@@ -1,0 +1,620 @@
+{
+  "key": "saleshandy",
+  "name": "SalesHandy",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["email-marketing"],
+  "auth": {
+    "type": "api_key",
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "API Key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "open-api.saleshandy.com"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the SalesHandy connector. Returns connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\"."
+          }
+        }
+      }
+    },
+    "sequences.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Sequences",
+      "description": "Retrieve a paginated list of email sequences in your SalesHandy account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number to retrieve (1-based). Defaults to 1."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Optional. Number of sequences per page. Defaults to 10."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "sequences": {
+            "type": "array",
+            "description": "List of sequence resources."
+          },
+          "meta": {
+            "type": "object",
+            "description": "Pagination metadata."
+          }
+        }
+      }
+    },
+    "sequences.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Sequence",
+      "description": "Retrieve the details of a single SalesHandy sequence by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequenceId": {
+            "type": "string",
+            "description": "The ID of the sequence to retrieve."
+          }
+        },
+        "required": ["sequenceId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "sequence": {
+            "type": "object",
+            "description": "The sequence resource."
+          }
+        }
+      }
+    },
+    "sequences.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create Sequence",
+      "description": "Create a new email sequence in SalesHandy with a given name and optional settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the new sequence."
+          },
+          "scheduleId": {
+            "type": "string",
+            "description": "Optional. The ID of the sending schedule to use."
+          },
+          "emailAccountId": {
+            "type": "string",
+            "description": "Optional. The ID of the email account to send from."
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "sequence": {
+            "type": "object",
+            "description": "The newly created sequence resource."
+          }
+        }
+      }
+    },
+    "sequences.pause": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Pause Sequence",
+      "description": "Pause an active SalesHandy email sequence, stopping further emails from being sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequenceId": {
+            "type": "string",
+            "description": "The ID of the sequence to pause."
+          }
+        },
+        "required": ["sequenceId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "result": {
+            "type": "object",
+            "description": "The API response after pausing the sequence."
+          }
+        }
+      }
+    },
+    "sequences.resume": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Resume Sequence",
+      "description": "Resume a paused SalesHandy email sequence, allowing further emails to be sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequenceId": {
+            "type": "string",
+            "description": "The ID of the sequence to resume."
+          }
+        },
+        "required": ["sequenceId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "result": {
+            "type": "object",
+            "description": "The API response after resuming the sequence."
+          }
+        }
+      }
+    },
+    "sequence.steps.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Sequence Steps",
+      "description": "Retrieve all steps (email variants, wait periods) for a specific SalesHandy sequence.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequenceId": {
+            "type": "string",
+            "description": "The ID of the sequence whose steps to list."
+          }
+        },
+        "required": ["sequenceId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "steps": {
+            "type": "array",
+            "description": "List of sequence step resources."
+          }
+        }
+      }
+    },
+    "prospects.add_to_sequence": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 65536,
+      "title": "Add Prospects to Sequence",
+      "description": "Import one or more prospects into a SalesHandy sequence step. Uses POST /v1/prospects/import-with-field-name. Requires a stepId (the sequence step ID). Each prospect requires at minimum an email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stepId": {
+            "type": "string",
+            "description": "The ID of the sequence step to add the prospects to."
+          },
+          "prospects": {
+            "type": "array",
+            "description": "Array of prospect objects to add. Each prospect must have an email address.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "description": "The prospect's email address (required)."
+                },
+                "firstName": {
+                  "type": "string",
+                  "description": "Optional. The prospect's first name."
+                },
+                "lastName": {
+                  "type": "string",
+                  "description": "Optional. The prospect's last name."
+                },
+                "company": {
+                  "type": "string",
+                  "description": "Optional. The prospect's company name."
+                },
+                "phone": {
+                  "type": "string",
+                  "description": "Optional. The prospect's phone number."
+                },
+                "website": {
+                  "type": "string",
+                  "description": "Optional. The prospect's company website."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Optional. The prospect's job title."
+                },
+                "customFields": {
+                  "type": "object",
+                  "description": "Optional. Custom field key-value pairs for the prospect."
+                }
+              },
+              "required": ["email"]
+            }
+          },
+          "verifyProspects": {
+            "type": "boolean",
+            "description": "Optional. Whether to verify prospect emails before import. Defaults to false."
+          },
+          "conflictAction": {
+            "type": "string",
+            "description": "Optional. Action on duplicate prospects: 'overwrite' or 'skip'. Defaults to 'overwrite'."
+          }
+        },
+        "required": ["stepId", "prospects"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "result": {
+            "type": "object",
+            "description": "The API response after adding prospects."
+          }
+        }
+      }
+    },
+    "prospects.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Prospects",
+      "description": "Retrieve a paginated list of prospects in SalesHandy. Uses GET /v1/prospects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number to retrieve (1-based). Defaults to 1."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Optional. Number of prospects per page. Defaults to 10."
+          },
+          "search": {
+            "type": "string",
+            "description": "Optional. Search query to filter prospects by name or email."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "prospects": {
+            "type": "array",
+            "description": "List of prospect resources."
+          },
+          "meta": {
+            "type": "object",
+            "description": "Pagination metadata."
+          }
+        }
+      }
+    },
+    "prospects.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Prospect",
+      "description": "Retrieve the details of a single prospect by their prospect ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prospectId": {
+            "type": "string",
+            "description": "The ID of the prospect to retrieve."
+          }
+        },
+        "required": ["prospectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "prospect": {
+            "type": "object",
+            "description": "The prospect resource."
+          }
+        }
+      }
+    },
+    "prospects.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Update Prospect",
+      "description": "Update the properties of an existing SalesHandy prospect via POST /v1/prospects/{id}/attribute.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prospectId": {
+            "type": "string",
+            "description": "The ID of the prospect to update."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Optional. The prospect's first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Optional. The prospect's last name."
+          },
+          "company": {
+            "type": "string",
+            "description": "Optional. The prospect's company name."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Optional. The prospect's phone number."
+          },
+          "website": {
+            "type": "string",
+            "description": "Optional. The prospect's company website."
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional. The prospect's job title."
+          },
+          "customFields": {
+            "type": "object",
+            "description": "Optional. Custom field key-value pairs to update."
+          }
+        },
+        "required": ["prospectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "prospect": {
+            "type": "object",
+            "description": "The updated prospect resource."
+          }
+        }
+      }
+    },
+    "prospects.pause": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Pause Prospect in Sequence",
+      "description": "Pause a specific prospect within a SalesHandy sequence via PATCH /v1/prospects/status, preventing further emails to that prospect.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequenceId": {
+            "type": "string",
+            "description": "The ID of the sequence containing the prospect."
+          },
+          "prospectId": {
+            "type": "string",
+            "description": "The ID of the prospect to pause."
+          }
+        },
+        "required": ["sequenceId", "prospectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "result": {
+            "type": "object",
+            "description": "The API response after pausing the prospect."
+          }
+        }
+      }
+    },
+    "prospects.resume": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Resume Prospect in Sequence",
+      "description": "Resume a paused prospect within a SalesHandy sequence via PATCH /v1/prospects/status, re-enabling email delivery.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequenceId": {
+            "type": "string",
+            "description": "The ID of the sequence containing the prospect."
+          },
+          "prospectId": {
+            "type": "string",
+            "description": "The ID of the prospect to resume."
+          }
+        },
+        "required": ["sequenceId", "prospectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "result": {
+            "type": "object",
+            "description": "The API response after resuming the prospect."
+          }
+        }
+      }
+    },
+    "prospects.unsubscribe": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Unsubscribe Prospect",
+      "description": "Unsubscribe a prospect from SalesHandy email communications via PATCH /v1/prospects/status with status=unsubscribed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prospectId": {
+            "type": "string",
+            "description": "The ID of the prospect to unsubscribe."
+          }
+        },
+        "required": ["prospectId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "result": {
+            "type": "object",
+            "description": "The API response after unsubscribing the prospect."
+          }
+        }
+      }
+    },
+    "email_accounts.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Email Accounts",
+      "description": "Retrieve a paginated list of connected email accounts in SalesHandy via POST /v1/email-accounts (real API uses POST with filter body).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number to retrieve (1-based). Defaults to 1."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Optional. Number of email accounts per page. Defaults to 10."
+          },
+          "search": {
+            "type": "string",
+            "description": "Optional. Search query to filter email accounts."
+          },
+          "status": {
+            "type": "string",
+            "description": "Optional. Filter by account status (e.g. 'connected', 'disconnected')."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "emailAccounts": {
+            "type": "array",
+            "description": "List of email account resources."
+          },
+          "meta": {
+            "type": "object",
+            "description": "Pagination metadata."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "sequence",
+    "prospect",
+    "email-account"
+  ]
+}

@@ -1,0 +1,430 @@
+{
+  "key": "lemmy",
+  "name": "Lemmy",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["social"],
+  "auth": {
+    "type": "bearer",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "host",
+          "label": "Canonical instance hostname (no scheme, path or port)",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "accessToken",
+          "label": "Existing Lemmy 0.19 JWT (provision outside appcall)",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["{{host}}"]
+  },
+  "http": {
+    "baseUrl": "https://{{host}}/api/v3",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": ["error", "message"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Check connection",
+      "description": "Authenticate by reading private unread counts on Lemmy 0.19 API v3; public site metadata would not verify a token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connection status."
+          },
+          "counts": {
+            "type": "object",
+            "description": "Provider resource."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/unread_count",
+        "success": [200],
+        "result": {
+          "status": "ok",
+          "counts": "{{response}}"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      }
+    },
+    "post.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List posts",
+      "description": "Read a page of posts. Pass nextCursor back as pageCursor, keeping filters fixed. Stop when the cursor is absent or posts is empty.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; instance enforces limits."
+          },
+          "pageCursor": {
+            "type": "string",
+            "description": "Opaque nextCursor from a previous response."
+          },
+          "communityId": {
+            "type": "integer",
+            "description": "Filter by community ID."
+          },
+          "type": {
+            "type": "string",
+            "description": "Feed type.",
+            "enum": ["All", "Local", "Subscribed"]
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "posts": {
+            "type": "array",
+            "description": "Provider resources.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Opaque continuation cursor; may be absent."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/post/list",
+        "success": [200],
+        "result": {
+          "posts": "{{response.posts}}",
+          "nextCursor": "{{response.next_page}}"
+        },
+        "query": {
+          "limit": "{{limit}}",
+          "page_cursor": "{{pageCursor}}",
+          "community_id": "{{communityId}}",
+          "type_": "{{type}}"
+        }
+      }
+    },
+    "post.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Get post",
+      "description": "Read a post view by numeric local instance ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Local post ID."
+          }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object",
+            "description": "Provider resource."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/post",
+        "success": [200],
+        "result": {
+          "post": "{{response.post_view}}"
+        },
+        "query": {
+          "id": "{{id}}"
+        }
+      }
+    },
+    "post.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Create post",
+      "description": "Publish a post in a community; this is a public write.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "integer",
+            "description": "Community ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Post title."
+          },
+          "body": {
+            "type": "string",
+            "description": "Markdown body."
+          },
+          "url": {
+            "type": "string",
+            "description": "Link URL, if this is a link post."
+          },
+          "nsfw": {
+            "type": "boolean",
+            "description": "Mark content NSFW."
+          },
+          "languageId": {
+            "type": "integer",
+            "description": "Instance language ID."
+          }
+        },
+        "required": ["communityId", "name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object",
+            "description": "Provider resource."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/post",
+        "success": [200],
+        "result": {
+          "post": "{{response.post_view}}"
+        },
+        "body": {
+          "community_id": "{{communityId}}",
+          "name": "{{name}}",
+          "body": "{{body}}",
+          "url": "{{url}}",
+          "nsfw": "{{nsfw}}",
+          "language_id": "{{languageId}}"
+        }
+      }
+    },
+    "post.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Update post",
+      "description": "Edit supplied fields on a post owned by the authenticated user; omitted fields are preserved.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "integer",
+            "description": "Existing post ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Post title."
+          },
+          "body": {
+            "type": "string",
+            "description": "Markdown body."
+          },
+          "url": {
+            "type": "string",
+            "description": "Link URL, if this is a link post."
+          },
+          "nsfw": {
+            "type": "boolean",
+            "description": "Mark content NSFW."
+          },
+          "languageId": {
+            "type": "integer",
+            "description": "Instance language ID."
+          }
+        },
+        "required": ["postId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object",
+            "description": "Provider resource."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/post",
+        "success": [200],
+        "result": {
+          "post": "{{response.post_view}}"
+        },
+        "body": {
+          "post_id": "{{postId}}",
+          "name": "{{name}}",
+          "body": "{{body}}",
+          "url": "{{url}}",
+          "nsfw": "{{nsfw}}",
+          "language_id": "{{languageId}}"
+        }
+      }
+    },
+    "comment.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Create comment",
+      "description": "Publish a Markdown comment or reply on a post.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "integer",
+            "description": "Local post ID."
+          },
+          "content": {
+            "type": "string",
+            "description": "Markdown comment."
+          },
+          "parentId": {
+            "type": "integer",
+            "description": "Parent comment ID for a reply."
+          },
+          "languageId": {
+            "type": "integer",
+            "description": "Instance language ID."
+          }
+        },
+        "required": ["postId", "content"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object",
+            "description": "Provider resource."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/comment",
+        "success": [200],
+        "result": {
+          "comment": "{{response.comment_view}}"
+        },
+        "body": {
+          "post_id": "{{postId}}",
+          "content": "{{content}}",
+          "parent_id": "{{parentId}}",
+          "language_id": "{{languageId}}"
+        }
+      }
+    },
+    "community.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List communities",
+      "description": "Read communities using one-based page pagination. Increment page until the communities array is empty; this API v3 endpoint has no next cursor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "One-based page; default 1."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; instance enforces limits."
+          },
+          "type": {
+            "type": "string",
+            "description": "Listing type.",
+            "enum": ["All", "Local", "Subscribed"]
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "communities": {
+            "type": "array",
+            "description": "Provider resources.",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/community/list",
+        "success": [200],
+        "result": {
+          "communities": "{{response.communities}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "type_": "{{type}}"
+        }
+      }
+    }
+  },
+  "models": ["post", "comment", "community"]
+}

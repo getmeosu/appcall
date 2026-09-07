@@ -1,0 +1,534 @@
+{
+  "key": "figma",
+  "name": "Figma",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "Personal access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["api.figma.com"]
+  },
+  "http": {
+    "baseUrl": "https://api.figma.com",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "X-Figma-Token",
+      "value": "{{accessToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": ["err", "message"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the personal access token by calling GET /v1/me. Takes no input and returns the authenticated user's id, handle, avatar URL, and email. This is a Tier 3 (cheapest) call — safe to use for connection testing. Note: the spec omits 401 from this endpoint's documented responses but the live API returns it on a missing or invalid token; both 401 and 403 are treated as authentication failures.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "userId": { "type": "string" },
+          "handle": { "type": "string" },
+          "imgUrl": { "type": "string" },
+          "email": { "type": "string" }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/me",
+        "success": [200],
+        "echo": { "status": "ok" },
+        "result": {
+          "status": "ok",
+          "userId": "{{response.id}}",
+          "handle": "{{response.handle}}",
+          "imgUrl": "{{response.img_url}}",
+          "email": "{{response.email}}"
+        }
+      }
+    },
+    "file.get": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 10485760,
+      "sideEffect": "read",
+      "title": "Get File",
+      "description": "Fetch a file's full document tree by file key. WARNING: this is a Tier 1 endpoint, capped at 20 calls per MONTH (not per minute) on View/Collab seats — the single biggest operational trap in this connector. Prefer file.getNodes with explicit ids and depth instead, which is far cheaper for targeted reads; reserve file.get for cases that genuinely need the entire document. Always pass ids and/or depth when you can to limit the response size. The response has no file id field — the file key you passed in is the identifier. Use file.getMeta for a shareable URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": { "type": "string", "description": "File key or branch key, from the file's URL." },
+          "version": { "type": "string", "description": "A specific version id to fetch instead of the latest." },
+          "ids": { "type": "string", "description": "Comma-separated node ids to limit the returned document tree. Strongly recommended given the monthly call cap." },
+          "depth": { "type": "integer", "description": "How many levels deep into the document tree to traverse. Strongly recommended given the monthly call cap." },
+          "geometry": { "type": "string", "description": "Set to \"paths\" to export vector data." },
+          "pluginData": { "type": "string", "description": "Comma-separated plugin ids (or \"shared\") whose plugin data to include." },
+          "branchData": { "type": "boolean", "description": "Include branch metadata in the response." }
+        },
+        "required": ["fileKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "object" }
+        }
+      },
+      "sample": { "fileKey": "abcXYZ123" },
+      "request": {
+        "method": "GET",
+        "path": "/v1/files/{{fileKey}}",
+        "query": {
+          "version": "{{version}}",
+          "ids": "{{ids}}",
+          "depth": "{{depth}}",
+          "geometry": "{{geometry}}",
+          "plugin_data": "{{pluginData}}",
+          "branch_data": "{{branchData}}"
+        },
+        "success": [200],
+        "result": {
+          "file": {
+            "key": "{{input.fileKey}}",
+            "name": "{{response.name}}",
+            "role": "{{response.role}}",
+            "lastModified": "{{response.lastModified}}",
+            "editorType": "{{response.editorType}}",
+            "thumbnailUrl": "{{response.thumbnailUrl}}",
+            "version": "{{response.version}}",
+            "document": "{{response.document}}",
+            "components": "{{response.components}}",
+            "componentSets": "{{response.componentSets}}",
+            "styles": "{{response.styles}}"
+          }
+        }
+      }
+    },
+    "file.getNodes": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 10485760,
+      "sideEffect": "read",
+      "title": "Get File Nodes",
+      "description": "Fetch specific nodes from a file by id, without downloading the entire document tree. ids is required — Figma rejects this call without it, and it is also the whole reason to prefer this operation over file.get, which is capped at 20 calls per month on View/Collab seats. Pass depth to further limit how far each node's subtree is traversed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": { "type": "string", "description": "File key or branch key, from the file's URL." },
+          "ids": { "type": "string", "description": "Comma-separated node ids to fetch. Required." },
+          "version": { "type": "string", "description": "A specific version id to fetch instead of the latest." },
+          "depth": { "type": "integer", "description": "How many levels deep into each node's subtree to traverse." },
+          "geometry": { "type": "string", "description": "Set to \"paths\" to export vector data." },
+          "pluginData": { "type": "string", "description": "Comma-separated plugin ids (or \"shared\") whose plugin data to include." }
+        },
+        "required": ["fileKey", "ids"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string" },
+          "lastModified": { "type": "string" },
+          "editorType": { "type": "string" },
+          "thumbnailUrl": { "type": "string" },
+          "version": { "type": "string" },
+          "nodes": { "type": "object" }
+        }
+      },
+      "sample": { "fileKey": "abcXYZ123", "ids": "1:2" },
+      "request": {
+        "method": "GET",
+        "path": "/v1/files/{{fileKey}}/nodes",
+        "query": {
+          "ids": "{{ids}}",
+          "version": "{{version}}",
+          "depth": "{{depth}}",
+          "geometry": "{{geometry}}",
+          "plugin_data": "{{pluginData}}"
+        },
+        "success": [200],
+        "result": {
+          "name": "{{response.name}}",
+          "role": "{{response.role}}",
+          "lastModified": "{{response.lastModified}}",
+          "editorType": "{{response.editorType}}",
+          "thumbnailUrl": "{{response.thumbnailUrl}}",
+          "version": "{{response.version}}",
+          "nodes": "{{response.nodes}}"
+        }
+      }
+    },
+    "file.getMeta": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get File Metadata",
+      "description": "Fetch a file's metadata — name, folder, editor type, role, thumbnail, and shareable URL — without any document content. This is the cheap way to resolve a file key to a shareable link (file.get and file.getNodes do not return one).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": { "type": "string", "description": "File key or branch key, from the file's URL." }
+        },
+        "required": ["fileKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "object" }
+        }
+      },
+      "sample": { "fileKey": "abcXYZ123" },
+      "request": {
+        "method": "GET",
+        "path": "/v1/files/{{fileKey}}/meta",
+        "success": [200],
+        "result": {
+          "file": "{{response.file}}"
+        }
+      }
+    },
+    "file.listVersions": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List File Versions",
+      "description": "List the named/saved version history of a file, newest first. This is the only Figma list operation that paginates: pass pageSize to control the page size and before/after (version ids) to page. nextPage is a full URL Figma returns in pagination.next_page; it disappears from the result once the last page is reached.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": { "type": "string", "description": "File key or branch key, from the file's URL." },
+          "pageSize": { "type": "integer", "description": "Results per page. Figma defaults to 30." },
+          "before": { "type": "integer", "description": "Return versions before this version id (older page)." },
+          "after": { "type": "integer", "description": "Return versions after this version id (newer page)." }
+        },
+        "required": ["fileKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "versions": { "type": "array", "items": { "type": "object" } },
+          "nextPage": { "type": "string" },
+          "prevPage": { "type": "string" }
+        }
+      },
+      "sample": { "fileKey": "abcXYZ123" },
+      "request": {
+        "method": "GET",
+        "path": "/v1/files/{{fileKey}}/versions",
+        "query": {
+          "page_size": "{{pageSize}}",
+          "before": "{{before}}",
+          "after": "{{after}}"
+        },
+        "success": [200],
+        "result": {
+          "versions": "{{response.versions}}",
+          "nextPage": "{{response.pagination.next_page}}",
+          "prevPage": "{{response.pagination.prev_page}}"
+        }
+      }
+    },
+    "image.render": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Render Images",
+      "description": "Render one or more nodes to PNG, JPG, SVG, or PDF and get back image URLs. ids is required — this call is useless without it. The returned URLs point at short-lived CDN links on hosts Figma does not document and does not keep stable; fetch the bytes promptly and do not rely on the link persisting. A null value for a node id in the response means that node failed to render. This connector does not download the image bytes itself and does not allowlist the CDN host — only api.figma.com is reachable through this connector.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": { "type": "string", "description": "File key or branch key, from the file's URL." },
+          "ids": { "type": "string", "description": "Comma-separated node ids to render. Required." },
+          "version": { "type": "string", "description": "A specific version id to render instead of the latest." },
+          "scale": { "type": "number", "description": "A number between 0.01 and 4, the image scaling factor." },
+          "format": { "type": "string", "enum": ["jpg", "png", "svg", "pdf"], "description": "Image output format." },
+          "svgOutlineText": { "type": "boolean", "description": "Whether text elements are rendered as outlines in SVG output." },
+          "svgIncludeId": { "type": "boolean", "description": "Include id attributes in SVG output." },
+          "svgIncludeNodeId": { "type": "boolean", "description": "Include the Figma node id as an attribute in SVG output." },
+          "svgSimplifyStroke": { "type": "boolean", "description": "Simplify strokes in SVG output." },
+          "contentsOnly": { "type": "boolean", "description": "Exclude overlapping content that falls outside a node's bounds." },
+          "useAbsoluteBounds": { "type": "boolean", "description": "Use each node's absolute rendered bounds rather than its own bounding box." }
+        },
+        "required": ["fileKey", "ids"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "images": { "type": "object" }
+        }
+      },
+      "sample": { "fileKey": "abcXYZ123", "ids": "1:2", "format": "png" },
+      "request": {
+        "method": "GET",
+        "path": "/v1/images/{{fileKey}}",
+        "query": {
+          "ids": "{{ids}}",
+          "version": "{{version}}",
+          "scale": "{{scale}}",
+          "format": "{{format}}",
+          "svg_outline_text": "{{svgOutlineText}}",
+          "svg_include_id": "{{svgIncludeId}}",
+          "svg_include_node_id": "{{svgIncludeNodeId}}",
+          "svg_simplify_stroke": "{{svgSimplifyStroke}}",
+          "contents_only": "{{contentsOnly}}",
+          "use_absolute_bounds": "{{useAbsoluteBounds}}"
+        },
+        "success": [200],
+        "result": {
+          "images": "{{response.images}}"
+        }
+      }
+    },
+    "image.listFills": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Image Fills",
+      "description": "List the download URLs for every image fill (raster image used as a fill) referenced anywhere in a file, keyed by imageRef. Returns everything in one call — there is no pagination. Note this endpoint's success envelope is {error: false, status: 200, meta: {images: {...}}}, different from image.render's {err: null, images: {...}}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": { "type": "string", "description": "File key or branch key, from the file's URL." }
+        },
+        "required": ["fileKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "images": { "type": "object" }
+        }
+      },
+      "sample": { "fileKey": "abcXYZ123" },
+      "request": {
+        "method": "GET",
+        "path": "/v1/files/{{fileKey}}/images",
+        "success": [200],
+        "result": {
+          "images": "{{response.meta.images}}"
+        }
+      }
+    },
+    "comment.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Comments",
+      "description": "List every comment on a file, including replies. Returns the entire set in one call — this endpoint does not paginate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": { "type": "string", "description": "File key or branch key, from the file's URL." },
+          "asMd": { "type": "boolean", "description": "Return comment message text as markdown instead of plain text." }
+        },
+        "required": ["fileKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comments": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "sample": { "fileKey": "abcXYZ123" },
+      "request": {
+        "method": "GET",
+        "path": "/v1/files/{{fileKey}}/comments",
+        "query": {
+          "as_md": "{{asMd}}"
+        },
+        "success": [200],
+        "result": {
+          "comments": "{{response.comments}}"
+        }
+      }
+    },
+    "comment.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create Comment",
+      "description": "Post a new comment on a file, or reply to an existing one. message is required. To reply, pass commentId of the comment being replied to — it must be a root comment; Figma cannot reply to a reply.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": { "type": "string", "description": "File key to comment on." },
+          "message": { "type": "string", "description": "Comment text." },
+          "commentId": { "type": "string", "description": "Root comment id to reply to. Omit to start a new comment thread. Must be a root comment — Figma cannot reply to a reply." },
+          "clientMeta": { "type": "object", "description": "Where the comment is pinned: a Vector {x,y}, a FrameOffset {node_id,node_offset}, a Region, or a FrameOffsetRegion." }
+        },
+        "required": ["fileKey", "message"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": { "type": "object" }
+        }
+      },
+      "sample": { "fileKey": "abcXYZ123", "message": "Looks good to me" },
+      "request": {
+        "method": "POST",
+        "path": "/v1/files/{{fileKey}}/comments",
+        "body": {
+          "message": "{{message}}",
+          "comment_id": "{{commentId}}",
+          "client_meta": "{{clientMeta}}"
+        },
+        "success": [200],
+        "result": {
+          "comment": "{{response}}"
+        }
+      }
+    },
+    "comment.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete Comment",
+      "description": "Permanently delete a comment from a file. Figma answers with an empty body on success, so the result echoes back the file key and comment id that were deleted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileKey": { "type": "string", "description": "File key the comment belongs to." },
+          "commentId": { "type": "string", "description": "Comment id to delete." }
+        },
+        "required": ["fileKey", "commentId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": { "type": "boolean" },
+          "fileKey": { "type": "string" },
+          "commentId": { "type": "string" }
+        }
+      },
+      "sample": { "fileKey": "abcXYZ123", "commentId": "1234567" },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/files/{{fileKey}}/comments/{{commentId}}",
+        "success": [200, 204],
+        "result": {
+          "deleted": true,
+          "fileKey": "{{input.fileKey}}",
+          "commentId": "{{input.commentId}}"
+        }
+      }
+    },
+    "folder.listForTeam": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Team Folders",
+      "description": "List the folders in a team. Folders replace the deprecated Projects concept — this connector does not implement the deprecated /v1/teams/{id}/projects endpoint. Returns the entire set in one call — this endpoint does not paginate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamId": { "type": "string", "description": "Team id." }
+        },
+        "required": ["teamId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "folders": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "sample": { "teamId": "123456" },
+      "request": {
+        "method": "GET",
+        "path": "/v2/teams/{{teamId}}/folders",
+        "success": [200],
+        "result": {
+          "name": "{{response.name}}",
+          "folders": "{{response.folders}}"
+        }
+      }
+    },
+    "folder.listFiles": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Folder Files",
+      "description": "List the files in a folder. Folders replace the deprecated Projects concept — this connector does not implement the deprecated /v1/projects/{id}/files endpoint. Returns the entire set in one call — this endpoint does not paginate. Each returned file's key is the file_key every other file/image/comment operation takes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderId": { "type": "string", "description": "Folder id." },
+          "branchData": { "type": "boolean", "description": "Include branch metadata for each file." }
+        },
+        "required": ["folderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "files": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "sample": { "folderId": "111111" },
+      "request": {
+        "method": "GET",
+        "path": "/v2/folders/{{folderId}}/files",
+        "query": {
+          "branch_data": "{{branchData}}"
+        },
+        "success": [200],
+        "result": {
+          "name": "{{response.name}}",
+          "files": "{{response.files}}"
+        }
+      }
+    }
+  },
+  "models": ["file", "node", "image", "comment", "version", "folder"]
+}

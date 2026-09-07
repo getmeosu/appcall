@@ -1,0 +1,355 @@
+{
+  "key": "hashnode",
+  "name": "Hashnode",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "description": "Read and publish articles with Hashnode.",
+  "categories": [
+    "social"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Personal access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "gql.hashnode.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://gql.hashnode.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "errors.0.message"
+      ],
+      "bodyErrorPaths": [
+        "errors"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify credentials by reading the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query Me { me { id username name } }"
+        },
+        "result": {
+          "user": "{{response.data.me}}"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Users Me",
+      "description": "Get the authenticated user profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query Me { me { id username name } }"
+        },
+        "result": {
+          "user": "{{response.data.me}}"
+        }
+      }
+    },
+    "publications.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Publications List",
+      "description": "List your publications using cursor pagination; stop when hasNextPage is false.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": {
+            "type": "integer",
+            "description": "Page size, 1 to 50. Provider validates range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Previous nextCursor. Stop when hasNextPage is false."
+          }
+        },
+        "required": [
+          "first"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "edges": {
+            "type": "array"
+          },
+          "nextCursor": {
+            "type": "string"
+          },
+          "hasNextPage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query Publications($first: Int!, $after: String) { me { publications(first: $first, after: $after) { edges { node { id title url } cursor } pageInfo { endCursor hasNextPage } } } }",
+          "variables": {
+            "first": "{{first}}",
+            "after": "{{after}}"
+          }
+        },
+        "result": {
+          "edges": "{{response.data.me.publications.edges}}",
+          "nextCursor": "{{response.data.me.publications.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.me.publications.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "publications.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Publications Get",
+      "description": "Read publication metadata by hostname. Hashnode requires the target publication to be Pro.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "Publication hostname. Requires a Pro publication."
+          }
+        },
+        "required": [
+          "host"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "publication": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query Publication($host: String!) { publication(host: $host) { id title url } }",
+          "variables": {
+            "host": "{{host}}"
+          }
+        },
+        "result": {
+          "publication": "{{response.data.publication}}"
+        }
+      }
+    },
+    "posts.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Posts Get",
+      "description": "Get a post by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Post ID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "query Post($id: ID!) { post(id: $id) { id title slug url } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "result": {
+          "post": "{{response.data.post}}"
+        }
+      }
+    },
+    "posts.publish": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Posts Publish",
+      "description": "Publish a post to a Pro publication. Requires a role authorized to publish; contributors must use the review workflow outside this connector.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "publicationId": {
+            "type": "string",
+            "description": "Pro publication ID. Requires an authorized publishing role."
+          },
+          "title": {
+            "type": "string",
+            "description": "Post title."
+          },
+          "contentMarkdown": {
+            "type": "string",
+            "description": "Markdown content."
+          },
+          "subtitle": {
+            "type": "string",
+            "description": "Optional subtitle."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Optional URL slug."
+          },
+          "originalArticleURL": {
+            "type": "string",
+            "description": "Canonical URL for a republished article."
+          }
+        },
+        "required": [
+          "publicationId",
+          "title",
+          "contentMarkdown"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/",
+        "success": [
+          200
+        ],
+        "body": {
+          "query": "mutation PublishPost($input: PublishPostInput!) { publishPost(input: $input) { post { id title slug url } } }",
+          "variables": {
+            "input": {
+              "publicationId": "{{publicationId}}",
+              "title": "{{title}}",
+              "contentMarkdown": "{{contentMarkdown}}",
+              "subtitle": "{{subtitle}}",
+              "slug": "{{slug}}",
+              "originalArticleURL": "{{originalArticleURL}}"
+            }
+          }
+        },
+        "result": {
+          "post": "{{response.data.publishPost.post}}"
+        }
+      }
+    }
+  },
+  "models": [
+    "post",
+    "publication",
+    "user"
+  ]
+}

@@ -1,0 +1,446 @@
+{
+  "key": "woocommerce",
+  "name": "WooCommerce",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["ecommerce"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "*.wp-json.com",
+      "mystore.test",
+      "*.mystore.test",
+      "*.wpengine.com",
+      "*.kinsta.cloud",
+      "*.siteground.site",
+      "*.staging.wpengine.com"
+    ]
+  },
+  "operations": {
+    "products.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "orders.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "customers.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the WooCommerce connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    },
+    "products.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Create Product",
+      "description": "Create a new product in WooCommerce via POST /wp-json/wc/v3/products. Supports simple, variable, grouped, and external product types.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store, e.g. https://mystore.example.com" },
+          "name": { "type": "string", "description": "Product name." },
+          "type": { "type": "string", "description": "Product type: simple, grouped, external, or variable." },
+          "status": { "type": "string", "description": "Product status: draft, pending, private, or publish." },
+          "regular_price": { "type": "string", "description": "Product regular price." },
+          "sale_price": { "type": "string", "description": "Product sale price." },
+          "sku": { "type": "string", "description": "Unique product SKU." },
+          "description": { "type": "string", "description": "Product full description." },
+          "short_description": { "type": "string", "description": "Product short description." },
+          "manage_stock": { "type": "boolean", "description": "Whether to manage stock." },
+          "stock_quantity": { "type": "number", "description": "Stock quantity when manage_stock is true." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "product": { "type": "object" }
+        }
+      }
+    },
+    "products.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Get Product",
+      "description": "Retrieve a single product from WooCommerce by its ID via GET /wp-json/wc/v3/products/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "productId": { "type": "number", "description": "The numeric WooCommerce product ID." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "productId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "product": { "type": "object" }
+        }
+      }
+    },
+    "products.update": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Update Product",
+      "description": "Update an existing product in WooCommerce via PUT /wp-json/wc/v3/products/{id}. Only provided fields are updated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "productId": { "type": "number", "description": "The numeric WooCommerce product ID." },
+          "name": { "type": "string", "description": "Updated product name." },
+          "status": { "type": "string", "description": "Updated product status." },
+          "regular_price": { "type": "string", "description": "Updated regular price." },
+          "sale_price": { "type": "string", "description": "Updated sale price." },
+          "sku": { "type": "string", "description": "Updated SKU." },
+          "description": { "type": "string", "description": "Updated description." },
+          "stock_quantity": { "type": "number", "description": "Updated stock quantity." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "productId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "product": { "type": "object" }
+        }
+      }
+    },
+    "products.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Delete Product",
+      "description": "Delete a product from WooCommerce via DELETE /wp-json/wc/v3/products/{id}. The product is moved to trash by default.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "productId": { "type": "number", "description": "The numeric WooCommerce product ID to delete." },
+          "force": { "type": "boolean", "description": "If true, permanently delete the product (bypass trash)." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "productId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" },
+          "productId": { "type": "number" }
+        }
+      }
+    },
+    "orders.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Create Order",
+      "description": "Create a new order in WooCommerce via POST /wp-json/wc/v3/orders. Accepts customer, billing, shipping and line items.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "status": { "type": "string", "description": "Order status: pending, processing, on-hold, completed, cancelled, refunded, failed, trash." },
+          "customer_id": { "type": "number", "description": "Customer ID associated with the order." },
+          "billing": { "type": "object", "description": "Billing address details." },
+          "shipping": { "type": "object", "description": "Shipping address details." },
+          "line_items": { "type": "array", "description": "Array of line item objects with product_id and quantity." },
+          "payment_method": { "type": "string", "description": "Payment method ID, e.g. bacs, cheque, cod." },
+          "payment_method_title": { "type": "string", "description": "Payment method title." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "order": { "type": "object" }
+        }
+      }
+    },
+    "orders.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Get Order",
+      "description": "Retrieve a single order from WooCommerce by its ID via GET /wp-json/wc/v3/orders/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "orderId": { "type": "number", "description": "The numeric WooCommerce order ID." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "orderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "order": { "type": "object" }
+        }
+      }
+    },
+    "orders.update": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Update Order",
+      "description": "Update an existing order in WooCommerce via PUT /wp-json/wc/v3/orders/{id}. Useful for changing order status, billing, or shipping info.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "orderId": { "type": "number", "description": "The numeric WooCommerce order ID." },
+          "status": { "type": "string", "description": "New order status." },
+          "billing": { "type": "object", "description": "Updated billing address." },
+          "shipping": { "type": "object", "description": "Updated shipping address." },
+          "customer_note": { "type": "string", "description": "Note left by the customer." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "orderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "order": { "type": "object" }
+        }
+      }
+    },
+    "orders.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Delete Order",
+      "description": "Delete an order from WooCommerce via DELETE /wp-json/wc/v3/orders/{id}. The order is moved to trash by default.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "orderId": { "type": "number", "description": "The numeric WooCommerce order ID to delete." },
+          "force": { "type": "boolean", "description": "If true, permanently delete the order (bypass trash)." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "orderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" },
+          "orderId": { "type": "number" }
+        }
+      }
+    },
+    "customers.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Create Customer",
+      "description": "Create a new customer account in WooCommerce via POST /wp-json/wc/v3/customers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "email": { "type": "string", "description": "Customer email address (must be unique)." },
+          "first_name": { "type": "string", "description": "Customer first name." },
+          "last_name": { "type": "string", "description": "Customer last name." },
+          "username": { "type": "string", "description": "Customer username." },
+          "password": { "type": "string", "description": "Customer password." },
+          "billing": { "type": "object", "description": "Customer billing address." },
+          "shipping": { "type": "object", "description": "Customer shipping address." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "email"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "customer": { "type": "object" }
+        }
+      }
+    },
+    "customers.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Get Customer",
+      "description": "Retrieve a single customer from WooCommerce by their ID via GET /wp-json/wc/v3/customers/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "customerId": { "type": "number", "description": "The numeric WooCommerce customer ID." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "customerId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "customer": { "type": "object" }
+        }
+      }
+    },
+    "customers.update": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Update Customer",
+      "description": "Update an existing customer in WooCommerce via PUT /wp-json/wc/v3/customers/{id}. Only provided fields are updated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "customerId": { "type": "number", "description": "The numeric WooCommerce customer ID." },
+          "email": { "type": "string", "description": "Updated email address." },
+          "first_name": { "type": "string", "description": "Updated first name." },
+          "last_name": { "type": "string", "description": "Updated last name." },
+          "billing": { "type": "object", "description": "Updated billing address." },
+          "shipping": { "type": "object", "description": "Updated shipping address." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "customerId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "customer": { "type": "object" }
+        }
+      }
+    },
+    "coupons.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Create Coupon",
+      "description": "Create a new discount coupon in WooCommerce via POST /wp-json/wc/v3/coupons. Supports percent, fixed_cart, and fixed_product discount types.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "consumerKey": { "type": "string", "description": "WooCommerce consumer key for Basic auth." },
+          "consumerSecret": { "type": "string", "description": "WooCommerce consumer secret for Basic auth." },
+          "siteUrl": { "type": "string", "description": "Base URL of the WooCommerce store." },
+          "code": { "type": "string", "description": "Unique coupon code." },
+          "discount_type": { "type": "string", "description": "Determines the type of discount: percent, fixed_cart, or fixed_product." },
+          "amount": { "type": "string", "description": "The amount of discount, as a string number." },
+          "description": { "type": "string", "description": "Coupon description." },
+          "date_expires": { "type": "string", "description": "Expiry date of the coupon in ISO 8601 format." },
+          "usage_limit": { "type": "number", "description": "How many times the coupon can be used in total." },
+          "usage_limit_per_user": { "type": "number", "description": "How many times the coupon can be used per customer." },
+          "individual_use": { "type": "boolean", "description": "If true, the coupon can only be used individually." },
+          "free_shipping": { "type": "boolean", "description": "If true, enables free shipping." }
+        },
+        "required": ["consumerKey", "consumerSecret", "siteUrl", "code", "discount_type", "amount"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "coupon": { "type": "object" }
+        }
+      }
+    }
+  },
+  "models": [
+    "product",
+    "order",
+    "customer"
+  ]
+}

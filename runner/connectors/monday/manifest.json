@@ -1,0 +1,610 @@
+{
+  "key": "monday",
+  "name": "monday.com",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiToken",
+          "label": "Personal API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["api.monday.com"]
+  },
+  "http": {
+    "baseUrl": "https://api.monday.com",
+    "auth": {
+      "field": "apiToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "{{apiToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "API-Version": "2026-07"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "bodyErrorPaths": ["errors", "error_message"],
+      "rateLimitCodePaths": ["errors.0.extensions.code"],
+      "rateLimitCodes": [
+        "ComplexityException",
+        "COMPLEXITY_BUDGET_EXHAUSTED",
+        "DAILY_LIMIT_EXCEEDED",
+        "maxConcurrencyExceeded",
+        "IP_RATE_LIMIT_EXCEEDED"
+      ],
+      "retryAfterPaths": ["errors.0.extensions.retry_in_seconds", "retry_in_seconds"],
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": ["errors.0.message", "error_message"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 8000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the personal API token with the cheapest authenticated call, query { me { id name email is_guest } } — the exact example monday's own auth docs use. monday can answer HTTP 200 with a populated errors array on an auth failure (this manifest's bodyErrorPaths demotes that to a failure before this ever returns), so on real success this still checks that data.me.id is present rather than trusting the status code alone. Takes no input.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "isGuest": { "type": "boolean" }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query { me { id name email is_guest } }"
+        },
+        "success": [200],
+        "echo": { "status": "ok" },
+        "result": {
+          "status": "ok",
+          "id": "{{response.data.me.id}}",
+          "name": "{{response.data.me.name}}",
+          "email": "{{response.data.me.email}}",
+          "isGuest": "{{response.data.me.is_guest}}"
+        }
+      }
+    },
+    "item.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Item",
+      "description": "Create an item on a board with the create_item mutation. boardId and itemName are the two non-null CreateItem arguments (board_id: ID!, item_name: String!); both are required here for the same reason. columnValues, if given, MUST be a JSON-ENCODED STRING, not an object — e.g. \"{\\\"date\\\":\\\"2023-05-25\\\",\\\"status\\\":{\\\"index\\\":1}}\" — monday's column_values argument is type JSON and accepts a stringified object; sending a real object silently fails the write. groupId places the item in a specific group (defaults to the board's first group); createLabels auto-creates status/dropdown label values referenced in columnValues that do not yet exist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": { "type": "string", "description": "Board ID (ID!). Required." },
+          "groupId": { "type": "string", "description": "Group ID to place the item in. Defaults to the board's first group." },
+          "itemName": { "type": "string", "description": "Item name (String!). Required." },
+          "columnValues": { "type": "string", "description": "JSON-ENCODED STRING of column id -> value, e.g. \"{\\\"status\\\":{\\\"index\\\":1}}\". NOT an object — monday's column_values argument is the JSON scalar, which this connector sends as a stringified payload." },
+          "createLabels": { "type": "boolean", "description": "Create missing status/dropdown label values referenced in columnValues." }
+        },
+        "required": ["boardId", "itemName"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "url": { "type": "string" }
+        }
+      },
+      "sample": { "boardId": "1234567890", "itemName": "new item" },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation CreateItem($boardId: ID!, $groupId: String, $itemName: String!, $columnValues: JSON, $createLabels: Boolean) { create_item( board_id: $boardId group_id: $groupId item_name: $itemName column_values: $columnValues create_labels_if_missing: $createLabels ) { id name url } }",
+          "variables": {
+            "boardId": "{{boardId}}",
+            "groupId": "{{groupId}}",
+            "itemName": "{{itemName}}",
+            "columnValues": "{{columnValues}}",
+            "createLabels": "{{createLabels}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "id": "{{response.data.create_item.id}}",
+          "name": "{{response.data.create_item.name}}",
+          "url": "{{response.data.create_item.url}}"
+        }
+      }
+    },
+    "item.createSubitem": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Subitem",
+      "description": "Create a subitem under a parent item with the create_subitem mutation. parentItemId and itemName are required (parent_item_id: ID!, item_name: String!). columnValues, if given, MUST be a JSON-ENCODED STRING, not an object — same JSON scalar convention as item.create.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parentItemId": { "type": "string", "description": "Parent item ID (ID!). Required." },
+          "itemName": { "type": "string", "description": "Subitem name (String!). Required." },
+          "columnValues": { "type": "string", "description": "JSON-ENCODED STRING of column id -> value. NOT an object." }
+        },
+        "required": ["parentItemId", "itemName"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "board": { "type": "object" }
+        }
+      },
+      "sample": { "parentItemId": "1234567890123", "itemName": "subitem" },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($parentItemId: ID!, $itemName: String!, $columnValues: JSON) { create_subitem(parent_item_id: $parentItemId, item_name: $itemName, column_values: $columnValues) { id name board { id } } }",
+          "variables": {
+            "parentItemId": "{{parentItemId}}",
+            "itemName": "{{itemName}}",
+            "columnValues": "{{columnValues}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "id": "{{response.data.create_subitem.id}}",
+          "name": "{{response.data.create_subitem.name}}",
+          "board": "{{response.data.create_subitem.board}}"
+        }
+      }
+    },
+    "item.updateColumnValues": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Item Column Values",
+      "description": "Change one or more column values on an item with the change_multiple_column_values mutation. boardId and columnValues are required (board_id: ID!, column_values: JSON!); itemId is nullable in the SDL but should almost always be passed to target the write at a specific item. columnValues MUST be a JSON-ENCODED STRING, not an object — e.g. \"{\\\"status\\\":{\\\"index\\\":1},\\\"date4\\\":{\\\"date\\\":\\\"2021-01-01\\\"}}\"; sending a real object silently fails the write. THIS IS ALSO HOW ITEM RENAMING WORKS — monday has no dedicated rename mutation. To rename an item, call this operation with columnValues set to JSON.stringify({ name: \"Updated Task Name\" }) and itemId set to the item to rename.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": { "type": "string", "description": "Board ID the item belongs to (ID!). Required." },
+          "itemId": { "type": "string", "description": "Item ID to update. Nullable in the SDL, but required in practice to target a specific item — including for renaming via the name pseudo-column." },
+          "columnValues": { "type": "string", "description": "JSON-ENCODED STRING of column id -> value (JSON!). NOT an object. Use the pseudo-column \"name\" to rename the item, e.g. \"{\\\"name\\\":\\\"Updated Task Name\\\"}\"." },
+          "createLabels": { "type": "boolean", "description": "Create missing status/dropdown label values referenced in columnValues." }
+        },
+        "required": ["boardId", "columnValues"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" }
+        }
+      },
+      "sample": { "boardId": "1234567890", "itemId": "1234567890123", "columnValues": "{\"name\":\"Updated Task Name\"}" },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($boardId: ID!, $itemId: ID, $columnValues: JSON!, $createLabels: Boolean) { change_multiple_column_values( board_id: $boardId item_id: $itemId column_values: $columnValues create_labels_if_missing: $createLabels ) { id name } }",
+          "variables": {
+            "boardId": "{{boardId}}",
+            "itemId": "{{itemId}}",
+            "columnValues": "{{columnValues}}",
+            "createLabels": "{{createLabels}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "id": "{{response.data.change_multiple_column_values.id}}",
+          "name": "{{response.data.change_multiple_column_values.name}}"
+        }
+      }
+    },
+    "item.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Items",
+      "description": "Fetch items by ID with the items(ids:) query. ids is required — without it the call returns nothing meaningful. Not paginated; pass at most 100 ids per monday's documented per-query item cap.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": { "type": "array", "items": { "type": "string" }, "description": "Item IDs to fetch. Required." }
+        },
+        "required": ["ids"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "sample": { "ids": ["1234567890123"] },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($ids: [ID!]) { items(ids: $ids) { id name url created_at group { id title } board { id name } } }",
+          "variables": {
+            "ids": "{{ids}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "items": "{{response.data.items}}"
+        }
+      }
+    },
+    "item.listByBoard": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Items By Board (cursor pagination)",
+      "description": "List a board's items with boards { items_page(limit, cursor) }, the CURSOR-paginated mechanism monday uses for items. boardId is required. limit is required too, even though the brief's own summary table does not list it: the query pins $limit: Int! as a non-null GraphQL variable, and the declarative engine drops an unresolved placeholder rather than defaulting it, so an omitted limit would send a request missing a required variable and monday would reject the whole call. Pass 25 for the documented provider default (max 500). This operation returns items_page.cursor (as nextCursor) for the FIRST page only; for page 2..N call item.nextPage passing that value as its cursor input — do NOT re-call this operation, since re-nesting items_page under boards on every page burns unnecessary complexity budget (monday's own guidance). A null or absent nextCursor in the response means there is no next page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": { "type": "string", "description": "Board ID (ID!). Required." },
+          "limit": { "type": "integer", "description": "Page size (Int!, required by the query). Provider default 25, max 500." },
+          "cursor": { "type": "string", "description": "Opaque cursor. Omit for the first page." }
+        },
+        "required": ["boardId", "limit"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "sample": { "boardId": "1234567890", "limit": 25 },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($boardId: ID!, $limit: Int!, $cursor: String) { boards(ids: [$boardId]) { items_page(limit: $limit, cursor: $cursor) { cursor items { id name url column_values { id text value } } } } }",
+          "variables": {
+            "boardId": "{{boardId}}",
+            "limit": "{{limit}}",
+            "cursor": "{{cursor}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "items": "{{response.data.boards.0.items_page.items}}",
+          "nextCursor": "{{response.data.boards.0.items_page.cursor}}"
+        }
+      }
+    },
+    "item.nextPage": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Next Items Page (cursor pagination)",
+      "description": "Fetch page 2..N of a cursor-paginated item listing with next_items_page(cursor:), called AT THE QUERY ROOT rather than re-nested under boards { items_page } — monday documents this explicitly as avoiding the complexity cost of re-nesting. cursor is required and comes from a previous item.listByBoard or item.nextPage call's nextCursor result field. A null or absent nextCursor in the response means there is no further page — stop paging.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": { "type": "string", "description": "Cursor from the previous page's nextCursor result (String!). Required." }
+        },
+        "required": ["cursor"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "sample": { "cursor": "MSw0Nz0xMjM0" },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($cursor: String!) { next_items_page(cursor: $cursor) { cursor items { id name url } } }",
+          "variables": {
+            "cursor": "{{cursor}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "items": "{{response.data.next_items_page.items}}",
+          "nextCursor": "{{response.data.next_items_page.cursor}}"
+        }
+      }
+    },
+    "update.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create Update",
+      "description": "Post an update (monday's term for a comment/activity note) with the create_update mutation. body is required (String!). itemId is not required if parentId is given (a reply to an existing update); pass itemId to post directly on an item.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "itemId": { "type": "string", "description": "Item ID to post the update on. Not required if parentId is given." },
+          "body": { "type": "string", "description": "Update text (String!). Required." },
+          "parentId": { "type": "string", "description": "Parent update ID, to reply to an existing update thread." }
+        },
+        "required": ["body"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "body": { "type": "string" },
+          "createdAt": { "type": "string" }
+        }
+      },
+      "sample": { "itemId": "1234567890123", "body": "Confirmed on staging." },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($itemId: ID, $body: String!, $parentId: ID) { create_update(item_id: $itemId, body: $body, parent_id: $parentId) { id body created_at } }",
+          "variables": {
+            "itemId": "{{itemId}}",
+            "body": "{{body}}",
+            "parentId": "{{parentId}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "id": "{{response.data.create_update.id}}",
+          "body": "{{response.data.create_update.body}}",
+          "createdAt": "{{response.data.create_update.created_at}}"
+        }
+      }
+    },
+    "update.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Updates (page pagination)",
+      "description": "List recent updates with the updates query, reverse-chronological. Uses the PAGE-NUMBER pagination mechanism (limit + 1-based page), not a cursor — monday's own docs group updates with boards/users/teams under this mechanism. There is no cursor and no total-count field; terminate paging when a page returns fewer results than limit. fromDate/toDate filter by created_at (YYYY-MM-DD).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "integer", "description": "Page size. Provider default 25." },
+          "page": { "type": "integer", "description": "1-based page number. No cursor and no total; stop when a page returns fewer than limit." },
+          "fromDate": { "type": "string", "description": "Filter: created_at >= this date, YYYY-MM-DD." },
+          "toDate": { "type": "string", "description": "Filter: created_at <= this date, YYYY-MM-DD." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "updates": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "sample": { "limit": 50 },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($limit: Int, $page: Int, $fromDate: String, $toDate: String) { updates(limit: $limit, page: $page, from_date: $fromDate, to_date: $toDate) { id body created_at creator { id name } } }",
+          "variables": {
+            "limit": "{{limit}}",
+            "page": "{{page}}",
+            "fromDate": "{{fromDate}}",
+            "toDate": "{{toDate}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "updates": "{{response.data.updates}}"
+        }
+      }
+    },
+    "board.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create Board",
+      "description": "Create a board with the create_board mutation. boardName and boardKind are required (board_name: String!, board_kind: BoardKind!, one of \"private\" | \"public\" | \"share\"). This intentionally requests only id name on the create payload — whether create_board returns a url field is UNVERIFIED across API versions, so this connector does not map one. To get a board's URL, follow up with board.list filtered to the new id, or a dedicated boards(ids:){url} query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardName": { "type": "string", "description": "Board name (String!). Required." },
+          "boardKind": { "type": "string", "enum": ["private", "public", "share"], "description": "Board visibility kind (BoardKind!). Required." },
+          "workspaceId": { "type": "string", "description": "Workspace ID to create the board in." },
+          "folderId": { "type": "string", "description": "Folder ID to create the board in." },
+          "description": { "type": "string", "description": "Board description." }
+        },
+        "required": ["boardName", "boardKind"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" }
+        }
+      },
+      "sample": { "boardName": "New Board", "boardKind": "public" },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($boardName: String!, $boardKind: BoardKind!, $workspaceId: ID, $folderId: ID, $description: String) { create_board( board_name: $boardName board_kind: $boardKind workspace_id: $workspaceId folder_id: $folderId description: $description ) { id name } }",
+          "variables": {
+            "boardName": "{{boardName}}",
+            "boardKind": "{{boardKind}}",
+            "workspaceId": "{{workspaceId}}",
+            "folderId": "{{folderId}}",
+            "description": "{{description}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "id": "{{response.data.create_board.id}}",
+          "name": "{{response.data.create_board.name}}"
+        }
+      }
+    },
+    "board.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Boards (page pagination)",
+      "description": "List boards with the boards(limit, page, workspace_ids:) query. Uses the PAGE-NUMBER pagination mechanism (limit + 1-based page) — different from item.listByBoard's cursor mechanism. There is no cursor and no total-count field; terminate paging when a page returns fewer results than limit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "integer", "description": "Page size. Provider default 25." },
+          "page": { "type": "integer", "description": "1-based page number. No cursor and no total; stop when a page returns fewer than limit." },
+          "workspaceIds": { "type": "array", "items": { "type": "string" }, "description": "Restrict to these workspace IDs." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "boards": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "sample": { "limit": 25, "page": 1 },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($limit: Int, $page: Int, $workspaceIds: [ID]) { boards(limit: $limit, page: $page, workspace_ids: $workspaceIds) { id name state permissions } }",
+          "variables": {
+            "limit": "{{limit}}",
+            "page": "{{page}}",
+            "workspaceIds": "{{workspaceIds}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "boards": "{{response.data.boards}}"
+        }
+      }
+    },
+    "group.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create Group",
+      "description": "Create a group on a board with the create_group mutation. boardId and groupName are required (board_id: ID!, group_name: String!, at most 255 chars). groupColor is a HEX string (e.g. \"#ff642e\"). pos is the position_relative_method enum (before_at | after_at), used together with relativeTo to place the new group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": { "type": "string", "description": "Board ID (ID!). Required." },
+          "groupName": { "type": "string", "description": "Group name (String!, <=255 chars). Required." },
+          "groupColor": { "type": "string", "description": "HEX color, e.g. \"#ff642e\"." },
+          "relativeTo": { "type": "string", "description": "Group ID to position relative to." },
+          "pos": { "type": "string", "enum": ["before_at", "after_at"], "description": "position_relative_method — where to place the group relative to relativeTo." }
+        },
+        "required": ["boardId", "groupName"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }
+        }
+      },
+      "sample": { "boardId": "1234567890", "groupName": "New Group" },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "mutation ($boardId: ID!, $groupName: String!, $groupColor: String, $relativeTo: String, $pos: PositionRelative) { create_group( board_id: $boardId group_name: $groupName group_color: $groupColor relative_to: $relativeTo position_relative_method: $pos ) { id } }",
+          "variables": {
+            "boardId": "{{boardId}}",
+            "groupName": "{{groupName}}",
+            "groupColor": "{{groupColor}}",
+            "relativeTo": "{{relativeTo}}",
+            "pos": "{{pos}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "id": "{{response.data.create_group.id}}"
+        }
+      }
+    },
+    "group.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Groups",
+      "description": "List a board's groups with boards { groups }. boardId is required. Not paginated — a board's group list is small and returned in full.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "boardId": { "type": "string", "description": "Board ID (ID!). Required." }
+        },
+        "required": ["boardId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "groups": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "sample": { "boardId": "1234567890" },
+      "request": {
+        "method": "POST",
+        "path": "/v2",
+        "body": {
+          "query": "query ($boardId: ID!) { boards(ids: $boardId) { groups { id title color position archived } } }",
+          "variables": {
+            "boardId": "{{boardId}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "groups": "{{response.data.boards.0.groups}}"
+        }
+      }
+    }
+  },
+  "models": ["item", "update", "board", "group"]
+}

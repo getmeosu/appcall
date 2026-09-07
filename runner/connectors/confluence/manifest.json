@@ -1,0 +1,555 @@
+{
+  "key": "confluence",
+  "name": "Confluence",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "derive": [{ "field": "basicAuth", "kind": "basic", "from": ["email", "apiToken"] }],
+      "fields": [
+        {
+          "key": "site",
+          "label": "Confluence site",
+          "description": "Bare hostname only — no scheme, no /wiki path, no trailing slash, e.g. \"acme.atlassian.net\". Custom domains are admitted too, but must be the exact canonical hostname the tenant answers on (the outbound boundary blocks redirects).",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "email",
+          "label": "Account email",
+          "description": "The Atlassian account email the API token below belongs to. Used with apiToken to build the HTTP Basic Authorization header.",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "apiToken",
+          "label": "API token",
+          "description": "An Atlassian API token created at https://id.atlassian.com/manage/api-tokens. Sent as the password half of HTTP Basic auth alongside email.",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["{{site}}"]
+  },
+  "http": {
+    "baseUrl": "https://{{site}}/wiki",
+    "auth": {
+      "field": "apiToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Basic {{basicAuth}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": ["errors.0.detail", "errors.0.title", "message", "errors.0.code"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the email/apiToken pair by calling GET /rest/api/user/current (v1 — v2 has no current-user endpoint), which returns the authenticated user's own details. Takes no input; a 401/403 means the credentials are bad, expired, or the site hostname is wrong.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "type": { "type": "string" },
+          "accountId": { "type": "string" },
+          "displayName": { "type": "string" },
+          "email": { "type": "string" }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/rest/api/user/current",
+        "success": [200],
+        "echo": { "status": "ok" },
+        "result": {
+          "status": "ok",
+          "type": "{{response.type}}",
+          "accountId": "{{response.accountId}}",
+          "displayName": "{{response.displayName}}",
+          "email": "{{response.email}}"
+        }
+      }
+    },
+    "page.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Page",
+      "description": "Create a page (v2). spaceId is the NUMERIC-STRING space id, NOT the space key — resolve a key to its id first with space.list (GET /api/v2/spaces?keys=KEY -> results[0].id); passing a key directly here fails. title is required unless status is \"draft\". parentId defaults to the space homepage; set rootLevel true to create at the space root instead. body.representation is typically \"storage\" (Confluence storage-format XHTML) or \"atlas_doc_format\".",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spaceId": { "type": "string", "description": "Numeric-string space id, NOT the space key. Resolve via space.list." },
+          "title": { "type": "string", "description": "Page title. Required unless status is \"draft\"." },
+          "status": { "type": "string", "enum": ["current", "draft"], "description": "Page status. Defaults to \"current\"." },
+          "parentId": { "type": "string", "description": "Parent page id. Defaults to the space homepage unless rootLevel is true." },
+          "body": {
+            "type": "object",
+            "description": "{ representation: \"storage\" | \"atlas_doc_format\" | \"wiki\", value: \"<content string>\" }",
+            "properties": {
+              "representation": { "type": "string", "enum": ["storage", "atlas_doc_format", "wiki"] },
+              "value": { "type": "string" }
+            }
+          },
+          "subtype": { "type": "string", "enum": ["live"], "description": "Set \"live\" to create a live doc." },
+          "embedded": { "type": "boolean", "description": "Create as an embedded page." },
+          "private": { "type": "boolean", "description": "Create as a private page visible only to the creator." },
+          "rootLevel": { "type": "boolean", "description": "Create at the space root instead of under the space homepage." }
+        },
+        "required": ["spaceId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "page": { "type": "object" } }
+      },
+      "sample": { "spaceId": "98765", "title": "New page", "body": { "representation": "storage", "value": "<p>Hello</p>" } },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/pages",
+        "query": {
+          "embedded": "{{embedded}}",
+          "private": "{{private}}",
+          "root-level": "{{rootLevel}}"
+        },
+        "body": {
+          "spaceId": "{{spaceId}}",
+          "title": "{{title}}",
+          "status": "{{status}}",
+          "parentId": "{{parentId}}",
+          "body": "{{body}}",
+          "subtype": "{{subtype}}"
+        },
+        "success": [200],
+        "result": { "page": "{{response}}" }
+      }
+    },
+    "page.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Page",
+      "description": "Fetch a single page by id (v2). Pass bodyFormat to control how the response's body.value is rendered (e.g. \"storage\" or \"atlas_doc_format\"); omit it to leave the body out of the response.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Page id." },
+          "bodyFormat": { "type": "string", "enum": ["storage", "atlas_doc_format", "view"], "description": "Representation to render the page body in." }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "page": { "type": "object" } }
+      },
+      "sample": { "id": "123456" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/pages/{{id}}",
+        "query": { "body-format": "{{bodyFormat}}" },
+        "success": [200],
+        "result": { "page": "{{response}}" }
+      }
+    },
+    "page.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Page",
+      "description": "Update a page (v2). This is OPTIMISTIC CONCURRENCY: id, status, title, body AND version are ALL required, and version.number must be the page's CURRENT version number PLUS ONE — read the page first with page.get to learn the current version.number, then send number+1. A stale version.number is rejected by Confluence. id in the body must match the id in the path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Page id. Must match the id in the path." },
+          "status": { "type": "string", "enum": ["current", "draft"], "description": "Page status." },
+          "title": { "type": "string", "description": "Page title." },
+          "body": {
+            "type": "object",
+            "description": "{ representation: \"storage\" | \"atlas_doc_format\" | \"wiki\", value: \"<content string>\" }",
+            "properties": {
+              "representation": { "type": "string", "enum": ["storage", "atlas_doc_format", "wiki"] },
+              "value": { "type": "string" }
+            }
+          },
+          "version": {
+            "type": "object",
+            "description": "{ number: <CURRENT page version number + 1>, message?: \"...\" }. Read the page first to learn the current version number.",
+            "properties": {
+              "number": { "type": "integer" },
+              "message": { "type": "string" }
+            }
+          },
+          "spaceId": { "type": "string", "description": "Cannot move a page across spaces via this field." },
+          "parentId": { "type": "string", "description": "Move the page within its current space." },
+          "ownerId": { "type": "string", "description": "New page owner account id." }
+        },
+        "required": ["id", "status", "title", "body", "version"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "page": { "type": "object" } }
+      },
+      "sample": {
+        "id": "123456",
+        "status": "current",
+        "title": "Updated title",
+        "body": { "representation": "storage", "value": "<p>Updated</p>" },
+        "version": { "number": 2, "message": "Connector update" }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v2/pages/{{id}}",
+        "body": {
+          "id": "{{id}}",
+          "status": "{{status}}",
+          "title": "{{title}}",
+          "body": "{{body}}",
+          "version": "{{version}}",
+          "spaceId": "{{spaceId}}",
+          "parentId": "{{parentId}}",
+          "ownerId": "{{ownerId}}"
+        },
+        "success": [200],
+        "result": { "page": "{{response}}" }
+      }
+    },
+    "page.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Pages",
+      "description": "List pages (v2). Uses cursor pagination: pass cursor and limit. The response carries no bare cursor scalar — Confluence returns _links.next, a RELATIVE URL that already contains the cursor query parameter (e.g. \"/wiki/api/v2/pages?cursor=...&limit=25\"). This is mapped through unchanged as nextLink; there is no further pagination once nextLink is absent. A caller must extract the cursor query parameter from nextLink itself to continue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spaceId": { "type": "string", "description": "Filter to a single space id." },
+          "title": { "type": "string", "description": "Filter by exact title." },
+          "status": { "type": "string", "enum": ["current", "archived", "deleted", "trashed", "draft"], "description": "Filter by page status." },
+          "bodyFormat": { "type": "string", "enum": ["storage", "atlas_doc_format", "view"], "description": "Representation to render each page body in." },
+          "sort": { "type": "string", "description": "Sort order, e.g. \"id\" or \"-modified-date\"." },
+          "cursor": { "type": "string", "description": "Opaque cursor extracted from a previous response's nextLink." },
+          "limit": { "type": "integer", "description": "Results per page." }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pages": { "type": "array", "items": { "type": "object" } },
+          "nextLink": { "type": "string", "description": "Relative URL for the next page, already carrying the cursor query parameter. Not a bare cursor." }
+        }
+      },
+      "sample": { "limit": 25 },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/pages",
+        "query": {
+          "space-id": "{{spaceId}}",
+          "title": "{{title}}",
+          "status": "{{status}}",
+          "body-format": "{{bodyFormat}}",
+          "sort": "{{sort}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "pages": "{{response.results}}",
+          "nextLink": "{{response._links.next}}"
+        }
+      }
+    },
+    "page.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete Page",
+      "description": "Delete a page by id (v2). Moves the page to trash by default (Confluence's normal delete semantics); returns 204 with no body.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Page id." }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": { "type": "boolean" },
+          "id": { "type": "string" }
+        }
+      },
+      "sample": { "id": "123456" },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v2/pages/{{id}}",
+        "success": [200, 204],
+        "result": { "deleted": true, "id": "{{input.id}}" }
+      }
+    },
+    "space.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Spaces",
+      "description": "List spaces (v2), or resolve a space KEY to the numeric-string id page.create requires: pass keys with the space key and read results[0].id. Uses cursor pagination — see page.list's description for why nextLink is a relative URL, not a bare cursor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": { "type": "array", "items": { "type": "string" }, "description": "Filter to these numeric-string space ids." },
+          "keys": { "type": "array", "items": { "type": "string" }, "description": "Filter to these space keys. Use this to resolve a key to an id for page.create's spaceId." },
+          "type": { "type": "string", "enum": ["global", "personal"], "description": "Filter by space type." },
+          "status": { "type": "string", "enum": ["current", "archived"], "description": "Filter by space status." },
+          "sort": { "type": "string", "description": "Sort order, e.g. \"name\" or \"-name\"." },
+          "cursor": { "type": "string", "description": "Opaque cursor extracted from a previous response's nextLink." },
+          "limit": { "type": "integer", "description": "Results per page." }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "spaces": { "type": "array", "items": { "type": "object" } },
+          "nextLink": { "type": "string", "description": "Relative URL for the next page, already carrying the cursor query parameter. Not a bare cursor." }
+        }
+      },
+      "sample": { "keys": ["ENG"] },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/spaces",
+        "query": {
+          "ids": "{{ids}}",
+          "keys": "{{keys}}",
+          "type": "{{type}}",
+          "status": "{{status}}",
+          "sort": "{{sort}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "spaces": "{{response.results}}",
+          "nextLink": "{{response._links.next}}"
+        }
+      }
+    },
+    "space.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Space",
+      "description": "Fetch a single space by its numeric-string id (v2). Use space.list with keys to resolve a space key to an id first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Numeric-string space id." },
+          "descriptionFormat": { "type": "string", "enum": ["plain", "view"], "description": "Representation to render the space description in." },
+          "includeIcon": { "type": "boolean", "description": "Include the space icon in the response." }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "space": { "type": "object" } }
+      },
+      "sample": { "id": "98765" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/spaces/{{id}}",
+        "query": {
+          "description-format": "{{descriptionFormat}}",
+          "include-icon": "{{includeIcon}}"
+        },
+        "success": [200],
+        "result": { "space": "{{response}}" }
+      }
+    },
+    "search.cql": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Search (CQL)",
+      "description": "Run a Confluence Query Language search (v1 — v2 has no CQL search endpoint). Example cql: \"type=page AND space=ENG AND text ~ \\\"onboarding\\\"\".",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cql": { "type": "string", "description": "The CQL query string." },
+          "cqlcontext": { "type": "string", "description": "JSON string narrowing the search, e.g. {\"spaceKey\":\"ENG\"}." },
+          "cursor": { "type": "string", "description": "Opaque cursor extracted from a previous response's _links.next." },
+          "limit": { "type": "integer", "description": "Results per page." },
+          "start": { "type": "integer", "description": "Legacy offset, alternative to cursor." },
+          "excerpt": { "type": "string", "description": "Excerpt strategy, e.g. \"highlight\" or \"none\"." },
+          "includeArchivedSpaces": { "type": "boolean", "description": "Include results from archived spaces." }
+        },
+        "required": ["cql"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "results": { "type": "array", "items": { "type": "object" } },
+          "start": { "type": "integer" },
+          "limit": { "type": "integer" },
+          "size": { "type": "integer" },
+          "totalSize": { "type": "integer" }
+        }
+      },
+      "sample": { "cql": "type=page AND text ~ \"onboarding\"" },
+      "request": {
+        "method": "GET",
+        "path": "/rest/api/search",
+        "query": {
+          "cql": "{{cql}}",
+          "cqlcontext": "{{cqlcontext}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "start": "{{start}}",
+          "excerpt": "{{excerpt}}",
+          "includeArchivedSpaces": "{{includeArchivedSpaces}}"
+        },
+        "success": [200],
+        "result": {
+          "results": "{{response.results}}",
+          "start": "{{response.start}}",
+          "limit": "{{response.limit}}",
+          "size": "{{response.size}}",
+          "totalSize": "{{response.totalSize}}"
+        }
+      }
+    },
+    "attachment.listForPage": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Attachments for Page",
+      "description": "List attachment metadata for a page (v2). Uploading an attachment is NOT supported by this connector — it requires multipart/form-data and an X-Atlassian-Token header, which the declarative engine cannot express; see the README's known gaps.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Page id." },
+          "sort": { "type": "string", "description": "Sort order, e.g. \"created-date\" or \"-created-date\"." },
+          "cursor": { "type": "string", "description": "Opaque cursor extracted from a previous response's nextLink." },
+          "status": { "type": "string", "enum": ["current", "archived", "trashed"], "description": "Filter by attachment status." },
+          "mediaType": { "type": "string", "description": "Filter by media (MIME) type." },
+          "filename": { "type": "string", "description": "Filter by filename." },
+          "limit": { "type": "integer", "description": "Results per page." }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "attachments": { "type": "array", "items": { "type": "object" } },
+          "nextLink": { "type": "string", "description": "Relative URL for the next page, already carrying the cursor query parameter. Not a bare cursor." }
+        }
+      },
+      "sample": { "id": "123456" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/pages/{{id}}/attachments",
+        "query": {
+          "sort": "{{sort}}",
+          "cursor": "{{cursor}}",
+          "status": "{{status}}",
+          "mediaType": "{{mediaType}}",
+          "filename": "{{filename}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "attachments": "{{response.results}}",
+          "nextLink": "{{response._links.next}}"
+        }
+      }
+    },
+    "comment.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Footer Comment",
+      "description": "Create a footer comment (v2, POST /api/v2/footer-comments). Attach it to exactly one container: pageId is the common case; use blogPostId, attachmentId, or customContentId instead to comment on a different container. Set parentCommentId to reply to an existing comment instead of starting a new thread. Inline comments use a separate endpoint (/api/v2/inline-comments) this connector does not expose.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": { "type": "string", "description": "Page to attach the comment to. Provide exactly one of pageId/blogPostId/attachmentId/customContentId." },
+          "blogPostId": { "type": "string", "description": "Blog post to attach the comment to, instead of pageId." },
+          "attachmentId": { "type": "string", "description": "Attachment to attach the comment to, instead of pageId." },
+          "customContentId": { "type": "string", "description": "Custom content to attach the comment to, instead of pageId." },
+          "parentCommentId": { "type": "string", "description": "Reply to this existing comment instead of starting a new thread." },
+          "body": {
+            "type": "object",
+            "description": "{ representation: \"storage\" | \"atlas_doc_format\" | \"wiki\", value: \"<content string>\" }",
+            "properties": {
+              "representation": { "type": "string", "enum": ["storage", "atlas_doc_format", "wiki"] },
+              "value": { "type": "string" }
+            }
+          }
+        },
+        "required": ["body"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "comment": { "type": "object" } }
+      },
+      "sample": { "pageId": "123456", "body": { "representation": "storage", "value": "<p>Nice work!</p>" } },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/footer-comments",
+        "body": {
+          "pageId": "{{pageId}}",
+          "blogPostId": "{{blogPostId}}",
+          "attachmentId": "{{attachmentId}}",
+          "customContentId": "{{customContentId}}",
+          "parentCommentId": "{{parentCommentId}}",
+          "body": "{{body}}"
+        },
+        "success": [201],
+        "result": { "comment": "{{response}}" }
+      }
+    }
+  },
+  "models": ["page", "space", "comment", "attachment", "user"]
+}

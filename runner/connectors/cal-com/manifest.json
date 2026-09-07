@@ -1,0 +1,460 @@
+{
+  "key": "cal-com",
+  "name": "Cal.com",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["scheduling"],
+  "auth": {
+    "type": "external_bearer",
+    "scopes": ["BOOKING_READ", "BOOKING_WRITE", "EVENT_TYPE_READ", "SCHEDULE_READ"],
+    "setup": {
+      "mode": "external_bearer",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": ["api.cal.com"]
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Cal.com connector. Returns connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "description": "Connector health status, e.g. \"ok\"." }
+        }
+      }
+    },
+    "me.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Current User",
+      "description": "Retrieve the profile of the authenticated Cal.com user, including name, email, username, timezone, and default scheduling settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "user": { "type": "object", "description": "The authenticated user profile from Cal.com." }
+        }
+      }
+    },
+    "event_types.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Event Types",
+      "description": "Retrieve a list of event types from Cal.com. Optionally filter by username or event slug.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Optional. Filter event types for a specific Cal.com username."
+          },
+          "eventSlug": {
+            "type": "string",
+            "description": "Optional. Filter by a specific event slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "eventTypes": { "type": "array", "description": "List of event type objects." }
+        }
+      }
+    },
+    "event_types.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Event Type",
+      "description": "Retrieve details of a single Cal.com event type by its numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "The numeric ID of the event type to retrieve."
+          }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "eventType": { "type": "object", "description": "The event type resource." }
+        }
+      }
+    },
+    "bookings.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Bookings",
+      "description": "Retrieve a list of bookings from Cal.com with optional filters for status, attendee email, event type, date range, and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Optional. Filter bookings by status: upcoming, recurring, past, cancelled, or unconfirmed.",
+            "enum": ["upcoming", "recurring", "past", "cancelled", "unconfirmed"]
+          },
+          "attendeeEmail": {
+            "type": "string",
+            "description": "Optional. Filter bookings by attendee email address."
+          },
+          "eventTypeId": {
+            "type": "number",
+            "description": "Optional. Filter bookings by event type numeric ID."
+          },
+          "afterStart": {
+            "type": "string",
+            "description": "Optional. ISO 8601 date-time. Return bookings that start at or after this time."
+          },
+          "beforeEnd": {
+            "type": "string",
+            "description": "Optional. ISO 8601 date-time. Return bookings that end at or before this time."
+          },
+          "take": {
+            "type": "number",
+            "description": "Optional. Number of bookings to return (pagination page size)."
+          },
+          "skip": {
+            "type": "number",
+            "description": "Optional. Number of bookings to skip (pagination offset)."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "bookings": { "type": "array", "description": "List of booking objects." }
+        }
+      }
+    },
+    "bookings.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Booking",
+      "description": "Retrieve details of a single Cal.com booking by its UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "description": "The UID of the booking to retrieve."
+          }
+        },
+        "required": ["uid"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "booking": { "type": "object", "description": "The booking resource." }
+        }
+      }
+    },
+    "bookings.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create Booking",
+      "description": "Create a new booking on Cal.com for a given event type and start time.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "ISO 8601 date-time string for when the booking should start (e.g. 2024-09-15T10:00:00Z)."
+          },
+          "eventTypeId": {
+            "type": "number",
+            "description": "The numeric ID of the event type to book."
+          },
+          "attendee": {
+            "type": "object",
+            "description": "Attendee details for the booking.",
+            "properties": {
+              "name": { "type": "string", "description": "Full name of the attendee." },
+              "email": { "type": "string", "description": "Email address of the attendee." },
+              "timeZone": { "type": "string", "description": "IANA timezone of the attendee (e.g. America/New_York)." },
+              "language": { "type": "string", "description": "Optional. Language locale code (e.g. en)." }
+            },
+            "required": ["name", "email", "timeZone"]
+          },
+          "location": {
+            "type": "string",
+            "description": "Optional. Location for the meeting (e.g. a conferencing link or address)."
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional. Arbitrary key-value metadata to attach to the booking."
+          },
+          "lengthInMinutes": {
+            "type": "number",
+            "description": "Optional. Override the default duration of the booking in minutes."
+          }
+        },
+        "required": ["start", "eventTypeId", "attendee"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "booking": { "type": "object", "description": "The created booking resource." }
+        }
+      }
+    },
+    "bookings.cancel": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Cancel Booking",
+      "description": "Cancel an existing Cal.com booking by its UID, optionally providing a cancellation reason.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "description": "The UID of the booking to cancel."
+          },
+          "cancellationReason": {
+            "type": "string",
+            "description": "Optional. The reason for cancelling the booking."
+          }
+        },
+        "required": ["uid"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "booking": { "type": "object", "description": "The cancelled booking resource." }
+        }
+      }
+    },
+    "bookings.reschedule": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Reschedule Booking",
+      "description": "Reschedule an existing Cal.com booking to a new start time, optionally providing a rescheduling reason.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "description": "The UID of the booking to reschedule."
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO 8601 date-time string for the new start time of the booking."
+          },
+          "reschedulingReason": {
+            "type": "string",
+            "description": "Optional. The reason for rescheduling the booking."
+          }
+        },
+        "required": ["uid", "start"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "booking": { "type": "object", "description": "The rescheduled booking resource." }
+        }
+      }
+    },
+    "bookings.confirm": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Confirm Booking",
+      "description": "Confirm a pending Cal.com booking that requires host approval.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "description": "The UID of the booking to confirm."
+          }
+        },
+        "required": ["uid"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "booking": { "type": "object", "description": "The confirmed booking resource." }
+        }
+      }
+    },
+    "bookings.decline": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Decline Booking",
+      "description": "Decline a pending Cal.com booking that requires host approval, optionally providing a decline reason.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "description": "The UID of the booking to decline."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Optional. The reason for declining the booking."
+          }
+        },
+        "required": ["uid"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "booking": { "type": "object", "description": "The declined booking resource." }
+        }
+      }
+    },
+    "slots.available": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Available Slots",
+      "description": "Retrieve available time slots for a Cal.com event type within a date range, optionally filtered by timezone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "eventTypeId": {
+            "type": "number",
+            "description": "The numeric ID of the event type to get available slots for."
+          },
+          "start": {
+            "type": "string",
+            "description": "ISO 8601 date-time string for the start of the availability window."
+          },
+          "end": {
+            "type": "string",
+            "description": "ISO 8601 date-time string for the end of the availability window."
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "Optional. IANA timezone for the returned slots (e.g. America/New_York)."
+          }
+        },
+        "required": ["eventTypeId", "start", "end"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "slots": { "type": "object", "description": "Map of date strings to arrays of available slot times." }
+        }
+      }
+    },
+    "schedules.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Schedules",
+      "description": "Retrieve all availability schedules for the authenticated Cal.com user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "schedules": { "type": "array", "description": "List of availability schedule objects." }
+        }
+      }
+    }
+  },
+  "models": ["booking", "event-type", "schedule"]
+}

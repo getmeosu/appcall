@@ -1,0 +1,324 @@
+{
+  "key": "dribbble",
+  "name": "Dribbble",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "description": "Authenticated Dribbble API operations using a manually supplied OAuth2 access token.",
+  "categories": [
+    "social"
+  ],
+  "auth": {
+    "type": "bearer",
+    "scopes": [
+      "public",
+      "upload"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "OAuth2 user access token (manual; no automatic refresh)",
+          "secret": true,
+          "required": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.dribbble.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://api.dribbble.com/v2",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "x-ratelimit-reset",
+      "retryAfterKind": "unix",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "message"
+      ],
+      "bodyErrorPaths": [
+        "errors"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the OAuth2 user access token by reading the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user",
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "user": "{{response}}"
+        }
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Users Me",
+      "description": "Read the authenticated user profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      }
+    },
+    "shots.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Shots List",
+      "description": "List shots owned by the authenticated user. Returns the raw Link header; read rel=next to request the next page. Never assume a short page is the last page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting at 1. Use the page indicated by paginationLink rel=next."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size up to 100; some endpoints may ignore this value."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "shots": {
+            "type": "array",
+            "description": "Provider result."
+          },
+          "paginationLink": {
+            "type": "string",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/shots",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "result": {
+          "shots": "{{response}}",
+          "paginationLink": "{{headers.link}}"
+        }
+      }
+    },
+    "shots.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Shots Get",
+      "description": "Get an existing shot owned by the authenticated user; this is not a public discovery endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Shot ID owned by the authenticated user."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "shot": {
+            "type": "object",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/shots/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "shot": "{{response}}"
+        }
+      }
+    },
+    "shots.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Shots Update",
+      "description": "Update an owned shot title, description, tags or visibility. Requires upload scope. Omitted fields are unchanged; uploading media is unsupported.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Shot ID owned by the authenticated user."
+          },
+          "title": {
+            "type": "string",
+            "description": "Shot title."
+          },
+          "description": {
+            "type": "string",
+            "description": "Shot description."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Replacement tags, maximum 12. Existing omitted tags are removed."
+          },
+          "lowProfile": {
+            "type": "boolean",
+            "description": "Whether the shot is low profile."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "shot": {
+            "type": "object",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/shots/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "tags": "{{tags}}",
+          "low_profile": "{{lowProfile}}"
+        },
+        "result": {
+          "shot": "{{response}}"
+        }
+      }
+    },
+    "shots.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Shots Delete",
+      "description": "Permanently delete a shot owned by the authenticated user. Requires upload scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Shot ID owned by the authenticated user."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/shots/{{id}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    }
+  },
+  "models": [
+    "user",
+    "shot"
+  ]
+}

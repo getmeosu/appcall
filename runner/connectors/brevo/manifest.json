@@ -1,0 +1,669 @@
+{
+  "key": "brevo",
+  "name": "Brevo",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["email-marketing"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [],
+      "routes": [
+        {
+          "id": "api_key",
+          "label": "API Key",
+          "fields": [
+            { "key": "apiKey", "label": "API Key", "required": true, "secret": true }
+          ]
+        },
+        {
+          "id": "smtp",
+          "label": "SMTP relay",
+          "fields": [
+            { "key": "smtpHost", "label": "SMTP host (e.g. smtp-relay.brevo.com)", "required": true, "secret": false },
+            { "key": "smtpPort", "label": "Port (587 or 465)", "required": true, "secret": false },
+            { "key": "smtpUser", "label": "SMTP login", "required": true, "secret": false },
+            { "key": "smtpPassword", "label": "SMTP key / password", "required": true, "secret": true }
+          ]
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.brevo.com",
+      "smtp-relay.brevo.com"
+    ]
+  },
+  "operations": {
+    "contacts.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "lists.list": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576
+    },
+    "campaigns.list": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "contacts.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Contact",
+      "description": "Create a new contact in Brevo by email, optionally setting name, list memberships, and custom attributes.",
+      "sample": {
+        "email": "new.contact@example.com",
+        "firstName": "Test",
+        "lastName": "Contact"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Contact email address. Required and used as the unique identifier."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Contact's first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Contact's last name."
+          },
+          "listIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "IDs of the Brevo lists to add the contact to."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Custom contact attributes as key-value pairs."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contact": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "provider": { "type": "string" },
+              "providerContactId": { "type": "string" },
+              "email": { "type": "string" },
+              "firstName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "listIds": { "type": "array", "items": { "type": "number" } },
+              "attributes": { "type": "object" },
+              "createdAt": { "type": "string" },
+              "updatedAt": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "contacts.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Contact",
+      "description": "Retrieve a Brevo contact by email address or numeric contact ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "The contact's email address or numeric Brevo contact ID."
+          }
+        },
+        "required": ["identifier"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contact": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "provider": { "type": "string" },
+              "providerContactId": { "type": "string" },
+              "email": { "type": "string" },
+              "firstName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "listIds": { "type": "array", "items": { "type": "number" } },
+              "attributes": { "type": "object" },
+              "createdAt": { "type": "string" },
+              "updatedAt": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "contacts.update": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 65536,
+      "title": "Update Contact",
+      "description": "Update an existing Brevo contact's name, attributes, or list memberships by email or contact ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "The contact's email address or numeric Brevo contact ID."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "New first name for the contact."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "New last name for the contact."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Custom contact attributes to update as key-value pairs."
+          },
+          "listIds": {
+            "type": "array",
+            "items": { "type": "number" },
+            "description": "List IDs to assign the contact to."
+          }
+        },
+        "required": ["identifier"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "updated": { "type": "boolean" }
+        }
+      }
+    },
+    "contacts.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Contact",
+      "description": "Permanently delete a Brevo contact by email address or numeric contact ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "description": "The contact's email address or numeric Brevo contact ID."
+          }
+        },
+        "required": ["identifier"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "smtp.email.send": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 65536,
+      "title": "Send Transactional Email",
+      "description": "Send a transactional email via Brevo's SMTP API. If you omit the sender, the account's first verified sender is used automatically (a send from an unverified sender is silently dropped by Brevo). Supports HTML and plain-text content, CC/BCC, and reply-to.",
+      "sample": {
+        "to": [{ "email": "recipient@example.com" }],
+        "subject": "Test email from appcall ✅",
+        "htmlContent": "<h1>Hello 👋</h1>\n<p>This is a test email sent from the appcall guided tester. If you're reading this, sending works.</p>"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": { "type": "string", "description": "Recipient email address." },
+                "name": { "type": "string", "description": "Recipient display name." }
+              },
+              "required": ["email"]
+            },
+            "description": "List of recipient email addresses (and optional display names)."
+          },
+          "sender": {
+            "type": "object",
+            "properties": {
+              "email": { "type": "string", "description": "Sender email address." },
+              "name": { "type": "string", "description": "Sender display name." }
+            },
+            "required": ["email"],
+            "description": "Sender. Optional — leave blank to use your account's first verified Brevo sender (recommended for testing)."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "htmlContent": {
+            "type": "string",
+            "description": "HTML body of the email."
+          },
+          "textContent": {
+            "type": "string",
+            "description": "Plain-text body of the email."
+          },
+          "replyTo": {
+            "type": "object",
+            "properties": {
+              "email": { "type": "string" },
+              "name": { "type": "string" }
+            },
+            "description": "Reply-to address."
+          },
+          "cc": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": { "type": "string" },
+                "name": { "type": "string" }
+              },
+              "required": ["email"]
+            },
+            "description": "CC recipients."
+          },
+          "bcc": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": { "type": "string" },
+                "name": { "type": "string" }
+              },
+              "required": ["email"]
+            },
+            "description": "BCC recipients."
+          }
+        },
+        "required": ["to", "subject"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "email": {
+            "type": "object",
+            "properties": {
+              "messageId": { "type": "string" },
+              "provider": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "lists.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create List",
+      "description": "Create a new contact list in Brevo under the specified folder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the new contact list."
+          },
+          "folderId": {
+            "type": "number",
+            "description": "ID of the folder to create the list in."
+          }
+        },
+        "required": ["name", "folderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "list": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "provider": { "type": "string" },
+              "providerListId": { "type": "string" },
+              "name": { "type": "string" },
+              "totalSubscribers": { "type": "number" },
+              "createdAt": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "lists.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Get List",
+      "description": "Retrieve details of a Brevo contact list by its numeric list ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "number",
+            "description": "The numeric ID of the Brevo list to retrieve."
+          }
+        },
+        "required": ["listId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "list": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "provider": { "type": "string" },
+              "providerListId": { "type": "string" },
+              "name": { "type": "string" },
+              "totalSubscribers": { "type": "number" },
+              "createdAt": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "contacts.addToList": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 65536,
+      "title": "Add Contacts to List",
+      "description": "Add one or more contacts (by email) to a Brevo contact list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "number",
+            "description": "The numeric ID of the Brevo list to add contacts to."
+          },
+          "emails": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of email addresses to add to the list."
+          }
+        },
+        "required": ["listId", "emails"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contacts": { "type": "object" }
+        }
+      }
+    },
+    "contacts.removeFromList": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 65536,
+      "title": "Remove Contacts from List",
+      "description": "Remove one or more contacts (by email) from a Brevo contact list, or remove all contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "number",
+            "description": "The numeric ID of the Brevo list to remove contacts from."
+          },
+          "emails": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of email addresses to remove from the list. Provide either this or all:true."
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Set to true to remove all contacts from the list."
+          }
+        },
+        "required": ["listId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "removed": { "type": "boolean" }
+        }
+      }
+    },
+    "emailCampaigns.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 1048576,
+      "title": "Create Email Campaign",
+      "description": "Create a new email marketing campaign in Brevo with subject, sender, HTML content, and recipients.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Internal name for the campaign."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line shown to recipients."
+          },
+          "sender": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "description": "Sender display name." },
+              "email": { "type": "string", "description": "Sender email address." }
+            },
+            "required": ["name", "email"],
+            "description": "Sender information for the campaign."
+          },
+          "htmlContent": {
+            "type": "string",
+            "description": "HTML content of the email campaign body."
+          },
+          "htmlUrl": {
+            "type": "string",
+            "description": "URL of an HTML page to use as the campaign body."
+          },
+          "scheduledAt": {
+            "type": "string",
+            "description": "ISO 8601 datetime to schedule the campaign send."
+          },
+          "recipients": {
+            "type": "object",
+            "properties": {
+              "listIds": {
+                "type": "array",
+                "items": { "type": "number" },
+                "description": "List IDs to send the campaign to."
+              },
+              "exclusionListIds": {
+                "type": "array",
+                "items": { "type": "number" },
+                "description": "List IDs to exclude from the send."
+              }
+            },
+            "description": "Recipient list configuration."
+          }
+        },
+        "required": ["name", "subject", "sender"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "campaign": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "provider": { "type": "string" },
+              "providerCampaignId": { "type": "string" },
+              "name": { "type": "string" },
+              "status": { "type": "string" },
+              "subject": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "emailCampaigns.send": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Send Email Campaign Now",
+      "description": "Immediately send a Brevo email campaign that is in draft or scheduled state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "number",
+            "description": "The numeric ID of the email campaign to send immediately."
+          }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "sent": { "type": "boolean" }
+        }
+      }
+    },
+    "emailCampaigns.get": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Email Campaign",
+      "description": "Retrieve details and statistics for a specific Brevo email campaign by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "number",
+            "description": "The numeric ID of the email campaign to retrieve."
+          }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "campaign": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "provider": { "type": "string" },
+              "providerCampaignId": { "type": "string" },
+              "name": { "type": "string" },
+              "status": { "type": "string" },
+              "type": { "type": "string" },
+              "subject": { "type": "string" },
+              "sentCount": { "type": "number" },
+              "openRate": { "type": "number" },
+              "clickRate": { "type": "number" },
+              "createdAt": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Brevo connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "contact",
+    "list",
+    "campaign"
+  ]
+}

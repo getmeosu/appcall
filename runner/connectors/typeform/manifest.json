@@ -1,0 +1,452 @@
+{
+  "key": "typeform",
+  "name": "Typeform",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["forms"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "forms:read",
+      "forms:write",
+      "responses:read",
+      "responses:write",
+      "webhooks:read",
+      "webhooks:write"
+    ],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.typeform.com"
+    ]
+  },
+  "operations": {
+    "forms.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "responses.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Typeform connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    },
+    "forms.list.action": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Forms",
+      "description": "Retrieve a paginated list of all Typeform forms in the workspace. Supports filtering by search query and pagination parameters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number to retrieve (1-based)."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Number of forms per page (max 200)."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search query to filter forms by title."
+          }
+        },
+        "required": ["accessToken"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "forms": {
+            "type": "array",
+            "description": "Array of form objects."
+          },
+          "totalItems": {
+            "type": "number",
+            "description": "Total number of forms matching the query."
+          }
+        }
+      }
+    },
+    "forms.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Form",
+      "description": "Retrieve a single Typeform form by its ID, including all fields, settings, and metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the Typeform form."
+          }
+        },
+        "required": ["accessToken", "formId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "form": {
+            "type": "object",
+            "description": "The normalized form object including title, fields, and metadata."
+          }
+        }
+      }
+    },
+    "forms.create": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 524288,
+      "maxResponseBytes": 1048576,
+      "title": "Create Form",
+      "description": "Create a new Typeform form with the specified title, fields, and settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "title": {
+            "type": "string",
+            "description": "The title of the new form."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Array of field objects to include in the form."
+          },
+          "settings": {
+            "type": "object",
+            "description": "Form settings such as language, progress bar visibility, etc."
+          },
+          "welcomeScreens": {
+            "type": "array",
+            "description": "Array of welcome screen objects."
+          },
+          "thankyouScreens": {
+            "type": "array",
+            "description": "Array of thank-you screen objects."
+          }
+        },
+        "required": ["accessToken", "title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "form": {
+            "type": "object",
+            "description": "The newly created form object."
+          }
+        }
+      }
+    },
+    "forms.update": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 524288,
+      "maxResponseBytes": 1048576,
+      "title": "Update Form",
+      "description": "Replace an existing Typeform form with a new definition. This is a full replacement (PUT) of the form's title, fields, and settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the form to update."
+          },
+          "title": {
+            "type": "string",
+            "description": "The new title for the form."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Updated array of field objects."
+          },
+          "settings": {
+            "type": "object",
+            "description": "Updated form settings."
+          },
+          "welcomeScreens": {
+            "type": "array",
+            "description": "Updated welcome screen objects."
+          },
+          "thankyouScreens": {
+            "type": "array",
+            "description": "Updated thank-you screen objects."
+          }
+        },
+        "required": ["accessToken", "formId", "title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "form": {
+            "type": "object",
+            "description": "The updated form object."
+          }
+        }
+      }
+    },
+    "forms.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Form",
+      "description": "Permanently delete a Typeform form and all its associated responses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the form to delete."
+          }
+        },
+        "required": ["accessToken", "formId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "Whether the form was successfully deleted."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The ID of the deleted form."
+          }
+        }
+      }
+    },
+    "responses.list.action": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Form Responses",
+      "description": "Retrieve a paginated list of responses for a specific Typeform form. Supports filtering by date range and cursor-based pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the form whose responses to retrieve."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Number of responses per page (max 1000)."
+          },
+          "since": {
+            "type": "string",
+            "description": "Limit to responses submitted after this ISO 8601 datetime."
+          },
+          "until": {
+            "type": "string",
+            "description": "Limit to responses submitted before this ISO 8601 datetime."
+          },
+          "after": {
+            "type": "string",
+            "description": "Token to retrieve the next page of responses (cursor)."
+          },
+          "before": {
+            "type": "string",
+            "description": "Token to retrieve the previous page of responses (cursor)."
+          }
+        },
+        "required": ["accessToken", "formId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "responses": {
+            "type": "array",
+            "description": "Array of response objects."
+          },
+          "totalItems": {
+            "type": "number",
+            "description": "Total number of responses for the form."
+          }
+        }
+      }
+    },
+    "responses.delete": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Form Responses",
+      "description": "Delete specific responses from a Typeform form by their response tokens.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the form."
+          },
+          "includedTokens": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of response token IDs to delete."
+          }
+        },
+        "required": ["accessToken", "formId", "includedTokens"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "Whether the responses were successfully deleted."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The ID of the form."
+          }
+        }
+      }
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create or Update Webhook",
+      "description": "Create or update a webhook for a Typeform form. Webhooks are identified by a tag; creating with an existing tag updates the webhook.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the form to attach the webhook to."
+          },
+          "tag": {
+            "type": "string",
+            "description": "A unique tag to identify this webhook within the form."
+          },
+          "url": {
+            "type": "string",
+            "description": "The URL to receive webhook payloads."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the webhook is active (default true)."
+          },
+          "verifySsl": {
+            "type": "boolean",
+            "description": "Whether to verify SSL certificates for the webhook URL."
+          },
+          "secret": {
+            "type": "string",
+            "description": "Secret for signing webhook payloads."
+          }
+        },
+        "required": ["accessToken", "formId", "tag", "url"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook": {
+            "type": "object",
+            "description": "The created or updated webhook object."
+          }
+        }
+      }
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "List Webhooks",
+      "description": "List all webhooks configured for a specific Typeform form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Typeform OAuth2 Bearer access token."
+          },
+          "formId": {
+            "type": "string",
+            "description": "The unique identifier of the form whose webhooks to list."
+          }
+        },
+        "required": ["accessToken", "formId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "webhooks": {
+            "type": "array",
+            "description": "Array of normalized webhook objects."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "form",
+    "response",
+    "webhook"
+  ]
+}

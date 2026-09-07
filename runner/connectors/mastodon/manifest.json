@@ -1,0 +1,600 @@
+{
+  "key": "mastodon",
+  "name": "Mastodon",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "social"
+  ],
+  "auth": {
+    "type": "bearer",
+    "scopes": [
+      "read:accounts",
+      "read:statuses",
+      "write:statuses"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "instance",
+          "label": "Canonical instance hostname (no scheme, path or port)",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "accessToken",
+          "label": "User access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "{{instance}}"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://{{instance}}",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 1800,
+      "messagePaths": [
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Verify connection",
+      "description": "Verify the stored credential with an authenticated identity request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/accounts/verify_credentials",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "ok",
+          "accountId": "{{response.id}}"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Provider resource ID, preserved as a string."
+          }
+        },
+        "required": [
+          "status",
+          "accountId"
+        ]
+      }
+    },
+    "accounts.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get account",
+      "description": "Read an account by its ID on the configured instance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Provider resource identifier."
+          }
+        },
+        "required": [
+          "accountId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/accounts/{{accountId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "account": "{{response}}"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Provider resource ID, preserved as a string."
+              },
+              "username": {
+                "type": "string",
+                "description": "Account username."
+              },
+              "acct": {
+                "type": "string",
+                "description": "Account address."
+              },
+              "display_name": {
+                "type": "string",
+                "description": "Display name."
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        "required": [
+          "account"
+        ]
+      }
+    },
+    "timelines.home": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Read home timeline",
+      "description": "Read followed accounts and hashtags; requires read:statuses. Pagination cursors come from the returned Link header. Pass maxId for older posts or sinceId for newer posts; empty arrays are valid.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Page size, 1\u201340."
+          },
+          "maxId": {
+            "type": "string",
+            "description": "Return statuses older than this ID."
+          },
+          "sinceId": {
+            "type": "string",
+            "description": "Return statuses newer than this ID."
+          }
+        },
+        "required": []
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/timelines/home",
+        "success": [
+          200
+        ],
+        "result": {
+          "statuses": "{{response}}",
+          "link": "{{headers.link}}"
+        },
+        "query": {
+          "limit": "{{limit}}",
+          "max_id": "{{maxId}}",
+          "since_id": "{{sinceId}}"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "statuses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Provider resource ID, preserved as a string."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Provider HTML content; sanitize before rendering."
+                },
+                "visibility": {
+                  "type": "string",
+                  "description": "Status visibility."
+                },
+                "created_at": {
+                  "type": "string",
+                  "description": "Status creation timestamp."
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          "link": {
+            "type": "string",
+            "description": "Optional raw provider Link pagination header."
+          }
+        },
+        "required": [
+          "statuses"
+        ]
+      }
+    },
+    "statuses.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get status",
+      "description": "Read a visible status by its local instance ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "statusId": {
+            "type": "string",
+            "description": "Provider resource identifier."
+          }
+        },
+        "required": [
+          "statusId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/statuses/{{statusId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response}}"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Provider resource ID, preserved as a string."
+              },
+              "content": {
+                "type": "string",
+                "description": "Provider HTML content; sanitize before rendering."
+              },
+              "visibility": {
+                "type": "string",
+                "description": "Status visibility."
+              },
+              "created_at": {
+                "type": "string",
+                "description": "Status creation timestamp."
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      }
+    },
+    "statuses.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Publish text status",
+      "description": "Publish a text-only status; requires write:statuses. Visibility defaults to the account setting when omitted. Does not schedule posts or upload media.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Non-empty text, within the instance character limit."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "unlisted",
+              "private",
+              "direct"
+            ],
+            "description": "Audience for this post."
+          },
+          "sensitive": {
+            "type": "boolean",
+            "description": "Mark content sensitive."
+          },
+          "spoilerText": {
+            "type": "string",
+            "description": "Content warning."
+          },
+          "inReplyToId": {
+            "type": "string",
+            "description": "Status ID to reply to."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Optional caller-chosen provider deduplication key. Reuse the same key for retries of one publication within the provider retention window (up to one hour). Separate from the appcall action idempotency key."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/statuses",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "{{response}}"
+        },
+        "body": {
+          "status": "{{status}}",
+          "visibility": "{{visibility}}",
+          "sensitive": "{{sensitive}}",
+          "spoiler_text": "{{spoilerText}}",
+          "in_reply_to_id": "{{inReplyToId}}"
+        },
+        "headers": {
+          "Idempotency-Key": "{{idempotencyKey}}"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Provider resource ID, preserved as a string."
+              },
+              "content": {
+                "type": "string",
+                "description": "Provider HTML content; sanitize before rendering."
+              },
+              "visibility": {
+                "type": "string",
+                "description": "Status visibility."
+              },
+              "created_at": {
+                "type": "string",
+                "description": "Status creation timestamp."
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      }
+    },
+    "statuses.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Delete own status",
+      "description": "Delete a status owned by the authenticated account; requires write:statuses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "statusId": {
+            "type": "string",
+            "description": "Provider resource identifier."
+          }
+        },
+        "required": [
+          "statusId"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/statuses/{{statusId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "statusId": "{{input.statusId}}"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "statusId": {
+            "type": "string",
+            "description": "Provider resource ID, preserved as a string."
+          }
+        },
+        "required": [
+          "deleted",
+          "statusId"
+        ]
+      }
+    },
+    "normalized.post.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create normalized text post",
+      "description": "Publish text and return the versioned appcall Post model. Publish a text-only status; requires write:statuses. Visibility defaults to the account setting when omitted. Does not schedule posts or upload media.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "unlisted",
+              "private",
+              "direct"
+            ],
+            "description": "Audience for this post."
+          },
+          "sensitive": {
+            "type": "boolean",
+            "description": "Mark content sensitive."
+          },
+          "spoilerText": {
+            "type": "string",
+            "description": "Content warning."
+          },
+          "inReplyToId": {
+            "type": "string",
+            "description": "Status ID to reply to."
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "description": "Optional caller-chosen provider deduplication key. Reuse the same key for retries of one publication within the provider retention window (up to one hour). Separate from the appcall action idempotency key."
+          },
+          "text": {
+            "type": "string",
+            "description": "Non-empty text, within the instance character limit."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/statuses",
+        "success": [
+          200
+        ],
+        "result": {
+          "id": "mastodon:{{response.uri}}",
+          "provider": "mastodon",
+          "providerPostId": "{{response.id}}",
+          "authorId": "{{response.account.id}}",
+          "text": "{{input.text}}",
+          "publishedAt": "{{response.created_at}}",
+          "modelVersion": "2026-09-05",
+          "raw": "{{response}}",
+          "url": "{{response.url}}"
+        },
+        "body": {
+          "status": "{{text}}",
+          "visibility": "{{visibility}}",
+          "sensitive": "{{sensitive}}",
+          "spoiler_text": "{{spoilerText}}",
+          "in_reply_to_id": "{{inReplyToId}}"
+        },
+        "headers": {
+          "Idempotency-Key": "{{idempotencyKey}}"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "providerPostId": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "modelVersion": {
+            "type": "string",
+            "enum": [
+              "2026-09-05"
+            ]
+          },
+          "raw": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "providerPostId",
+          "modelVersion",
+          "raw"
+        ]
+      }
+    }
+  },
+  "models": [
+    "account",
+    "status",
+    "post"
+  ]
+}

@@ -1,0 +1,682 @@
+{
+  "key": "asana",
+  "name": "Asana",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiToken",
+          "label": "Personal access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["app.asana.com"]
+  },
+  "http": {
+    "baseUrl": "https://app.asana.com/api/1.0",
+    "auth": {
+      "field": "apiToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": ["errors.0.message", "errors.0.phrase"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the Asana personal access token (or OAuth token) by calling GET /users/me, using the literal \"me\" the API accepts for the caller's own user. Takes no input and returns the connector health status with the authenticated user's gid, name, and email. This call also returns the caller's workspaces, useful for resolving the workspace gid Create Task and Create Project need.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "userGid": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "workspaces": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/me",
+        "success": [200],
+        "echo": { "status": "ok" },
+        "result": {
+          "status": "ok",
+          "userGid": "{{response.data.gid}}",
+          "name": "{{response.data.name}}",
+          "email": "{{response.data.email}}",
+          "workspaces": "{{response.data.workspaces}}"
+        }
+      }
+    },
+    "tasks.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Task",
+      "description": "Create a task. name is always required. workspace is required unless projects or parent is supplied — Asana can infer the workspace from either. The response includes permalinkUrl only when opt_fields requests it; pass optFields to get it back.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Task title." },
+          "workspace": { "type": "string", "description": "Workspace gid. Required unless projects or parent is given." },
+          "projects": { "type": "array", "items": { "type": "string" }, "description": "Project gids to add the task to." },
+          "parent": { "type": "string", "description": "Parent task gid, which makes this a subtask." },
+          "assignee": { "type": "string", "description": "Who to assign the task to: a user gid, an email address, or the literal string \"me\"." },
+          "assigneeSection": { "type": "string", "description": "Section gid the task lands in within the assignee's My Tasks list." },
+          "notes": { "type": "string", "description": "Plain-text task description." },
+          "dueOn": { "type": "string", "description": "Due date as YYYY-MM-DD. Use dueAt instead for a specific time." },
+          "dueAt": { "type": "string", "description": "Due date and time, ISO 8601." },
+          "startOn": { "type": "string", "description": "Start date as YYYY-MM-DD." },
+          "startAt": { "type": "string", "description": "Start date and time, ISO 8601." },
+          "followers": { "type": "array", "items": { "type": "string" }, "description": "User gids or emails to add as followers." },
+          "tags": { "type": "array", "items": { "type": "string" }, "description": "Tag gids to apply." },
+          "completed": { "type": "boolean", "description": "Create the task already marked complete." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include in the response, e.g. \"permalink_url\"." }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "task": { "type": "object" } }
+      },
+      "sample": { "name": "Write the launch post", "workspace": "1201933996468857" },
+      "request": {
+        "method": "POST",
+        "path": "/tasks",
+        "query": {
+          "opt_fields": "{{optFields}}"
+        },
+        "body": {
+          "data": {
+            "name": "{{name}}",
+            "workspace": "{{workspace}}",
+            "projects": "{{projects}}",
+            "parent": "{{parent}}",
+            "assignee": "{{assignee}}",
+            "assignee_section": "{{assigneeSection}}",
+            "notes": "{{notes}}",
+            "due_on": "{{dueOn}}",
+            "due_at": "{{dueAt}}",
+            "start_on": "{{startOn}}",
+            "start_at": "{{startAt}}",
+            "followers": "{{followers}}",
+            "tags": "{{tags}}",
+            "completed": "{{completed}}"
+          }
+        },
+        "success": [201],
+        "result": { "task": "{{response.data}}" }
+      }
+    },
+    "tasks.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Task",
+      "description": "Update a task. Omitted fields are left unchanged. To change project membership use Add Task to Section; this call does not accept a projects list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskGid": { "type": "string", "description": "Task gid to update." },
+          "name": { "type": "string", "description": "New task title." },
+          "assignee": { "type": "string", "description": "Who to assign the task to: a user gid, an email address, or the literal string \"me\"." },
+          "assigneeSection": { "type": "string", "description": "Section gid the task lands in within the assignee's My Tasks list." },
+          "notes": { "type": "string", "description": "Plain-text task description." },
+          "dueOn": { "type": "string", "description": "Due date as YYYY-MM-DD." },
+          "dueAt": { "type": "string", "description": "Due date and time, ISO 8601." },
+          "startOn": { "type": "string", "description": "Start date as YYYY-MM-DD." },
+          "startAt": { "type": "string", "description": "Start date and time, ISO 8601." },
+          "followers": { "type": "array", "items": { "type": "string" }, "description": "User gids or emails to add as followers." },
+          "tags": { "type": "array", "items": { "type": "string" }, "description": "Replacement list of tag gids." },
+          "completed": { "type": "boolean", "description": "Mark the task complete or incomplete." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include in the response, e.g. \"permalink_url\"." }
+        },
+        "required": ["taskGid"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "task": { "type": "object" } }
+      },
+      "sample": { "taskGid": "1201933996468858", "completed": true },
+      "request": {
+        "method": "PUT",
+        "path": "/tasks/{{taskGid}}",
+        "query": {
+          "opt_fields": "{{optFields}}"
+        },
+        "body": {
+          "data": {
+            "name": "{{name}}",
+            "assignee": "{{assignee}}",
+            "assignee_section": "{{assigneeSection}}",
+            "notes": "{{notes}}",
+            "due_on": "{{dueOn}}",
+            "due_at": "{{dueAt}}",
+            "start_on": "{{startOn}}",
+            "start_at": "{{startAt}}",
+            "followers": "{{followers}}",
+            "tags": "{{tags}}",
+            "completed": "{{completed}}"
+          }
+        },
+        "success": [200],
+        "result": { "task": "{{response.data}}" }
+      }
+    },
+    "tasks.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Task",
+      "description": "Fetch a single task by gid. Pass optFields (e.g. \"permalink_url,notes\") to request fields the compact default response omits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskGid": { "type": "string", "description": "Task gid." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include, e.g. \"permalink_url\"." }
+        },
+        "required": ["taskGid"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "task": { "type": "object" } }
+      },
+      "sample": { "taskGid": "1201933996468858" },
+      "request": {
+        "method": "GET",
+        "path": "/tasks/{{taskGid}}",
+        "query": {
+          "opt_fields": "{{optFields}}"
+        },
+        "success": [200],
+        "result": { "task": "{{response.data}}" }
+      }
+    },
+    "tasks.listByProject": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Tasks by Project",
+      "description": "List the tasks in a project, ordered by priority within the project. limit must be sent and must be between 1 and 100 — Asana only returns a next_page cursor when limit is supplied, so this call always sends one. Pass the opaque nextOffset from a previous call back as offset; it disappears from the result once the last page is reached.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectGid": { "type": "string", "description": "Project gid." },
+          "completedSince": { "type": "string", "description": "Only tasks that are incomplete or were completed at or after this ISO 8601 time, or the literal \"now\" for only-incomplete." },
+          "limit": { "type": "integer", "description": "Results per page. Must be between 1 and 100. Defaults to 50." },
+          "offset": { "type": "string", "description": "Opaque pagination token from a previous call's nextOffset. Omit for the first page." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include, e.g. \"permalink_url\"." }
+        },
+        "required": ["projectGid", "limit"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tasks": { "type": "array", "items": { "type": "object" } },
+          "nextOffset": { "type": "string" }
+        }
+      },
+      "sample": { "projectGid": "1201933996468800", "limit": 50 },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectGid}}/tasks",
+        "query": {
+          "completed_since": "{{completedSince}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "opt_fields": "{{optFields}}"
+        },
+        "success": [200],
+        "result": {
+          "tasks": "{{response.data}}",
+          "nextOffset": "{{response.next_page.offset}}"
+        }
+      }
+    },
+    "tasks.listSubtasks": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Subtasks",
+      "description": "List the direct subtasks of a task. limit must be sent and must be between 1 and 100 — Asana only returns a next_page cursor when limit is supplied. Pass the opaque nextOffset from a previous call back as offset; it disappears from the result once the last page is reached.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskGid": { "type": "string", "description": "Parent task gid." },
+          "limit": { "type": "integer", "description": "Results per page. Must be between 1 and 100. Defaults to 50." },
+          "offset": { "type": "string", "description": "Opaque pagination token from a previous call's nextOffset. Omit for the first page." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include, e.g. \"permalink_url\"." }
+        },
+        "required": ["taskGid", "limit"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "subtasks": { "type": "array", "items": { "type": "object" } },
+          "nextOffset": { "type": "string" }
+        }
+      },
+      "sample": { "taskGid": "1201933996468858", "limit": 50 },
+      "request": {
+        "method": "GET",
+        "path": "/tasks/{{taskGid}}/subtasks",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "opt_fields": "{{optFields}}"
+        },
+        "success": [200],
+        "result": {
+          "subtasks": "{{response.data}}",
+          "nextOffset": "{{response.next_page.offset}}"
+        }
+      }
+    },
+    "projects.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Projects",
+      "description": "List projects, optionally scoped to a workspace. limit must be sent and must be between 1 and 100 — Asana only returns a next_page cursor when limit is supplied. Pass the opaque nextOffset from a previous call back as offset; it disappears from the result once the last page is reached.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": { "type": "string", "description": "Only projects in this workspace." },
+          "archived": { "type": "boolean", "description": "Only archived (true) or only active (false) projects. Omit for both." },
+          "limit": { "type": "integer", "description": "Results per page. Must be between 1 and 100. Defaults to 50." },
+          "offset": { "type": "string", "description": "Opaque pagination token from a previous call's nextOffset. Omit for the first page." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include, e.g. \"permalink_url\"." }
+        },
+        "required": ["limit"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projects": { "type": "array", "items": { "type": "object" } },
+          "nextOffset": { "type": "string" }
+        }
+      },
+      "sample": { "limit": 50 },
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "query": {
+          "workspace": "{{workspace}}",
+          "archived": "{{archived}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "opt_fields": "{{optFields}}"
+        },
+        "success": [200],
+        "result": {
+          "projects": "{{response.data}}",
+          "nextOffset": "{{response.next_page.offset}}"
+        }
+      }
+    },
+    "projects.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Project",
+      "description": "Fetch a single project by gid. Pass optFields (e.g. \"permalink_url\") to request fields the compact default response omits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectGid": { "type": "string", "description": "Project gid." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include, e.g. \"permalink_url\"." }
+        },
+        "required": ["projectGid"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "project": { "type": "object" } }
+      },
+      "sample": { "projectGid": "1201933996468800" },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectGid}}",
+        "query": {
+          "opt_fields": "{{optFields}}"
+        },
+        "success": [200],
+        "result": { "project": "{{response.data}}" }
+      }
+    },
+    "projects.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Project",
+      "description": "Create a project in a workspace. team is required when the workspace is an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Project name." },
+          "workspace": { "type": "string", "description": "Workspace gid the project is created in." },
+          "team": { "type": "string", "description": "Team gid. Required when the workspace is an organization." },
+          "notes": { "type": "string", "description": "Plain-text project description." },
+          "color": { "type": "string", "description": "Project colour name, e.g. \"light-green\"." },
+          "public": { "type": "boolean", "description": "Whether the project is public to the workspace or organization." },
+          "dueOn": { "type": "string", "description": "Project due date as YYYY-MM-DD." },
+          "startOn": { "type": "string", "description": "Project start date as YYYY-MM-DD." },
+          "followers": { "type": "array", "items": { "type": "string" }, "description": "User gids or emails to add as followers." }
+        },
+        "required": ["name", "workspace"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "project": { "type": "object" } }
+      },
+      "sample": { "name": "Q3 Launch", "workspace": "1201933996468857" },
+      "request": {
+        "method": "POST",
+        "path": "/projects",
+        "body": {
+          "data": {
+            "name": "{{name}}",
+            "workspace": "{{workspace}}",
+            "team": "{{team}}",
+            "notes": "{{notes}}",
+            "color": "{{color}}",
+            "public": "{{public}}",
+            "due_on": "{{dueOn}}",
+            "start_on": "{{startOn}}",
+            "followers": "{{followers}}"
+          }
+        },
+        "success": [201],
+        "result": { "project": "{{response.data}}" }
+      }
+    },
+    "sections.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Sections",
+      "description": "List the sections of a project. limit must be sent and must be between 1 and 100 — Asana only returns a next_page cursor when limit is supplied. Pass the opaque nextOffset from a previous call back as offset; it disappears from the result once the last page is reached.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectGid": { "type": "string", "description": "Project gid." },
+          "limit": { "type": "integer", "description": "Results per page. Must be between 1 and 100. Defaults to 50." },
+          "offset": { "type": "string", "description": "Opaque pagination token from a previous call's nextOffset. Omit for the first page." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include, e.g. \"permalink_url\"." }
+        },
+        "required": ["projectGid", "limit"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "sections": { "type": "array", "items": { "type": "object" } },
+          "nextOffset": { "type": "string" }
+        }
+      },
+      "sample": { "projectGid": "1201933996468800", "limit": 50 },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectGid}}/sections",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "opt_fields": "{{optFields}}"
+        },
+        "success": [200],
+        "result": {
+          "sections": "{{response.data}}",
+          "nextOffset": "{{response.next_page.offset}}"
+        }
+      }
+    },
+    "sections.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Section",
+      "description": "Create a section inside a project. Both the project and the section name are required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectGid": { "type": "string", "description": "Project the section is created in." },
+          "name": { "type": "string", "description": "Section name." },
+          "insertBefore": { "type": "string", "description": "Section gid to insert this section before." },
+          "insertAfter": { "type": "string", "description": "Section gid to insert this section after." }
+        },
+        "required": ["projectGid", "name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "section": { "type": "object" } }
+      },
+      "sample": { "projectGid": "1201933996468800", "name": "In review" },
+      "request": {
+        "method": "POST",
+        "path": "/projects/{{projectGid}}/sections",
+        "body": {
+          "data": {
+            "name": "{{name}}",
+            "insert_before": "{{insertBefore}}",
+            "insert_after": "{{insertAfter}}"
+          }
+        },
+        "success": [201],
+        "result": { "section": "{{response.data}}" }
+      }
+    },
+    "sections.addTask": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Add Task to Section",
+      "description": "Move a task into a section, removing it from the other sections of the same project. The task is inserted at the top of the section unless insertBefore or insertAfter is given. Asana answers this call with an empty object — there is no gid to read back, so the result echoes the section and task gids that were sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sectionGid": { "type": "string", "description": "Section gid to add the task to." },
+          "task": { "type": "string", "description": "Task gid to move into the section." },
+          "insertBefore": { "type": "string", "description": "Task gid to insert this task before, within the section." },
+          "insertAfter": { "type": "string", "description": "Task gid to insert this task after, within the section." }
+        },
+        "required": ["sectionGid", "task"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "added": { "type": "boolean" },
+          "sectionGid": { "type": "string" },
+          "taskGid": { "type": "string" }
+        }
+      },
+      "sample": { "sectionGid": "1201933996468900", "task": "1201933996468858" },
+      "request": {
+        "method": "POST",
+        "path": "/sections/{{sectionGid}}/addTask",
+        "body": {
+          "data": {
+            "task": "{{task}}",
+            "insert_before": "{{insertBefore}}",
+            "insert_after": "{{insertAfter}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "added": true,
+          "sectionGid": "{{input.sectionGid}}",
+          "taskGid": "{{input.task}}"
+        }
+      }
+    },
+    "stories.listForTask": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Task Stories",
+      "description": "List the story feed on a task — this includes both comments and system activity (field changes, assignments, and so on). Filter on resource_subtype == \"comment_added\" to get just the human comments. limit must be sent and must be between 1 and 100 — Asana only returns a next_page cursor when limit is supplied. Pass the opaque nextOffset from a previous call back as offset; it disappears from the result once the last page is reached.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskGid": { "type": "string", "description": "Task gid." },
+          "limit": { "type": "integer", "description": "Results per page. Must be between 1 and 100. Defaults to 50." },
+          "offset": { "type": "string", "description": "Opaque pagination token from a previous call's nextOffset. Omit for the first page." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include, e.g. \"permalink_url\"." }
+        },
+        "required": ["taskGid", "limit"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "stories": { "type": "array", "items": { "type": "object" } },
+          "nextOffset": { "type": "string" }
+        }
+      },
+      "sample": { "taskGid": "1201933996468858", "limit": 50 },
+      "request": {
+        "method": "GET",
+        "path": "/tasks/{{taskGid}}/stories",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "opt_fields": "{{optFields}}"
+        },
+        "success": [200],
+        "result": {
+          "stories": "{{response.data}}",
+          "nextOffset": "{{response.next_page.offset}}"
+        }
+      }
+    },
+    "stories.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Comment on Task",
+      "description": "Add a comment to a task, posted as a new story. text (or htmlText for rich text) is required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskGid": { "type": "string", "description": "Task gid to comment on." },
+          "text": { "type": "string", "description": "Plain text of the comment." },
+          "htmlText": { "type": "string", "description": "Rich-text HTML alternative to text." },
+          "isPinned": { "type": "boolean", "description": "Pin the comment to the top of the task." }
+        },
+        "required": ["taskGid", "text"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "story": { "type": "object" } }
+      },
+      "sample": { "taskGid": "1201933996468858", "text": "Shipped, moving to review." },
+      "request": {
+        "method": "POST",
+        "path": "/tasks/{{taskGid}}/stories",
+        "body": {
+          "data": {
+            "text": "{{text}}",
+            "html_text": "{{htmlText}}",
+            "is_pinned": "{{isPinned}}"
+          }
+        },
+        "success": [201],
+        "result": { "story": "{{response.data}}" }
+      }
+    },
+    "workspaces.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Workspaces",
+      "description": "List the workspaces and organizations the caller can access. Needed to resolve the workspace gid Create Task and Create Project require. limit must be sent and must be between 1 and 100 — Asana only returns a next_page cursor when limit is supplied. Pass the opaque nextOffset from a previous call back as offset; it disappears from the result once the last page is reached.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "integer", "description": "Results per page. Must be between 1 and 100. Defaults to 50." },
+          "offset": { "type": "string", "description": "Opaque pagination token from a previous call's nextOffset. Omit for the first page." },
+          "optFields": { "type": "string", "description": "Comma-separated field list to include, e.g. \"is_organization\"." }
+        },
+        "required": ["limit"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaces": { "type": "array", "items": { "type": "object" } },
+          "nextOffset": { "type": "string" }
+        }
+      },
+      "sample": { "limit": 50 },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "opt_fields": "{{optFields}}"
+        },
+        "success": [200],
+        "result": {
+          "workspaces": "{{response.data}}",
+          "nextOffset": "{{response.next_page.offset}}"
+        }
+      }
+    }
+  },
+  "models": ["task", "project", "section", "story", "workspace"]
+}

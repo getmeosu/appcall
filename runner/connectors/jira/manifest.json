@@ -1,0 +1,529 @@
+{
+  "key": "jira",
+  "name": "Jira Cloud",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["dev-tools"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "read:jira-work",
+      "write:jira-work",
+      "read:jira-user"
+    ],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.atlassian.com",
+      "auth.atlassian.com"
+    ]
+  },
+  "operations": {
+    "issues.search": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "projects.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "users.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "issues.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Create Issue",
+      "description": "Create a new issue in a Jira Cloud project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectKey": {
+            "type": "string",
+            "description": "Key of the Jira project to create the issue in (e.g. \"ENG\")."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Short summary or title of the issue."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional plain-text description of the issue."
+          },
+          "issueType": {
+            "type": "string",
+            "description": "Issue type name, e.g. \"Task\", \"Bug\", \"Story\". Defaults to \"Task\"."
+          },
+          "priority": {
+            "type": "string",
+            "description": "Optional priority name, e.g. \"High\", \"Medium\", \"Low\"."
+          },
+          "assigneeId": {
+            "type": "string",
+            "description": "Optional Atlassian account ID of the user to assign the issue to."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional list of labels to attach to the issue."
+          }
+        },
+        "required": [
+          "projectKey",
+          "summary"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "issue": {
+            "type": "object",
+            "description": "The created issue, normalized."
+          }
+        }
+      }
+    },
+    "issues.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Issue",
+      "description": "Retrieve a single Jira issue by its key or ID from Jira Cloud REST API v3.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or numeric ID of the issue to retrieve."
+          }
+        },
+        "required": ["issueKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "issue": {
+            "type": "object",
+            "description": "The retrieved issue, normalized."
+          }
+        }
+      }
+    },
+    "issues.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Update Issue",
+      "description": "Update fields on an existing Jira Cloud issue using the REST API v3 PUT /issue/{key} endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or numeric ID of the issue to update."
+          },
+          "summary": {
+            "type": "string",
+            "description": "New summary/title for the issue."
+          },
+          "description": {
+            "type": "string",
+            "description": "New plain-text description for the issue."
+          },
+          "priority": {
+            "type": "string",
+            "description": "New priority name, e.g. \"High\", \"Medium\", \"Low\"."
+          },
+          "assigneeId": {
+            "type": "string",
+            "description": "Atlassian account ID of the user to assign, or null to unassign."
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "New set of labels for the issue (replaces existing labels)."
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Due date in YYYY-MM-DD format."
+          }
+        },
+        "required": ["issueKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "updated": { "type": "boolean", "description": "True if the update was accepted." }
+        }
+      }
+    },
+    "issues.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Issue",
+      "description": "Permanently delete a Jira Cloud issue by key or ID. This action is irreversible.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or numeric ID of the issue to delete."
+          },
+          "deleteSubtasks": {
+            "type": "boolean",
+            "description": "Whether to delete all subtasks of this issue. Defaults to false."
+          }
+        },
+        "required": ["issueKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean", "description": "True if the issue was deleted." }
+        }
+      }
+    },
+    "issues.jql_search": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 5242880,
+      "title": "Search Issues with JQL",
+      "description": "Search Jira Cloud issues using a JQL (Jira Query Language) query via POST /rest/api/3/search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "jql": {
+            "type": "string",
+            "description": "JQL query string, e.g. \"project = PROJ AND status = 'In Progress' ORDER BY created DESC\"."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Maximum number of issues to return. Defaults to 50."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Index of the first result to return (0-based). Defaults to 0."
+          },
+          "fields": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of field keys to include in results. Defaults to all fields."
+          }
+        },
+        "required": ["jql"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "issues": {
+            "type": "array",
+            "items": { "type": "object" },
+            "description": "List of matching issues, normalized."
+          },
+          "total": { "type": "number", "description": "Total number of matching issues." },
+          "startAt": { "type": "number" },
+          "maxResults": { "type": "number" }
+        }
+      }
+    },
+    "issues.comments.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Add Comment to Issue",
+      "description": "Add a new comment to an existing Jira Cloud issue via POST /rest/api/3/issue/{key}/comment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or ID to add a comment to."
+          },
+          "body": {
+            "type": "string",
+            "description": "Plain-text body of the comment."
+          }
+        },
+        "required": ["issueKey", "body"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "comment": {
+            "type": "object",
+            "description": "The created comment, normalized."
+          }
+        }
+      }
+    },
+    "issues.comments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Issue Comments",
+      "description": "List all comments on a Jira Cloud issue via GET /rest/api/3/issue/{key}/comment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or ID to list comments for."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "Index of the first result to return (0-based). Defaults to 0."
+          },
+          "maxResults": {
+            "type": "number",
+            "description": "Maximum number of comments to return. Defaults to 50."
+          }
+        },
+        "required": ["issueKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "comments": {
+            "type": "array",
+            "items": { "type": "object" },
+            "description": "List of comments, normalized."
+          },
+          "total": { "type": "number", "description": "Total number of comments." }
+        }
+      }
+    },
+    "issues.transitions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Issue Transitions",
+      "description": "List available workflow transitions for a Jira Cloud issue via GET /rest/api/3/issue/{key}/transitions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or ID to list transitions for."
+          }
+        },
+        "required": ["issueKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "transitions": {
+            "type": "array",
+            "items": { "type": "object" },
+            "description": "Available transitions for the issue."
+          }
+        }
+      }
+    },
+    "issues.transitions.do": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 65536,
+      "title": "Transition Issue",
+      "description": "Move a Jira Cloud issue to a new status by performing a workflow transition via POST /rest/api/3/issue/{key}/transitions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or ID to transition."
+          },
+          "transitionId": {
+            "type": "string",
+            "description": "The ID of the transition to perform (get IDs from issues.transitions.list)."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Optional plain-text comment to add when performing the transition."
+          }
+        },
+        "required": ["issueKey", "transitionId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "transitioned": { "type": "boolean", "description": "True if the transition was performed." }
+        }
+      }
+    },
+    "issues.assign": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Assign Issue",
+      "description": "Assign a Jira Cloud issue to a user (or unassign it) via PUT /rest/api/3/issue/{key}/assignee.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": {
+            "type": "string",
+            "description": "The issue key (e.g. \"PROJ-123\") or ID to assign."
+          },
+          "accountId": {
+            "type": "string",
+            "description": "Atlassian account ID of the user to assign the issue to. Pass null or omit to unassign."
+          }
+        },
+        "required": ["issueKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "assigned": { "type": "boolean", "description": "True if the assignment was updated." }
+        }
+      }
+    },
+    "projects.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Project",
+      "description": "Retrieve details of a single Jira Cloud project by its key or ID via GET /rest/api/3/project/{key}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectKey": {
+            "type": "string",
+            "description": "The project key (e.g. \"PROJ\") or numeric ID of the project to retrieve."
+          }
+        },
+        "required": ["projectKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "project": {
+            "type": "object",
+            "description": "The retrieved project, normalized."
+          }
+        }
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get User",
+      "description": "Retrieve a single Jira Cloud user by Atlassian account ID via GET /rest/api/3/user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "The Atlassian account ID of the user to retrieve."
+          }
+        },
+        "required": ["accountId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "user": {
+            "type": "object",
+            "description": "The retrieved user, normalized."
+          }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Jira Cloud connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "issue",
+    "project",
+    "user"
+  ]
+}

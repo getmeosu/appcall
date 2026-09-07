@@ -1,0 +1,273 @@
+import { describe, expect, test } from "bun:test";
+import sheetsUpdateFixture from "../fixtures/sheets_update.json";
+import sheetsClearFixture from "../fixtures/sheets_clear.json";
+import spreadsheetCreateFixture from "../fixtures/spreadsheet_create.json";
+import rateLimitedFixture from "../fixtures/rate_limited.json";
+import {
+  createSheetsClient,
+  validateUpdateValuesInput,
+  validateClearValuesInput,
+  validateCreateSpreadsheetInput,
+  validateBatchUpdateSpreadsheetInput,
+} from "../src/sheets";
+
+describe("google-workspace Sheets extended actions", () => {
+  // ─── sheets.values.update ───────────────────────────────────────────────
+
+  test("validateUpdateValuesInput accepts valid input", () => {
+    const r = validateUpdateValuesInput({
+      spreadsheetId: "spreadId",
+      range: "Sheet1!A1:B2",
+      values: [["a", "b"], ["c", "d"]],
+    });
+    expect(r.spreadsheetId).toBe("spreadId");
+    expect(r.range).toBe("Sheet1!A1:B2");
+    expect(r.values).toHaveLength(2);
+  });
+
+  test("validateUpdateValuesInput throws if values is not 2D array", () => {
+    expect(() =>
+      validateUpdateValuesInput({ spreadsheetId: "s", range: "A1", values: ["a", "b"] })
+    ).toThrow();
+  });
+
+  test("validateUpdateValuesInput throws on missing required fields", () => {
+    expect(() => validateUpdateValuesInput({ spreadsheetId: "s", range: "A1" })).toThrow();
+    expect(() => validateUpdateValuesInput("not-object")).toThrow();
+  });
+
+  test("updateValues sends PUT to correct URL with auth", async () => {
+    const requests: Request[] = [];
+    const client = createSheetsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(sheetsUpdateFixture);
+      },
+    });
+
+    const result = await client.updateValues({
+      spreadsheetId: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
+      range: "Sheet1!A1:C2",
+      values: [["a", "b", "c"], ["d", "e", "f"]],
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toContain("https://www.googleapis.com/v4/spreadsheets/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/values/");
+    expect(requests[0].method).toBe("PUT");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
+    expect(result.spreadsheetId).toBe("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms");
+    expect(result.updatedRange).toBe("Sheet1!A1:C2");
+    expect(result.updatedRows).toBe(2);
+    expect(result.updatedCells).toBe(6);
+  });
+
+  test("updateValues throws on upstream error", async () => {
+    const client = createSheetsClient({
+      accessToken: "token",
+      fetch: async () => new Response(
+        JSON.stringify({ error: { code: 400, message: "Bad Request" } }),
+        { status: 400 },
+      ),
+    });
+
+    await expect(
+      client.updateValues({ spreadsheetId: "s", range: "A1", values: [["a"]] })
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  // ─── sheets.values.clear ────────────────────────────────────────────────
+
+  test("validateClearValuesInput accepts valid input", () => {
+    const r = validateClearValuesInput({ spreadsheetId: "sId", range: "Sheet1!A1:C10" });
+    expect(r.spreadsheetId).toBe("sId");
+    expect(r.range).toBe("Sheet1!A1:C10");
+  });
+
+  test("validateClearValuesInput throws on missing fields", () => {
+    expect(() => validateClearValuesInput({ spreadsheetId: "s" })).toThrow();
+    expect(() => validateClearValuesInput("not-object")).toThrow();
+  });
+
+  test("clearValues sends POST to :clear URL", async () => {
+    const requests: Request[] = [];
+    const client = createSheetsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(sheetsClearFixture);
+      },
+    });
+
+    const result = await client.clearValues({
+      spreadsheetId: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
+      range: "Sheet1!A1:C10",
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toContain(":clear");
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
+    expect(result.spreadsheetId).toBe("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms");
+    expect(result.clearedRange).toBe("Sheet1!A1:C10");
+  });
+
+  test("clearValues throws on upstream error", async () => {
+    const client = createSheetsClient({
+      accessToken: "token",
+      fetch: async () => new Response(
+        JSON.stringify({ error: { code: 403, message: "Forbidden" } }),
+        { status: 403 },
+      ),
+    });
+
+    await expect(
+      client.clearValues({ spreadsheetId: "s", range: "A1" })
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  // ─── sheets.spreadsheets.create ─────────────────────────────────────────
+
+  test("validateCreateSpreadsheetInput accepts valid input", () => {
+    const r = validateCreateSpreadsheetInput({ title: "My Spreadsheet" });
+    expect(r.title).toBe("My Spreadsheet");
+  });
+
+  test("validateCreateSpreadsheetInput accepts optional sheetTitles", () => {
+    const r = validateCreateSpreadsheetInput({
+      title: "Budget",
+      sheetTitles: ["Q1", "Q2", "Q3"],
+    });
+    expect(r.sheetTitles).toEqual(["Q1", "Q2", "Q3"]);
+  });
+
+  test("validateCreateSpreadsheetInput throws on missing title", () => {
+    expect(() => validateCreateSpreadsheetInput({})).toThrow();
+    expect(() => validateCreateSpreadsheetInput("not-object")).toThrow();
+  });
+
+  test("createSpreadsheet posts to Sheets API and returns spreadsheet metadata", async () => {
+    const requests: Request[] = [];
+    const client = createSheetsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(spreadsheetCreateFixture);
+      },
+    });
+
+    const result = await client.createSpreadsheet({ title: "My New Spreadsheet" });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://www.googleapis.com/v4/spreadsheets");
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
+    expect(result.spreadsheetId).toBe("newSpreadsheetId123");
+    expect(result.spreadsheetUrl).toContain("newSpreadsheetId123");
+    expect(result.title).toBe("My New Spreadsheet");
+  });
+
+  test("createSpreadsheet throws on upstream error", async () => {
+    const client = createSheetsClient({
+      accessToken: "token",
+      fetch: async () => new Response(
+        JSON.stringify({ error: { code: 401, message: "Unauthorized" } }),
+        { status: 401 },
+      ),
+    });
+
+    await expect(
+      client.createSpreadsheet({ title: "Test" })
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  // ─── sheets.spreadsheets.batchUpdate ───────────────────────────────────
+
+  test("validateBatchUpdateSpreadsheetInput accepts safe formatting requests", () => {
+    const r = validateBatchUpdateSpreadsheetInput({
+      spreadsheetId: "spreadId",
+      requests: [
+        { freezeRows: { sheetId: 0, rowCount: 1 } },
+        { setBasicFilter: { sheetId: 0, startRowIndex: 0, endColumnIndex: 10 } },
+        { autoResizeColumns: { sheetId: 0, startIndex: 0, endIndex: 10 } },
+        {
+          repeatCell: {
+            sheetId: 0,
+            startRowIndex: 0,
+            endRowIndex: 1,
+            cell: {
+              userEnteredFormat: {
+                textFormat: { bold: true },
+                backgroundColor: { red: 0.9, green: 0.9, blue: 0.9 },
+              },
+            },
+            fields: "userEnteredFormat(textFormat,backgroundColor)",
+          },
+        },
+      ],
+    });
+    expect(r.spreadsheetId).toBe("spreadId");
+    expect(r.requests).toHaveLength(4);
+  });
+
+  test("validateBatchUpdateSpreadsheetInput rejects unsafe or oversized requests", () => {
+    expect(() => validateBatchUpdateSpreadsheetInput({ spreadsheetId: "s", requests: [] })).toThrow();
+    expect(() => validateBatchUpdateSpreadsheetInput({ spreadsheetId: "s", requests: Array.from({ length: 51 }, () => ({ freezeRows: { sheetId: 0, rowCount: 1 } })) })).toThrow();
+    expect(() => validateBatchUpdateSpreadsheetInput({ spreadsheetId: "s", requests: [{ deleteSheet: { sheetId: 0 } }] })).toThrow();
+    expect(() => validateBatchUpdateSpreadsheetInput({ spreadsheetId: "s", requests: [{ repeatCell: { sheetId: 0, cell: {}, fields: "*" } }] })).toThrow();
+  });
+
+  test("batchUpdateSpreadsheet maps safe helpers to Google batchUpdate requests", async () => {
+    const requests: Request[] = [];
+    const client = createSheetsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({ spreadsheetId: "spreadId", replies: [{}, {}] });
+      },
+    });
+
+    const result = await client.batchUpdateSpreadsheet({
+      spreadsheetId: "spreadId",
+      requests: [
+        { freezeRows: { sheetId: 0, rowCount: 1 } },
+        { setColumnWidth: { sheetId: 0, startIndex: 0, endIndex: 3, pixelSize: 160 } },
+      ],
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://www.googleapis.com/v4/spreadsheets/spreadId:batchUpdate");
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
+    const body = await requests[0].json() as { requests: Array<Record<string, unknown>> };
+    expect(body.requests[0]).toEqual({
+      updateSheetProperties: {
+        properties: { sheetId: 0, gridProperties: { frozenRowCount: 1 } },
+        fields: "gridProperties.frozenRowCount",
+      },
+    });
+    expect(body.requests[1]).toEqual({
+      updateDimensionProperties: {
+        range: { sheetId: 0, dimension: "COLUMNS", startIndex: 0, endIndex: 3 },
+        properties: { pixelSize: 160 },
+        fields: "pixelSize",
+      },
+    });
+    expect(result.spreadsheetId).toBe("spreadId");
+    expect(result.replies).toHaveLength(2);
+  });
+
+  test("batchUpdateSpreadsheet throws on upstream error", async () => {
+    const client = createSheetsClient({
+      accessToken: "token",
+      fetch: async () => new Response(
+        JSON.stringify({ error: { code: 400, message: "Bad Request" } }),
+        { status: 400 },
+      ),
+    });
+
+    await expect(
+      client.batchUpdateSpreadsheet({ spreadsheetId: "s", requests: [{ freezeRows: { sheetId: 0, rowCount: 1 } }] })
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});

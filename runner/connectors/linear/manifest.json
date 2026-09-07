@@ -1,0 +1,654 @@
+{
+  "key": "linear",
+  "name": "Linear",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Personal API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["api.linear.app"]
+  },
+  "http": {
+    "baseUrl": "https://api.linear.app",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "rateLimitCodePaths": ["errors.0.extensions.code"],
+      "rateLimitCodes": ["RATELIMITED"],
+      "bodyErrorPaths": ["errors"],
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": ["errors.0.message"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 8000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the personal API key with the cheapest authenticated call, query Me { viewer { id name email } }. Linear can answer HTTP 200 with a populated errors array on an auth failure, so the manifest's bodyErrorPaths demotes that to a failure before this ever returns; on real success this still checks that data.viewer.id is present rather than trusting the status code alone. Takes no input.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "viewerId": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Me { viewer { id name email } }"
+        },
+        "success": [200],
+        "echo": { "status": "ok" },
+        "result": {
+          "status": "ok",
+          "viewerId": "{{response.data.viewer.id}}",
+          "name": "{{response.data.viewer.name}}",
+          "email": "{{response.data.viewer.email}}"
+        }
+      }
+    },
+    "issues.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Issue",
+      "description": "Create an issue with the issueCreate mutation. teamId is the only non-null field in IssueCreateInput, and title is optional in the SDL but required here because an issue created without one is not meaningfully usable — both are enforced by this schema. Optional fields: description (markdown), assigneeId, stateId, priority (0-4), labelIds, projectId, parentId, cycleId, dueDate (YYYY-MM-DD), estimate, subscriberIds, createdAt (ISO 8601).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamId": { "type": "string", "description": "Team UUID the issue belongs to. Required — the only non-null field in IssueCreateInput." },
+          "title": { "type": "string", "description": "Issue title." },
+          "description": { "type": "string", "description": "Issue description as markdown." },
+          "assigneeId": { "type": "string", "description": "User UUID to assign the issue to." },
+          "stateId": { "type": "string", "description": "Workflow state UUID. Resolve with workflowStates.list." },
+          "priority": { "type": "integer", "description": "0 (no priority) to 4 (urgent)." },
+          "labelIds": { "type": "array", "items": { "type": "string" }, "description": "Label UUIDs to apply." },
+          "projectId": { "type": "string", "description": "Project UUID." },
+          "parentId": { "type": "string", "description": "Parent issue UUID, to create a sub-issue." },
+          "cycleId": { "type": "string", "description": "Cycle UUID." },
+          "dueDate": { "type": "string", "description": "Due date as YYYY-MM-DD." },
+          "estimate": { "type": "integer", "description": "Point estimate." },
+          "subscriberIds": { "type": "array", "items": { "type": "string" }, "description": "User UUIDs to subscribe to the issue." },
+          "createdAt": { "type": "string", "description": "ISO 8601 timestamp to backdate creation. Requires admin scope in practice." }
+        },
+        "required": ["teamId", "title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "issue": { "type": "object" }
+        }
+      },
+      "sample": { "teamId": "team-uuid", "title": "Fix the login redirect loop" },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation IssueCreate($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier title url branchName state { id name } } } }",
+          "variables": {
+            "input": {
+              "teamId": "{{teamId}}",
+              "title": "{{title}}",
+              "description": "{{description}}",
+              "assigneeId": "{{assigneeId}}",
+              "stateId": "{{stateId}}",
+              "priority": "{{priority}}",
+              "labelIds": "{{labelIds}}",
+              "projectId": "{{projectId}}",
+              "parentId": "{{parentId}}",
+              "cycleId": "{{cycleId}}",
+              "dueDate": "{{dueDate}}",
+              "estimate": "{{estimate}}",
+              "subscriberIds": "{{subscriberIds}}",
+              "createdAt": "{{createdAt}}"
+            }
+          }
+        },
+        "success": [200],
+        "result": {
+          "success": "{{response.data.issueCreate.success}}",
+          "issue": {
+            "id": "{{response.data.issueCreate.issue.id}}",
+            "identifier": "{{response.data.issueCreate.issue.identifier}}",
+            "title": "{{response.data.issueCreate.issue.title}}",
+            "url": "{{response.data.issueCreate.issue.url}}",
+            "branchName": "{{response.data.issueCreate.issue.branchName}}",
+            "state": "{{response.data.issueCreate.issue.state}}"
+          }
+        }
+      }
+    },
+    "issues.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Issue",
+      "description": "Update an issue with the issueUpdate mutation. id is required and accepts either the issue UUID or the human identifier (e.g. ENG-123). Every IssueUpdateInput field is optional in the SDL, so only the fields you pass are changed. Use addedLabelIds/removedLabelIds to change labels incrementally instead of replacing the whole labelIds set.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Issue UUID or human identifier (e.g. ENG-123)." },
+          "title": { "type": "string" },
+          "description": { "type": "string", "description": "Markdown." },
+          "assigneeId": { "type": "string" },
+          "stateId": { "type": "string", "description": "Workflow state UUID. Resolve with workflowStates.list." },
+          "priority": { "type": "integer", "description": "0 (no priority) to 4 (urgent)." },
+          "labelIds": { "type": "array", "items": { "type": "string" }, "description": "Replaces the full label set." },
+          "addedLabelIds": { "type": "array", "items": { "type": "string" } },
+          "removedLabelIds": { "type": "array", "items": { "type": "string" } },
+          "projectId": { "type": "string" },
+          "parentId": { "type": "string" },
+          "cycleId": { "type": "string" },
+          "dueDate": { "type": "string", "description": "YYYY-MM-DD." },
+          "estimate": { "type": "integer" },
+          "teamId": { "type": "string", "description": "Move the issue to a different team." },
+          "subscriberIds": { "type": "array", "items": { "type": "string" } },
+          "trashed": { "type": "boolean", "description": "Move the issue to the trash." },
+          "snoozedUntilAt": { "type": "string", "description": "ISO 8601 timestamp." },
+          "sortOrder": { "type": "number" }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "issue": { "type": "object" }
+        }
+      },
+      "sample": { "id": "ENG-123", "stateId": "state-uuid" },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id identifier title url state { id name } } } }",
+          "variables": {
+            "id": "{{id}}",
+            "input": {
+              "title": "{{title}}",
+              "description": "{{description}}",
+              "assigneeId": "{{assigneeId}}",
+              "stateId": "{{stateId}}",
+              "priority": "{{priority}}",
+              "labelIds": "{{labelIds}}",
+              "addedLabelIds": "{{addedLabelIds}}",
+              "removedLabelIds": "{{removedLabelIds}}",
+              "projectId": "{{projectId}}",
+              "parentId": "{{parentId}}",
+              "cycleId": "{{cycleId}}",
+              "dueDate": "{{dueDate}}",
+              "estimate": "{{estimate}}",
+              "teamId": "{{teamId}}",
+              "subscriberIds": "{{subscriberIds}}",
+              "trashed": "{{trashed}}",
+              "snoozedUntilAt": "{{snoozedUntilAt}}",
+              "sortOrder": "{{sortOrder}}"
+            }
+          }
+        },
+        "success": [200],
+        "result": {
+          "success": "{{response.data.issueUpdate.success}}",
+          "issue": {
+            "id": "{{response.data.issueUpdate.issue.id}}",
+            "identifier": "{{response.data.issueUpdate.issue.identifier}}",
+            "title": "{{response.data.issueUpdate.issue.title}}",
+            "url": "{{response.data.issueUpdate.issue.url}}",
+            "state": "{{response.data.issueUpdate.issue.state}}"
+          }
+        }
+      }
+    },
+    "issues.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Issue",
+      "description": "Fetch a single issue with the issue query. id accepts either the UUID or the human identifier (e.g. ENG-123) — Linear resolves both from the same argument.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Issue UUID or human identifier (e.g. ENG-123)." }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issue": { "type": "object" }
+        }
+      },
+      "sample": { "id": "ENG-123" },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Issue($id: String!) { issue(id: $id) { id identifier title description url priority createdAt updatedAt state { id name type } assignee { id name email } team { id key name } labels { nodes { id name } } } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "issue": "{{response.data.issue}}"
+        }
+      }
+    },
+    "issues.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Issues",
+      "description": "List issues with the issues query, using Relay cursor pagination. filter is a raw IssueFilter object passed through as-is. first defaults to 50 on the provider side if omitted. Pass the previous call's nextCursor as after to continue; keep paging while hasNextPage is true — endCursor may still be present on the final page since it points at the last returned edge, per Relay semantics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filter": { "type": "object", "description": "IssueFilter object, passed through to the provider as-is." },
+          "first": { "type": "integer", "description": "Page size. Provider default 50." },
+          "after": { "type": "string", "description": "Cursor from a previous call's nextCursor." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issues": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" },
+          "hasNextPage": { "type": "boolean" }
+        }
+      },
+      "sample": { "first": 25 },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Issues($filter: IssueFilter, $first: Int, $after: String) { issues(filter: $filter, first: $first, after: $after) { nodes { id identifier title url state { name } assignee { name } updatedAt } pageInfo { hasNextPage endCursor } } }",
+          "variables": {
+            "filter": "{{filter}}",
+            "first": "{{first}}",
+            "after": "{{after}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "issues": "{{response.data.issues.nodes}}",
+          "nextCursor": "{{response.data.issues.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.issues.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "issues.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Search Issues",
+      "description": "Full-text search issues with the searchIssues query, using Relay cursor pagination. term is required. This deliberately uses searchIssues, not the deprecated issueSearch(query:) field the SDL marks [Deprecated] — do not switch to it. Pass the previous call's nextCursor as after; keep paging while hasNextPage is true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "term": { "type": "string", "description": "Search text." },
+          "first": { "type": "integer", "description": "Page size. Provider default 50." },
+          "after": { "type": "string", "description": "Cursor from a previous call's nextCursor." }
+        },
+        "required": ["term"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issues": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" },
+          "hasNextPage": { "type": "boolean" }
+        }
+      },
+      "sample": { "term": "login redirect" },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query SearchIssues($term: String!, $first: Int, $after: String) { searchIssues(term: $term, first: $first, after: $after) { nodes { id identifier title url } pageInfo { hasNextPage endCursor } } }",
+          "variables": {
+            "term": "{{term}}",
+            "first": "{{first}}",
+            "after": "{{after}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "issues": "{{response.data.searchIssues.nodes}}",
+          "nextCursor": "{{response.data.searchIssues.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.searchIssues.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "comments.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Create Comment",
+      "description": "Post a comment on an issue with the commentCreate mutation. No field in CommentCreateInput is non-null in the SDL, but issueId and body are required here because a comment without a target issue or text is not meaningfully usable. Pass parentId to reply to an existing comment thread.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueId": { "type": "string", "description": "Issue UUID or human identifier to comment on." },
+          "body": { "type": "string", "description": "Comment text as markdown." },
+          "parentId": { "type": "string", "description": "Parent comment UUID, to reply in a thread." },
+          "createAsUser": { "type": "string", "description": "Display name override for app-authored comments." },
+          "displayIconUrl": { "type": "string", "description": "Avatar URL override for app-authored comments." },
+          "projectId": { "type": "string", "description": "Project UUID, for a comment on a project update instead of an issue." },
+          "documentContentId": { "type": "string" }
+        },
+        "required": ["issueId", "body"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "comment": { "type": "object" }
+        }
+      },
+      "sample": { "issueId": "ENG-123", "body": "Confirmed on staging." },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "mutation CommentCreate($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id body url createdAt } } }",
+          "variables": {
+            "input": {
+              "issueId": "{{issueId}}",
+              "body": "{{body}}",
+              "parentId": "{{parentId}}",
+              "createAsUser": "{{createAsUser}}",
+              "displayIconUrl": "{{displayIconUrl}}",
+              "projectId": "{{projectId}}",
+              "documentContentId": "{{documentContentId}}"
+            }
+          }
+        },
+        "success": [200],
+        "result": {
+          "success": "{{response.data.commentCreate.success}}",
+          "comment": "{{response.data.commentCreate.comment}}"
+        }
+      }
+    },
+    "teams.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Teams",
+      "description": "List teams with the teams query, using Relay cursor pagination. Needed to resolve the teamId that issues.create requires. Pass the previous call's nextCursor as after; keep paging while hasNextPage is true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": { "type": "integer", "description": "Page size. Provider default 50." },
+          "after": { "type": "string", "description": "Cursor from a previous call's nextCursor." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "teams": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" },
+          "hasNextPage": { "type": "boolean" }
+        }
+      },
+      "sample": {},
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Teams($first: Int, $after: String) { teams(first: $first, after: $after) { nodes { id key name displayName } pageInfo { hasNextPage endCursor } } }",
+          "variables": {
+            "first": "{{first}}",
+            "after": "{{after}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "teams": "{{response.data.teams.nodes}}",
+          "nextCursor": "{{response.data.teams.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.teams.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "workflowStates.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Workflow States",
+      "description": "List workflow states with the workflowStates query. Needed to resolve the stateId issues.update needs for 'move issue to Done' style operations. filter is a raw WorkflowStateFilter object, commonly {team: {id: {eq: teamId}}}. The verified reference documents only filter and first as arguments for this query — no after argument is documented, so this operation returns a single page only; it does not accept an after cursor and does not report pageInfo.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filter": { "type": "object", "description": "WorkflowStateFilter object, passed through to the provider as-is." },
+          "first": { "type": "integer", "description": "Page size. Provider default 50." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowStates": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "sample": {},
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query WorkflowStates($filter: WorkflowStateFilter, $first: Int) { workflowStates(filter: $filter, first: $first) { nodes { id name type position team { id key } } pageInfo { hasNextPage endCursor } } }",
+          "variables": {
+            "filter": "{{filter}}",
+            "first": "{{first}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "workflowStates": "{{response.data.workflowStates.nodes}}"
+        }
+      }
+    },
+    "projects.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Projects",
+      "description": "List projects with the projects query, using Relay cursor pagination. Pass the previous call's nextCursor as after; keep paging while hasNextPage is true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": { "type": "integer", "description": "Page size. Provider default 50." },
+          "after": { "type": "string", "description": "Cursor from a previous call's nextCursor." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projects": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" },
+          "hasNextPage": { "type": "boolean" }
+        }
+      },
+      "sample": {},
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Projects($first: Int, $after: String) { projects(first: $first, after: $after) { nodes { id name slugId url state progress } pageInfo { hasNextPage endCursor } } }",
+          "variables": {
+            "first": "{{first}}",
+            "after": "{{after}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "projects": "{{response.data.projects.nodes}}",
+          "nextCursor": "{{response.data.projects.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.projects.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "projects.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Project",
+      "description": "Fetch a single project by UUID with the project query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Project UUID." }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "project": { "type": "object" }
+        }
+      },
+      "sample": { "id": "project-uuid" },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Project($id: String!) { project(id: $id) { id name description url state } }",
+          "variables": {
+            "id": "{{id}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "project": "{{response.data.project}}"
+        }
+      }
+    },
+    "users.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Users",
+      "description": "List workspace users with the users query, using Relay cursor pagination. Needed to resolve the assigneeId that issues.create/issues.update accept. Pass the previous call's nextCursor as after; keep paging while hasNextPage is true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first": { "type": "integer", "description": "Page size. Provider default 50." },
+          "after": { "type": "string", "description": "Cursor from a previous call's nextCursor." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "users": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" },
+          "hasNextPage": { "type": "boolean" }
+        }
+      },
+      "sample": {},
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Users($first: Int, $after: String) { users(first: $first, after: $after) { nodes { id name displayName email active } pageInfo { hasNextPage endCursor } } }",
+          "variables": {
+            "first": "{{first}}",
+            "after": "{{after}}"
+          }
+        },
+        "success": [200],
+        "result": {
+          "users": "{{response.data.users.nodes}}",
+          "nextCursor": "{{response.data.users.pageInfo.endCursor}}",
+          "hasNextPage": "{{response.data.users.pageInfo.hasNextPage}}"
+        }
+      }
+    },
+    "organization.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get Organization",
+      "description": "Fetch the authenticated workspace's organization with the organization query. Takes no input.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "organization": { "type": "object" }
+        }
+      },
+      "sample": {},
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "body": {
+          "query": "query Organization { organization { id name urlKey } }"
+        },
+        "success": [200],
+        "result": {
+          "organization": "{{response.data.organization}}"
+        }
+      }
+    }
+  },
+  "models": ["issue", "comment", "team", "workflowState", "project", "user", "organization"]
+}

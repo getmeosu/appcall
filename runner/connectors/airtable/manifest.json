@@ -1,0 +1,372 @@
+{
+  "key": "airtable",
+  "name": "Airtable",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [
+      "data.records:read",
+      "data.records:write",
+      "schema.bases:read"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Personal access token (starts with pat…)",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["api.airtable.com"]
+  },
+  "http": {
+    "baseUrl": "https://api.airtable.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": ["error.message", "error.type", "error"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the Airtable personal access token by calling GET /v0/meta/whoami. Takes no input and returns the connector health status.",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "status": { "type": "string", "description": "Connector health status." } }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/meta/whoami",
+        "success": [200],
+        "echo": { "status": "ok" },
+        "result": { "status": "ok", "userId": "{{response.id}}" }
+      }
+    },
+    "records.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Records",
+      "description": "List records in an Airtable table, with optional view, formula filter, field selection, sorting, and cursor pagination. Returns up to 100 records per page along with the offset cursor for the next page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string", "description": "Airtable base ID, e.g. \"appXXXXXXXXXXXXXX\"." },
+          "tableIdOrName": { "type": "string", "description": "Table ID (\"tblXXXXXXXXXXXXXX\") or table name." },
+          "view": { "type": "string", "description": "View ID or name to read records through." },
+          "filterByFormula": { "type": "string", "description": "Airtable formula that must evaluate truthy for a record to be returned." },
+          "fields": { "type": "array", "items": { "type": "string" }, "description": "Field names to return. Omit for all fields." },
+          "maxRecords": { "type": "integer", "description": "Maximum number of records to return in total." },
+          "pageSize": { "type": "integer", "description": "Records per page, 1-100. Defaults to 100." },
+          "offset": { "type": "string", "description": "Pagination cursor returned by a previous call." },
+          "sortField": { "type": "string", "description": "Field name to sort by." },
+          "sortDirection": { "type": "string", "enum": ["asc", "desc"], "description": "Sort direction; requires sortField." },
+          "returnFieldsByFieldId": { "type": "boolean", "description": "Key the returned fields by field ID instead of field name." }
+        },
+        "required": ["baseId", "tableIdOrName"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "records": { "type": "array", "items": { "type": "object" } },
+          "offset": { "type": "string" }
+        }
+      },
+      "sample": { "baseId": "appXXXXXXXXXXXXXX", "tableIdOrName": "Contacts", "pageSize": 25 },
+      "request": {
+        "method": "GET",
+        "path": "/v0/{{baseId}}/{{tableIdOrName}}",
+        "query": {
+          "view": "{{view}}",
+          "filterByFormula": "{{filterByFormula}}",
+          "fields[]": "{{fields}}",
+          "maxRecords": "{{maxRecords}}",
+          "pageSize": "{{pageSize}}",
+          "offset": "{{offset}}",
+          "sort[0][field]": "{{sortField}}",
+          "sort[0][direction]": "{{sortDirection}}",
+          "returnFieldsByFieldId": "{{returnFieldsByFieldId}}"
+        },
+        "success": [200],
+        "result": { "records": "{{response.records}}", "offset": "{{response.offset}}" }
+      }
+    },
+    "records.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Record",
+      "description": "Fetch a single Airtable record by ID, returning its field values and creation time.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string", "description": "Airtable base ID." },
+          "tableIdOrName": { "type": "string", "description": "Table ID or name." },
+          "recordId": { "type": "string", "description": "Record ID, e.g. \"recXXXXXXXXXXXXXX\"." }
+        },
+        "required": ["baseId", "tableIdOrName", "recordId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "record": { "type": "object" } }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/{{baseId}}/{{tableIdOrName}}/{{recordId}}",
+        "success": [200],
+        "result": {
+          "record": {
+            "id": "{{response.id}}",
+            "createdTime": "{{response.createdTime}}",
+            "fields": "{{response.fields}}"
+          }
+        }
+      }
+    },
+    "records.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Record",
+      "description": "Create one record in an Airtable table from a map of field names to cell values. Set typecast to let Airtable coerce string values into select, date, and linked-record fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string", "description": "Airtable base ID." },
+          "tableIdOrName": { "type": "string", "description": "Table ID or name." },
+          "fields": { "type": "object", "description": "Field name to cell value map for the new record." },
+          "typecast": { "type": "boolean", "description": "Let Airtable coerce string values into the destination field type." }
+        },
+        "required": ["baseId", "tableIdOrName", "fields"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "record": { "type": "object" } }
+      },
+      "sample": { "baseId": "appXXXXXXXXXXXXXX", "tableIdOrName": "Contacts", "fields": { "Name": "Ada Lovelace", "Email": "ada@example.com" } },
+      "request": {
+        "method": "POST",
+        "path": "/v0/{{baseId}}/{{tableIdOrName}}",
+        "body": { "fields": "{{fields}}", "typecast": "{{typecast}}" },
+        "success": [200, 201],
+        "result": {
+          "record": {
+            "id": "{{response.id}}",
+            "createdTime": "{{response.createdTime}}",
+            "fields": "{{response.fields}}"
+          }
+        }
+      }
+    },
+    "records.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Record",
+      "description": "Update the supplied fields on an existing Airtable record. Fields that are not supplied are left unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string", "description": "Airtable base ID." },
+          "tableIdOrName": { "type": "string", "description": "Table ID or name." },
+          "recordId": { "type": "string", "description": "Record ID to update." },
+          "fields": { "type": "object", "description": "Field name to cell value map of the changes to apply." },
+          "typecast": { "type": "boolean", "description": "Let Airtable coerce string values into the destination field type." }
+        },
+        "required": ["baseId", "tableIdOrName", "recordId", "fields"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "record": { "type": "object" } }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v0/{{baseId}}/{{tableIdOrName}}/{{recordId}}",
+        "body": { "fields": "{{fields}}", "typecast": "{{typecast}}" },
+        "success": [200],
+        "result": {
+          "record": {
+            "id": "{{response.id}}",
+            "createdTime": "{{response.createdTime}}",
+            "fields": "{{response.fields}}"
+          }
+        }
+      }
+    },
+    "records.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete Record",
+      "description": "Permanently delete one Airtable record by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string", "description": "Airtable base ID." },
+          "tableIdOrName": { "type": "string", "description": "Table ID or name." },
+          "recordId": { "type": "string", "description": "Record ID to delete." }
+        },
+        "required": ["baseId", "tableIdOrName", "recordId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "id": { "type": "string" }, "deleted": { "type": "boolean" } }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v0/{{baseId}}/{{tableIdOrName}}/{{recordId}}",
+        "success": [200],
+        "result": { "id": "{{response.id}}", "deleted": "{{response.deleted}}" }
+      }
+    },
+    "bases.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Bases",
+      "description": "List the Airtable bases the token can access, with each base's ID, name, and permission level.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "offset": { "type": "string", "description": "Pagination cursor returned by a previous call." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "bases": { "type": "array", "items": { "type": "object" } }, "offset": { "type": "string" } }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/meta/bases",
+        "query": { "offset": "{{offset}}" },
+        "success": [200],
+        "result": { "bases": "{{response.bases}}", "offset": "{{response.offset}}" }
+      }
+    },
+    "tables.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Tables",
+      "description": "List the tables in an Airtable base together with their field definitions and views, so a caller can discover the schema before reading or writing records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string", "description": "Airtable base ID." }
+        },
+        "required": ["baseId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "tables": { "type": "array", "items": { "type": "object" } } }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/meta/bases/{{baseId}}/tables",
+        "success": [200],
+        "result": { "tables": "{{response.tables}}" }
+      }
+    },
+    "comments.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Record Comments",
+      "description": "List the comments on an Airtable record, newest first, with cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string", "description": "Airtable base ID." },
+          "tableIdOrName": { "type": "string", "description": "Table ID or name." },
+          "recordId": { "type": "string", "description": "Record ID whose comments are listed." },
+          "pageSize": { "type": "integer", "description": "Comments per page, 1-100." },
+          "offset": { "type": "string", "description": "Pagination cursor returned by a previous call." }
+        },
+        "required": ["baseId", "tableIdOrName", "recordId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "comments": { "type": "array", "items": { "type": "object" } }, "offset": { "type": "string" } }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v0/{{baseId}}/{{tableIdOrName}}/{{recordId}}/comments",
+        "query": { "pageSize": "{{pageSize}}", "offset": "{{offset}}" },
+        "success": [200],
+        "result": { "comments": "{{response.comments}}", "offset": "{{response.offset}}" }
+      }
+    },
+    "comments.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Record Comment",
+      "description": "Post a comment on an Airtable record. Mention a collaborator with the @[usrXXXXXXXXXXXXXX] syntax inside the text.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "baseId": { "type": "string", "description": "Airtable base ID." },
+          "tableIdOrName": { "type": "string", "description": "Table ID or name." },
+          "recordId": { "type": "string", "description": "Record ID to comment on." },
+          "text": { "type": "string", "description": "Comment body." }
+        },
+        "required": ["baseId", "tableIdOrName", "recordId", "text"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "comment": { "type": "object" } }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v0/{{baseId}}/{{tableIdOrName}}/{{recordId}}/comments",
+        "body": { "text": "{{text}}" },
+        "success": [200, 201],
+        "result": { "comment": { "id": "{{response.id}}", "text": "{{response.text}}", "createdTime": "{{response.createdTime}}" } }
+      }
+    }
+  },
+  "models": ["record", "table", "base", "comment"]
+}

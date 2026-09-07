@@ -1,0 +1,323 @@
+use crate::{http::escape, Error, Request};
+use serde_json::Value;
+pub(crate) fn banner(message: &str, success: bool) -> String {
+    let tone = if success {
+        "border-emerald-900 bg-emerald-950/60 text-emerald-300"
+    } else {
+        "border-red-900 bg-red-950/60 text-red-300"
+    };
+    format!(
+        "<div role=\"{}\" class=\"mb-4 rounded-lg border px-3 py-2 text-sm {tone}\">{}</div>",
+        if success { "status" } else { "alert" },
+        escape(message)
+    )
+}
+pub(crate) fn failure_target(path: &str) -> Option<&'static str> {
+    Some(match path {
+        "/app/users/invite" => "/app/users?error=invite",
+        "/app/settings/organization" => "/app/settings/organization?error=org",
+        "/app/settings/account/mfa/setup" => "/app/settings/account?error=setup",
+        "/app/settings/account/mfa/verify" => "/app/settings/account?error=verify",
+        "/app/settings/account/mfa/disable" => "/app/settings/account?error=disable",
+        "/app/settings/account/change-password" => "/app/settings/account?error=password",
+        "/app/settings/billing/checkout" => "/app/settings/billing?error=checkout",
+        "/app/settings/billing/portal" => "/app/settings/billing?error=portal",
+        p if p.starts_with("/app/users/") && p.ends_with("/remove") => "/app/users?error=remove",
+        p if p.starts_with("/app/users/") && p.ends_with("/role") => "/app/users?error=role",
+        p if p.starts_with("/app/sessions/") && p.ends_with("/revoke") => {
+            "/app/sessions?error=revoke"
+        }
+        _ => return None,
+    })
+}
+pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
+    let err = r.field("error")?;
+    let message = match (r.path, err) {
+        ("/app/users", "invite") => "Failed to send invitation. Please try again.",
+        ("/app/users", "remove") => "Failed to remove member. Please try again.",
+        ("/app/users", "role") => "Failed to update role. Please try again.",
+        ("/app/sessions", "revoke") => "Could not revoke session. Please try again.",
+        ("/app/settings/organization", "org") => {
+            "Could not save organization settings. Please try again."
+        }
+        ("/app/settings/account", "setup") => "Could not start MFA setup. Please try again.",
+        ("/app/settings/account", "verify") => {
+            "Could not verify your MFA code. Please start setup again."
+        }
+        ("/app/settings/account", "disable") => {
+            "Could not disable MFA. Check your verification code."
+        }
+        ("/app/settings/account", "password") => {
+            "Could not change your password. Check your current password and try again."
+        }
+        ("/app/settings/billing", "checkout") => "Could not start checkout. Please try again.",
+        ("/app/settings/billing", "portal") => {
+            "Could not open the billing portal. Please try again."
+        }
+        _ => "",
+    };
+    if !message.is_empty() {
+        return Ok(banner(message, false));
+    }
+    let success = match r.path {
+        "/app/users" if r.field("invited")? == "1" => "Invitation sent successfully.",
+        "/app/users" if r.field("removed")? == "1" => "Member removed successfully.",
+        "/app/users" if r.field("role")? == "updated" => "Role updated successfully.",
+        "/app/sessions" if r.field("revoked")? == "1" => "Session revoked successfully.",
+        "/app/settings/account" if r.field("password")? == "changed" => {
+            "Password changed successfully."
+        }
+        "/app/settings/organization" if r.field("saved")? == "1" => "Organization settings saved.",
+        _ => "",
+    };
+    Ok(if success.is_empty() {
+        String::new()
+    } else {
+        banner(success, true)
+    })
+}
+pub(crate) fn billing(status: Result<Value, Error>, plans: Result<Value, Error>) -> String {
+    let mut body = String::from("<div class=\"space-y-8\"><section><h3 class=\"mb-3 text-sm font-semibold uppercase tracking-wider text-dusk-blue-500\">Current Plan</h3>");
+    let status = match status {
+        Ok(v) => v,
+        Err(_) => {
+            body.push_str(&banner(
+                "Could not load your subscription status. Please refresh.",
+                false,
+            ));
+            Value::Null
+        }
+    };
+    let raw_status = status["billingStatus"]
+        .as_str()
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let (label, tone) = match raw_status.as_str() {
+        "active" => ("Active", "bg-tropical-teal-900 text-tropical-teal-300"),
+        "past_due" => ("Past due", "text-yellow-300"),
+        "canceled" => ("Canceled", "text-dusk-blue-300"),
+        _ => ("No subscription", "text-dusk-blue-300"),
+    };
+    let plan = status["plan"]["name"].as_str().unwrap_or("No active plan");
+    let credits = status["subscriptionCredits"]
+        .as_i64()
+        .unwrap_or(0)
+        .saturating_add(status["purchasedCredits"].as_i64().unwrap_or(0));
+    let digits = credits.unsigned_abs().to_string();
+    let grouped = digits
+        .chars()
+        .enumerate()
+        .map(|(i, c)| {
+            format!(
+                "{}{c}",
+                if i > 0 && (digits.len() - i) % 3 == 0 {
+                    ","
+                } else {
+                    ""
+                }
+            )
+        })
+        .collect::<String>();
+    body.push_str(&format!("<div class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><div class=\"flex flex-wrap items-start justify-between gap-4\"><div class=\"space-y-3\"><p class=\"text-base font-semibold text-dusk-blue-50\">{} <span class=\"text-xs {tone}\">{label}</span></p><p class=\"text-xs uppercase text-dusk-blue-500\">Credits</p><p class=\"text-lg font-semibold\">{}{grouped}</p>",escape(plan),if credits<0 {"-"} else {""}));
+    if let Some(date) = status["currentPeriodEnd"].as_str() {
+        body.push_str(&format!(
+            "<p>Renews <time>{}</time></p>",
+            escape(&display_date(date, false))
+        ));
+    }
+    body.push_str("</div>");
+    if raw_status == "active" && status["plan"].is_object() {
+        body.push_str(&crate::admin::form("/app/settings/billing/portal", &[]));
+    }
+    body.push_str("</div></div></section><section><h3 class=\"mb-3 text-sm font-semibold uppercase tracking-wider text-dusk-blue-500\">Available Plans</h3>");
+    match plans {
+        Ok(v) if v["plans"].as_array().is_some() => {
+            let plans = v["plans"].as_array().unwrap();
+            if plans.is_empty() {
+                body.push_str("<p>No plans available</p><p>Check back soon or contact support to get started.</p>");
+            }
+            body.push_str("<div class=\"grid gap-4 sm:grid-cols-2 lg:grid-cols-3\">");
+            for plan in plans {
+                let str = |key: &str| plan[key].as_str().unwrap_or("");
+                body.push_str(&format!("<article class=\"flex flex-col rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><h3 class=\"text-base font-semibold\">{}</h3><p class=\"text-2xl font-bold text-neon-ice-400\">{}</p><p class=\"text-sm text-dusk-blue-400\">{}</p>{}</article>",escape(str("name")),escape(&crate::admin::plan_price(plan["price"].as_i64().unwrap_or(0),str("currency"),str("billingInterval"))),escape(str("description")),crate::admin::form("/app/settings/billing/checkout",&[("planId","","hidden",str("id"))])));
+            }
+            body.push_str("</div>");
+        }
+        _ => body.push_str(&banner("Could not load plans.", false)),
+    }
+    body.push_str("</section></div>");
+    body
+}
+
+/// The QR matrix is encoded locally and rendered as inert SVG rectangles. Neither
+/// the provisioning URL nor the shared secret is sent to an image service.
+pub(crate) fn mfa_qr(value: &str) -> Result<String, Error> {
+    let url = reqwest::Url::parse(value).map_err(|_| Error::Invalid)?;
+    if value.len() > 2048
+        || url.scheme() != "otpauth"
+        || url.host_str() != Some("totp")
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || !url
+            .query_pairs()
+            .any(|(k, v)| k == "secret" && !v.is_empty())
+    {
+        return Err(Error::Invalid);
+    }
+    let qr = qrcode::QrCode::with_error_correction_level(value.as_bytes(), qrcode::EcLevel::M)
+        .map_err(|_| Error::Invalid)?;
+    let width = qr.width();
+    let mut svg = format!("<svg role=\"img\" aria-label=\"Authenticator setup QR code\" width=\"256\" height=\"256\" viewBox=\"0 0 {} {}\" shape-rendering=\"crispEdges\"><rect width=\"100%\" height=\"100%\" fill=\"white\"/><g fill=\"black\">",width+8,width+8);
+    for y in 0..width {
+        for x in 0..width {
+            if qr[(x, y)] == qrcode::Color::Dark {
+                svg.push_str(&format!(
+                    "<rect x=\"{}\" y=\"{}\" width=\"1\" height=\"1\"/>",
+                    x + 4,
+                    y + 4
+                ));
+            }
+        }
+    }
+    svg.push_str("</g></svg>");
+    Ok(svg)
+}
+
+/// Display the calendar component carried by the broker, matching the Go view.
+pub(crate) fn display_date(value: &str, with_time: bool) -> String {
+    let bytes = value.as_bytes();
+    if bytes.len() < 10
+        || bytes[4] != b'-'
+        || bytes[7] != b'-'
+        || !bytes[..4].iter().all(u8::is_ascii_digit)
+    {
+        return String::new();
+    }
+    let Some(month) = value
+        .get(5..7)
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|m| (1..=12).contains(m))
+    else {
+        return String::new();
+    };
+    let Some(day) = value
+        .get(8..10)
+        .and_then(|v| v.parse::<u8>().ok())
+        .filter(|d| (1..=31).contains(d))
+    else {
+        return String::new();
+    };
+    let months = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let mut date = format!("{} {day}, {}", months[month - 1], &value[..4]);
+    if with_time {
+        if let Some(time) = value.get(11..16).filter(|t| {
+            t.as_bytes()[2] == b':' && t.bytes().filter(|b| *b != b':').all(|b| b.is_ascii_digit())
+        }) {
+            date.push(' ');
+            date.push_str(time);
+        }
+    }
+    date
+}
+
+pub(crate) fn settings(project_id: &str, project_name: &str, organization: &str) -> String {
+    let mut body = format!("<p class=\"mb-6 text-sm text-dusk-blue-400\">Manage your project, organization, account, and billing.</p><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2\"><section class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><h3 class=\"text-sm font-semibold\">Project</h3><p class=\"mt-4 text-sm\">Name: {}</p><p class=\"mt-3 text-sm\">Project ID: <code>{}</code></p><p class=\"mt-4 text-xs text-dusk-blue-500\">API keys for this project are managed via the API.</p></section>",escape(project_name),escape(project_id));
+    for (path, title, description) in [
+        (
+            "organization",
+            "Organization",
+            "Rename your organization and manage team members.",
+        ),
+        (
+            "account",
+            "Account",
+            "Multi-factor authentication and personal security.",
+        ),
+        (
+            "billing",
+            "Billing",
+            "Plans, subscription, and usage credits.",
+        ),
+        (
+            "usage",
+            "Usage",
+            "Tool calls, synced records, and webhook events this month.",
+        ),
+        (
+            "white-labeling",
+            "White Labeling",
+            "Customize your branding on the OAuth consent screen.",
+        ),
+    ] {
+        body.push_str(&format!("<a href=\"/app/settings/{path}\" class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-neon-ice-500\"><h3 class=\"text-sm font-semibold\">{title} →</h3><p class=\"mt-2 text-sm text-dusk-blue-400\">{description}</p>{}</a>",if path=="organization" {format!("<p class=\"mt-3 text-xs text-dusk-blue-500\">{}</p>",escape(organization))} else {String::new()}));
+    }
+    body.push_str("</div>");
+    body
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    #[test]
+    fn settings_hub_exposes_all_subpages_and_verified_project() {
+        let html = settings("proj_verified", "Project", "Organization");
+        for path in [
+            "organization",
+            "account",
+            "billing",
+            "usage",
+            "white-labeling",
+        ] {
+            assert!(html.contains(&format!("href=\"/app/settings/{path}\"")));
+        }
+        assert!(html.contains("proj_verified"));
+    }
+    #[test]
+    fn billing_preserves_partial_failures_and_only_active_portal() {
+        let active = billing(
+            Ok(
+                json!({"billingStatus":"active","plan":{"name":"Pro"},"subscriptionCredits":900,"purchasedCredits":120,"currentPeriodEnd":"2026-10-01T00:00:00Z"}),
+            ),
+            Err(crate::Error::Unavailable),
+        );
+        assert!(active.contains("1,020"));
+        assert!(active.contains("Manage billing"));
+        assert!(active.contains("Could not load plans."));
+        let inactive = billing(
+            Ok(json!({"billingStatus":"past_due"})),
+            Ok(json!({"plans":[]})),
+        );
+        assert!(inactive.contains("Past due"));
+        assert!(!inactive.contains("Manage billing"));
+        assert!(inactive.contains("No plans available"));
+    }
+    #[test]
+    fn redirect_errors_are_fixed_and_unknown_paths_fail_closed() {
+        assert_eq!(
+            failure_target("/app/users/member-1/remove"),
+            Some("/app/users?error=remove")
+        );
+        assert_eq!(
+            failure_target("/app/settings/billing/portal"),
+            Some("/app/settings/billing?error=portal")
+        );
+        assert_eq!(failure_target("/app/users/x/unknown"), None);
+    }
+}
+#[cfg(test)]
+mod qr_tests {
+    #[test]
+    fn mfa_qr_is_local_and_rejects_non_totp_urls() {
+        let qr =
+            super::mfa_qr("otpauth://totp/Appcall:test?secret=JBSWY3DPEHPK3PXP&issuer=Appcall")
+                .unwrap();
+        assert!(qr.starts_with("<svg"));
+        assert!(qr.contains("shape-rendering=\"crispEdges\""));
+        assert!(!qr.contains("JBSWY"));
+        assert!(!qr.contains("http://"));
+        assert!(super::mfa_qr("javascript:alert(1)").is_err());
+        assert!(super::mfa_qr("otpauth://hotp/a?secret=X").is_err());
+    }
+}

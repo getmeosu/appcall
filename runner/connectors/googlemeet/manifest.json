@@ -1,0 +1,97 @@
+{
+  "key": "googlemeet",
+  "name": "Google Meet",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["scheduling"],
+  "auth": {
+    "type": "external_bearer",
+    "scopes": [
+      "https://www.googleapis.com/auth/calendar.events"
+    ],
+    "setup": {
+      "mode": "external_bearer",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": ["www.googleapis.com"]
+  },
+  "operations": {
+    "meetings.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Meeting",
+      "description": "Create a Google Calendar event with a Google Meet conference link.",
+      "sideEffect": "write",
+      "sample": {
+        "summary": "Intro call",
+        "start": "2026-06-01T09:00:00Z",
+        "end": "2026-06-01T09:30:00Z",
+        "attendees": ["prospect@example.com"]
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "summary": { "type": "string", "description": "Meeting title shown on the calendar event." },
+          "start": { "type": "string", "description": "Start time, RFC3339 (e.g. 2026-06-01T09:00:00Z)." },
+          "end": { "type": "string", "description": "End time, RFC3339." },
+          "description": { "type": "string", "description": "Optional event description." },
+          "attendees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Attendee email addresses to invite; Google emails them a calendar invite."
+          }
+        },
+        "required": ["summary", "start", "end"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "meeting": { "type": "object" }
+        }
+      }
+    },
+    "meetings.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Meetings",
+      "description": "List upcoming Google Calendar events that carry a Google Meet conference link.",
+      "sideEffect": "read",
+      "sample": { "maxResults": 10 },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "maxResults": { "type": "number", "description": "Optional. Maximum number of upcoming meetings to return. Default 50." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "meetings": { "type": "array", "description": "Normalized upcoming meetings." }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify the supplied Google access token can read the primary calendar.",
+      "sideEffect": "read",
+      "inputSchema": { "type": "object", "properties": {} },
+      "outputSchema": { "type": "object", "properties": { "status": { "type": "string" } } }
+    }
+  },
+  "models": ["meeting"]
+}

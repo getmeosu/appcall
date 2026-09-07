@@ -1,0 +1,454 @@
+{
+  "key": "facebook",
+  "name": "Facebook Pages",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "description": "Facebook Pages curated publishing operations with a manually supplied OAuth2 token.",
+  "categories": [
+    "social"
+  ],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "pages_read_engagement",
+      "pages_manage_posts"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "Existing Page OAuth2 access token (manual renewal)",
+          "secret": true,
+          "required": true
+        },
+        {
+          "key": "pageId",
+          "label": "Facebook Page ID matching the Page token",
+          "secret": false,
+          "required": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "graph.facebook.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://graph.facebook.com/v26.0",
+    "auth": {
+      "field": "accessToken",
+      "in": "query",
+      "name": "access_token",
+      "value": "{{accessToken}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "error.message"
+      ],
+      "bodyErrorPaths": [
+        "error"
+      ],
+      "rateLimitCodePaths": [
+        "error.code"
+      ],
+      "rateLimitCodes": [
+        "4",
+        "17"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "title": "Read the identity represented by the supplied Page access token",
+      "description": "Read the identity represented by the supplied Page access token. Use a Page token matching the configured pageId.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "object",
+            "description": "Authenticated Page identity.",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Page ID."
+              },
+              "name": {
+                "type": "string",
+                "description": "Page name."
+              }
+            }
+          }
+        },
+        "required": [
+          "page"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me",
+        "success": [
+          200
+        ],
+        "result": {
+          "page": "{{response}}"
+        },
+        "query": {
+          "fields": "id,name"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      }
+    },
+    "posts.list": {
+      "kind": "action",
+      "title": "List the configured Page feed",
+      "description": "List the configured Page feed. Follow after cursors only while pages contain results.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; provider validates its allowed range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from the prior response. Omit for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "posts": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider posts."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque continuation cursor, if supplied by the provider. A cursor alone does not prove there is another page."
+          }
+        },
+        "required": [
+          "posts"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{pageId}}/feed",
+        "success": [
+          200
+        ],
+        "result": {
+          "posts": "{{response.data}}",
+          "after": "{{response.paging.cursors.after}}"
+        },
+        "query": {
+          "fields": "id,message,created_time",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        }
+      }
+    },
+    "posts.create": {
+      "kind": "action",
+      "title": "Publish a text or link post to the configured Page immediately",
+      "description": "Publish a text or link post to the configured Page immediately.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Text content of the Page post."
+          },
+          "link": {
+            "type": "string",
+            "description": "Optional URL to attach."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Published Page post ID."
+          }
+        },
+        "required": [
+          "postId"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{pageId}}/feed",
+        "success": [
+          200
+        ],
+        "result": {
+          "postId": "{{response.id}}"
+        },
+        "body": {
+          "message": "{{message}}",
+          "link": "{{link}}",
+          "published": true
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "posts.schedule": {
+      "kind": "action",
+      "title": "Schedule a Page post",
+      "description": "Schedule a Page post. The provider requires a publish time between 10 minutes and 30 days from the request; confirm the schedule in Facebook.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Text content of the Page post."
+          },
+          "link": {
+            "type": "string",
+            "description": "Optional URL to attach."
+          },
+          "scheduledPublishTime": {
+            "type": "integer",
+            "description": "Future Unix timestamp in seconds; provider validates the scheduling window."
+          }
+        },
+        "required": [
+          "message",
+          "scheduledPublishTime"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Scheduled Page post ID; not evidence it has already published."
+          }
+        },
+        "required": [
+          "postId"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{pageId}}/feed",
+        "success": [
+          200
+        ],
+        "result": {
+          "postId": "{{response.id}}"
+        },
+        "body": {
+          "message": "{{message}}",
+          "link": "{{link}}",
+          "published": false,
+          "scheduled_publish_time": "{{scheduledPublishTime}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "posts.update": {
+      "kind": "action",
+      "title": "Update message text of a Page post created by the same app",
+      "description": "Update message text of a Page post created by the same app. Other posts cannot be edited.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Page post ID belonging to the Page represented by this token."
+          },
+          "message": {
+            "type": "string",
+            "description": "Replacement post message."
+          }
+        },
+        "required": [
+          "postId",
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Provider mutation acknowledgement."
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{postId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.success}}"
+        },
+        "body": {
+          "message": "{{message}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "posts.delete": {
+      "kind": "action",
+      "title": "Delete an existing Page post using the Page token",
+      "description": "Delete an existing Page post using the Page token.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Page post ID belonging to the Page represented by this token."
+          }
+        },
+        "required": [
+          "postId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Provider mutation acknowledgement."
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/{{postId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.success}}"
+        }
+      }
+    },
+    "photos.publish": {
+      "kind": "action",
+      "title": "Publish a photo to the configured Page from a public URL fetched by Meta",
+      "description": "Publish a photo to the configured Page from a public URL fetched by Meta. No binary upload is performed.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Public photo URL that Meta can fetch."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "photoId": {
+            "type": "string",
+            "description": "Photo ID."
+          },
+          "postId": {
+            "type": "string",
+            "description": "Page post ID."
+          }
+        },
+        "required": [
+          "photoId",
+          "postId"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{pageId}}/photos",
+        "success": [
+          200
+        ],
+        "result": {
+          "photoId": "{{response.id}}",
+          "postId": "{{response.post_id}}"
+        },
+        "body": {
+          "url": "{{url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    }
+  },
+  "models": [
+    "post"
+  ]
+}

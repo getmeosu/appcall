@@ -1,0 +1,66 @@
+{
+  "connector": "github",
+  "scenarios": [
+    {
+      "name": "get repository metadata",
+      "operation": "repos.get",
+      "input": {
+        "owner": "panora-qa",
+        "repo": "certification-fixture"
+      },
+      "expect": {
+        "status": "ok",
+        "assertions": [
+          { "path": "repo", "op": "isObject" },
+          { "path": "repo.fullName", "op": "exists" },
+          { "path": "repo.fullName", "op": "matches", "value": "certification-fixture$" }
+        ]
+      }
+    },
+    {
+      "name": "get a known issue",
+      "operation": "issues.get",
+      "input": {
+        "owner": "panora-qa",
+        "repo": "certification-fixture",
+        "issueNumber": 1
+      },
+      "expect": {
+        "status": "ok",
+        "assertions": [
+          { "path": "issue.number", "op": "eq", "value": 1 },
+          { "path": "issue.title", "op": "exists" },
+          { "path": "issue.url", "op": "type", "value": "string" }
+        ]
+      }
+    },
+    {
+      "name": "create then close an issue",
+      "operation": "issues.create",
+      "input": {
+        "owner": "panora-qa",
+        "repo": "certification-fixture",
+        "title": "QA certification run {{runId}}",
+        "body": "Created by the Panora connector QA harness; closed automatically by teardown."
+      },
+      "expect": {
+        "status": "ok",
+        "assertions": [
+          { "path": "issue.number", "op": "exists" },
+          { "path": "issue.state", "op": "eq", "value": "open" }
+        ]
+      },
+      "teardown": [
+        {
+          "operation": "issues.update",
+          "input": {
+            "owner": "panora-qa",
+            "repo": "certification-fixture",
+            "issueNumber": "{{issue.number}}",
+            "state": "closed"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,794 @@
+{
+  "key": "apollo",
+  "name": "Apollo",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["crm"],
+  "auth": {
+    "type": "api_key",
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "API Key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["api.apollo.io"]
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Apollo connector. Returns connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "description": "Connector health status, e.g. \"ok\"." }
+        }
+      }
+    },
+    "webhook.phone_revealed": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
+    },
+    "people.search": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search People",
+      "description": "Search for people (prospects) in Apollo using keywords, titles, seniorities, locations, and organization criteria. Returns matching people with contact details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q_keywords": {
+            "type": "string",
+            "description": "Optional. Keywords to search for across all person fields."
+          },
+          "person_titles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. List of job titles to filter by (e.g. [\"VP of Sales\", \"Director of Marketing\"])."
+          },
+          "person_seniorities": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Seniority levels to filter by (e.g. [\"senior\", \"director\", \"vp\", \"c_suite\"])."
+          },
+          "person_locations": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Geographic locations to filter by (e.g. [\"United States\", \"New York, NY\"])."
+          },
+          "organization_domains": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Company domains to filter by (e.g. [\"google.com\", \"salesforce.com\"])."
+          },
+          "organization_num_employees_ranges": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Employee count ranges to filter by (e.g. [\"1,10\", \"11,50\", \"51,200\"])."
+          },
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number for pagination (default: 1)."
+          },
+          "per_page": {
+            "type": "number",
+            "description": "Optional. Number of results per page (default: 25, max: 100)."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "people": { "type": "array", "description": "List of matching people." },
+          "pagination": { "type": "object", "description": "Pagination metadata." }
+        }
+      }
+    },
+    "people.match": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Match Person",
+      "description": "Find a specific person in Apollo by matching on name, email, domain, organization, or LinkedIn URL. Returns enriched person data including contact information.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional. Apollo person ID. The most reliable way to enrich a known prospect — supply this to bypass fuzzy matching entirely."
+          },
+          "first_name": {
+            "type": "string",
+            "description": "Optional. Person's first name."
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Optional. Person's last name."
+          },
+          "email": {
+            "type": "string",
+            "description": "Optional. Person's email address."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Optional. Company domain to narrow the match (e.g. \"google.com\")."
+          },
+          "organization_name": {
+            "type": "string",
+            "description": "Optional. Company name to narrow the match."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Optional. LinkedIn profile URL of the person."
+          },
+          "reveal_personal_emails": {
+            "type": "boolean",
+            "description": "Optional. Whether to attempt to reveal personal email addresses (uses credits)."
+          },
+          "reveal_phone_number": {
+            "type": "boolean",
+            "description": "Optional. Whether to attempt to reveal phone numbers (uses credits). The revealed number is delivered asynchronously to a server-managed webhook; set this flag and read the result from the apollo webhook-events feed."
+          },
+          "webhook_url": {
+            "type": "string",
+            "description": "Reserved. The async phone-reveal callback URL is injected server-side and must not be supplied by the caller; any provided value is overridden."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "person": { "type": "object", "description": "Matched and enriched person data." }
+        }
+      }
+    },
+    "people.bulk_match": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 131072,
+      "maxResponseBytes": 5242880,
+      "title": "Bulk Match People",
+      "description": "Match multiple people at once by providing a list of person detail objects. Each object can include first_name, last_name, email, domain, organization_name, or linkedin_url.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "first_name": { "type": "string", "description": "Person's first name." },
+                "last_name": { "type": "string", "description": "Person's last name." },
+                "email": { "type": "string", "description": "Person's email address." },
+                "domain": { "type": "string", "description": "Company domain." },
+                "organization_name": { "type": "string", "description": "Company name." },
+                "linkedin_url": { "type": "string", "description": "LinkedIn profile URL." }
+              }
+            },
+            "description": "Array of person detail objects to match against Apollo database."
+          }
+        },
+        "additionalProperties": false,
+        "required": ["details"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "matches": { "type": "array", "description": "List of matched person results." }
+        }
+      }
+    },
+    "organizations.search": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Organizations",
+      "description": "Search for companies/organizations in Apollo by name, location, and employee count ranges.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q_organization_name": {
+            "type": "string",
+            "description": "Optional. Company name keyword to search for."
+          },
+          "organization_locations": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. List of geographic locations to filter by (e.g. [\"United States\", \"San Francisco, CA\"])."
+          },
+          "organization_num_employees_ranges": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Employee count ranges to filter by (e.g. [\"1,10\", \"11,50\"])."
+          },
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number for pagination (default: 1)."
+          },
+          "per_page": {
+            "type": "number",
+            "description": "Optional. Number of results per page (default: 25, max: 100)."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "organizations": { "type": "array", "description": "List of matching organizations." },
+          "pagination": { "type": "object", "description": "Pagination metadata." }
+        }
+      }
+    },
+    "organizations.enrich": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Enrich Organization",
+      "description": "Retrieve detailed company/organization information from Apollo by providing a company domain name. Returns firmographic data, technographics, and social profiles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "The company domain to enrich (e.g. \"apollo.io\", \"google.com\")."
+          }
+        },
+        "additionalProperties": false,
+        "required": ["domain"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "organization": { "type": "object", "description": "Enriched organization data." }
+        }
+      }
+    },
+    "organizations.bulk_enrich": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Bulk Enrich Organizations",
+      "description": "Enrich multiple organizations at once by providing a list of company domains. Returns firmographic and enrichment data for each domain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domains": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of company domains to enrich (e.g. [\"apollo.io\", \"google.com\"])."
+          }
+        },
+        "additionalProperties": false,
+        "required": ["domains"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "organizations": { "type": "array", "description": "List of enriched organization data." }
+        }
+      }
+    },
+    "organizations.job_postings": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Organization Job Postings",
+      "description": "Retrieve open job postings for a specific organization in Apollo by its organization ID. Useful for understanding company growth signals.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The Apollo organization ID to get job postings for."
+          }
+        },
+        "additionalProperties": false,
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "job_postings": { "type": "array", "description": "List of job postings for the organization." }
+        }
+      }
+    },
+    "contacts.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Create Contact",
+      "description": "Create a new contact record in Apollo CRM with full profile details including name, email, phone, title, and company information.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "description": "Contact's first name."
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Contact's last name."
+          },
+          "email": {
+            "type": "string",
+            "description": "Optional. Contact's email address."
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional. Contact's job title."
+          },
+          "organization_name": {
+            "type": "string",
+            "description": "Optional. Company name for the contact."
+          },
+          "website_url": {
+            "type": "string",
+            "description": "Optional. Company website URL."
+          },
+          "direct_phone": {
+            "type": "string",
+            "description": "Optional. Contact's direct phone number."
+          },
+          "mobile_phone": {
+            "type": "string",
+            "description": "Optional. Contact's mobile phone number."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Optional. Contact's LinkedIn profile URL."
+          },
+          "label_names": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. List of label names to apply to the contact."
+          }
+        },
+        "additionalProperties": false,
+        "required": ["first_name", "last_name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contact": { "type": "object", "description": "The created contact record." }
+        }
+      }
+    },
+    "contacts.update": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Update Contact",
+      "description": "Update an existing contact record in Apollo CRM by its ID. Provide only the fields you want to change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The Apollo contact ID to update."
+          },
+          "first_name": {
+            "type": "string",
+            "description": "Optional. Updated first name."
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Optional. Updated last name."
+          },
+          "email": {
+            "type": "string",
+            "description": "Optional. Updated email address."
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional. Updated job title."
+          },
+          "organization_name": {
+            "type": "string",
+            "description": "Optional. Updated company name."
+          },
+          "direct_phone": {
+            "type": "string",
+            "description": "Optional. Updated direct phone number."
+          },
+          "mobile_phone": {
+            "type": "string",
+            "description": "Optional. Updated mobile phone number."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Optional. Updated LinkedIn profile URL."
+          },
+          "label_names": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Updated list of label names."
+          }
+        },
+        "additionalProperties": false,
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contact": { "type": "object", "description": "The updated contact record." }
+        }
+      }
+    },
+    "contacts.search": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Contacts",
+      "description": "Search contacts in your Apollo CRM database using various filters including name, email, title, and more.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q_keywords": {
+            "type": "string",
+            "description": "Optional. Keywords to search across contact fields."
+          },
+          "email": {
+            "type": "string",
+            "description": "Optional. Filter by email address."
+          },
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number for pagination (default: 1)."
+          },
+          "per_page": {
+            "type": "number",
+            "description": "Optional. Number of results per page (default: 25, max: 100)."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contacts": { "type": "array", "description": "List of matching contacts." },
+          "pagination": { "type": "object", "description": "Pagination metadata." }
+        }
+      }
+    },
+    "accounts.create": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Create Account",
+      "description": "Create a new account (company) record in Apollo CRM with company name, domain, and other firmographic details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The account/company name."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Optional. Company domain (e.g. \"acme.com\")."
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Optional. Company phone number."
+          },
+          "raw_address": {
+            "type": "string",
+            "description": "Optional. Company address."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Optional. Company LinkedIn page URL."
+          },
+          "website_url": {
+            "type": "string",
+            "description": "Optional. Company website URL."
+          },
+          "num_employees": {
+            "type": "number",
+            "description": "Optional. Approximate number of employees."
+          },
+          "industry": {
+            "type": "string",
+            "description": "Optional. Industry sector."
+          },
+          "label_names": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. List of label names to apply to the account."
+          }
+        },
+        "additionalProperties": false,
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "account": { "type": "object", "description": "The created account record." }
+        }
+      }
+    },
+    "accounts.update": {
+      "sideEffect": "write",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Update Account",
+      "description": "Update an existing account (company) record in Apollo CRM by its ID. Provide only the fields you want to change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The Apollo account ID to update."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional. Updated company name."
+          },
+          "domain": {
+            "type": "string",
+            "description": "Optional. Updated company domain."
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Optional. Updated company phone number."
+          },
+          "raw_address": {
+            "type": "string",
+            "description": "Optional. Updated company address."
+          },
+          "linkedin_url": {
+            "type": "string",
+            "description": "Optional. Updated company LinkedIn URL."
+          },
+          "website_url": {
+            "type": "string",
+            "description": "Optional. Updated company website URL."
+          },
+          "num_employees": {
+            "type": "number",
+            "description": "Optional. Updated number of employees."
+          },
+          "industry": {
+            "type": "string",
+            "description": "Optional. Updated industry sector."
+          }
+        },
+        "additionalProperties": false,
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "account": { "type": "object", "description": "The updated account record." }
+        }
+      }
+    },
+    "sequences.search": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Sequences",
+      "description": "Search for email sequences (emailer campaigns) in Apollo. Returns sequences with their status, steps, and settings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q_keywords": {
+            "type": "string",
+            "description": "Optional. Keywords to search sequences by name."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Optional. Filter by active/inactive status."
+          },
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number for pagination (default: 1)."
+          },
+          "per_page": {
+            "type": "number",
+            "description": "Optional. Number of results per page (default: 25, max: 100)."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "sequences": { "type": "array", "description": "List of matching sequences." },
+          "pagination": { "type": "object", "description": "Pagination metadata." }
+        }
+      }
+    },
+    "sequences.add_contacts": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Add Contacts to Sequence",
+      "description": "Add one or more contacts to an Apollo email sequence (emailer campaign) by providing their contact IDs and optionally the sending email account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emailer_campaign_id": {
+            "type": "string",
+            "description": "The Apollo sequence/emailer campaign ID to add contacts to."
+          },
+          "contact_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of contact IDs to add to the sequence."
+          },
+          "send_email_from_email_account_id": {
+            "type": "string",
+            "description": "Optional. The email account ID to send emails from. If omitted, Apollo uses the default account."
+          }
+        },
+        "additionalProperties": false,
+        "required": ["emailer_campaign_id", "contact_ids"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contacts": { "type": "array", "description": "List of contacts added to the sequence." }
+        }
+      }
+    },
+    "email_accounts.list": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "List Email Accounts",
+      "description": "Retrieve all email accounts connected to Apollo for sending sequences. Returns account details including email address and sending limits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "email_accounts": { "type": "array", "description": "List of connected email accounts." }
+        }
+      }
+    },
+    "users.search": {
+      "sideEffect": "read",
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 8192,
+      "maxResponseBytes": 65536,
+      "title": "Search Users",
+      "description": "Search for users in your Apollo organization. Returns user profiles including name, email, role, and permissions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q_keywords": {
+            "type": "string",
+            "description": "Optional. Keywords to search user names or emails."
+          },
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number for pagination (default: 1)."
+          },
+          "per_page": {
+            "type": "number",
+            "description": "Optional. Number of results per page (default: 25, max: 100)."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "users": { "type": "array", "description": "List of users in the organization." },
+          "pagination": { "type": "object", "description": "Pagination metadata." }
+        }
+      }
+    }
+  },
+  "models": ["person", "organization", "contact", "account"]
+}

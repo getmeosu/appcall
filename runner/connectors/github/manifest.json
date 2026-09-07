@@ -1,0 +1,1015 @@
+{
+  "key": "github",
+  "name": "GitHub",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["dev-tools"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "repo",
+      "read:org",
+      "admin:repo_hook",
+      "gist"
+    ],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.github.com",
+      "github.com"
+    ]
+  },
+  "operations": {
+    "issues.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "issues.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Issue",
+      "description": "Create a new issue in a GitHub repository.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the issue."
+          },
+          "body": {
+            "type": "string",
+            "description": "Markdown body/description of the issue."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Label names to apply to the issue."
+          },
+          "assignees": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "GitHub usernames to assign to the issue."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issue": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "number",
+                "description": "Issue number within the repository."
+              },
+              "title": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "issues.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Issue",
+      "description": "Retrieve a single issue from a GitHub repository by its number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "issueNumber": {
+            "type": "number",
+            "description": "Number of the issue to retrieve."
+          }
+        },
+        "required": ["owner", "repo", "issueNumber"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issue": {
+            "type": "object",
+            "properties": {
+              "number": { "type": "number" },
+              "title": { "type": "string" },
+              "state": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "issues.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Issue",
+      "description": "Update an existing issue in a GitHub repository — change title, body, state, labels, or assignees.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "issueNumber": {
+            "type": "number",
+            "description": "Number of the issue to update."
+          },
+          "title": {
+            "type": "string",
+            "description": "New title for the issue."
+          },
+          "body": {
+            "type": "string",
+            "description": "New markdown body for the issue."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["open", "closed"],
+            "description": "New state for the issue."
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Complete replacement label list."
+          },
+          "assignees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Complete replacement assignee list."
+          }
+        },
+        "required": ["owner", "repo", "issueNumber"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issue": {
+            "type": "object",
+            "properties": {
+              "number": { "type": "number" },
+              "title": { "type": "string" },
+              "state": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "issues.labels.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add Labels to Issue",
+      "description": "Add one or more labels to an existing GitHub issue or pull request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "issueNumber": {
+            "type": "number",
+            "description": "Number of the issue or pull request."
+          },
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Label names to add."
+          }
+        },
+        "required": ["owner", "repo", "issueNumber", "labels"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Full list of labels now on the issue."
+          }
+        }
+      }
+    },
+    "issues.comments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Issue Comment",
+      "description": "Add a comment to an existing GitHub issue or pull request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "issueNumber": {
+            "type": "number",
+            "description": "Number of the issue or pull request to comment on."
+          },
+          "body": {
+            "type": "string",
+            "description": "Markdown text of the comment."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "issueNumber",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object",
+            "properties": {
+              "body": {
+                "type": "string"
+              },
+              "author": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "pull_requests.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "pull_requests.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Pull Request",
+      "description": "Open a new pull request in a GitHub repository from a head branch into a base branch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the pull request."
+          },
+          "head": {
+            "type": "string",
+            "description": "Name of the branch containing the changes (optionally user:branch for cross-fork)."
+          },
+          "base": {
+            "type": "string",
+            "description": "Name of the branch to merge the changes into."
+          },
+          "body": {
+            "type": "string",
+            "description": "Markdown body/description of the pull request."
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Whether to create the pull request as a draft."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "title",
+          "head",
+          "base"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pullRequest": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "number",
+                "description": "Pull request number within the repository."
+              },
+              "title": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "pull_requests.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Pull Request",
+      "description": "Retrieve a single pull request from a GitHub repository by its number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Number of the pull request."
+          }
+        },
+        "required": ["owner", "repo", "pullNumber"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pullRequest": {
+            "type": "object",
+            "properties": {
+              "number": { "type": "number" },
+              "title": { "type": "string" },
+              "state": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "pull_requests.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Pull Request",
+      "description": "Update an existing pull request — change title, body, state (open/closed), or base branch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Number of the pull request."
+          },
+          "title": {
+            "type": "string",
+            "description": "New title for the pull request."
+          },
+          "body": {
+            "type": "string",
+            "description": "New markdown body for the pull request."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["open", "closed"],
+            "description": "New state for the pull request."
+          },
+          "base": {
+            "type": "string",
+            "description": "New base branch name."
+          }
+        },
+        "required": ["owner", "repo", "pullNumber"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pullRequest": {
+            "type": "object",
+            "properties": {
+              "number": { "type": "number" },
+              "title": { "type": "string" },
+              "state": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "pull_requests.list_files": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pull Request Files",
+      "description": "List files changed in a GitHub pull request including their diff patches.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Number of the pull request."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Number of files per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number of results."
+          }
+        },
+        "required": ["owner", "repo", "pullNumber"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "filename": { "type": "string" },
+                "status": { "type": "string" },
+                "additions": { "type": "number" },
+                "deletions": { "type": "number" },
+                "changes": { "type": "number" },
+                "patch": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "pull_requests.merge": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Merge Pull Request",
+      "description": "Merge an open pull request in a GitHub repository.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Number of the pull request to merge."
+          },
+          "commitTitle": {
+            "type": "string",
+            "description": "Title for the automatic merge commit message."
+          },
+          "commitMessage": {
+            "type": "string",
+            "description": "Extra detail to append to the merge commit message."
+          },
+          "mergeMethod": {
+            "type": "string",
+            "enum": [
+              "merge",
+              "squash",
+              "rebase"
+            ],
+            "description": "Merge strategy to use. Defaults to merge."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "merged": {
+            "type": "boolean",
+            "description": "True when the pull request was merged."
+          }
+        }
+      }
+    },
+    "repos.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Repository",
+      "description": "Retrieve metadata for a GitHub repository including stars, language, and default branch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          }
+        },
+        "required": ["owner", "repo"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "object",
+            "properties": {
+              "fullName": { "type": "string" },
+              "private": { "type": "boolean" },
+              "url": { "type": "string" },
+              "defaultBranch": { "type": "string" },
+              "stars": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "repos.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Repository",
+      "description": "Create a new GitHub repository under the authenticated user's account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Repository name (must be unique for the user)."
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description of the repository."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Whether the repository should be private."
+          },
+          "autoInit": {
+            "type": "boolean",
+            "description": "Whether to initialize with a README."
+          },
+          "gitignoreTemplate": {
+            "type": "string",
+            "description": "Gitignore template name (e.g. Node, Python)."
+          },
+          "licenseTemplate": {
+            "type": "string",
+            "description": "License template key (e.g. mit, apache-2.0)."
+          }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "object",
+            "properties": {
+              "fullName": { "type": "string" },
+              "url": { "type": "string" },
+              "cloneUrl": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "repos.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Repositories",
+      "description": "List GitHub repositories accessible to the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["all", "owner", "public", "private", "member"],
+            "description": "Filter by repository type."
+          },
+          "sort": {
+            "type": "string",
+            "enum": ["created", "updated", "pushed", "full_name"],
+            "description": "Sort field."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Number of repos per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number of results."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "repos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fullName": { "type": "string" },
+                "private": { "type": "boolean" },
+                "url": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repos.contents.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Repository File Contents",
+      "description": "Get the contents of a file or directory in a GitHub repository. File content is base64-encoded.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "path": {
+            "type": "string",
+            "description": "File or directory path within the repository."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Git ref (branch, tag, or SHA) to read from."
+          }
+        },
+        "required": ["owner", "repo", "path"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "contents": {
+            "type": "object",
+            "description": "GitHub contents object (file has type=file and base64 content field)."
+          }
+        }
+      }
+    },
+    "branches.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Branch",
+      "description": "Retrieve branch metadata including the HEAD commit SHA and protection status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name."
+          }
+        },
+        "required": ["owner", "repo", "branch"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "sha": { "type": "string" },
+              "protected": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "branches.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Branch",
+      "description": "Create a new branch in a GitHub repository from a specific commit SHA.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Name for the new branch."
+          },
+          "sha": {
+            "type": "string",
+            "description": "The SHA of the commit to branch from."
+          }
+        },
+        "required": ["owner", "repo", "branch", "sha"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "ref": { "type": "string" },
+              "sha": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "releases.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Release",
+      "description": "Create a GitHub release (optionally as a draft or pre-release) with a tag and release notes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "tagName": {
+            "type": "string",
+            "description": "Tag name for the release (e.g. v1.0.0)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the release."
+          },
+          "body": {
+            "type": "string",
+            "description": "Markdown release notes."
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Publish as a draft if true."
+          },
+          "prerelease": {
+            "type": "boolean",
+            "description": "Mark as a pre-release if true."
+          },
+          "targetCommitish": {
+            "type": "string",
+            "description": "Branch or commit SHA to tag. Defaults to default branch."
+          },
+          "generateReleaseNotes": {
+            "type": "boolean",
+            "description": "Auto-generate release notes from commits."
+          }
+        },
+        "required": ["owner", "repo", "tagName"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "release": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "tagName": { "type": "string" },
+              "name": { "type": "string" },
+              "url": { "type": "string" },
+              "draft": { "type": "boolean" },
+              "prerelease": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "gists.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 1048576,
+      "title": "Create Gist",
+      "description": "Create a GitHub Gist with one or more files. Gists can be public or secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the gist."
+          },
+          "public": {
+            "type": "boolean",
+            "description": "Whether the gist is public (true) or secret (false)."
+          },
+          "files": {
+            "type": "array",
+            "description": "Files to include in the gist.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "filename": {
+                  "type": "string",
+                  "description": "Name of the file including extension."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "File content."
+                }
+              },
+              "required": ["filename", "content"]
+            }
+          }
+        },
+        "required": ["files"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "gist": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "url": { "type": "string" },
+              "description": { "type": "string" },
+              "public": { "type": "boolean" },
+              "fileNames": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "commits.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "repositories.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the GitHub connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "issue",
+    "pull_request",
+    "commit",
+    "repository",
+    "issue_comment",
+    "release",
+    "gist",
+    "branch"
+  ]
+}

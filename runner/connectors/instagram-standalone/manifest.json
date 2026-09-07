@@ -1,0 +1,505 @@
+{
+  "key": "instagram-standalone",
+  "name": "Instagram (Instagram Login)",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "description": "Read professional Instagram media and explicitly create, inspect, and publish public-URL image or Reel containers.",
+  "categories": [
+    "social"
+  ],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "instagram_business_basic",
+      "instagram_business_content_publish"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "Instagram User access token",
+          "description": "Existing token from the matching Meta login product. Automatic token refresh is not implemented.",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "instagramUserId",
+          "label": "Instagram professional account ID",
+          "description": "Bind this connection to the Instagram account represented by the token; this is not a Facebook Page ID.",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "graph.instagram.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://graph.instagram.com/v26.0",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "error.message"
+      ],
+      "bodyErrorPaths": [
+        "error"
+      ],
+      "rateLimitCodePaths": [
+        "error.code"
+      ],
+      "rateLimitCodes": [
+        "4",
+        "17",
+        "32",
+        "613",
+        "80002"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Read the bound professional Instagram account identity using the stored access token. A provider identity is required for monitoring evidence.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string",
+            "description": "Instagram object ID."
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "ok",
+          "userId": "{{response.id}}",
+          "username": "{{response.username}}"
+        },
+        "query": {
+          "fields": "id,username"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Get Account",
+      "description": "Read the identity of the professional account bound to this connection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        },
+        "query": {
+          "fields": "id,username"
+        }
+      }
+    },
+    "media.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List Media",
+      "description": "List one page of media owned by the bound account. Pass after to request a subsequent page; cursor presence alone does not guarantee another page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Provider page size."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from a prior response."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "media": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}/media",
+        "success": [
+          200
+        ],
+        "result": {
+          "media": "{{response.data}}",
+          "nextCursor": "{{response.paging.cursors.after}}"
+        },
+        "query": {
+          "fields": "id,caption,media_type,media_product_type,media_url,permalink,timestamp,username",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        }
+      }
+    },
+    "media.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Get Media",
+      "description": "Read a published media object visible to this connection. Media CDN URLs can expire.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "description": "Instagram object ID."
+          }
+        },
+        "required": [
+          "mediaId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "media": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{mediaId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "media": "{{response}}"
+        },
+        "query": {
+          "fields": "id,caption,media_type,media_product_type,media_url,permalink,timestamp,username"
+        }
+      }
+    },
+    "containers.createImage": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Create Image Container",
+      "description": "Create an unpublished image container from a public JPEG URL. This does not publish. Check container status and explicitly publish when ready.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "imageUrl": {
+            "type": "string",
+            "description": "Publicly accessible media URL; Meta retrieves the file."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Caption text, subject to provider content limits."
+          },
+          "altText": {
+            "type": "string",
+            "description": "Alternative text for the image."
+          }
+        },
+        "required": [
+          "imageUrl"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "description": "Instagram object ID."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/media",
+        "success": [
+          200
+        ],
+        "result": {
+          "containerId": "{{response.id}}"
+        },
+        "body": {
+          "image_url": "{{imageUrl}}",
+          "caption": "{{caption}}",
+          "alt_text": "{{altText}}"
+        }
+      }
+    },
+    "containers.createReel": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Create Reel Container",
+      "description": "Create an unpublished Reel container from a public video URL. Processing is asynchronous; poll containers.get separately, then explicitly publish when FINISHED.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "videoUrl": {
+            "type": "string",
+            "description": "Publicly accessible media URL; Meta retrieves the file."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Caption text, subject to provider content limits."
+          },
+          "shareToFeed": {
+            "type": "boolean",
+            "description": "Whether the Reel also appears in the feed."
+          },
+          "coverUrl": {
+            "type": "string",
+            "description": "Publicly accessible media URL; Meta retrieves the file."
+          },
+          "thumbOffset": {
+            "type": "integer",
+            "description": "Cover frame offset in milliseconds; coverUrl takes precedence."
+          }
+        },
+        "required": [
+          "videoUrl"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "description": "Instagram object ID."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/media",
+        "success": [
+          200
+        ],
+        "result": {
+          "containerId": "{{response.id}}"
+        },
+        "body": {
+          "media_type": "REELS",
+          "video_url": "{{videoUrl}}",
+          "caption": "{{caption}}",
+          "share_to_feed": "{{shareToFeed}}",
+          "cover_url": "{{coverUrl}}",
+          "thumb_offset": "{{thumbOffset}}"
+        }
+      }
+    },
+    "containers.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Get Container Status",
+      "description": "Check an unpublished container. FINISHED means ready to publish; IN_PROGRESS means processing; ERROR, EXPIRED and PUBLISHED are terminal states. No automatic polling occurs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "description": "Instagram object ID."
+          }
+        },
+        "required": [
+          "containerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "description": "Instagram object ID."
+          },
+          "statusCode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{containerId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "containerId": "{{response.id}}",
+          "statusCode": "{{response.status_code}}",
+          "status": "{{response.status}}"
+        },
+        "query": {
+          "fields": "status_code,status"
+        }
+      }
+    },
+    "media.publish": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Publish Media Container",
+      "description": "Publish a previously created container to the bound account. Call containers.get first and publish only when FINISHED. A returned ID identifies the published media; this operation does not retry or poll.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "creationId": {
+            "type": "string",
+            "description": "Container ID ready for publication, not a published media ID."
+          }
+        },
+        "required": [
+          "creationId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "mediaId": {
+            "type": "string",
+            "description": "Instagram object ID."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{instagramUserId}}/media_publish",
+        "success": [
+          200
+        ],
+        "result": {
+          "mediaId": "{{response.id}}"
+        },
+        "body": {
+          "creation_id": "{{creationId}}"
+        }
+      }
+    },
+    "publishing.limit": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Get Publishing Usage",
+      "description": "Read current publishing usage and provider quota configuration. Quotas may differ by account and API behavior; no fixed cap is assumed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "limits": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{instagramUserId}}/content_publishing_limit",
+        "success": [
+          200
+        ],
+        "result": {
+          "limits": "{{response.data}}"
+        },
+        "query": {
+          "fields": "quota_usage,config"
+        }
+      }
+    }
+  },
+  "models": [
+    "user",
+    "media",
+    "container"
+  ]
+}

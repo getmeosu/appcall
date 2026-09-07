@@ -1,0 +1,123 @@
+# appcall merge gate.
+#
+# CI combines local Make targets with service-backed tests and container checks.
+# A missing integration or build result is not a pass.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hygiene:
+    name: public release hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 scripts/test-public-release.py
+      - run: python3 scripts/public-release.py check --source . --index
+
+  build-clean:
+    name: locked Rust build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: native TLS build dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev cmake
+      - name: Rust toolchain
+        run: rustup toolchain install 1.94.0 --profile minimal && rustup default 1.94.0
+      - run: make build
+
+  runner-tests:
+    name: runner tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      # The whole tree, not a curated file list. runner/live/ self-skips
+      # without provider credentials, so no secrets are needed here.
+      - name: bun test
+        run: bun test runner/
+
+  rust-tests:
+    name: Rust core and adapters
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+        env:
+          POSTGRES_USER: appcall
+          POSTGRES_PASSWORD: appcall
+          POSTGRES_DB: appcall_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U appcall"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      APPCALL_ENGINE_POSTGRES_URL: postgres://appcall:appcall@localhost:5432/appcall_test?sslmode=disable
+      APPCALL_TEST_DATABASE_URL: postgres://appcall:appcall@localhost:5432/appcall_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - name: native TLS build dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev cmake
+      - name: private PostgreSQL clusters for recovery contracts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-client libpq-dev
+          postgres_bin=$(pg_config --bindir)
+          test -x "$postgres_bin/initdb"
+          test -x "$postgres_bin/pg_ctl"
+          echo "APPCALL_TEST_POSTGRES_BIN=$postgres_bin" >> "$GITHUB_ENV"
+          echo "$postgres_bin" >> "$GITHUB_PATH"
+      - name: Rust toolchain
+        run: rustup toolchain install 1.94.0 --profile minimal --component rustfmt --component clippy && rustup default 1.94.0
+      - run: make check-rust test-rust
+      - name: Rust dependency audit
+        run: |
+          cargo install cargo-audit --version 0.22.1 --locked
+          make audit-rust
+      - name: PostgreSQL, concurrency and subprocess contracts
+        run: make test-integration
+
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: pinned open-source secret scanner
+        run: |
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o /tmp/gitleaks.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          GITLEAKS_BIN=/tmp/gitleaks python3 scripts/test-public-release.py
+          /tmp/gitleaks git --redact --no-banner --log-opts="--all" .
+
+  images:
+    name: container image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: API image
+        run: docker build -f Dockerfile.api -t appcall-api:ci .
+      - name: runner image
+        run: docker build -f Dockerfile.runner -t appcall-runner:ci .

@@ -1,0 +1,963 @@
+{
+  "key": "todoist",
+  "name": "Todoist",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Personal API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["api.todoist.com"]
+  },
+  "http": {
+    "baseUrl": "https://api.todoist.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": ["error", "error_tag"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the Todoist personal API token by calling GET /api/v1/user. Takes no input and returns the connector health status with the authenticated user's ID and email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "userId": { "type": "string" },
+          "email": { "type": "string" },
+          "fullName": { "type": "string" }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/user",
+        "success": [200],
+        "echo": { "status": "ok" },
+        "result": {
+          "status": "ok",
+          "userId": "{{response.id}}",
+          "email": "{{response.email}}",
+          "fullName": "{{response.full_name}}"
+        }
+      }
+    },
+    "projects.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Projects",
+      "description": "List the caller's active projects. Use this to resolve a project name to the ID every project-scoped operation needs. Archived projects are excluded; read those with List Archived Projects. Returns one page plus nextCursor, which is absent on the last page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": { "type": "string", "description": "Cursor from a previous call's nextCursor. Omit for the first page." },
+          "limit": { "type": "integer", "description": "Projects per page, up to 200. Defaults to 50." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projects": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "sample": { "limit": 50 },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects",
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "projects": "{{response.results}}",
+          "nextCursor": "{{response.next_cursor}}"
+        }
+      }
+    },
+    "projects.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Project",
+      "description": "Fetch a single Todoist project by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Project ID." }
+        },
+        "required": ["projectId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "project": { "type": "object" } }
+      },
+      "sample": { "projectId": "6XGgm6PHrGgMpCFX" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/{{projectId}}",
+        "success": [200],
+        "result": { "project": "{{response}}" }
+      }
+    },
+    "projects.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Project",
+      "description": "Create a Todoist project. Only the name is required. Set parentId to nest the project under an existing one.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Project name." },
+          "description": { "type": "string", "description": "Project description." },
+          "parentId": { "type": "string", "description": "Parent project ID, which makes this a sub-project." },
+          "color": {
+            "type": "string",
+            "enum": ["berry_red", "red", "orange", "yellow", "olive_green", "lime_green", "green", "mint_green", "teal", "sky_blue", "light_blue", "blue", "grape", "violet", "lavender", "magenta", "salmon", "charcoal", "grey", "taupe"],
+            "description": "Project icon colour name. Defaults to charcoal."
+          },
+          "isFavorite": { "type": "boolean", "description": "Mark the project as a favourite." },
+          "viewStyle": { "type": "string", "enum": ["list", "board", "calendar"], "description": "How the project opens in Todoist." }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "project": { "type": "object" } }
+      },
+      "sample": { "name": "Launch", "color": "blue" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects",
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "parent_id": "{{parentId}}",
+          "color": "{{color}}",
+          "is_favorite": "{{isFavorite}}",
+          "view_style": "{{viewStyle}}"
+        },
+        "success": [200],
+        "result": { "project": "{{response}}" }
+      }
+    },
+    "projects.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Project",
+      "description": "Update a Todoist project. Todoist updates with POST to the project path, not PATCH. Omitted fields are left unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Project ID to update." },
+          "name": { "type": "string", "description": "New project name." },
+          "description": { "type": "string", "description": "New project description." },
+          "color": {
+            "type": "string",
+            "enum": ["berry_red", "red", "orange", "yellow", "olive_green", "lime_green", "green", "mint_green", "teal", "sky_blue", "light_blue", "blue", "grape", "violet", "lavender", "magenta", "salmon", "charcoal", "grey", "taupe"],
+            "description": "New project icon colour name."
+          },
+          "isFavorite": { "type": "boolean", "description": "Whether the project is a favourite." },
+          "viewStyle": { "type": "string", "enum": ["list", "board", "calendar"], "description": "How the project opens in Todoist." }
+        },
+        "required": ["projectId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "project": { "type": "object" } }
+      },
+      "sample": { "projectId": "6XGgm6PHrGgMpCFX", "name": "Launch plan" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/{{projectId}}",
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "color": "{{color}}",
+          "is_favorite": "{{isFavorite}}",
+          "view_style": "{{viewStyle}}"
+        },
+        "success": [200],
+        "result": { "project": "{{response}}" }
+      }
+    },
+    "projects.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Search Projects",
+      "description": "Find projects whose name matches a text fragment, case-insensitively. Use this when the caller names a project loosely; use List Projects to enumerate them all.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Text to match against project names." },
+          "cursor": { "type": "string", "description": "Cursor from a previous call's nextCursor." },
+          "limit": { "type": "integer", "description": "Projects per page, up to 200. Defaults to 50." }
+        },
+        "required": ["query"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projects": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "sample": { "query": "launch" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/search",
+        "query": {
+          "query": "{{query}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "projects": "{{response.results}}",
+          "nextCursor": "{{response.next_cursor}}"
+        }
+      }
+    },
+    "projects.list-archived": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Archived Projects",
+      "description": "List the caller's archived projects. List Projects returns only active ones, so this is the way to find a project that was archived.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": { "type": "string", "description": "Cursor from a previous call's nextCursor." },
+          "limit": { "type": "integer", "description": "Projects per page, up to 200. Defaults to 50." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projects": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/archived",
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "projects": "{{response.results}}",
+          "nextCursor": "{{response.next_cursor}}"
+        }
+      }
+    },
+    "sections.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Sections",
+      "description": "List sections, optionally narrowed to one project. Sections group tasks inside a project; a task's sectionId must be a section of its own project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Only sections in this project. Omit for every section the caller can see." },
+          "cursor": { "type": "string", "description": "Cursor from a previous call's nextCursor." },
+          "limit": { "type": "integer", "description": "Sections per page, up to 200. Defaults to 50." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "sections": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "sample": { "projectId": "6XGgm6PHrGgMpCFX" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/sections",
+        "query": {
+          "project_id": "{{projectId}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "sections": "{{response.results}}",
+          "nextCursor": "{{response.next_cursor}}"
+        }
+      }
+    },
+    "sections.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Section",
+      "description": "Fetch a single Todoist section by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sectionId": { "type": "string", "description": "Section ID." }
+        },
+        "required": ["sectionId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "section": { "type": "object" } }
+      },
+      "sample": { "sectionId": "6fFPHV272WWh3gpW" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/sections/{{sectionId}}",
+        "success": [200],
+        "result": { "section": "{{response}}" }
+      }
+    },
+    "sections.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Section",
+      "description": "Create a section inside a project. Both the name and the owning project are required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Section name." },
+          "projectId": { "type": "string", "description": "Project the section is created in." },
+          "description": { "type": "string", "description": "Section description." },
+          "order": { "type": "integer", "description": "Position of the section within the project." }
+        },
+        "required": ["name", "projectId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "section": { "type": "object" } }
+      },
+      "sample": { "name": "In review", "projectId": "6XGgm6PHrGgMpCFX" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/sections",
+        "body": {
+          "name": "{{name}}",
+          "project_id": "{{projectId}}",
+          "description": "{{description}}",
+          "order": "{{order}}"
+        },
+        "success": [200],
+        "result": { "section": "{{response}}" }
+      }
+    },
+    "tasks.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Tasks",
+      "description": "List active (not yet completed) tasks, optionally narrowed by project, section, parent task, or label name. Returns one page plus nextCursor, which is absent on the last page. For anything more expressive than these filters, use Filter Tasks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Only tasks in this project." },
+          "sectionId": { "type": "string", "description": "Only tasks in this section." },
+          "parentId": { "type": "string", "description": "Only sub-tasks of this task." },
+          "label": { "type": "string", "description": "Only tasks carrying this label name." },
+          "ids": { "type": "string", "description": "Comma-separated task IDs to fetch." },
+          "cursor": { "type": "string", "description": "Cursor from a previous call's nextCursor." },
+          "limit": { "type": "integer", "description": "Tasks per page, up to 200. Defaults to 50." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tasks": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "sample": { "projectId": "6XGgm6PHrGgMpCFX" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/tasks",
+        "query": {
+          "project_id": "{{projectId}}",
+          "section_id": "{{sectionId}}",
+          "parent_id": "{{parentId}}",
+          "label": "{{label}}",
+          "ids": "{{ids}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "tasks": "{{response.results}}",
+          "nextCursor": "{{response.next_cursor}}"
+        }
+      }
+    },
+    "tasks.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Task",
+      "description": "Fetch a single Todoist task by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string", "description": "Task ID." }
+        },
+        "required": ["taskId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "task": { "type": "object" } }
+      },
+      "sample": { "taskId": "6XGgmFVcrG5RRjVr" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/tasks/{{taskId}}",
+        "success": [200],
+        "result": { "task": "{{response}}" }
+      }
+    },
+    "tasks.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Task",
+      "description": "Create a task. Only the content is required; without a project the task lands in the Inbox. Give the due date in exactly one of dueString, dueDate, or dueDatetime. Labels are label names, not IDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string", "description": "Task title, which supports Todoist markdown." },
+          "description": { "type": "string", "description": "Longer task description." },
+          "projectId": { "type": "string", "description": "Project to add the task to. Defaults to the Inbox." },
+          "sectionId": { "type": "string", "description": "Section within the project." },
+          "parentId": { "type": "string", "description": "Task this becomes a sub-task of." },
+          "labels": { "type": "array", "items": { "type": "string" }, "description": "Label names to apply." },
+          "priority": { "type": "integer", "enum": [1, 2, 3, 4], "description": "1 is highest, 4 is lowest." },
+          "assigneeId": { "type": "string", "description": "User ID to assign the task to, in a shared project." },
+          "dueString": { "type": "string", "description": "Due date in natural language, such as \"tomorrow at 9am\"." },
+          "dueDate": { "type": "string", "description": "Due date as YYYY-MM-DD." },
+          "dueDatetime": { "type": "string", "description": "Due date and time in RFC 3339." },
+          "dueLang": { "type": "string", "description": "Language dueString is written in, when not English." },
+          "deadlineDate": { "type": "string", "description": "Deadline date as YYYY-MM-DD, which is separate from the due date." },
+          "duration": { "type": "integer", "description": "Duration amount. Requires durationUnit." },
+          "durationUnit": { "type": "string", "enum": ["minute", "day"], "description": "Unit for duration." },
+          "order": { "type": "integer", "description": "Position within the project or section." }
+        },
+        "required": ["content"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "task": { "type": "object" } }
+      },
+      "sample": { "content": "Write the launch post", "dueString": "tomorrow", "priority": 2 },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tasks",
+        "body": {
+          "content": "{{content}}",
+          "description": "{{description}}",
+          "project_id": "{{projectId}}",
+          "section_id": "{{sectionId}}",
+          "parent_id": "{{parentId}}",
+          "labels": "{{labels}}",
+          "priority": "{{priority}}",
+          "assignee_id": "{{assigneeId}}",
+          "due_string": "{{dueString}}",
+          "due_date": "{{dueDate}}",
+          "due_datetime": "{{dueDatetime}}",
+          "due_lang": "{{dueLang}}",
+          "deadline_date": "{{deadlineDate}}",
+          "duration": "{{duration}}",
+          "duration_unit": "{{durationUnit}}",
+          "order": "{{order}}"
+        },
+        "success": [200],
+        "result": { "task": "{{response}}" }
+      }
+    },
+    "tasks.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Task",
+      "description": "Update a task. Todoist updates with POST to the task path, not PATCH. Omitted fields are left unchanged, and labels replaces the whole list rather than adding to it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string", "description": "Task ID to update." },
+          "content": { "type": "string", "description": "New task title." },
+          "description": { "type": "string", "description": "New task description." },
+          "labels": { "type": "array", "items": { "type": "string" }, "description": "Replacement list of label names." },
+          "priority": { "type": "integer", "enum": [1, 2, 3, 4], "description": "1 is highest, 4 is lowest." },
+          "assigneeId": { "type": "string", "description": "User ID to assign the task to." },
+          "dueString": { "type": "string", "description": "New due date in natural language." },
+          "dueDate": { "type": "string", "description": "New due date as YYYY-MM-DD." },
+          "dueDatetime": { "type": "string", "description": "New due date and time in RFC 3339." },
+          "dueLang": { "type": "string", "description": "Language dueString is written in." },
+          "deadlineDate": { "type": "string", "description": "New deadline date as YYYY-MM-DD." },
+          "duration": { "type": "integer", "description": "Duration amount. Requires durationUnit." },
+          "durationUnit": { "type": "string", "enum": ["minute", "day"], "description": "Unit for duration." }
+        },
+        "required": ["taskId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "task": { "type": "object" } }
+      },
+      "sample": { "taskId": "6XGgmFVcrG5RRjVr", "priority": 1 },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tasks/{{taskId}}",
+        "body": {
+          "content": "{{content}}",
+          "description": "{{description}}",
+          "labels": "{{labels}}",
+          "priority": "{{priority}}",
+          "assignee_id": "{{assigneeId}}",
+          "due_string": "{{dueString}}",
+          "due_date": "{{dueDate}}",
+          "due_datetime": "{{dueDatetime}}",
+          "due_lang": "{{dueLang}}",
+          "deadline_date": "{{deadlineDate}}",
+          "duration": "{{duration}}",
+          "duration_unit": "{{durationUnit}}"
+        },
+        "success": [200],
+        "result": { "task": "{{response}}" }
+      }
+    },
+    "tasks.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete Task",
+      "description": "Permanently delete a task and its sub-tasks. This cannot be undone; to mark a task done instead, use Close Task. The API returns no body on success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string", "description": "Task ID to delete." }
+        },
+        "required": ["taskId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": { "type": "boolean" },
+          "taskId": { "type": "string" }
+        }
+      },
+      "sample": { "taskId": "6XGgmFVcrG5RRjVr" },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/tasks/{{taskId}}",
+        "success": [200, 204],
+        "result": {
+          "deleted": true,
+          "taskId": "{{input.taskId}}"
+        }
+      }
+    },
+    "tasks.close": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Close Task",
+      "description": "Mark a task complete. A recurring task moves to its next occurrence rather than finishing. The API returns no body on success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string", "description": "Task ID to close." }
+        },
+        "required": ["taskId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "closed": { "type": "boolean" },
+          "taskId": { "type": "string" }
+        }
+      },
+      "sample": { "taskId": "6XGgmFVcrG5RRjVr" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tasks/{{taskId}}/close",
+        "success": [200, 204],
+        "result": {
+          "closed": true,
+          "taskId": "{{input.taskId}}"
+        }
+      }
+    },
+    "tasks.reopen": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Reopen Task",
+      "description": "Reopen a completed task, restoring it and its ancestors to the active list. The API returns no body on success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string", "description": "Task ID to reopen." }
+        },
+        "required": ["taskId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "reopened": { "type": "boolean" },
+          "taskId": { "type": "string" }
+        }
+      },
+      "sample": { "taskId": "6XGgmFVcrG5RRjVr" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tasks/{{taskId}}/reopen",
+        "success": [200, 204],
+        "result": {
+          "reopened": true,
+          "taskId": "{{input.taskId}}"
+        }
+      }
+    },
+    "tasks.move": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Move Task",
+      "description": "Move a task to another project, section, or parent task. Supply exactly one destination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string", "description": "Task ID to move." },
+          "projectId": { "type": "string", "description": "Destination project." },
+          "sectionId": { "type": "string", "description": "Destination section." },
+          "parentId": { "type": "string", "description": "Task to move this one under as a sub-task." }
+        },
+        "required": ["taskId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "task": { "type": "object" } }
+      },
+      "sample": { "taskId": "6XGgmFVcrG5RRjVr", "projectId": "6XGgm6PHrGgMpCFX" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tasks/{{taskId}}/move",
+        "body": {
+          "project_id": "{{projectId}}",
+          "section_id": "{{sectionId}}",
+          "parent_id": "{{parentId}}"
+        },
+        "success": [200],
+        "result": { "task": "{{response}}" }
+      }
+    },
+    "tasks.quick-add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Quick Add Task",
+      "description": "Create a task from one line of natural language, letting Todoist parse the due date, project (#Project), labels (@label), priority (p1-p4), and assignee (+person). Prefer this when the caller phrases a task the way they would type it into Todoist; use Create Task when the fields are already separated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string", "description": "The task in Todoist quick-add syntax, such as \"Pay rent tomorrow #Home p1\"." },
+          "note": { "type": "string", "description": "A note attached to the new task as its first comment." },
+          "reminder": { "type": "string", "description": "A reminder time in natural language." },
+          "autoReminder": { "type": "boolean", "description": "Add the caller's default reminder to the task if it has a due time." }
+        },
+        "required": ["text"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "task": { "type": "object" } }
+      },
+      "sample": { "text": "Pay rent tomorrow #Home p1" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/tasks/quick",
+        "body": {
+          "text": "{{text}}",
+          "note": "{{note}}",
+          "reminder": "{{reminder}}",
+          "auto_reminder": "{{autoReminder}}"
+        },
+        "success": [200],
+        "result": { "task": "{{response}}" }
+      }
+    },
+    "tasks.filter": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Filter Tasks",
+      "description": "List tasks matching a Todoist filter query, which is the expressive way to ask questions like \"today & @urgent\", \"overdue\", or \"#Work & p1\". Use List Tasks for the simpler project or label filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "A Todoist filter expression, such as \"today | overdue\"." },
+          "lang": { "type": "string", "description": "Language the query is written in, when not English." },
+          "cursor": { "type": "string", "description": "Cursor from a previous call's nextCursor." },
+          "limit": { "type": "integer", "description": "Tasks per page, up to 200. Defaults to 50." }
+        },
+        "required": ["query"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tasks": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "sample": { "query": "today & p1" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/tasks/filter",
+        "query": {
+          "query": "{{query}}",
+          "lang": "{{lang}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "tasks": "{{response.results}}",
+          "nextCursor": "{{response.next_cursor}}"
+        }
+      }
+    },
+    "labels.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Labels",
+      "description": "List the caller's personal labels. Tasks carry label names rather than IDs, so this is how to check a label exists before applying it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": { "type": "string", "description": "Cursor from a previous call's nextCursor." },
+          "limit": { "type": "integer", "description": "Labels per page, up to 200. Defaults to 50." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "labels": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/labels",
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "labels": "{{response.results}}",
+          "nextCursor": "{{response.next_cursor}}"
+        }
+      }
+    },
+    "labels.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Label",
+      "description": "Create a personal label. Applying a label to a task does not create it, so make the label first when it does not already exist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Label name." },
+          "color": {
+            "type": "string",
+            "enum": ["berry_red", "red", "orange", "yellow", "olive_green", "lime_green", "green", "mint_green", "teal", "sky_blue", "light_blue", "blue", "grape", "violet", "lavender", "magenta", "salmon", "charcoal", "grey", "taupe"],
+            "description": "Label colour name. Defaults to charcoal."
+          },
+          "isFavorite": { "type": "boolean", "description": "Mark the label as a favourite." },
+          "order": { "type": "integer", "description": "Position in the label list." }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "label": { "type": "object" } }
+      },
+      "sample": { "name": "urgent", "color": "red" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/labels",
+        "body": {
+          "name": "{{name}}",
+          "color": "{{color}}",
+          "is_favorite": "{{isFavorite}}",
+          "order": "{{order}}"
+        },
+        "success": [200],
+        "result": { "label": "{{response}}" }
+      }
+    },
+    "comments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Comments",
+      "description": "List the comments on a task or on a project. Supply exactly one of taskId or projectId; Todoist rejects both together.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string", "description": "Task whose comments to read." },
+          "projectId": { "type": "string", "description": "Project whose comments to read." },
+          "cursor": { "type": "string", "description": "Cursor from a previous call's nextCursor." },
+          "limit": { "type": "integer", "description": "Comments per page, up to 200. Defaults to 50." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comments": { "type": "array", "items": { "type": "object" } },
+          "nextCursor": { "type": "string" }
+        }
+      },
+      "sample": { "taskId": "6XGgmFVcrG5RRjVr" },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/comments",
+        "query": {
+          "task_id": "{{taskId}}",
+          "project_id": "{{projectId}}",
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        },
+        "success": [200],
+        "result": {
+          "comments": "{{response.results}}",
+          "nextCursor": "{{response.next_cursor}}"
+        }
+      }
+    },
+    "comments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Comment",
+      "description": "Post a comment on a task or on a project. Supply exactly one of taskId or projectId. File attachments are not supported here; they need Todoist's upload endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string", "description": "Comment text, which supports Todoist markdown." },
+          "taskId": { "type": "string", "description": "Task to comment on." },
+          "projectId": { "type": "string", "description": "Project to comment on." },
+          "uidsToNotify": { "type": "array", "items": { "type": "string" }, "description": "User IDs to notify about the comment." }
+        },
+        "required": ["content"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "comment": { "type": "object" } }
+      },
+      "sample": { "content": "Shipped, moving to review.", "taskId": "6XGgmFVcrG5RRjVr" },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/comments",
+        "body": {
+          "content": "{{content}}",
+          "task_id": "{{taskId}}",
+          "project_id": "{{projectId}}",
+          "uids_to_notify": "{{uidsToNotify}}"
+        },
+        "success": [200],
+        "result": { "comment": "{{response}}" }
+      }
+    }
+  },
+  "models": ["task", "project", "section", "label", "comment"]
+}

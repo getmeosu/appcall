@@ -1,0 +1,389 @@
+{
+  "key": "devto",
+  "name": "DEV Community",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "description": "Read and publish articles with DEV Community.",
+  "categories": [
+    "social"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "dev.to"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://dev.to/api",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "api-key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Accept": "application/vnd.forem.api-v1+json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify credentials by reading the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/me",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Users Me",
+      "description": "Get the authenticated user profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/me",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      }
+    },
+    "articles.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Articles List",
+      "description": "List published articles with page-based pagination; increment page until empty.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting at 1. Increment until an empty page is returned."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size, 1 to 1000. Provider validates range."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Filter by tag."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "articles": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/articles",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "tag": "{{tag}}"
+        },
+        "result": {
+          "articles": "{{response}}"
+        }
+      }
+    },
+    "articles.mine": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Articles Mine",
+      "description": "List all authenticated-user articles, including drafts; increment page until empty.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number, starting at 1. Increment until an empty page is returned."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size, 1 to 1000. Provider validates range."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "articles": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/articles/me/all",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "result": {
+          "articles": "{{response}}"
+        }
+      }
+    },
+    "articles.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Articles Get",
+      "description": "Get a published article by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Article numeric ID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "article": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/articles/{{id}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "article": "{{response}}"
+        }
+      }
+    },
+    "articles.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Articles Create",
+      "description": "Create an article, draft by default; set published explicitly to publish.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Article title."
+          },
+          "bodyMarkdown": {
+            "type": "string",
+            "description": "Markdown content."
+          },
+          "published": {
+            "type": "boolean",
+            "description": "Whether to publish; create defaults to a draft if omitted."
+          },
+          "canonicalUrl": {
+            "type": "string",
+            "description": "Original article URL."
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags, per Forem OpenAPI Article schema."
+          }
+        },
+        "required": [
+          "title",
+          "bodyMarkdown"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "article": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/articles",
+        "success": [
+          201
+        ],
+        "body": {
+          "article": {
+            "title": "{{title}}",
+            "body_markdown": "{{bodyMarkdown}}",
+            "published": "{{published}}",
+            "canonical_url": "{{canonicalUrl}}",
+            "tags": "{{tags}}"
+          }
+        },
+        "result": {
+          "article": "{{response}}"
+        }
+      }
+    },
+    "articles.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Articles Update",
+      "description": "Update article fields; omitted fields are unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Article numeric ID."
+          },
+          "title": {
+            "type": "string",
+            "description": "Article title."
+          },
+          "bodyMarkdown": {
+            "type": "string",
+            "description": "Markdown content."
+          },
+          "published": {
+            "type": "boolean",
+            "description": "Whether to publish; create defaults to a draft if omitted."
+          },
+          "canonicalUrl": {
+            "type": "string",
+            "description": "Original article URL."
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags, per Forem OpenAPI Article schema."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "article": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/articles/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "article": {
+            "title": "{{title}}",
+            "body_markdown": "{{bodyMarkdown}}",
+            "published": "{{published}}",
+            "canonical_url": "{{canonicalUrl}}",
+            "tags": "{{tags}}"
+          }
+        },
+        "result": {
+          "article": "{{response}}"
+        }
+      }
+    }
+  },
+  "models": [
+    "article",
+    "user"
+  ]
+}

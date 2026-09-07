@@ -1,0 +1,124 @@
+{
+  "key": "resend",
+  "name": "Resend",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["email-marketing"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [],
+      "routes": [
+        {
+          "id": "api_key",
+          "label": "API Key",
+          "fields": [
+            { "key": "apiKey", "label": "API Key", "required": true, "secret": true }
+          ]
+        },
+        {
+          "id": "smtp",
+          "label": "SMTP relay",
+          "fields": [
+            { "key": "smtpHost", "label": "SMTP host (e.g. smtp.resend.com)", "required": true, "secret": false },
+            { "key": "smtpPort", "label": "Port (587 or 465)", "required": true, "secret": false },
+            { "key": "smtpUser", "label": "SMTP login (usually 'resend')", "required": true, "secret": false },
+            { "key": "smtpPassword", "label": "SMTP password / API key", "required": true, "secret": true }
+          ]
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.resend.com",
+      "smtp.resend.com"
+    ]
+  },
+  "operations": {
+    "emails.send": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 65536,
+      "title": "Send Email",
+      "description": "Send a transactional email via the Resend API (POST /emails). Supports plain text and/or HTML bodies and optional reply-to, cc, and bcc addresses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Sender address, e.g. \"Acme <onboarding@resend.dev>\". Required."
+          },
+          "to": {
+            "type": ["string", "array"],
+            "items": { "type": "string" },
+            "description": "Recipient address or list of recipient addresses. Required."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line. Required."
+          },
+          "html": {
+            "type": "string",
+            "description": "HTML body of the email."
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain text body of the email."
+          },
+          "replyTo": {
+            "type": ["string", "array"],
+            "items": { "type": "string" },
+            "description": "Reply-to address or list of addresses."
+          },
+          "cc": {
+            "type": ["string", "array"],
+            "items": { "type": "string" },
+            "description": "CC address or list of addresses."
+          },
+          "bcc": {
+            "type": ["string", "array"],
+            "items": { "type": "string" },
+            "description": "BCC address or list of addresses."
+          }
+        },
+        "required": ["from", "to", "subject"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "id": { "type": "string", "description": "ID of the email returned by Resend." }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Resend connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": ["email"]
+}

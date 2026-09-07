@@ -1,0 +1,522 @@
+{
+  "key": "dropbox",
+  "name": "Dropbox",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "description": "Dropbox JSON metadata operations using a manually supplied OAuth2 access token.",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "account_info.read",
+      "files.metadata.read",
+      "files.content.write"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "OAuth2 access token (manual; no automatic refresh)",
+          "secret": true,
+          "required": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.dropboxapi.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://api.dropboxapi.com/2",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "error_summary",
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read the authenticated Dropbox account",
+      "description": "Read the authenticated Dropbox account. Requires account_info.read.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions.",
+            "required": [
+              "account_id"
+            ],
+            "properties": {
+              "account_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Authenticated provider account identifier."
+              }
+            }
+          }
+        },
+        "required": [
+          "account"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/get_current_account",
+        "success": [
+          200
+        ],
+        "result": {
+          "account": "{{response}}"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      }
+    },
+    "root.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List the root folder in the token's accessible namespace",
+      "description": "List the root folder in the token's accessible namespace. Continue while hasMore is true.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size from 1 to 2000, enforced by Dropbox."
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "Include nested folders when true; omitted uses provider default false."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "description": "Provider file/folder metadata, including deleted entries when enabled.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor for folders.continue. Retain even when hasMore is false for later changes.",
+            "minLength": 1
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Continue immediately while true; false means this snapshot is drained."
+          }
+        },
+        "required": [
+          "entries",
+          "cursor",
+          "hasMore"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/list_folder",
+        "success": [
+          200
+        ],
+        "result": {
+          "entries": "{{response.entries}}",
+          "cursor": "{{response.cursor}}",
+          "hasMore": "{{response.has_more}}"
+        },
+        "body": {
+          "path": "",
+          "limit": "{{limit}}",
+          "recursive": "{{recursive}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "folders.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List a non-root folder",
+      "description": "List a non-root folder. Continue with folders.continue while hasMore is true.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Nonempty Dropbox path beginning with /, or a supported id: reference. Use root.list for the root folder."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size from 1 to 2000, enforced by Dropbox."
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "Include nested folders when true; omitted uses provider default false."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "description": "Provider file/folder metadata, including deleted entries when enabled.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor for folders.continue. Retain even when hasMore is false for later changes.",
+            "minLength": 1
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Continue immediately while true; false means this snapshot is drained."
+          }
+        },
+        "required": [
+          "entries",
+          "cursor",
+          "hasMore"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/list_folder",
+        "success": [
+          200
+        ],
+        "result": {
+          "entries": "{{response.entries}}",
+          "cursor": "{{response.cursor}}",
+          "hasMore": "{{response.has_more}}"
+        },
+        "body": {
+          "path": "{{path}}",
+          "limit": "{{limit}}",
+          "recursive": "{{recursive}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "folders.continue": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Continue a Dropbox folder listing or fetch changes using its saved cursor",
+      "description": "Continue a Dropbox folder listing or fetch changes using its saved cursor. A reset error requires restarting the listing.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor from a previous root.list, folders.list or folders.continue result."
+          }
+        },
+        "required": [
+          "cursor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "description": "Provider file/folder metadata, including deleted entries when enabled.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor for folders.continue. Retain even when hasMore is false for later changes.",
+            "minLength": 1
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Continue immediately while true; false means this snapshot is drained."
+          }
+        },
+        "required": [
+          "entries",
+          "cursor",
+          "hasMore"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/list_folder/continue",
+        "success": [
+          200
+        ],
+        "result": {
+          "entries": "{{response.entries}}",
+          "cursor": "{{response.cursor}}",
+          "hasMore": "{{response.has_more}}"
+        },
+        "body": {
+          "cursor": "{{cursor}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.getMetadata": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read metadata for a file or folder without downloading content",
+      "description": "Read metadata for a file or folder without downloading content.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Nonempty Dropbox path beginning with /, or a supported id: reference. Use root.list for the root folder."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "metadata"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/get_metadata",
+        "success": [
+          200
+        ],
+        "result": {
+          "metadata": "{{response}}"
+        },
+        "body": {
+          "path": "{{path}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "folders.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create a Dropbox folder at an explicit path",
+      "description": "Create a Dropbox folder at an explicit path. Conflicting names fail; automatic renaming is disabled.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Destination path beginning with /, such as /Reports."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "metadata"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/create_folder_v2",
+        "success": [
+          200
+        ],
+        "result": {
+          "metadata": "{{response.metadata}}"
+        },
+        "body": {
+          "path": "{{path}}",
+          "autorename": false
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.move": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Move a file or folder to a new path, including folder contents",
+      "description": "Move a file or folder to a new path, including folder contents. Conflicts fail; case-only renames are unsupported.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromPath": {
+            "type": "string",
+            "description": "Existing source path or id: reference."
+          },
+          "toPath": {
+            "type": "string",
+            "description": "Destination path beginning with /."
+          }
+        },
+        "required": [
+          "fromPath",
+          "toPath"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "metadata"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/move_v2",
+        "success": [
+          200
+        ],
+        "result": {
+          "metadata": "{{response.metadata}}"
+        },
+        "body": {
+          "from_path": "{{fromPath}}",
+          "to_path": "{{toPath}}",
+          "autorename": false
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete a Dropbox file or folder, recursively including folder contents",
+      "description": "Delete a Dropbox file or folder, recursively including folder contents. Provider retention and recovery policies apply.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Nonempty Dropbox path beginning with /, or a supported id: reference. Use root.list for the root folder."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "metadata"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/delete_v2",
+        "success": [
+          200
+        ],
+        "result": {
+          "metadata": "{{response.metadata}}"
+        },
+        "body": {
+          "path": "{{path}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    }
+  },
+  "models": [
+    "file",
+    "folder",
+    "account"
+  ]
+}

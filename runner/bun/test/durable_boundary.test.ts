@@ -1,0 +1,56 @@
+import {test, expect} from 'bun:test';
+import {handleRPC} from '../src/server';
+import {createConnectorHttpClient} from '../src/http';
+test('RPC rejects null envelopes without throwing', async()=> {
+ const r=await handleRPC(new Request('http://local/rpc',{method:'POST',body:'null'})); expect(r.status).toBe(400);
+});
+test('pre-aborted outbound signal never dispatches',async()=>{
+ let calls=0; const c=createConnectorHttpClient({allowedHosts:['example.com'],maxResponseBytes:100,fetch:(async()=>{calls++;return new Response('');}) as typeof fetch});
+ await expect(c.fetchText('https://example.com',{signal:AbortSignal.abort()})).rejects.toBeDefined(); expect(calls).toBe(0);
+});
+test('RPC honors expired caller deadline',async()=>{
+ const r=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'expired',method:'runner.describe',deadlineUnixMs:1})})); expect(r.status).toBe(504);
+});
+import {defaultConnectorRegistry} from '../src/registry';
+import {createFetchHandler} from '../src/serve';
+import {createCalDAVClient} from '../../connectors/caldav/src/http';
+test('CalDAV rejects unsafe credential destinations at construction',()=>{
+ for(const baseUrl of ['http://caldav.icloud.com','https://caldav.icloud.com:8443','https://user:pass@caldav.icloud.com'])expect(()=>createCalDAVClient({username:'u',password:'p',baseUrl})).toThrow();
+});
+test('RPC preserves provider retry hints and caller cancellation at dispatch boundary',async()=>{
+ const original=defaultConnectorRegistry.executeAction;
+ defaultConnectorRegistry.executeAction=()=>({ok:true,output:Promise.reject({code:'CONNECTOR_RATE_LIMITED',message:'slow',retryAfterSeconds:17})});
+ const request=(signal?:AbortSignal)=>new Request('http://local/rpc',{method:'POST',signal,body:JSON.stringify({id:'rpc-test',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
+ try{
+ const response=await handleRPC(request());expect((await response.json()).error.retryAfterSeconds).toBe(17);
+ let dispatched=false;defaultConnectorRegistry.executeAction=()=>{dispatched=true;return {ok:true,output:{}}};
+ expect((await handleRPC(request(AbortSignal.abort()))).status).toBe(504);expect(dispatched).toBe(false);
+ }finally{defaultConnectorRegistry.executeAction=original;}
+});
+test('admission limits reject overflow and recycle only after accepted work drains',async()=>{
+ const original=defaultConnectorRegistry.executeAction; let resolve!:()=>void;
+ defaultConnectorRegistry.executeAction=()=>({ok:true,output:new Promise<void>(r=>resolve=r)});
+ let recycled=0;const handler=createFetchHandler({maxConcurrent:1,maxQueued:0,maxJobs:1,onRecycle:()=>recycled++});
+ const request=()=>new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'a',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
+ try{const pending=handler(request());await new Promise(r=>setTimeout(r,1));expect((await handler(request())).status).toBe(503);expect(recycled).toBe(0);resolve();await pending;expect(recycled).toBe(1);expect((await handler(request())).status).toBe(503);}finally{defaultConnectorRegistry.executeAction=original;}
+});
+test('caller deadline aborts the dispatched provider request at RPC boundary',async()=>{
+ const original=globalThis.fetch;let aborted=false;
+ globalThis.fetch=(async(_url:any,init:any)=>new Promise((_resolve,reject)=>{init.signal.addEventListener('abort',()=>{aborted=true;reject(init.signal.reason)},{once:true})})) as typeof fetch;
+ try{
+ const response=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'deadline',deadlineUnixMs:Date.now()+20,method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send',input:{apiKey:'known-secret',from:'a@test.com',to:['b@test.com'],subject:'hello',text:'body'}}})}));
+ expect(response.status).toBe(504);expect(aborted).toBe(true);
+ }finally{globalThis.fetch=original;}
+});
+test('handwritten RPC errors redact exact known credentials',async()=>{
+ const original=defaultConnectorRegistry.executeAction;
+ defaultConnectorRegistry.executeAction=()=>({ok:true,output:Promise.reject({code:'CONNECTOR_UPSTREAM_ERROR',message:'reflected very-short-secret'})});
+ try{const response=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'secret',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send',input:{apiKey:'very-short-secret'}}})}));expect((await response.json()).error.message).toBe('reflected [REDACTED]');}finally{defaultConnectorRegistry.executeAction=original;}
+});
+test('RPC wire bounds reject oversized input and output',async()=>{
+ const request=()=>new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'big',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
+ const input=await handleRPC(new Request('http://local/rpc',{method:'POST',body:' '.repeat(8*1024*1024+1)}));expect(input.status).toBe(413);
+ const original=defaultConnectorRegistry.executeAction;
+ defaultConnectorRegistry.executeAction=()=>({ok:true,output:{data:'x'.repeat(8*1024*1024)}});
+ try{const output=await handleRPC(request());expect(output.status).toBe(502);expect((await output.json()).error.code).toBe('OUTPUT_TOO_LARGE');}finally{defaultConnectorRegistry.executeAction=original;}
+});

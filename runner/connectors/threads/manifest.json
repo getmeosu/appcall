@@ -1,0 +1,482 @@
+{
+  "key": "threads",
+  "name": "Threads",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "description": "Threads curated publishing operations with a manually supplied OAuth2 token.",
+  "categories": [
+    "social"
+  ],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "threads_basic",
+      "threads_content_publish"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "Existing OAuth2 access token (manual renewal)",
+          "secret": true,
+          "required": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "graph.threads.net"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://graph.threads.net/v1.0",
+    "auth": {
+      "field": "accessToken",
+      "in": "query",
+      "name": "access_token",
+      "value": "{{accessToken}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "error.message"
+      ],
+      "bodyErrorPaths": [
+        "error"
+      ],
+      "rateLimitCodePaths": [
+        "error.code"
+      ],
+      "rateLimitCodes": [
+        "4",
+        "17"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "title": "Read the authenticated Threads profile",
+      "description": "Read the authenticated Threads profile.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Authenticated Threads identity.",
+            "required": [
+              "id",
+              "username"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "App-scoped user ID."
+              },
+              "username": {
+                "type": "string",
+                "description": "Threads username."
+              }
+            }
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        },
+        "query": {
+          "fields": "id,username"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      }
+    },
+    "posts.list": {
+      "kind": "action",
+      "title": "List posts created by the authenticated user",
+      "description": "List posts created by the authenticated user. Follow after cursors only while pages contain results.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; provider validates its allowed range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from the prior response. Omit for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "posts": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider posts."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque continuation cursor, if supplied by the provider. A cursor alone does not prove there is another page."
+          }
+        },
+        "required": [
+          "posts"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me/threads",
+        "success": [
+          200
+        ],
+        "result": {
+          "posts": "{{response.data}}",
+          "after": "{{response.paging.cursors.after}}"
+        },
+        "query": {
+          "fields": "id,text,timestamp,permalink",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        }
+      }
+    },
+    "posts.get": {
+      "kind": "action",
+      "title": "Read one Threads post accessible to the token",
+      "description": "Read one Threads post accessible to the token.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Threads media ID as a string."
+          }
+        },
+        "required": [
+          "postId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object",
+            "description": "Provider post.",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Threads media ID."
+              }
+            }
+          }
+        },
+        "required": [
+          "post"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{postId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "post": "{{response}}"
+        },
+        "query": {
+          "fields": "id,text,timestamp,permalink"
+        }
+      }
+    },
+    "containers.createText": {
+      "kind": "action",
+      "title": "Create a text container without publishing",
+      "description": "Create a text container without publishing. Check status, then explicitly call posts.publish when FINISHED.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Post text, up to 500 characters as counted by Threads."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "description": "Unpublished container ID, not a published post ID."
+          }
+        },
+        "required": [
+          "containerId"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/me/threads",
+        "success": [
+          200
+        ],
+        "result": {
+          "containerId": "{{response.id}}"
+        },
+        "query": {
+          "media_type": "TEXT",
+          "text": "{{text}}",
+          "auto_publish_text": false
+        }
+      }
+    },
+    "containers.createImage": {
+      "kind": "action",
+      "title": "Create an image container from a publicly accessible URL without publishing",
+      "description": "Create an image container from a publicly accessible URL without publishing. Check status before explicitly publishing.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "imageUrl": {
+            "type": "string",
+            "description": "Public image URL fetched by Threads. Provider media limits apply."
+          },
+          "text": {
+            "type": "string",
+            "description": "Optional caption."
+          }
+        },
+        "required": [
+          "imageUrl"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "description": "Unpublished container ID."
+          }
+        },
+        "required": [
+          "containerId"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/me/threads",
+        "success": [
+          200
+        ],
+        "result": {
+          "containerId": "{{response.id}}"
+        },
+        "query": {
+          "media_type": "IMAGE",
+          "image_url": "{{imageUrl}}",
+          "text": "{{text}}"
+        }
+      }
+    },
+    "containers.status": {
+      "kind": "action",
+      "title": "Read container processing status once",
+      "description": "Read container processing status once. FINISHED is ready to publish; IN_PROGRESS is not success; ERROR and EXPIRED require intervention.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "description": "Container ID returned by a create operation."
+          }
+        },
+        "required": [
+          "containerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "type": "object",
+            "description": "Provider container status; optional error_message describes processing failure.",
+            "required": [
+              "id",
+              "status"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Container ID."
+              },
+              "status": {
+                "type": "string",
+                "description": "EXPIRED, ERROR, FINISHED, IN_PROGRESS or PUBLISHED."
+              }
+            }
+          }
+        },
+        "required": [
+          "container"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{containerId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "container": "{{response}}"
+        },
+        "query": {
+          "fields": "id,status,error_message"
+        }
+      }
+    },
+    "posts.publish": {
+      "kind": "action",
+      "title": "Publish an existing FINISHED container",
+      "description": "Publish an existing FINISHED container. This operation does not poll or retry; inspect container status after an ambiguous timeout.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerId": {
+            "type": "string",
+            "description": "Existing container ID whose processing status is FINISHED."
+          }
+        },
+        "required": [
+          "containerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Published Threads media ID."
+          }
+        },
+        "required": [
+          "postId"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/me/threads_publish",
+        "success": [
+          200
+        ],
+        "result": {
+          "postId": "{{response.id}}"
+        },
+        "query": {
+          "creation_id": "{{containerId}}"
+        }
+      }
+    },
+    "publishing.quota": {
+      "kind": "action",
+      "title": "Read current publishing usage and quota configuration",
+      "description": "Read current publishing usage and quota configuration. Requires threads_content_publish in addition to threads_basic.",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "quota": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider quota usage and configuration."
+          }
+        },
+        "required": [
+          "quota"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me/threads_publishing_limit",
+        "success": [
+          200
+        ],
+        "result": {
+          "quota": "{{response.data}}"
+        },
+        "query": {
+          "fields": "quota_usage,config"
+        }
+      }
+    }
+  },
+  "models": [
+    "post"
+  ]
+}

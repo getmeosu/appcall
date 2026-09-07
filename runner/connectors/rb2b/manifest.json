@@ -1,0 +1,91 @@
+{
+  "key": "rb2b",
+  "name": "RB2B",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["crm"],
+  "auth": {
+    "type": "api_key",
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "API Key",
+          "required": false,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.rb2b.com",
+      "rb2b.com"
+    ]
+  },
+  "operations": {
+    "webhook.visitor_identified": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880
+    },
+    "visitors.parse": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Parse RB2B Visitor Webhook Payload",
+      "description": "Parse and normalize a raw RB2B visitor-identified webhook payload into a structured NormalizedVisitor object. No network call is made — this is a pure normalization action useful for agents that receive the raw payload from an RB2B webhook and need to extract person-level identity fields (name, LinkedIn URL, emails, company, title, location, pages visited).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "type": "object",
+            "description": "The raw RB2B webhook payload object exactly as delivered by the webhook endpoint. Expected fields (all optional, connector tolerates missing values): first_name, last_name, linkedin_url, business_email, personal_emails (array of strings), company_name, job_title, city, region, all_time_page_views or pages (array of {url, timestamp}), timestamp."
+          }
+        },
+        "required": ["payload"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "visitor": {
+            "type": "object",
+            "description": "The normalized visitor object with camelCase fields."
+          }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the RB2B connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "visitor"
+  ]
+}

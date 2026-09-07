@@ -1,0 +1,29 @@
+# Caddy reverse proxy for the appcall tester sandbox (single VM).
+# Auto-HTTPS via Let's Encrypt. Replace <VM_IP_DASHED> with the VM's public IP
+# using dashes, e.g. 34.42.1.9 -> 34-42-1-9. sslip.io resolves the hostname to
+# that IP, so no DNS records are needed.
+#
+# Run:  caddy run --config /etc/caddy/Caddyfile
+# (or systemd: place at /etc/caddy/Caddyfile and `systemctl restart caddy`)
+#
+# Prereqs: ports 80 and 443 open to the internet on the VM (ACME HTTP/TLS
+# challenge), and both backends listening on loopback:
+#   appcall API  -> 127.0.0.1:5080  (serves Sena's /v1 AND the web /app dashboard)
+#   anusa  auth  -> 127.0.0.1:4290
+
+{
+	# ACME registration email (use a real inbox for cert-expiry notices).
+	email admin@fieldmon.viralhit.ai
+}
+
+# appcall: Sena hits /v1/*, the web OTP dashboard is /app, connector callbacks
+# (Apollo/Unipile) arrive under /v1 — do not path-restrict.
+sandbox-app.<VM_IP_DASHED>.sslip.io {
+	reverse_proxy 127.0.0.1:5080
+}
+
+# anusa: appcall calls this server-side (ANUSA_API_URL); dashboard OAuth
+# callbacks land here too.
+sandbox-auth.<VM_IP_DASHED>.sslip.io {
+	reverse_proxy 127.0.0.1:4290
+}

@@ -1,0 +1,106 @@
+# Production topology for a single VM:
+#   - Only the API is reachable from the host, and only on 127.0.0.1:5080 — a
+#     host reverse proxy (nginx/caddy) terminates TLS and forwards to it.
+#   - The runner and Postgres live on the internal network with no published
+#     ports; the runner additionally requires the shared bearer token.
+#
+# Usage:
+#   make docker-prep                  # validate the locked Rust build
+#   cp .env.production.example .env.production   # then fill in real values
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build --wait
+services:
+  db:
+    image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    environment:
+      POSTGRES_DB: appcall
+      POSTGRES_USER: appcall
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set in .env.production}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appcall -d appcall"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [internal]
+
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+    environment:
+      APPCALL_RUNNER_HOST: 0.0.0.0
+      APPCALL_RUNNER_PORT: "5081"
+      APPCALL_RUNNER_TOKEN: "${APPCALL_RUNNER_TOKEN:?set in .env.production}"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const r=await fetch('http://127.0.0.1:5081/healthz');process.exit(r.ok?0:1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks: [internal]
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    # Overridable so scripts/smoke-prod.sh can run the identical topology with
+    # throwaway secrets (.env.smoke) without touching a real .env.production.
+    env_file: ${APPCALL_ENV_FILE:-.env.production}
+    environment:
+      # Compose-injected wiring; everything else comes from .env.production.
+      APPCALL_HTTP_ADDR: ":5080"
+      APPCALL_DATABASE_URL: "postgres://appcall:${POSTGRES_PASSWORD}@db:5432/appcall?sslmode=disable"
+      APPCALL_RUNNER_URL: "http://runner:5081"
+      APPCALL_RUNNER_TOKEN: "${APPCALL_RUNNER_TOKEN}"
+    depends_on:
+      db:
+        condition: service_healthy
+      runner:
+        condition: service_healthy
+    stop_grace_period: 70s
+    ports:
+      - "127.0.0.1:${APPCALL_HTTP_PORT:-5080}:5080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5080/readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks: [internal]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    entrypoint: ["/app/appcall-worker"]
+    env_file: ${APPCALL_ENV_FILE:-.env.production}
+    environment:
+      APPCALL_DATABASE_URL: "postgres://appcall:${POSTGRES_PASSWORD}@db:5432/appcall?sslmode=disable"
+      APPCALL_RUNNER_URL: "http://runner:5081"
+      APPCALL_RUNNER_TOKEN: "${APPCALL_RUNNER_TOKEN}"
+      # Empty means persistent daemon; MAX_JOBS is reserved for one-shot CLI runs.
+      APPCALL_WORKER_MAX_JOBS: ""
+    depends_on:
+      api:
+        condition: service_healthy
+      runner:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:5082/readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 70s
+    restart: unless-stopped
+    networks: [internal]
+
+networks:
+  internal: {}
+
+volumes:
+  pgdata: {}

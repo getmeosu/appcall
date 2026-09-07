@@ -1,0 +1,393 @@
+{
+  "key": "whatsapp",
+  "name": "WhatsApp",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["messaging"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "Access token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "phoneNumberId",
+          "label": "Phone number ID",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "graph.facebook.com"
+    ]
+  },
+  "operations": {
+    "messages.send": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send WhatsApp Message",
+      "description": "Send a plain-text WhatsApp message to a recipient phone number via the WhatsApp Cloud API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient phone number in international format (e.g. 15551234567)."
+          },
+          "text": {
+            "type": "string",
+            "description": "Message body text. Maximum 4096 characters."
+          },
+          "graphVersion": {
+            "type": "string",
+            "description": "Optional Graph API version like v25.0. Defaults to v25.0 when omitted."
+          }
+        },
+        "required": ["to", "text"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "providerMessageId": {
+            "type": "string",
+            "description": "Provider-assigned message ID."
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Phone number ID the message was sent from."
+          },
+          "text": {
+            "type": "string",
+            "description": "The message text that was sent."
+          },
+          "raw": {
+            "type": "object",
+            "description": "Raw provider response body."
+          }
+        }
+      }
+    },
+    "credentials.validate": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Validate WhatsApp Credentials",
+      "description": "Validate that the supplied WhatsApp access token and phone number ID are present and well-formed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the credentials passed validation."
+          }
+        }
+      }
+    },
+    "messages.sendTemplate": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send WhatsApp Template Message",
+      "description": "Send a pre-approved template message to a recipient via the WhatsApp Cloud API. Templates must be approved by Meta before use.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "Recipient phone number in international format." },
+          "templateName": { "type": "string", "description": "Name of the approved template to send." },
+          "languageCode": { "type": "string", "description": "Template language code (e.g. en_US). Defaults to en_US." },
+          "components": { "type": "array", "description": "Template component parameters (header, body, buttons).", "items": {} },
+          "graphVersion": { "type": "string", "description": "Graph API version like v25.0. Defaults to v25.0." }
+        },
+        "required": ["to", "templateName"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "providerMessageId": { "type": "string", "description": "Provider-assigned message ID." },
+          "channelId": { "type": "string" },
+          "raw": { "type": "object" }
+        }
+      }
+    },
+    "messages.sendImage": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send WhatsApp Image Message",
+      "description": "Send an image message to a recipient via the WhatsApp Cloud API using a publicly accessible image URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "Recipient phone number in international format." },
+          "imageUrl": { "type": "string", "description": "Publicly accessible URL of the image to send." },
+          "caption": { "type": "string", "description": "Optional caption text for the image." },
+          "graphVersion": { "type": "string", "description": "Graph API version like v25.0. Defaults to v25.0." }
+        },
+        "required": ["to", "imageUrl"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "providerMessageId": { "type": "string" },
+          "channelId": { "type": "string" },
+          "raw": { "type": "object" }
+        }
+      }
+    },
+    "messages.sendDocument": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send WhatsApp Document Message",
+      "description": "Send a document (PDF, DOCX, etc.) to a recipient via the WhatsApp Cloud API using a publicly accessible document URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "Recipient phone number in international format." },
+          "documentUrl": { "type": "string", "description": "Publicly accessible URL of the document to send." },
+          "filename": { "type": "string", "description": "Optional filename for the document." },
+          "caption": { "type": "string", "description": "Optional caption text for the document." },
+          "graphVersion": { "type": "string", "description": "Graph API version like v25.0. Defaults to v25.0." }
+        },
+        "required": ["to", "documentUrl"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "providerMessageId": { "type": "string" },
+          "channelId": { "type": "string" },
+          "raw": { "type": "object" }
+        }
+      }
+    },
+    "messages.sendLocation": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send WhatsApp Location Message",
+      "description": "Send a location pin to a recipient via the WhatsApp Cloud API using GPS coordinates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "Recipient phone number in international format." },
+          "latitude": { "type": "number", "description": "Latitude of the location (-90 to 90)." },
+          "longitude": { "type": "number", "description": "Longitude of the location (-180 to 180)." },
+          "name": { "type": "string", "description": "Optional name of the location." },
+          "address": { "type": "string", "description": "Optional address of the location." },
+          "graphVersion": { "type": "string", "description": "Graph API version like v25.0. Defaults to v25.0." }
+        },
+        "required": ["to", "latitude", "longitude"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "providerMessageId": { "type": "string" },
+          "channelId": { "type": "string" },
+          "raw": { "type": "object" }
+        }
+      }
+    },
+    "messages.sendContacts": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send WhatsApp Contacts Message",
+      "description": "Send one or more vCard contacts to a recipient via the WhatsApp Cloud API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "Recipient phone number in international format." },
+          "contacts": {
+            "type": "array",
+            "description": "Array of WhatsApp contact objects with name and phone fields.",
+            "items": { "type": "object" },
+            "minItems": 1
+          },
+          "graphVersion": { "type": "string", "description": "Graph API version like v25.0. Defaults to v25.0." }
+        },
+        "required": ["to", "contacts"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "providerMessageId": { "type": "string" },
+          "channelId": { "type": "string" },
+          "raw": { "type": "object" }
+        }
+      }
+    },
+    "messages.sendReaction": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send WhatsApp Reaction",
+      "description": "React to a specific WhatsApp message with an emoji via the WhatsApp Cloud API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "Recipient phone number in international format." },
+          "messageId": { "type": "string", "description": "Provider message ID (wamid) of the message to react to." },
+          "emoji": { "type": "string", "description": "Emoji to react with (e.g. 👍). Send empty string to remove reaction." },
+          "graphVersion": { "type": "string", "description": "Graph API version like v25.0. Defaults to v25.0." }
+        },
+        "required": ["to", "messageId", "emoji"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "providerMessageId": { "type": "string" },
+          "channelId": { "type": "string" },
+          "raw": { "type": "object" }
+        }
+      }
+    },
+    "messages.markRead": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Mark WhatsApp Message as Read",
+      "description": "Mark an incoming WhatsApp message as read by sending a PUT request with status=read to the WhatsApp Cloud API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": { "type": "string", "description": "Provider message ID (wamid) of the message to mark as read." },
+          "graphVersion": { "type": "string", "description": "Graph API version like v25.0. Defaults to v25.0." }
+        },
+        "required": ["messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "success": { "type": "boolean", "description": "Whether the message was marked as read." },
+          "raw": { "type": "object" }
+        }
+      }
+    },
+    "messages.sendInteractive": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send WhatsApp Interactive Message",
+      "description": "Send an interactive message with buttons or a list menu to a recipient via the WhatsApp Cloud API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": { "type": "string", "description": "Recipient phone number in international format." },
+          "interactiveType": {
+            "type": "string",
+            "enum": ["button", "list", "product", "product_list"],
+            "description": "Type of interactive message: button, list, product, or product_list."
+          },
+          "interactive": {
+            "type": "object",
+            "description": "Interactive message body object with header, body, footer, and action fields per WhatsApp spec."
+          },
+          "graphVersion": { "type": "string", "description": "Graph API version like v25.0. Defaults to v25.0." }
+        },
+        "required": ["to", "interactiveType", "interactive"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "providerMessageId": { "type": "string" },
+          "channelId": { "type": "string" },
+          "raw": { "type": "object" }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the WhatsApp connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "message",
+    "user"
+  ]
+}

@@ -1,0 +1,841 @@
+{
+  "key": "microsoft-365",
+  "name": "Microsoft 365",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "Mail.Read",
+      "Mail.ReadWrite",
+      "Mail.Send",
+      "Calendars.Read",
+      "Calendars.ReadWrite",
+      "Files.Read.All",
+      "Files.ReadWrite.All",
+      "User.Read.All",
+      "Contacts.Read",
+      "Contacts.ReadWrite",
+      "OnlineMeetings.Read",
+      "OnlineMeetings.ReadWrite"
+    ],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "graph.microsoft.com"
+    ]
+  },
+  "operations": {
+    "messages.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "messages.send": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 10485760,
+      "maxResponseBytes": 1048576,
+      "title": "Send Email",
+      "description": "Send an email message from the authenticated user's Outlook mailbox via Microsoft Graph.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "array",
+            "description": "Recipient email addresses. Each item may be a plain address string, an object with an 'address' field, or an object with an 'emailAddress.address' field.",
+            "items": {
+              "type": ["string", "object"]
+            },
+            "minItems": 1
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject line of the email."
+          },
+          "body": {
+            "type": "string",
+            "description": "Body content of the email."
+          },
+          "contentType": {
+            "type": "string",
+            "description": "Format of the body content. Defaults to 'text'.",
+            "enum": ["text", "html"]
+          }
+        },
+        "required": ["to", "subject", "body"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "sent": { "type": "boolean" }
+        }
+      }
+    },
+    "messages.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Email Message",
+      "description": "Retrieve a specific email message by its ID from the authenticated user's Outlook mailbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "The unique identifier of the message to retrieve."
+          }
+        },
+        "required": ["messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "message": { "type": "object", "description": "The normalized message object." }
+        }
+      }
+    },
+    "messages.reply": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 65536,
+      "title": "Reply to Email",
+      "description": "Reply to an existing email message in the authenticated user's Outlook mailbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "The unique identifier of the message to reply to."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The reply comment/body text."
+          }
+        },
+        "required": ["messageId", "comment"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "replied": { "type": "boolean" }
+        }
+      }
+    },
+    "messages.move": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Move Email Message",
+      "description": "Move an email message to a different mail folder in the authenticated user's Outlook mailbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "The unique identifier of the message to move."
+          },
+          "destinationId": {
+            "type": "string",
+            "description": "The ID of the destination mail folder, or a well-known name like 'inbox', 'drafts', 'sentItems', 'deletedItems'."
+          }
+        },
+        "required": ["messageId", "destinationId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "messageId": { "type": "string" }
+        }
+      }
+    },
+    "messages.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Email Message",
+      "description": "Permanently delete an email message from the authenticated user's Outlook mailbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "The unique identifier of the message to delete."
+          }
+        },
+        "required": ["messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "mailFolders.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Mail Folders",
+      "description": "List all mail folders in the authenticated user's Outlook mailbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "folders": { "type": "array", "items": { "type": "object" } }
+        }
+      }
+    },
+    "events.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "events.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Calendar Event",
+      "description": "Create a new event in the authenticated user's default Outlook calendar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Title of the calendar event."
+          },
+          "start": {
+            "type": "object",
+            "description": "Start date/time with timeZone.",
+            "properties": {
+              "dateTime": { "type": "string", "description": "ISO 8601 date-time string, e.g. '2026-06-01T09:00:00'." },
+              "timeZone": { "type": "string", "description": "IANA time zone name, e.g. 'UTC' or 'America/New_York'." }
+            },
+            "required": ["dateTime", "timeZone"]
+          },
+          "end": {
+            "type": "object",
+            "description": "End date/time with timeZone.",
+            "properties": {
+              "dateTime": { "type": "string" },
+              "timeZone": { "type": "string" }
+            },
+            "required": ["dateTime", "timeZone"]
+          },
+          "body": {
+            "type": "string",
+            "description": "Body/description of the event."
+          },
+          "location": {
+            "type": "string",
+            "description": "Display name of the event location."
+          },
+          "attendees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Email addresses of required attendees."
+          },
+          "isOnlineMeeting": {
+            "type": "boolean",
+            "description": "Whether to create a Teams online meeting link."
+          }
+        },
+        "required": ["subject", "start", "end"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "event": { "type": "object" }
+        }
+      }
+    },
+    "events.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Calendar Event",
+      "description": "Update an existing calendar event in the authenticated user's Outlook calendar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "description": "The unique identifier of the event to update."
+          },
+          "subject": {
+            "type": "string",
+            "description": "New title for the event."
+          },
+          "start": {
+            "type": "object",
+            "properties": {
+              "dateTime": { "type": "string" },
+              "timeZone": { "type": "string" }
+            },
+            "required": ["dateTime", "timeZone"]
+          },
+          "end": {
+            "type": "object",
+            "properties": {
+              "dateTime": { "type": "string" },
+              "timeZone": { "type": "string" }
+            },
+            "required": ["dateTime", "timeZone"]
+          },
+          "body": {
+            "type": "string",
+            "description": "New body/description for the event."
+          },
+          "location": {
+            "type": "string",
+            "description": "New display name of the event location."
+          }
+        },
+        "required": ["eventId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "event": { "type": "object" }
+        }
+      }
+    },
+    "events.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Calendar Event",
+      "description": "Delete a calendar event from the authenticated user's Outlook calendar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "description": "The unique identifier of the event to delete."
+          }
+        },
+        "required": ["eventId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "events.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Calendar Event",
+      "description": "Retrieve a specific calendar event by its ID from the authenticated user's Outlook calendar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "description": "The unique identifier of the event to retrieve."
+          }
+        },
+        "required": ["eventId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "event": { "type": "object" }
+        }
+      }
+    },
+    "calendars.list": {
+      "kind": "sync",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576
+    },
+    "files.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "drive.items.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get OneDrive Item",
+      "description": "Retrieve metadata for a specific file or folder in the authenticated user's OneDrive.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "description": "The unique identifier of the drive item."
+          }
+        },
+        "required": ["itemId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "item": { "type": "object" }
+        }
+      }
+    },
+    "drive.items.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete OneDrive Item",
+      "description": "Delete a file or folder from the authenticated user's OneDrive.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "description": "The unique identifier of the drive item to delete."
+          }
+        },
+        "required": ["itemId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "drive.items.copy": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Copy OneDrive Item",
+      "description": "Copy a file or folder to another location in the authenticated user's OneDrive. Returns an async operation URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "description": "The unique identifier of the drive item to copy."
+          },
+          "destinationId": {
+            "type": "string",
+            "description": "The ID of the destination folder."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional new name for the copied item."
+          }
+        },
+        "required": ["itemId", "destinationId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "operationUrl": { "type": "string" }
+        }
+      }
+    },
+    "contacts.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Contact",
+      "description": "Create a new contact in the authenticated user's Outlook personal contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "givenName": {
+            "type": "string",
+            "description": "First name of the contact."
+          },
+          "surname": {
+            "type": "string",
+            "description": "Last name of the contact."
+          },
+          "emailAddresses": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Email addresses for the contact."
+          },
+          "mobilePhone": {
+            "type": "string",
+            "description": "Mobile phone number."
+          },
+          "jobTitle": {
+            "type": "string",
+            "description": "Job title of the contact."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "Company or organization name."
+          }
+        },
+        "required": ["givenName"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contact": { "type": "object" }
+        }
+      }
+    },
+    "contacts.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Contacts",
+      "description": "List all contacts from the authenticated user's Outlook personal contacts folder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contacts": { "type": "array", "items": { "type": "object" } }
+        }
+      }
+    },
+    "teams_meetings.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Teams Meeting",
+      "description": "Create a new Microsoft Teams online meeting via the Microsoft Graph API. Optionally scope the meeting to a specific user with userId. Returns the meeting's joinWebUrl, id, and joinInformation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Title/subject of the Teams meeting."
+          },
+          "startDateTime": {
+            "type": "string",
+            "description": "Meeting start date/time as an ISO 8601 string with timezone offset, e.g. '2026-06-01T09:00:00Z'."
+          },
+          "endDateTime": {
+            "type": "string",
+            "description": "Meeting end date/time as an ISO 8601 string with timezone offset."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Optional. The ID or UPN of the user on whose behalf the meeting is created. Defaults to the authenticated user (me)."
+          }
+        },
+        "required": ["subject", "startDateTime", "endDateTime"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "meeting": {
+            "type": "object",
+            "description": "The created online meeting object including id, joinWebUrl, and joinInformation."
+          }
+        }
+      }
+    },
+    "teams_meetings.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Teams Meeting",
+      "description": "Retrieve a specific Microsoft Teams online meeting by its meeting ID from Microsoft Graph.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingId": {
+            "type": "string",
+            "description": "The unique identifier of the Teams online meeting to retrieve."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Optional. The ID or UPN of the user who owns the meeting. Defaults to the authenticated user (me)."
+          }
+        },
+        "required": ["meetingId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "meeting": { "type": "object", "description": "The retrieved online meeting object." }
+        }
+      }
+    },
+    "teams_meetings.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Teams Meeting",
+      "description": "Update an existing Microsoft Teams online meeting's subject, start time, or end time via Microsoft Graph.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingId": {
+            "type": "string",
+            "description": "The unique identifier of the Teams online meeting to update."
+          },
+          "subject": {
+            "type": "string",
+            "description": "New subject/title for the meeting."
+          },
+          "startDateTime": {
+            "type": "string",
+            "description": "New start date/time as ISO 8601 string."
+          },
+          "endDateTime": {
+            "type": "string",
+            "description": "New end date/time as ISO 8601 string."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Optional. The ID or UPN of the meeting owner. Defaults to the authenticated user (me)."
+          }
+        },
+        "required": ["meetingId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "meeting": { "type": "object", "description": "The updated online meeting object." }
+        }
+      }
+    },
+    "teams_meetings.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Teams Meeting",
+      "description": "Delete a Microsoft Teams online meeting by its meeting ID via Microsoft Graph. The Graph API returns 204 No Content on success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingId": {
+            "type": "string",
+            "description": "The unique identifier of the Teams online meeting to delete."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Optional. The ID or UPN of the meeting owner. Defaults to the authenticated user (me)."
+          }
+        },
+        "required": ["meetingId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "teams_meetings.get_by_join_url": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Teams Meeting by Join URL",
+      "description": "Look up a Microsoft Teams online meeting by its joinWebUrl using an OData $filter query via Microsoft Graph.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "joinWebUrl": {
+            "type": "string",
+            "description": "The Teams meeting join URL to search for, e.g. 'https://teams.microsoft.com/l/meetup-join/...'."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Optional. The ID or UPN of the meeting owner. Defaults to the authenticated user (me)."
+          }
+        },
+        "required": ["joinWebUrl"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "meetings": { "type": "array", "items": { "type": "object" }, "description": "List of matching online meeting objects." }
+        }
+      }
+    },
+    "calendar.event.create_teams": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Calendar Event with Teams Meeting",
+      "description": "Create a new Outlook calendar event that automatically includes a Microsoft Teams meeting link (isOnlineMeeting:true, provider:teamsForBusiness). Returns the calendar event with onlineMeeting.joinUrl.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Title of the calendar event."
+          },
+          "start": {
+            "type": "object",
+            "description": "Start date/time with timeZone.",
+            "properties": {
+              "dateTime": { "type": "string", "description": "ISO 8601 date-time string, e.g. '2026-06-02T14:00:00'." },
+              "timeZone": { "type": "string", "description": "IANA time zone name, e.g. 'UTC' or 'America/New_York'." }
+            },
+            "required": ["dateTime", "timeZone"]
+          },
+          "end": {
+            "type": "object",
+            "description": "End date/time with timeZone.",
+            "properties": {
+              "dateTime": { "type": "string" },
+              "timeZone": { "type": "string" }
+            },
+            "required": ["dateTime", "timeZone"]
+          },
+          "body": {
+            "type": "string",
+            "description": "Body/description of the calendar event."
+          },
+          "location": {
+            "type": "string",
+            "description": "Display name of the event location."
+          },
+          "attendees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Email addresses of required attendees."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Optional. The ID or UPN of the calendar owner. Defaults to the authenticated user (me)."
+          }
+        },
+        "required": ["subject", "start", "end"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "event": { "type": "object", "description": "The created calendar event including onlineMeeting.joinUrl." }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Microsoft 365 connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "message",
+    "calendar_event",
+    "calendar",
+    "drive_file",
+    "contact",
+    "teams_meeting"
+  ]
+}

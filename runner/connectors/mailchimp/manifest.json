@@ -1,0 +1,387 @@
+{
+  "key": "mailchimp",
+  "name": "Mailchimp",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["email-marketing"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "*.api.mailchimp.com"
+    ]
+  },
+  "operations": {
+    "contacts.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "audiences.list": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576
+    },
+    "campaigns.list": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "contacts.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Contact",
+      "description": "Add or subscribe a contact (member) to a Mailchimp audience list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "string",
+            "description": "Mailchimp audience (list) ID to add the contact to."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address of the contact."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Contact's first name (FNAME merge field)."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Contact's last name (LNAME merge field)."
+          },
+          "status": {
+            "type": "string",
+            "description": "Subscription status, e.g. 'subscribed', 'unsubscribed', 'pending'. Defaults to 'subscribed'."
+          }
+        },
+        "required": [
+          "listId",
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contact": { "type": "object", "description": "The normalized created contact." }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Mailchimp connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    },
+    "lists.members.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Get List Member",
+      "description": "Retrieve information about a specific member of a Mailchimp audience list by email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string", "description": "The Mailchimp audience (list) ID." },
+          "email": { "type": "string", "description": "Email address of the member to retrieve." }
+        },
+        "required": ["listId", "email"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "member": { "type": "object", "description": "The normalized member record." }
+        }
+      }
+    },
+    "lists.members.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update List Member",
+      "description": "Update a member's information (name, status, merge fields) in a Mailchimp audience list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string", "description": "The Mailchimp audience (list) ID." },
+          "email": { "type": "string", "description": "Email address identifying the member to update." },
+          "firstName": { "type": "string", "description": "Updated first name (FNAME merge field)." },
+          "lastName": { "type": "string", "description": "Updated last name (LNAME merge field)." },
+          "status": { "type": "string", "description": "New subscription status, e.g. 'subscribed', 'unsubscribed', 'pending', 'archived'." },
+          "mergeFields": { "type": "object", "description": "Additional merge fields to update as a key-value map." }
+        },
+        "required": ["listId", "email"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "member": { "type": "object", "description": "The normalized updated member record." }
+        }
+      }
+    },
+    "lists.members.upsert": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Upsert List Member",
+      "description": "Add a new member or update an existing member in a Mailchimp audience list (PUT upsert by email hash).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string", "description": "The Mailchimp audience (list) ID." },
+          "email": { "type": "string", "description": "Email address of the member to add or update." },
+          "firstName": { "type": "string", "description": "First name (FNAME merge field)." },
+          "lastName": { "type": "string", "description": "Last name (LNAME merge field)." },
+          "status": { "type": "string", "description": "Subscription status for new members. Defaults to 'subscribed'." },
+          "mergeFields": { "type": "object", "description": "Additional merge fields to set as a key-value map." }
+        },
+        "required": ["listId", "email"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "member": { "type": "object", "description": "The normalized upserted member record." }
+        }
+      }
+    },
+    "lists.members.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Delete List Member",
+      "description": "Permanently delete a member from a Mailchimp audience list by email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string", "description": "The Mailchimp audience (list) ID." },
+          "email": { "type": "string", "description": "Email address of the member to delete." }
+        },
+        "required": ["listId", "email"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean", "description": "True when the member was successfully deleted." }
+        }
+      }
+    },
+    "lists.members.tags.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Add Tags to List Member",
+      "description": "Add one or more tags to an existing member in a Mailchimp audience list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string", "description": "The Mailchimp audience (list) ID." },
+          "email": { "type": "string", "description": "Email address of the member to tag." },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of tag name strings to add to the member."
+          }
+        },
+        "required": ["listId", "email", "tags"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "updated": { "type": "boolean", "description": "True when the tags were successfully applied." }
+        }
+      }
+    },
+    "lists.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Audience List",
+      "description": "Create a new Mailchimp audience (list) with campaign defaults and contact information.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "The name of the audience list." },
+          "permissionReminder": { "type": "string", "description": "Reminder to subscribers of how they joined the list." },
+          "contactCompany": { "type": "string", "description": "Company name for the list contact information." },
+          "contactAddress1": { "type": "string", "description": "Street address for the list contact information." },
+          "contactCity": { "type": "string", "description": "City for the list contact information." },
+          "contactCountry": { "type": "string", "description": "Two-letter country code for the list contact information." },
+          "fromName": { "type": "string", "description": "Default 'from' name for campaigns sent to this list." },
+          "fromEmail": { "type": "string", "description": "Default 'from' email for campaigns sent to this list." },
+          "subject": { "type": "string", "description": "Default subject line for campaigns sent to this list." },
+          "language": { "type": "string", "description": "Default language for this list, e.g. 'en'. Defaults to 'en'." },
+          "emailTypeOption": { "type": "boolean", "description": "Whether the list supports multiple formats for emails. Defaults to false." }
+        },
+        "required": ["name", "permissionReminder", "contactCompany", "contactAddress1", "contactCity", "contactCountry", "fromName", "fromEmail", "subject"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "audience": { "type": "object", "description": "The normalized created audience." }
+        }
+      }
+    },
+    "lists.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Get Audience List",
+      "description": "Retrieve information about a specific Mailchimp audience (list) by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string", "description": "The Mailchimp audience (list) ID to retrieve." }
+        },
+        "required": ["listId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "audience": { "type": "object", "description": "The normalized audience record." }
+        }
+      }
+    },
+    "campaigns.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Campaign",
+      "description": "Create a new Mailchimp email campaign with settings and recipient list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "description": "Campaign type, e.g. 'regular', 'plaintext', 'absplit', 'rss', 'variate'." },
+          "listId": { "type": "string", "description": "Mailchimp audience (list) ID for the campaign recipients." },
+          "subjectLine": { "type": "string", "description": "Email subject line for the campaign." },
+          "title": { "type": "string", "description": "Internal title of the campaign (not visible to recipients)." },
+          "fromName": { "type": "string", "description": "Sender name shown to recipients." },
+          "replyTo": { "type": "string", "description": "Reply-to email address for the campaign." },
+          "previewText": { "type": "string", "description": "Preview text shown in email clients before opening." }
+        },
+        "required": ["type", "listId", "subjectLine", "title", "fromName", "replyTo"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "campaign": { "type": "object", "description": "The normalized created campaign." }
+        }
+      }
+    },
+    "campaigns.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Get Campaign",
+      "description": "Retrieve information about a specific Mailchimp campaign by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID to retrieve." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "campaign": { "type": "object", "description": "The normalized campaign record." }
+        }
+      }
+    },
+    "campaigns.send": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Send Campaign",
+      "description": "Send a ready Mailchimp campaign to its recipient list immediately.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID to send." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "sent": { "type": "boolean", "description": "True when the campaign was successfully sent." }
+        }
+      }
+    }
+  },
+  "models": [
+    "contact",
+    "audience",
+    "campaign"
+  ]
+}

@@ -1,0 +1,748 @@
+{
+  "key": "gitlab",
+  "name": "GitLab",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "host",
+          "label": "GitLab host",
+          "description": "Bare hostname only — no scheme, no path, no trailing slash. Use \"gitlab.com\" for GitLab SaaS, or your self-managed instance's canonical hostname, e.g. \"gitlab.acme.example\".",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "apiToken",
+          "label": "Personal access token",
+          "description": "A GitLab personal, project, or group access token with the api scope. Create one from GitLab under Preferences -> Access tokens.",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["{{host}}"]
+  },
+  "http": {
+    "baseUrl": "https://{{host}}/api/v4",
+    "auth": {
+      "field": "apiToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": ["message", "error"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the personal access token (or OAuth token) by calling GET /user, which returns the authenticated user's own details. Takes no input; a 401 means the token is bad or expired.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "id": { "type": "integer" },
+          "username": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "webUrl": { "type": "string" }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user",
+        "success": [200],
+        "echo": { "status": "ok" },
+        "result": {
+          "status": "ok",
+          "id": "{{response.id}}",
+          "username": "{{response.username}}",
+          "name": "{{response.name}}",
+          "email": "{{response.email}}",
+          "webUrl": "{{response.web_url}}"
+        }
+      }
+    },
+    "issues.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Issue",
+      "description": "Create an issue in a project. projectId is the numeric project id, or the namespace/project path (e.g. \"diaspora/diaspora\") passed raw — it is percent-encoded for you automatically. The response's id is the instance-global identifier; iid is the project-scoped number every other issue endpoint takes in its path, and webUrl is the browsable link.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "title": { "type": "string", "description": "Issue title." },
+          "description": { "type": "string", "description": "Issue description. Up to 1,048,576 characters." },
+          "assigneeId": { "type": "integer", "description": "User id to assign the issue to." },
+          "assigneeIds": { "type": "array", "items": { "type": "integer" }, "description": "User ids to assign the issue to." },
+          "labels": { "type": "string", "description": "Comma-separated label names." },
+          "milestoneId": { "type": "integer", "description": "Milestone id." },
+          "milestone": { "type": "string", "description": "Milestone title." },
+          "dueDate": { "type": "string", "description": "Due date as YYYY-MM-DD." },
+          "startDate": { "type": "string", "description": "Start date as YYYY-MM-DD." },
+          "confidential": { "type": "boolean", "description": "Mark the issue confidential." },
+          "issueType": { "type": "string", "enum": ["issue", "incident", "test_case", "task"], "description": "Issue type." },
+          "severity": { "type": "string", "enum": ["unknown", "low", "medium", "high", "critical"], "description": "Issue severity." },
+          "weight": { "type": "integer", "description": "Issue weight, 0 or greater." },
+          "epicId": { "type": "integer", "description": "Epic id to attach the issue to." }
+        },
+        "required": ["projectId", "title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "issue": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "title": "Issues with auth" },
+      "request": {
+        "method": "POST",
+        "path": "/projects/{{projectId}}/issues",
+        "body": {
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "assignee_id": "{{assigneeId}}",
+          "assignee_ids": "{{assigneeIds}}",
+          "labels": "{{labels}}",
+          "milestone_id": "{{milestoneId}}",
+          "milestone": "{{milestone}}",
+          "due_date": "{{dueDate}}",
+          "start_date": "{{startDate}}",
+          "confidential": "{{confidential}}",
+          "issue_type": "{{issueType}}",
+          "severity": "{{severity}}",
+          "weight": "{{weight}}",
+          "epic_id": "{{epicId}}"
+        },
+        "success": [201],
+        "result": { "issue": "{{response}}" }
+      }
+    },
+    "issues.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Issue",
+      "description": "Update an issue by its project-scoped issueIid (not its global id). Omitted fields are left unchanged. Use stateEvent \"close\" or \"reopen\" to change state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "issueIid": { "type": "integer", "description": "Project-scoped issue iid (not the global id)." },
+          "title": { "type": "string", "description": "New issue title." },
+          "description": { "type": "string", "description": "New issue description." },
+          "assigneeIds": { "type": "array", "items": { "type": "integer" }, "description": "Replacement list of assignee user ids." },
+          "labels": { "type": "string", "description": "Replacement comma-separated label names." },
+          "addLabels": { "type": "string", "description": "Comma-separated label names to add." },
+          "removeLabels": { "type": "string", "description": "Comma-separated label names to remove." },
+          "stateEvent": { "type": "string", "enum": ["close", "reopen"], "description": "Close or reopen the issue." },
+          "confidential": { "type": "boolean", "description": "Mark the issue confidential." },
+          "dueDate": { "type": "string", "description": "Due date as YYYY-MM-DD." },
+          "startDate": { "type": "string", "description": "Start date as YYYY-MM-DD." },
+          "milestoneId": { "type": "integer", "description": "Milestone id." },
+          "weight": { "type": "integer", "description": "Issue weight, 0 or greater." }
+        },
+        "required": ["projectId", "issueIid"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "issue": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "issueIid": 14, "stateEvent": "close" },
+      "request": {
+        "method": "PUT",
+        "path": "/projects/{{projectId}}/issues/{{issueIid}}",
+        "body": {
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "assignee_ids": "{{assigneeIds}}",
+          "labels": "{{labels}}",
+          "add_labels": "{{addLabels}}",
+          "remove_labels": "{{removeLabels}}",
+          "state_event": "{{stateEvent}}",
+          "confidential": "{{confidential}}",
+          "due_date": "{{dueDate}}",
+          "start_date": "{{startDate}}",
+          "milestone_id": "{{milestoneId}}",
+          "weight": "{{weight}}"
+        },
+        "success": [200],
+        "result": { "issue": "{{response}}" }
+      }
+    },
+    "issues.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Issue",
+      "description": "Fetch a single issue by its project-scoped issueIid (not its global id).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "issueIid": { "type": "integer", "description": "Project-scoped issue iid (not the global id)." }
+        },
+        "required": ["projectId", "issueIid"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "issue": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "issueIid": 14 },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/issues/{{issueIid}}",
+        "success": [200],
+        "result": { "issue": "{{response}}" }
+      }
+    },
+    "issues.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Issues",
+      "description": "List the issues in a project. Uses GitLab's offset pagination: pass page and perPage (max 100). The response carries no cursor in its body — the next page number comes back in the x-next-page response header and is mapped to nextPage here, empty once the last page is reached. GitLab also offers keyset pagination via a Link response header, but the declarative engine cannot parse a Link header, so this operation uses the offset form only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "state": { "type": "string", "enum": ["opened", "closed", "all"], "description": "Filter by issue state." },
+          "labels": { "type": "string", "description": "Comma-separated label names to filter by." },
+          "milestone": { "type": "string", "description": "Milestone title to filter by." },
+          "assigneeId": { "type": "integer", "description": "Filter by assignee user id." },
+          "authorId": { "type": "integer", "description": "Filter by author user id." },
+          "search": { "type": "string", "description": "Search issue title and description." },
+          "orderBy": { "type": "string", "description": "Field to order by, e.g. \"created_at\"." },
+          "sort": { "type": "string", "enum": ["asc", "desc"], "description": "Sort direction." },
+          "page": { "type": "integer", "description": "Page number, 1-based. Defaults to 1." },
+          "perPage": { "type": "integer", "description": "Results per page, up to 100. Defaults to 20." }
+        },
+        "required": ["projectId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "issues": { "type": "array", "items": { "type": "object" } },
+          "nextPage": { "type": "string" }
+        }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "state": "opened" },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/issues",
+        "query": {
+          "state": "{{state}}",
+          "labels": "{{labels}}",
+          "milestone": "{{milestone}}",
+          "assignee_id": "{{assigneeId}}",
+          "author_id": "{{authorId}}",
+          "search": "{{search}}",
+          "order_by": "{{orderBy}}",
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [200],
+        "result": {
+          "issues": "{{response}}",
+          "nextPage": "{{headers.x-next-page}}"
+        }
+      }
+    },
+    "issues.comment": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Comment on Issue",
+      "description": "Add a comment (note) to an issue, addressed by its project-scoped issueIid. body is limited to 1,000,000 characters. The response note carries no web_url field — a link anchor of the form \"<issue web_url>#note_<id>\" is a UI convention, not a documented API guarantee, so it is not fabricated here.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "issueIid": { "type": "integer", "description": "Project-scoped issue iid (not the global id)." },
+          "body": { "type": "string", "description": "Comment text. Up to 1,000,000 characters." },
+          "internal": { "type": "boolean", "description": "Mark the note internal (visible only to members)." }
+        },
+        "required": ["projectId", "issueIid", "body"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "note": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "issueIid": 14, "body": "Looking into this now." },
+      "request": {
+        "method": "POST",
+        "path": "/projects/{{projectId}}/issues/{{issueIid}}/notes",
+        "body": {
+          "body": "{{body}}",
+          "internal": "{{internal}}"
+        },
+        "success": [201],
+        "result": { "note": "{{response}}" }
+      }
+    },
+    "mergeRequests.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Merge Request",
+      "description": "Open a merge request from sourceBranch into targetBranch. The response's id is the instance-global identifier; iid is the project-scoped number every other merge request endpoint takes in its path, and webUrl is the browsable link.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "sourceBranch": { "type": "string", "description": "Branch containing the changes." },
+          "targetBranch": { "type": "string", "description": "Branch the changes merge into." },
+          "title": { "type": "string", "description": "Merge request title." },
+          "description": { "type": "string", "description": "Merge request description." },
+          "assigneeId": { "type": "integer", "description": "User id to assign the merge request to." },
+          "reviewerIds": { "type": "array", "items": { "type": "integer" }, "description": "User ids to request review from." },
+          "labels": { "type": "string", "description": "Comma-separated label names." },
+          "milestoneId": { "type": "integer", "description": "Milestone id." },
+          "removeSourceBranch": { "type": "boolean", "description": "Delete the source branch once merged." },
+          "squash": { "type": "boolean", "description": "Squash commits when merging." }
+        },
+        "required": ["projectId", "sourceBranch", "targetBranch", "title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "mergeRequest": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "sourceBranch": "feature", "targetBranch": "main", "title": "Add feature" },
+      "request": {
+        "method": "POST",
+        "path": "/projects/{{projectId}}/merge_requests",
+        "body": {
+          "source_branch": "{{sourceBranch}}",
+          "target_branch": "{{targetBranch}}",
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "assignee_id": "{{assigneeId}}",
+          "reviewer_ids": "{{reviewerIds}}",
+          "labels": "{{labels}}",
+          "milestone_id": "{{milestoneId}}",
+          "remove_source_branch": "{{removeSourceBranch}}",
+          "squash": "{{squash}}"
+        },
+        "success": [201],
+        "result": { "mergeRequest": "{{response}}" }
+      }
+    },
+    "mergeRequests.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Merge Request",
+      "description": "Update a merge request by its project-scoped mergeRequestIid (not its global id). Omitted fields are left unchanged. Use stateEvent \"close\" or \"reopen\" to change state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "mergeRequestIid": { "type": "integer", "description": "Project-scoped merge request iid (not the global id)." },
+          "title": { "type": "string", "description": "New merge request title." },
+          "description": { "type": "string", "description": "New merge request description." },
+          "targetBranch": { "type": "string", "description": "New target branch." },
+          "stateEvent": { "type": "string", "enum": ["close", "reopen"], "description": "Close or reopen the merge request." },
+          "assigneeIds": { "type": "array", "items": { "type": "integer" }, "description": "Replacement list of assignee user ids." },
+          "reviewerIds": { "type": "array", "items": { "type": "integer" }, "description": "Replacement list of reviewer user ids." },
+          "labels": { "type": "string", "description": "Replacement comma-separated label names." },
+          "addLabels": { "type": "string", "description": "Comma-separated label names to add." },
+          "removeLabels": { "type": "string", "description": "Comma-separated label names to remove." },
+          "milestoneId": { "type": "integer", "description": "Milestone id." },
+          "removeSourceBranch": { "type": "boolean", "description": "Delete the source branch once merged." },
+          "squash": { "type": "boolean", "description": "Squash commits when merging." }
+        },
+        "required": ["projectId", "mergeRequestIid"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "mergeRequest": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "mergeRequestIid": 1, "stateEvent": "close" },
+      "request": {
+        "method": "PUT",
+        "path": "/projects/{{projectId}}/merge_requests/{{mergeRequestIid}}",
+        "body": {
+          "title": "{{title}}",
+          "description": "{{description}}",
+          "target_branch": "{{targetBranch}}",
+          "state_event": "{{stateEvent}}",
+          "assignee_ids": "{{assigneeIds}}",
+          "reviewer_ids": "{{reviewerIds}}",
+          "labels": "{{labels}}",
+          "add_labels": "{{addLabels}}",
+          "remove_labels": "{{removeLabels}}",
+          "milestone_id": "{{milestoneId}}",
+          "remove_source_branch": "{{removeSourceBranch}}",
+          "squash": "{{squash}}"
+        },
+        "success": [200],
+        "result": { "mergeRequest": "{{response}}" }
+      }
+    },
+    "mergeRequests.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Merge Request",
+      "description": "Fetch a single merge request by its project-scoped mergeRequestIid (not its global id).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "mergeRequestIid": { "type": "integer", "description": "Project-scoped merge request iid (not the global id)." }
+        },
+        "required": ["projectId", "mergeRequestIid"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "mergeRequest": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "mergeRequestIid": 1 },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/merge_requests/{{mergeRequestIid}}",
+        "success": [200],
+        "result": { "mergeRequest": "{{response}}" }
+      }
+    },
+    "mergeRequests.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Merge Requests",
+      "description": "List the merge requests in a project. Uses GitLab's offset pagination: pass page and perPage (max 100). The response carries no cursor in its body — the next page number comes back in the x-next-page response header and is mapped to nextPage here, empty once the last page is reached. GitLab also offers keyset pagination via a Link response header, but the declarative engine cannot parse a Link header, so this operation uses the offset form only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "state": { "type": "string", "enum": ["opened", "closed", "merged", "locked", "all"], "description": "Filter by merge request state." },
+          "labels": { "type": "string", "description": "Comma-separated label names to filter by." },
+          "authorId": { "type": "integer", "description": "Filter by author user id." },
+          "assigneeId": { "type": "integer", "description": "Filter by assignee user id." },
+          "reviewerId": { "type": "integer", "description": "Filter by reviewer user id." },
+          "orderBy": { "type": "string", "description": "Field to order by, e.g. \"created_at\"." },
+          "sort": { "type": "string", "enum": ["asc", "desc"], "description": "Sort direction." },
+          "page": { "type": "integer", "description": "Page number, 1-based. Defaults to 1." },
+          "perPage": { "type": "integer", "description": "Results per page, up to 100. Defaults to 20." }
+        },
+        "required": ["projectId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "mergeRequests": { "type": "array", "items": { "type": "object" } },
+          "nextPage": { "type": "string" }
+        }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "state": "opened" },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/merge_requests",
+        "query": {
+          "state": "{{state}}",
+          "labels": "{{labels}}",
+          "author_id": "{{authorId}}",
+          "assignee_id": "{{assigneeId}}",
+          "reviewer_id": "{{reviewerId}}",
+          "order_by": "{{orderBy}}",
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [200],
+        "result": {
+          "mergeRequests": "{{response}}",
+          "nextPage": "{{headers.x-next-page}}"
+        }
+      }
+    },
+    "mergeRequests.merge": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Merge Merge Request",
+      "description": "Accept and merge a merge request by its project-scoped mergeRequestIid. sha, when supplied, must match the current HEAD of the source branch and is required if the group/instance requires a commit SHA on this API. auto_merge (not the deprecated merge_when_pipeline_succeeds) merges once checks pass. GitLab documents five failure codes, all surfaced as CONNECTOR_UPSTREAM_ERROR with GitLab's own message: 400 (\"SHA must be provided when merging\"), 401 (no permission), 405 (the merge request cannot merge), 409 (\"SHA does not match HEAD of source branch\" — the supplied sha is stale), and 422 (\"Branch cannot be merged\").",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "mergeRequestIid": { "type": "integer", "description": "Project-scoped merge request iid (not the global id)." },
+          "sha": { "type": "string", "description": "Commit SHA that must match the current HEAD of the source branch." },
+          "autoMerge": { "type": "boolean", "description": "Merge automatically once all checks pass." },
+          "mergeCommitMessage": { "type": "string", "description": "Custom merge commit message." },
+          "squashCommitMessage": { "type": "string", "description": "Custom squash commit message." },
+          "squash": { "type": "boolean", "description": "Squash commits when merging." },
+          "shouldRemoveSourceBranch": { "type": "boolean", "description": "Delete the source branch once merged." }
+        },
+        "required": ["projectId", "mergeRequestIid"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "mergeRequest": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "mergeRequestIid": 1 },
+      "request": {
+        "method": "PUT",
+        "path": "/projects/{{projectId}}/merge_requests/{{mergeRequestIid}}/merge",
+        "body": {
+          "sha": "{{sha}}",
+          "auto_merge": "{{autoMerge}}",
+          "merge_commit_message": "{{mergeCommitMessage}}",
+          "squash_commit_message": "{{squashCommitMessage}}",
+          "squash": "{{squash}}",
+          "should_remove_source_branch": "{{shouldRemoveSourceBranch}}"
+        },
+        "success": [200],
+        "result": { "mergeRequest": "{{response}}" }
+      }
+    },
+    "pipelines.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Pipeline",
+      "description": "Trigger a new pipeline for a branch or tag ref. Note this endpoint is singular \"pipeline\", unlike the plural \"pipelines\" used to list and get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "ref": { "type": "string", "description": "Branch or tag to run the pipeline for." },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": { "type": "string" },
+                "value": { "type": "string" },
+                "variable_type": { "type": "string", "enum": ["env_var", "file"] }
+              }
+            },
+            "description": "Pipeline variables, e.g. [{\"key\": \"VAR\", \"value\": \"true\"}]."
+          },
+          "inputs": { "type": "object", "description": "Pipeline inputs as a key/value object." }
+        },
+        "required": ["projectId", "ref"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "pipeline": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "ref": "main" },
+      "request": {
+        "method": "POST",
+        "path": "/projects/{{projectId}}/pipeline",
+        "body": {
+          "ref": "{{ref}}",
+          "variables": "{{variables}}",
+          "inputs": "{{inputs}}"
+        },
+        "success": [201],
+        "result": { "pipeline": "{{response}}" }
+      }
+    },
+    "pipelines.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Pipeline",
+      "description": "Fetch a single pipeline by its id. Note this endpoint is plural \"pipelines\", unlike the singular \"pipeline\" used to create.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "pipelineId": { "type": "integer", "description": "Pipeline id." }
+        },
+        "required": ["projectId", "pipelineId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "pipeline": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora", "pipelineId": 287 },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/pipelines/{{pipelineId}}",
+        "success": [200],
+        "result": { "pipeline": "{{response}}" }
+      }
+    },
+    "pipelines.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Pipelines",
+      "description": "List the pipelines for a project. Note this endpoint is plural \"pipelines\", unlike the singular \"pipeline\" used to create. Uses GitLab's offset pagination: pass page and perPage (max 100). The response carries no cursor in its body — the next page number comes back in the x-next-page response header and is mapped to nextPage here, empty once the last page is reached. GitLab also offers keyset pagination via a Link response header, but the declarative engine cannot parse a Link header, so this operation uses the offset form only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." },
+          "ref": { "type": "string", "description": "Filter by branch or tag ref." },
+          "status": { "type": "string", "enum": ["created", "waiting_for_resource", "preparing", "pending", "running", "success", "failed", "canceled", "skipped", "manual", "scheduled"], "description": "Filter by pipeline status." },
+          "scope": { "type": "string", "enum": ["running", "pending", "finished", "branches", "tags"], "description": "Filter by pipeline scope." },
+          "orderBy": { "type": "string", "enum": ["id", "status", "ref", "updated_at", "user_id"], "description": "Field to order by." },
+          "sort": { "type": "string", "enum": ["asc", "desc"], "description": "Sort direction." },
+          "page": { "type": "integer", "description": "Page number, 1-based. Defaults to 1." },
+          "perPage": { "type": "integer", "description": "Results per page, up to 100. Defaults to 20." }
+        },
+        "required": ["projectId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pipelines": { "type": "array", "items": { "type": "object" } },
+          "nextPage": { "type": "string" }
+        }
+      },
+      "sample": { "projectId": "diaspora/diaspora" },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/pipelines",
+        "query": {
+          "ref": "{{ref}}",
+          "status": "{{status}}",
+          "scope": "{{scope}}",
+          "order_by": "{{orderBy}}",
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [200],
+        "result": {
+          "pipelines": "{{response}}",
+          "nextPage": "{{headers.x-next-page}}"
+        }
+      }
+    },
+    "projects.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Projects",
+      "description": "List projects visible to the caller. Pass membership=true and simple=true for the \"which projects can I act on\" call an agent typically needs. Uses GitLab's offset pagination: pass page and perPage (max 100). The response carries no cursor in its body — the next page number comes back in the x-next-page response header and is mapped to nextPage here, empty once the last page is reached. GitLab also offers keyset pagination via a Link response header, but the declarative engine cannot parse a Link header, so this operation uses the offset form only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "membership": { "type": "boolean", "description": "Only projects the caller is a member of." },
+          "owned": { "type": "boolean", "description": "Only projects the caller owns." },
+          "search": { "type": "string", "description": "Search project path, name, or description." },
+          "simple": { "type": "boolean", "description": "Return a limited, cheaper field set." },
+          "orderBy": { "type": "string", "enum": ["id", "name", "path", "created_at", "updated_at", "star_count", "last_activity_at"], "description": "Field to order by." },
+          "sort": { "type": "string", "enum": ["asc", "desc"], "description": "Sort direction." },
+          "page": { "type": "integer", "description": "Page number, 1-based. Defaults to 1." },
+          "perPage": { "type": "integer", "description": "Results per page, up to 100. Defaults to 20." }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "projects": { "type": "array", "items": { "type": "object" } },
+          "nextPage": { "type": "string" }
+        }
+      },
+      "sample": { "membership": true, "simple": true },
+      "request": {
+        "method": "GET",
+        "path": "/projects",
+        "query": {
+          "membership": "{{membership}}",
+          "owned": "{{owned}}",
+          "search": "{{search}}",
+          "simple": "{{simple}}",
+          "order_by": "{{orderBy}}",
+          "sort": "{{sort}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [200],
+        "result": {
+          "projects": "{{response}}",
+          "nextPage": "{{headers.x-next-page}}"
+        }
+      }
+    },
+    "projects.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Project",
+      "description": "Fetch a single project. projectId is the numeric project id, or the namespace/project path (e.g. \"diaspora/diaspora\") passed raw — it is percent-encoded for you automatically.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "Numeric project id, or the namespace/project path (e.g. \"mygroup/myproject\") — pass it raw; it is encoded for you." }
+        },
+        "required": ["projectId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": { "project": { "type": "object" } }
+      },
+      "sample": { "projectId": "diaspora/diaspora" },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}",
+        "success": [200],
+        "result": { "project": "{{response}}" }
+      }
+    }
+  },
+  "models": ["issue", "mergeRequest", "note", "pipeline", "project", "user"]
+}

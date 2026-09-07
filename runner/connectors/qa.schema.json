@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://panora.dev/schemas/connector-qa.schema.json",
+  "title": "Connector QA Scenario File",
+  "description": "Reference documentation for a connector's runner/connectors/<key>/qa.json certification file. The Go loader (internal/qa, decoding with DisallowUnknownFields) is the authoritative validator; this schema documents the shape for connector authors. Templating: any string value may contain {{token}} references. {{runId}} resolves to a unique per-run identifier (use it in create inputs to keep test resources unique). In teardown steps, the dot-path keys of the scenario operation's output object are available as tokens (e.g. {{issue.number}}) so teardown can clean up the resource the scenario created.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["connector", "scenarios"],
+  "properties": {
+    "connector": {
+      "type": "string",
+      "description": "Connector key; must match the connector's manifest.json key and the parent directory name.",
+      "minLength": 1
+    },
+    "scenarios": {
+      "type": "array",
+      "description": "Named certification cases. Each scenario exercises exactly one manifest operation.",
+      "items": { "$ref": "#/definitions/scenario" }
+    }
+  },
+  "definitions": {
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "operation", "expect"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique, human-readable scenario name within this file.",
+          "minLength": 1
+        },
+        "operation": {
+          "type": "string",
+          "description": "A real operation key from the connector's manifest.json operations map.",
+          "minLength": 1
+        },
+        "input": {
+          "description": "Input object passed to the operation. May contain {{runId}} tokens.",
+          "type": "object"
+        },
+        "expect": { "$ref": "#/definitions/expectation" },
+        "setup": {
+          "type": "array",
+          "description": "Steps run (in order) before the scenario operation. {{runId}} is available.",
+          "items": { "$ref": "#/definitions/step" }
+        },
+        "teardown": {
+          "type": "array",
+          "description": "Steps run (best-effort, in order) after the scenario operation to clean up. {{runId}} and the flattened scenario-output dot-path tokens (e.g. {{issue.number}}) are available.",
+          "items": { "$ref": "#/definitions/step" }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation"],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "description": "A real operation key from the connector's manifest.json operations map.",
+          "minLength": 1
+        },
+        "input": {
+          "description": "Input object for the step. May contain {{runId}} and (teardown only) captured output tokens.",
+          "type": "object"
+        }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Whether the operation is expected to succeed (\"ok\") or fail (\"error\").",
+          "enum": ["ok", "error"]
+        },
+        "errorCode": {
+          "type": "string",
+          "description": "Expected machine error code when status is \"error\"."
+        },
+        "assertions": {
+          "type": "array",
+          "description": "Checks against the operation output, each addressed by a dot-path.",
+          "items": { "$ref": "#/definitions/assertion" }
+        }
+      }
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "op"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Dot-path into the operation output (e.g. \"issue.number\", \"items.0.id\").",
+          "minLength": 1
+        },
+        "op": {
+          "type": "string",
+          "description": "Assertion operator. 'exists' tolerates a missing value (asserts presence); all others require the path to resolve.",
+          "enum": ["exists", "eq", "neq", "matches", "isArray", "isObject", "type", "len", "gt", "lt"]
+        },
+        "value": {
+          "description": "Comparison operand for ops that need one (eq, neq, matches, type, len, gt, lt). Omitted for exists/isArray/isObject."
+        }
+      }
+    }
+  }
+}

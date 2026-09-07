@@ -1,0 +1,471 @@
+{
+  "key": "telegram",
+  "name": "Telegram",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["messaging"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "botToken",
+          "label": "Bot token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.telegram.org"
+    ]
+  },
+  "operations": {
+    "messages.list": {
+      "kind": "sync",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "messages.send": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send Message",
+      "description": "Send a text message to a Telegram chat via the bot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Target Telegram chat ID (or @channelusername) to send the message to."
+          },
+          "text": {
+            "type": "string",
+            "description": "Message text to send. Maximum 4096 characters."
+          }
+        },
+        "required": [
+          "chatId",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "providerMessageId": {
+            "type": "string",
+            "description": "Telegram message ID of the sent message."
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Chat ID the message was delivered to."
+          },
+          "text": {
+            "type": "string",
+            "description": "Text of the sent message as returned by Telegram."
+          }
+        }
+      }
+    },
+    "messages.sendPhoto": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send Photo",
+      "description": "Send a photo to a Telegram chat. Accepts a file_id, URL, or local file path for the photo.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Target Telegram chat ID (or @channelusername)."
+          },
+          "photo": {
+            "type": "string",
+            "description": "Photo to send. Pass a file_id, a URL, or a local file path."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Optional caption for the photo, 0-1024 characters."
+          }
+        },
+        "required": ["chatId", "photo"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "providerMessageId": {
+            "type": "string",
+            "description": "Telegram message ID of the sent photo message."
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Chat ID the photo was delivered to."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Caption of the photo as returned by Telegram."
+          }
+        }
+      }
+    },
+    "messages.sendDocument": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send Document",
+      "description": "Send a document (file) to a Telegram chat. Accepts a file_id or URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Target Telegram chat ID (or @channelusername)."
+          },
+          "document": {
+            "type": "string",
+            "description": "Document to send. Pass a file_id or a URL."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Optional caption for the document, 0-1024 characters."
+          }
+        },
+        "required": ["chatId", "document"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "providerMessageId": {
+            "type": "string",
+            "description": "Telegram message ID of the sent document message."
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Chat ID the document was delivered to."
+          },
+          "caption": {
+            "type": "string",
+            "description": "Caption of the document as returned by Telegram."
+          }
+        }
+      }
+    },
+    "messages.edit": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Edit Message",
+      "description": "Edit the text of an existing message sent by the bot in a Telegram chat.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Chat ID containing the message to edit."
+          },
+          "messageId": {
+            "type": "number",
+            "description": "Identifier of the message to edit."
+          },
+          "text": {
+            "type": "string",
+            "description": "New text for the message. Maximum 4096 characters."
+          }
+        },
+        "required": ["chatId", "messageId", "text"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "providerMessageId": {
+            "type": "string",
+            "description": "Telegram message ID of the edited message."
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Chat ID of the edited message."
+          },
+          "text": {
+            "type": "string",
+            "description": "Updated text of the message."
+          }
+        }
+      }
+    },
+    "messages.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Message",
+      "description": "Delete a message from a Telegram chat. The bot must have appropriate admin privileges.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Chat ID containing the message to delete."
+          },
+          "messageId": {
+            "type": "number",
+            "description": "Identifier of the message to delete."
+          }
+        },
+        "required": ["chatId", "messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "Whether the message was successfully deleted."
+          }
+        }
+      }
+    },
+    "messages.forward": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Forward Message",
+      "description": "Forward a message from one Telegram chat to another chat.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Target chat ID to forward the message to."
+          },
+          "fromChatId": {
+            "type": "string",
+            "description": "Source chat ID where the original message lives."
+          },
+          "messageId": {
+            "type": "number",
+            "description": "Identifier of the message to forward."
+          }
+        },
+        "required": ["chatId", "fromChatId", "messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "providerMessageId": {
+            "type": "string",
+            "description": "Telegram message ID of the forwarded message in the target chat."
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Chat ID the message was forwarded to."
+          }
+        }
+      }
+    },
+    "messages.pin": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Pin Chat Message",
+      "description": "Pin a message in a Telegram chat. The bot must have appropriate admin privileges.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Chat ID containing the message to pin."
+          },
+          "messageId": {
+            "type": "number",
+            "description": "Identifier of the message to pin."
+          },
+          "disableNotification": {
+            "type": "boolean",
+            "description": "If true, sends the pin notification silently."
+          }
+        },
+        "required": ["chatId", "messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pinned": {
+            "type": "boolean",
+            "description": "Whether the message was successfully pinned."
+          }
+        }
+      }
+    },
+    "chats.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Chat",
+      "description": "Retrieve detailed information about a Telegram chat (group, supergroup, or channel) by its chat ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Unique identifier for the target chat (or @channelusername for public channels)."
+          }
+        },
+        "required": ["chatId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "chat": {
+            "type": "object",
+            "description": "Chat object returned by Telegram."
+          }
+        }
+      }
+    },
+    "chats.getMemberCount": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Get Chat Member Count",
+      "description": "Get the number of members in a Telegram chat or channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Unique identifier for the target chat (or @channelusername for public channels)."
+          }
+        },
+        "required": ["chatId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "description": "Number of members in the chat."
+          },
+          "chatId": {
+            "type": "string",
+            "description": "Chat ID the count belongs to."
+          }
+        }
+      }
+    },
+    "chats.sendAction": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Send Chat Action",
+      "description": "Send a chat action (e.g. 'typing', 'upload_photo') to a Telegram chat to indicate activity to the user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "Target chat ID (or @channelusername)."
+          },
+          "action": {
+            "type": "string",
+            "description": "Type of action to broadcast. One of: typing, upload_photo, record_video, upload_video, record_voice, upload_voice, upload_document, choose_sticker, find_location, record_video_note, upload_video_note."
+          }
+        },
+        "required": ["chatId", "action"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Whether the chat action was sent successfully."
+          }
+        }
+      }
+    },
+    "bot.getMe": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Bot Info",
+      "description": "Retrieve information about the bot itself using the configured bot token. Returns the bot's user profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "bot": {
+            "type": "object",
+            "description": "Bot user profile as returned by Telegram."
+          }
+        }
+      }
+    },
+    "credentials.validate": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Validate Credentials",
+      "description": "Validate the configured Telegram credentials against the provider. Takes no input and reports whether the credentials are accepted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the configured credentials are valid."
+          }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Telegram connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "message",
+    "user",
+    "channel"
+  ]
+}

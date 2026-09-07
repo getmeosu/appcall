@@ -1,0 +1,1184 @@
+{
+  "key": "google-workspace",
+  "name": "Google Workspace",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["productivity"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/gmail.modify",
+      "https://www.googleapis.com/auth/gmail.labels",
+      "https://www.googleapis.com/auth/drive",
+      "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/calendar",
+      "https://www.googleapis.com/auth/calendar.readonly",
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/documents",
+      "https://www.googleapis.com/auth/documents.readonly",
+      "https://www.googleapis.com/auth/meetings.space.created",
+      "https://www.googleapis.com/auth/meetings.space.readonly"
+    ],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    },
+    "oauth": {
+      "authorizeUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+      "tokenUrl": "https://oauth2.googleapis.com/token",
+      "pkce": true,
+      "supportsRefresh": true,
+      "extraAuthParams": { "access_type": "offline", "prompt": "consent" }
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "gmail.googleapis.com",
+      "www.googleapis.com",
+      "sheets.googleapis.com",
+      "docs.googleapis.com",
+      "calendar.googleapis.com",
+      "drive.googleapis.com",
+      "meet.googleapis.com",
+      "accounts.google.com",
+      "oauth2.googleapis.com"
+    ]
+  },
+  "operations": {
+    "messages.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "messages.send": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 1048576,
+      "title": "Send Gmail Message",
+      "description": "Send a plain-text email via the authenticated user's Gmail account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "body": {
+            "type": "string",
+            "description": "Plain-text body of the email."
+          }
+        },
+        "required": [
+          "to",
+          "subject",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "Gmail message ID of the sent email."
+          },
+          "threadId": {
+            "type": "string",
+            "description": "Gmail thread ID the message belongs to."
+          }
+        }
+      }
+    },
+    "messages.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Gmail Message",
+      "description": "Fetch the full metadata and body of a specific Gmail message by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "The Gmail message ID to fetch."
+          },
+          "format": {
+            "type": "string",
+            "description": "Format of the message: 'full' (default), 'metadata', 'minimal', or 'raw'."
+          }
+        },
+        "required": ["messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "threadId": { "type": "string" },
+          "labelIds": { "type": "array" },
+          "snippet": { "type": "string" },
+          "payload": { "type": "object" },
+          "sizeEstimate": { "type": "number" },
+          "historyId": { "type": "string" },
+          "internalDate": { "type": "string" }
+        }
+      }
+    },
+    "messages.modify": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Modify Gmail Message Labels",
+      "description": "Add or remove labels on a Gmail message (e.g. mark as read, archive, star).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "The Gmail message ID to modify."
+          },
+          "addLabelIds": {
+            "type": "array",
+            "description": "List of label IDs to add to the message.",
+            "items": { "type": "string" }
+          },
+          "removeLabelIds": {
+            "type": "array",
+            "description": "List of label IDs to remove from the message.",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "threadId": { "type": "string" },
+          "labelIds": { "type": "array" }
+        }
+      }
+    },
+    "messages.trash": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Trash Gmail Message",
+      "description": "Move a Gmail message to the trash.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "The Gmail message ID to trash."
+          }
+        },
+        "required": ["messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "threadId": { "type": "string" },
+          "labelIds": { "type": "array" }
+        }
+      }
+    },
+    "drafts.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 26214400,
+      "maxResponseBytes": 1048576,
+      "title": "Create Gmail Draft",
+      "description": "Create a new Gmail draft message that can be sent later.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line."
+          },
+          "body": {
+            "type": "string",
+            "description": "Plain-text body of the draft."
+          }
+        },
+        "required": ["to", "subject", "body"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "draftId": { "type": "string" },
+          "messageId": { "type": "string" },
+          "threadId": { "type": "string" }
+        }
+      }
+    },
+    "labels.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Gmail Labels",
+      "description": "List all Gmail labels for the authenticated user's mailbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "labels": {
+            "type": "array",
+            "description": "Array of Gmail label objects.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "type": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "files.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "drive.files.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Drive File",
+      "description": "Fetch metadata for a specific Google Drive file by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "The Google Drive file ID to fetch."
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated list of fields to include in the response (e.g. 'id,name,mimeType')."
+          }
+        },
+        "required": ["fileId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "parents": { "type": "array" },
+          "webViewLink": { "type": "string" },
+          "createdTime": { "type": "string" },
+          "modifiedTime": { "type": "string" },
+          "size": { "type": "string" }
+        }
+      }
+    },
+    "drive.files.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Drive File",
+      "description": "Create a new Google Drive file with metadata (folders, Docs, Sheets, etc.).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the file to create."
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "MIME type of the file (e.g. 'application/vnd.google-apps.folder')."
+          },
+          "parents": {
+            "type": "array",
+            "description": "List of parent folder IDs.",
+            "items": { "type": "string" }
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description for the file."
+          }
+        },
+        "required": ["name", "mimeType"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "webViewLink": { "type": "string" }
+        }
+      }
+    },
+    "drive.files.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Drive File",
+      "description": "Permanently delete a Google Drive file by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "The Google Drive file ID to delete."
+          }
+        },
+        "required": ["fileId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": { "type": "boolean" },
+          "fileId": { "type": "string" }
+        }
+      }
+    },
+    "drive.permissions.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Share Drive File",
+      "description": "Create a permission on a Google Drive file to share it with a user, group, domain, or make it public.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "The Google Drive file ID to share."
+          },
+          "role": {
+            "type": "string",
+            "description": "Permission role: 'reader', 'commenter', 'writer', 'fileOrganizer', 'organizer', or 'owner'."
+          },
+          "type": {
+            "type": "string",
+            "description": "Permission type: 'user', 'group', 'domain', or 'anyone'."
+          },
+          "emailAddress": {
+            "type": "string",
+            "description": "Email address of the user or group (required when type is 'user' or 'group')."
+          },
+          "sendNotificationEmail": {
+            "type": "boolean",
+            "description": "Whether to send a notification email to the recipient."
+          }
+        },
+        "required": ["fileId", "role", "type"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "permissionId": { "type": "string" },
+          "role": { "type": "string" },
+          "type": { "type": "string" },
+          "emailAddress": { "type": "string" }
+        }
+      }
+    },
+    "events.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "calendar.events.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Calendar Event",
+      "description": "Create a new event in a Google Calendar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "description": "Calendar ID (use 'primary' for the user's primary calendar)."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Title of the event."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the event."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location of the event."
+          },
+          "startDateTime": {
+            "type": "string",
+            "description": "Start date-time in RFC3339 format (e.g. '2024-01-15T09:00:00-07:00')."
+          },
+          "endDateTime": {
+            "type": "string",
+            "description": "End date-time in RFC3339 format (e.g. '2024-01-15T10:00:00-07:00')."
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "IANA time zone name (e.g. 'America/New_York')."
+          },
+          "attendees": {
+            "type": "array",
+            "description": "List of attendee email addresses.",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["calendarId", "summary", "startDateTime", "endDateTime"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": { "type": "string" },
+          "htmlLink": { "type": "string" },
+          "summary": { "type": "string" },
+          "status": { "type": "string" },
+          "startDateTime": { "type": "string" },
+          "endDateTime": { "type": "string" }
+        }
+      }
+    },
+    "calendar.events.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Calendar Event",
+      "description": "Update an existing Google Calendar event by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "description": "Calendar ID (use 'primary' for the user's primary calendar)."
+          },
+          "eventId": {
+            "type": "string",
+            "description": "The ID of the event to update."
+          },
+          "summary": {
+            "type": "string",
+            "description": "New title for the event."
+          },
+          "description": {
+            "type": "string",
+            "description": "New description for the event."
+          },
+          "location": {
+            "type": "string",
+            "description": "New location for the event."
+          },
+          "startDateTime": {
+            "type": "string",
+            "description": "New start date-time in RFC3339 format."
+          },
+          "endDateTime": {
+            "type": "string",
+            "description": "New end date-time in RFC3339 format."
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "IANA time zone name."
+          }
+        },
+        "required": ["calendarId", "eventId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": { "type": "string" },
+          "htmlLink": { "type": "string" },
+          "summary": { "type": "string" },
+          "status": { "type": "string" },
+          "startDateTime": { "type": "string" },
+          "endDateTime": { "type": "string" }
+        }
+      }
+    },
+    "calendar.events.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Calendar Event",
+      "description": "Delete a Google Calendar event by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "description": "Calendar ID (use 'primary' for the user's primary calendar)."
+          },
+          "eventId": {
+            "type": "string",
+            "description": "The ID of the event to delete."
+          }
+        },
+        "required": ["calendarId", "eventId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": { "type": "boolean" },
+          "eventId": { "type": "string" }
+        }
+      }
+    },
+    "calendar.events.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Calendar Event",
+      "description": "Fetch a single Google Calendar event by its ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "description": "Calendar ID (use 'primary' for the user's primary calendar)."
+          },
+          "eventId": {
+            "type": "string",
+            "description": "The ID of the event to fetch."
+          }
+        },
+        "required": ["calendarId", "eventId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": { "type": "string" },
+          "htmlLink": { "type": "string" },
+          "summary": { "type": "string" },
+          "description": { "type": "string" },
+          "location": { "type": "string" },
+          "status": { "type": "string" },
+          "startDateTime": { "type": "string" },
+          "endDateTime": { "type": "string" }
+        }
+      }
+    },
+    "calendar.calendars.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Calendars",
+      "description": "List all calendars in the authenticated user's Google Calendar list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "maxResults": {
+            "type": "number",
+            "description": "Maximum number of calendars to return (default 100)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "calendars": {
+            "type": "array",
+            "description": "Array of calendar objects.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "summary": { "type": "string" },
+                "description": { "type": "string" },
+                "primary": { "type": "boolean" },
+                "accessRole": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sheets.rows.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760
+    },
+    "sheets.worksheets.list": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576
+    },
+    "sheets.values.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "title": "Get Sheet Values",
+      "description": "Read cell values from a range of a Google Sheets spreadsheet.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": {
+            "type": "string",
+            "description": "ID of the spreadsheet to read from."
+          },
+          "range": {
+            "type": "string",
+            "description": "A1 notation range to read (e.g. 'Sheet1!A1:C10')."
+          }
+        },
+        "required": [
+          "spreadsheetId",
+          "range"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": {
+            "type": "string"
+          },
+          "range": {
+            "type": "string"
+          },
+          "majorDimension": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array",
+            "description": "2D array of cell values for the requested range."
+          }
+        }
+      }
+    },
+    "sheets.values.append": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Append Sheet Values",
+      "description": "Append rows of cell values to a range of a Google Sheets spreadsheet.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": {
+            "type": "string",
+            "description": "ID of the spreadsheet to append to."
+          },
+          "range": {
+            "type": "string",
+            "description": "A1 notation range that locates the table to append to (e.g. 'Sheet1!A1')."
+          },
+          "values": {
+            "type": "array",
+            "description": "2D array of rows to append; each element is an array of cell values for one row.",
+            "items": {
+              "type": "array"
+            }
+          },
+          "valueInputOption": {
+            "type": "string",
+            "description": "How input data is interpreted: 'USER_ENTERED' (default) or 'RAW'."
+          },
+          "insertDataOption": {
+            "type": "string",
+            "description": "How rows are inserted: 'INSERT_ROWS' (default) or 'OVERWRITE'."
+          },
+          "majorDimension": {
+            "type": "string",
+            "description": "Dimension of the supplied values: 'ROWS' (default) or 'COLUMNS'."
+          }
+        },
+        "required": [
+          "spreadsheetId",
+          "range",
+          "values"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": {
+            "type": "string"
+          },
+          "tableRange": {
+            "type": "string"
+          },
+          "updatedRange": {
+            "type": "string"
+          },
+          "updatedRows": {
+            "type": "number"
+          },
+          "updatedColumns": {
+            "type": "number"
+          },
+          "updatedCells": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "sheets.values.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Sheet Values",
+      "description": "Write cell values to a specific range of a Google Sheets spreadsheet, overwriting existing values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": {
+            "type": "string",
+            "description": "ID of the spreadsheet to update."
+          },
+          "range": {
+            "type": "string",
+            "description": "A1 notation range to write to (e.g. 'Sheet1!A1:C3')."
+          },
+          "values": {
+            "type": "array",
+            "description": "2D array of values to write.",
+            "items": {
+              "type": "array"
+            }
+          },
+          "valueInputOption": {
+            "type": "string",
+            "description": "How input data is interpreted: 'USER_ENTERED' (default) or 'RAW'."
+          }
+        },
+        "required": ["spreadsheetId", "range", "values"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string" },
+          "updatedRange": { "type": "string" },
+          "updatedRows": { "type": "number" },
+          "updatedColumns": { "type": "number" },
+          "updatedCells": { "type": "number" }
+        }
+      }
+    },
+    "sheets.values.clear": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Clear Sheet Values",
+      "description": "Clear all values from a specified range in a Google Sheets spreadsheet.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": {
+            "type": "string",
+            "description": "ID of the spreadsheet to clear."
+          },
+          "range": {
+            "type": "string",
+            "description": "A1 notation range to clear (e.g. 'Sheet1!A1:C10')."
+          }
+        },
+        "required": ["spreadsheetId", "range"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string" },
+          "clearedRange": { "type": "string" }
+        }
+      }
+    },
+    "sheets.spreadsheets.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Spreadsheet",
+      "description": "Create a new Google Sheets spreadsheet.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Title of the new spreadsheet."
+          },
+          "sheetTitles": {
+            "type": "array",
+            "description": "Optional list of worksheet names to create in the spreadsheet.",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string" },
+          "spreadsheetUrl": { "type": "string" },
+          "title": { "type": "string" }
+        }
+      }
+    },
+    "sheets.spreadsheets.batchUpdate": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Format Spreadsheet",
+      "description": "Apply bounded formatting and layout updates to a Google Sheets spreadsheet, such as freezing rows, filters, column widths, auto-resizing columns, and formatting cells.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": {
+            "type": "string",
+            "description": "ID of the spreadsheet to format."
+          },
+          "requests": {
+            "type": "array",
+            "description": "List of safe formatting/layout requests. At most 50 requests.",
+            "items": {
+              "type": "object",
+              "description": "Exactly one supported operation: freezeRows, setBasicFilter, autoResizeColumns, setColumnWidth, or repeatCell."
+            }
+          }
+        },
+        "required": ["spreadsheetId", "requests"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string" },
+          "replies": {
+            "type": "array",
+            "description": "Google Sheets batchUpdate replies."
+          }
+        }
+      }
+    },
+    "docs.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "title": "Get Google Doc",
+      "description": "Fetch the title, structured body content, and revision of a Google Docs document.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "description": "ID of the Google Docs document to fetch (alias: 'id')."
+          }
+        },
+        "required": [
+          "documentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "revisionId": {
+            "type": "string"
+          },
+          "body": {
+            "type": "object",
+            "description": "Structured document body content."
+          }
+        }
+      }
+    },
+    "docs.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Google Doc",
+      "description": "Create a new Google Docs document with an optional title.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Title of the new Google Docs document."
+          }
+        },
+        "required": ["title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": { "type": "string" },
+          "title": { "type": "string" },
+          "revisionId": { "type": "string" }
+        }
+      }
+    },
+    "meet.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Calendar Event with Google Meet",
+      "description": "Create a Google Calendar event with an auto-generated Google Meet conferencing link. Returns the event including the hangoutLink (Meet URL) and conferenceData entry points.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "description": "Calendar ID (use 'primary' for the user's primary calendar)."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Title of the event."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the event."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location of the event."
+          },
+          "startDateTime": {
+            "type": "string",
+            "description": "Start date-time in RFC3339 format (e.g. '2024-01-15T09:00:00-07:00')."
+          },
+          "endDateTime": {
+            "type": "string",
+            "description": "End date-time in RFC3339 format (e.g. '2024-01-15T10:00:00-07:00')."
+          },
+          "timeZone": {
+            "type": "string",
+            "description": "IANA time zone name (e.g. 'America/New_York')."
+          },
+          "attendees": {
+            "type": "array",
+            "description": "List of attendee email addresses.",
+            "items": { "type": "string" }
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Optional idempotency key for the conference creation request. A random UUID is generated if not provided."
+          }
+        },
+        "required": ["calendarId", "summary", "startDateTime", "endDateTime"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": { "type": "string", "description": "Calendar event ID." },
+          "htmlLink": { "type": "string", "description": "Link to the Calendar event." },
+          "summary": { "type": "string" },
+          "status": { "type": "string" },
+          "startDateTime": { "type": "string" },
+          "endDateTime": { "type": "string" },
+          "hangoutLink": { "type": "string", "description": "Google Meet URL for the event." },
+          "conferenceData": { "type": "object", "description": "Full conferenceData object from the Calendar API response." }
+        }
+      }
+    },
+    "meet.add_to_event": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add Google Meet to Existing Calendar Event",
+      "description": "Patch an existing Google Calendar event to attach a new Google Meet conference link. Uses conferenceDataVersion=1 in the request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "description": "Calendar ID (use 'primary' for the user's primary calendar)."
+          },
+          "eventId": {
+            "type": "string",
+            "description": "ID of the existing event to add a Meet link to."
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Optional idempotency key for the conference creation request. A random UUID is generated if not provided."
+          }
+        },
+        "required": ["calendarId", "eventId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": { "type": "string" },
+          "htmlLink": { "type": "string" },
+          "summary": { "type": "string" },
+          "status": { "type": "string" },
+          "startDateTime": { "type": "string" },
+          "endDateTime": { "type": "string" },
+          "hangoutLink": { "type": "string", "description": "Google Meet URL added to the event." },
+          "conferenceData": { "type": "object" }
+        }
+      }
+    },
+    "meet.spaces.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Google Meet Space",
+      "description": "Create a standalone Google Meet space (meeting room) via the Meet REST API (meet.googleapis.com/v2/spaces). Returns the space name and meeting URI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object",
+            "description": "Optional SpaceConfig object (e.g. { accessType: 'OPEN' }) passed to the Meet API."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Resource name of the space (e.g. 'spaces/abc123')." },
+          "meetingUri": { "type": "string", "description": "The Meet join URL." },
+          "meetingCode": { "type": "string", "description": "Short meeting code." },
+          "config": { "type": "object", "description": "Space configuration." }
+        }
+      }
+    },
+    "meet.spaces.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Google Meet Space",
+      "description": "Retrieve details about a Google Meet space by its resource name (e.g. 'spaces/abc123').",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Resource name of the Meet space (e.g. 'spaces/abc123' or just 'abc123')."
+          }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "meetingUri": { "type": "string" },
+          "meetingCode": { "type": "string" },
+          "config": { "type": "object" }
+        }
+      }
+    },
+    "meet.conference_records.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Google Meet Conference Records",
+      "description": "List conference records from the Google Meet REST API (meet.googleapis.com/v2/conferenceRecords). Supports pagination and optional filter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageSize": {
+            "type": "number",
+            "description": "Maximum number of records to return (default 25, max 100)."
+          },
+          "pageToken": {
+            "type": "string",
+            "description": "Page token for pagination from a previous response."
+          },
+          "filter": {
+            "type": "string",
+            "description": "AIP-160 filter string (e.g. 'space.name=\"spaces/abc123\"')."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "conferenceRecords": {
+            "type": "array",
+            "description": "List of conference record objects.",
+            "items": { "type": "object" }
+          },
+          "nextPageToken": {
+            "type": "string",
+            "description": "Token to retrieve the next page of results."
+          }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Google Workspace connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "message",
+    "file",
+    "calendar_event",
+    "sheet_row",
+    "worksheet",
+    "document",
+    "meet_space",
+    "conference_record"
+  ]
+}

@@ -1,0 +1,407 @@
+{
+  "key": "lusha",
+  "name": "Lusha",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["crm"],
+  "auth": {
+    "type": "api_key",
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "API Key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.lusha.com"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Lusha connector. Returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "status": { "type": "string", "description": "Connector health status, e.g. \"ok\"." },
+          "source": { "type": "string" }
+        }
+      }
+    },
+    "person.enrich": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Enrich Person",
+      "description": "Enrich a single person's contact data using Lusha's /v2/person endpoint. Provide at least one lookup identifier: email address, LinkedIn profile URL, or a combination of firstName + lastName + companyName/companyDomain. Returns verified contact emails and phone numbers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The person's email address to look up."
+          },
+          "linkedinUrl": {
+            "type": "string",
+            "description": "The person's LinkedIn profile URL (e.g. https://www.linkedin.com/in/johndoe)."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "The person's first name. Use together with lastName and companyName or companyDomain."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "The person's last name. Use together with firstName and companyName or companyDomain."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "The company name associated with the person. Use with firstName + lastName."
+          },
+          "companyDomain": {
+            "type": "string",
+            "description": "The company domain (e.g. acme.com) associated with the person. Use with firstName + lastName."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "person": { "type": "object", "description": "The enriched person data including emails and phones." }
+        }
+      }
+    },
+    "company.enrich": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Enrich Company",
+      "description": "Enrich company data using Lusha's /v2/company endpoint. Provide a company domain or company name to retrieve firmographic data including industry, size, revenue, location, and social profiles.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "The company's website domain (e.g. acme.com). Preferred over companyName for accuracy."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "The company's name. Used when domain is not available."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "company": { "type": "object", "description": "The enriched company firmographic data." }
+        }
+      }
+    },
+    "prospecting.contact.search": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Prospecting Contacts",
+      "description": "Search for contact prospects using Lusha's prospecting engine via POST /prospecting/contact/search. Filter by name, job titles, seniorities, departments, locations, company domains, and company sizes. Returns a requestId and contact stubs for subsequent enrichment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Optional. Full or partial name to search for."
+          },
+          "jobTitles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. List of job titles to filter by (e.g. [\"VP of Engineering\", \"CTO\"])."
+          },
+          "seniorities": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Seniority levels to filter by (e.g. [\"VP\", \"Director\", \"C-Level\"])."
+          },
+          "departments": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Department names to filter by (e.g. [\"Engineering\", \"Sales\"])."
+          },
+          "locations": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Geographic locations to filter by (e.g. [\"United States\", \"New York\"])."
+          },
+          "companyDomains": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Company domains to restrict search to (e.g. [\"acme.com\"])."
+          },
+          "companySizes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Company size buckets to filter by (e.g. [\"11-50\", \"51-200\"])."
+          },
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number for pagination (1-indexed, default 1)."
+          },
+          "size": {
+            "type": "number",
+            "description": "Optional. Number of results per page (max 100, default 10)."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "requestId": { "type": "string", "description": "Request ID used to enrich the returned contacts." },
+          "contacts": { "type": "array", "description": "Array of contact stub objects." },
+          "totalResults": { "type": "number", "description": "Total number of matching contacts." }
+        }
+      }
+    },
+    "prospecting.contact.enrich": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich Prospecting Contacts",
+      "description": "Reveal full contact details (emails and phone numbers) for contacts returned by a prospecting search, using POST /prospecting/contact/enrich. Requires the requestId from a prior search and the contactIds to reveal.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "The requestId returned by a previous prospecting.contact.search call."
+          },
+          "contactIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of contact IDs (from the search results) to reveal contact details for."
+          }
+        },
+        "required": ["requestId", "contactIds"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contacts": { "type": "array", "description": "Array of enriched contact objects with emails and phones." }
+        }
+      }
+    },
+    "prospecting.company.search": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Prospecting Companies",
+      "description": "Search for company prospects using Lusha's prospecting engine via POST /prospecting/company/search. Filter by company name, domains, sizes, industries, and locations. Returns a requestId and company stubs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Optional. Company name to search for."
+          },
+          "domains": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. List of company domains to filter by (e.g. [\"acme.com\"])."
+          },
+          "sizes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Company size buckets to filter by (e.g. [\"51-200\", \"201-500\"])."
+          },
+          "industries": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Industry names to filter by (e.g. [\"Software\", \"Financial Services\"])."
+          },
+          "locations": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Geographic locations to filter by (e.g. [\"United States\", \"California\"])."
+          },
+          "page": {
+            "type": "number",
+            "description": "Optional. Page number for pagination (1-indexed, default 1)."
+          },
+          "size": {
+            "type": "number",
+            "description": "Optional. Number of results per page (max 100, default 10)."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "requestId": { "type": "string", "description": "Request ID used to enrich the returned companies." },
+          "companies": { "type": "array", "description": "Array of company stub objects." },
+          "totalResults": { "type": "number", "description": "Total number of matching companies." }
+        }
+      }
+    },
+    "prospecting.company.enrich": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enrich Prospecting Companies",
+      "description": "Reveal full company details for companies returned by a prospecting search, using POST /prospecting/company/enrich. Requires the requestId from a prior company search and the companyIds to reveal.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "The requestId returned by a previous prospecting.company.search call."
+          },
+          "companyIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of company IDs (from the search results) to reveal full data for."
+          }
+        },
+        "required": ["requestId", "companyIds"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "companies": { "type": "array", "description": "Array of fully enriched company objects." }
+        }
+      }
+    },
+    "bulk.person": {
+      "kind": "action",
+      "timeoutMs": 60000,
+      "maxInputBytes": 524288,
+      "maxResponseBytes": 10485760,
+      "title": "Bulk Enrich Persons",
+      "description": "Enrich multiple people in a single API call via POST /v2/person. Each contact in the batch can be identified by contactId, email, linkedinUrl, fullName, companyName, or companyDomain. Returns enriched contact data for each entry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "description": "Array of contact lookup objects. Each must have at least one identifier.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contactId": {
+                  "type": "string",
+                  "description": "Optional. Your internal reference ID for the contact."
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Optional. The contact's email address."
+                },
+                "linkedinUrl": {
+                  "type": "string",
+                  "description": "Optional. The contact's LinkedIn profile URL."
+                },
+                "fullName": {
+                  "type": "string",
+                  "description": "Optional. The contact's full name."
+                },
+                "companyName": {
+                  "type": "string",
+                  "description": "Optional. The company name for name-based lookups."
+                },
+                "companyDomain": {
+                  "type": "string",
+                  "description": "Optional. The company domain for name-based lookups."
+                }
+              }
+            }
+          }
+        },
+        "required": ["contacts"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contacts": { "type": "array", "description": "Array of enriched contact objects." },
+          "requestId": { "type": "string", "description": "Lusha request ID for the bulk operation." }
+        }
+      }
+    },
+    "usage.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Get Usage / Credits",
+      "description": "Retrieve current API credit usage and remaining balance from Lusha via GET /credits. Returns the number of credits consumed and remaining for the current billing period. Note: endpoint assumed to be /credits based on Lusha API documentation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "credits": { "type": "object", "description": "Credit usage details including used, remaining, and limit." }
+        }
+      }
+    }
+  },
+  "models": [
+    "person",
+    "company"
+  ]
+}

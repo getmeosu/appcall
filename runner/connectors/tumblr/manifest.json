@@ -1,0 +1,308 @@
+{
+  "key": "tumblr",
+  "name": "Tumblr",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "description": "Authenticated Tumblr API operations using a manually supplied OAuth2 access token.",
+  "categories": [
+    "social"
+  ],
+  "auth": {
+    "type": "bearer",
+    "scopes": [
+      "basic",
+      "write"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "OAuth2 user access token (manual; no automatic refresh)",
+          "secret": true,
+          "required": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.tumblr.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://api.tumblr.com/v2",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "User-Agent": "appcall/0.1.0"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "errors.0.title",
+        "meta.msg"
+      ],
+      "bodyErrorPaths": [
+        "errors"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the OAuth2 user access token by reading the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/info",
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "user": "{{response.response.user}}"
+        }
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Users Me",
+      "description": "Read the authenticated user profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/info",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response.response.user}}"
+        }
+      }
+    },
+    "following.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Following List",
+      "description": "List blogs followed by the authenticated user with offset pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Page size, 1\u201320; provider validates range."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Zero-based offset. Increase by page size until blogs is empty or totalBlogs is reached."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "blogs": {
+            "type": "array",
+            "description": "Provider result."
+          },
+          "totalBlogs": {
+            "type": "integer",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user/following",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "result": {
+          "blogs": "{{response.response.blogs}}",
+          "totalBlogs": "{{response.response.total_blogs}}"
+        }
+      }
+    },
+    "posts.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Posts Get",
+      "description": "Fetch a post by blog and post ID in Neue Post Format using user authorization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blog": {
+            "type": "string",
+            "description": "Blog hostname or Tumblr blog identifier."
+          },
+          "postId": {
+            "type": "string",
+            "description": "Post ID as a string to avoid integer precision loss."
+          }
+        },
+        "required": [
+          "blog",
+          "postId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/blog/{{blog}}/posts/{{postId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "post_format": "npf"
+        },
+        "result": {
+          "post": "{{response.response}}"
+        }
+      }
+    },
+    "posts.createText": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Posts Createtext",
+      "description": "Create a plain text NPF post. Requires write scope and an explicit state; choose draft to avoid publishing. No media upload or reblog support.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blog": {
+            "type": "string",
+            "description": "Blog hostname or identifier belonging to the authorized user."
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain text content for one NPF text block."
+          },
+          "state": {
+            "type": "string",
+            "description": "Explicit initial state. published makes this public immediately.",
+            "enum": [
+              "published",
+              "draft",
+              "queue",
+              "private"
+            ]
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Optional permalink slug."
+          }
+        },
+        "required": [
+          "blog",
+          "text",
+          "state"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Provider result."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/blog/{{blog}}/posts",
+        "success": [
+          201
+        ],
+        "body": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{{text}}"
+            }
+          ],
+          "state": "{{state}}",
+          "tags": "{{tags}}",
+          "slug": "{{slug}}"
+        },
+        "result": {
+          "id": "{{response.response.id}}"
+        }
+      }
+    }
+  },
+  "models": [
+    "user",
+    "post",
+    "blog"
+  ]
+}

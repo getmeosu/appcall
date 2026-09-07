@@ -1,0 +1,3058 @@
+{
+  "key": "discord",
+  "name": "Discord",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "messaging"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "botToken",
+          "label": "Bot token (Developer Portal \u2192 Bot \u2192 Reset Token)",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "help": "Create an application on Discord's Developer Portal, open its Bot page, turn on the Server Members and Message Content intents, then press Reset Token and paste the token here. Invite the bot to your server and drag its role above any role you want it to hand out.",
+      "docsUrl": "https://discord.com/developers/applications"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "discord.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://discord.com/api/v10",
+    "auth": {
+      "field": "botToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bot {{botToken}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "retryAfterPaths": [
+        "retry_after"
+      ],
+      "defaultRetryAfterSeconds": 5,
+      "messagePaths": [
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the bot token by calling GET /users/@me. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/@me",
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "status": "ok",
+          "botUserId": "{{response.id}}"
+        }
+      }
+    },
+    "bot.getMe": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get Bot User",
+      "description": "Return the bot's own user (id, username). Call once per run so later steps can recognise the bot's own messages and skip them.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/@me",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      }
+    },
+    "guild.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Server",
+      "description": "Fetch a server (guild) by id with approximate member and presence counts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string",
+            "description": "The server id."
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "guild": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}",
+        "query": {
+          "with_counts": "true"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "guild": "{{response}}"
+        }
+      }
+    },
+    "channels.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Channels",
+      "description": "List every channel and category in a server, with id, name, type (0 text, 2 voice, 4 category, 15 forum) and parent_id. Use it to resolve a channel name to its id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string",
+            "description": "The server id."
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/channels",
+        "success": [
+          200
+        ],
+        "result": {
+          "channels": "{{response}}"
+        }
+      }
+    },
+    "channels.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Channel",
+      "description": "Fetch one channel or thread by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel or thread id."
+          }
+        },
+        "required": [
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channelId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "channel": "{{response}}"
+        }
+      }
+    },
+    "channels.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Channel",
+      "description": "Create a channel in a server. type 0 is a text channel (default), 2 voice, 4 category, 15 forum. Give parentId to place it under a category.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string",
+            "description": "The server id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Channel name, 1-100 characters, lowercase with dashes for text channels."
+          },
+          "type": {
+            "type": "number",
+            "description": "Channel type number. Defaults to 0 (text)."
+          },
+          "topic": {
+            "type": "string",
+            "description": "Channel topic, up to 1024 characters."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Category channel id to nest under."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Audit-log reason shown to server admins."
+          }
+        },
+        "required": [
+          "guildId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/guilds/{{guildId}}/channels",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "topic": "{{topic}}",
+          "parent_id": "{{parentId}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "channel": "{{response}}"
+        }
+      }
+    },
+    "channels.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Channel",
+      "description": "Rename a channel, change its topic, or move it under a category. Only the fields supplied change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel id."
+          },
+          "name": {
+            "type": "string",
+            "description": "New name."
+          },
+          "topic": {
+            "type": "string",
+            "description": "New topic."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Category channel id to move under."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Audit-log reason."
+          }
+        },
+        "required": [
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/channels/{{channelId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "topic": "{{topic}}",
+          "parent_id": "{{parentId}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "channel": "{{response}}"
+        }
+      }
+    },
+    "channels.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Delete Channel",
+      "description": "Delete a channel or thread for good, with every message in it. Cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel or thread id."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Audit-log reason."
+          }
+        },
+        "required": [
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/channels/{{channelId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "channel": "{{response}}"
+        }
+      }
+    },
+    "messages.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Messages",
+      "description": "Read a channel's or thread's recent messages, newest first (up to 100). Supply at most one of before, after, around (message ids). Each message carries author.id and author.bot; skip your own and other bots' messages when deciding what to answer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel or thread id."
+          },
+          "limit": {
+            "type": "number",
+            "description": "1-100, default 50."
+          },
+          "before": {
+            "type": "string",
+            "description": "Only messages before this message id."
+          },
+          "after": {
+            "type": "string",
+            "description": "Only messages after this message id."
+          },
+          "around": {
+            "type": "string",
+            "description": "Messages around this message id."
+          }
+        },
+        "required": [
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channelId}}/messages",
+        "query": {
+          "limit": "{{limit}}",
+          "before": "{{before}}",
+          "after": "{{after}}",
+          "around": "{{around}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "messages": "{{response}}"
+        }
+      }
+    },
+    "messages.send": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Send Message",
+      "description": "Post a new message to a channel or thread (up to 2000 characters). To answer a specific message use Reply instead, so members can see what you are answering.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel or thread id."
+          },
+          "content": {
+            "type": "string",
+            "description": "Message text, up to 2000 characters. Mention a user with <@userId>, a channel with <#channelId>."
+          }
+        },
+        "required": [
+          "channelId",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/channels/{{channelId}}/messages",
+        "body": {
+          "content": "{{content}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "message": "{{response}}"
+        }
+      }
+    },
+    "messages.reply": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Reply to Message",
+      "description": "Reply to one message in its channel or thread, quoting it. Use this to answer a member's question; your reply is what marks the question as handled.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel or thread id the message is in."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The message being answered."
+          },
+          "content": {
+            "type": "string",
+            "description": "Reply text, up to 2000 characters."
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/channels/{{channelId}}/messages",
+        "body": {
+          "content": "{{content}}",
+          "message_reference": {
+            "message_id": "{{messageId}}"
+          },
+          "allowed_mentions": {
+            "replied_user": true
+          }
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "message": "{{response}}"
+        }
+      }
+    },
+    "messages.edit": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Edit Message",
+      "description": "Change the text of a message the bot sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel or thread id."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The message to edit."
+          },
+          "content": {
+            "type": "string",
+            "description": "New text."
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/channels/{{channelId}}/messages/{{messageId}}",
+        "body": {
+          "content": "{{content}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "message": "{{response}}"
+        }
+      }
+    },
+    "messages.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete Message",
+      "description": "Remove one message from a channel. Give a reason; it appears in the server's audit log. Report the deletion in the mod-log channel afterwards.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel or thread id."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The message to delete."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Audit-log reason, e.g. the rule broken."
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/channels/{{channelId}}/messages/{{messageId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    },
+    "messages.bulkDelete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Bulk Delete Messages",
+      "description": "Delete 2 to 100 messages at once by id. Messages older than two weeks are rejected by Discord. Cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel id."
+          },
+          "messageIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "2-100 message ids."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Audit-log reason."
+          }
+        },
+        "required": [
+          "channelId",
+          "messageIds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/channels/{{channelId}}/messages/bulk-delete",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "body": {
+          "messages": "{{messageIds}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    },
+    "messages.pin": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Pin Message",
+      "description": "Pin a message in its channel (up to 50 pins per channel).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pinned": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/channels/{{channelId}}/pins/{{messageId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "pinned": true
+        }
+      }
+    },
+    "messages.unpin": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Unpin Message",
+      "description": "Unpin a message in its channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pinned": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/channels/{{channelId}}/pins/{{messageId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "pinned": false
+        }
+      }
+    },
+    "messages.listPinned": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Pinned Messages",
+      "description": "List the messages pinned in a channel. Pins are often the channel's own FAQ; read them before answering.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channelId}}/pins",
+        "success": [
+          200
+        ],
+        "result": {
+          "messages": "{{response}}"
+        }
+      }
+    },
+    "threads.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Thread",
+      "description": "Start a public thread in a text channel, not attached to a message. Use Create Thread From Message to discuss a specific message.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The text channel id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Thread name, 1-100 characters."
+          },
+          "autoArchiveMinutes": {
+            "type": "number",
+            "description": "Minutes of inactivity before archiving: 60, 1440, 4320 or 10080."
+          }
+        },
+        "required": [
+          "channelId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "thread": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/channels/{{channelId}}/threads",
+        "body": {
+          "name": "{{name}}",
+          "type": 11,
+          "auto_archive_duration": "{{autoArchiveMinutes}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "thread": "{{response}}"
+        }
+      }
+    },
+    "threads.createFromMessage": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Thread From Message",
+      "description": "Start a thread under one message, keeping a longer answer out of the main channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The channel id the message is in."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "The message to thread."
+          },
+          "name": {
+            "type": "string",
+            "description": "Thread name, 1-100 characters."
+          },
+          "autoArchiveMinutes": {
+            "type": "number",
+            "description": "60, 1440, 4320 or 10080."
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "thread": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/channels/{{channelId}}/messages/{{messageId}}/threads",
+        "body": {
+          "name": "{{name}}",
+          "auto_archive_duration": "{{autoArchiveMinutes}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "thread": "{{response}}"
+        }
+      }
+    },
+    "threads.join": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Join Thread",
+      "description": "Add the bot to a thread so it receives and can post there.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "threadId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "threadId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "joined": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/channels/{{threadId}}/thread-members/@me",
+        "success": [
+          204
+        ],
+        "result": {
+          "joined": true
+        }
+      }
+    },
+    "threads.leave": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Leave Thread",
+      "description": "Remove the bot from a thread.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "threadId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "threadId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "joined": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/channels/{{threadId}}/thread-members/@me",
+        "success": [
+          204
+        ],
+        "result": {
+          "joined": false
+        }
+      }
+    },
+    "threads.addMember": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Add Thread Member",
+      "description": "Add a member to a thread.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "threadId",
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/channels/{{threadId}}/thread-members/{{userId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "added": true
+        }
+      }
+    },
+    "threads.listActive": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Active Threads",
+      "description": "List every unarchived thread in a server.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "threads": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/threads/active",
+        "success": [
+          200
+        ],
+        "result": {
+          "threads": "{{response.threads}}",
+          "members": "{{response.members}}"
+        }
+      }
+    },
+    "threads.listArchived": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Archived Threads",
+      "description": "List a channel's archived public threads, newest first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string",
+            "description": "ISO8601 timestamp; only threads archived before it."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum threads to return."
+          }
+        },
+        "required": [
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "threads": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channelId}}/threads/archived/public",
+        "query": {
+          "before": "{{before}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "threads": "{{response.threads}}",
+          "hasMore": "{{response.has_more}}"
+        }
+      }
+    },
+    "reactions.add": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Add Reaction",
+      "description": "React to a message as the bot. emoji is the unicode character (\ud83d\udc4d) or a custom emoji as name:id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string",
+            "description": "Unicode emoji or name:id for a custom emoji."
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId",
+          "emoji"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "reacted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/channels/{{channelId}}/messages/{{messageId}}/reactions/{{emoji}}/@me",
+        "success": [
+          204
+        ],
+        "result": {
+          "reacted": true
+        }
+      }
+    },
+    "reactions.remove": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Remove Own Reaction",
+      "description": "Remove the bot's reaction from a message.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId",
+          "emoji"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "reacted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/channels/{{channelId}}/messages/{{messageId}}/reactions/{{emoji}}/@me",
+        "success": [
+          204
+        ],
+        "result": {
+          "reacted": false
+        }
+      }
+    },
+    "reactions.removeUser": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Remove a User's Reaction",
+      "description": "Remove one member's reaction from a message (moderation).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId",
+          "emoji",
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/channels/{{channelId}}/messages/{{messageId}}/reactions/{{emoji}}/{{userId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "removed": true
+        }
+      }
+    },
+    "reactions.clear": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Clear Reactions",
+      "description": "Remove every reaction from a message.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "cleared": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/channels/{{channelId}}/messages/{{messageId}}/reactions",
+        "success": [
+          204
+        ],
+        "result": {
+          "cleared": true
+        }
+      }
+    },
+    "reactions.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Reactions",
+      "description": "List the users who reacted to a message with one emoji.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "after": {
+            "type": "string",
+            "description": "User id cursor."
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId",
+          "emoji"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channelId}}/messages/{{messageId}}/reactions/{{emoji}}",
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "users": "{{response}}"
+        }
+      }
+    },
+    "members.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Members",
+      "description": "List a server's members in user-id order with their roles and joined_at. Requires the Server Members privileged intent on the bot. Page with after (the last user id seen). A member without the welcomed role has not been onboarded yet.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "number",
+            "description": "1-1000, default 1."
+          },
+          "after": {
+            "type": "string",
+            "description": "User id cursor; members with a higher id follow."
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/members",
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "members": "{{response}}"
+        }
+      }
+    },
+    "members.search": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Search Members",
+      "description": "Find members whose username or nickname starts with a string.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "number",
+            "description": "1-1000."
+          }
+        },
+        "required": [
+          "guildId",
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/members/search",
+        "query": {
+          "query": "{{query}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "members": "{{response}}"
+        }
+      }
+    },
+    "members.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Member",
+      "description": "Fetch one member of a server: user, nick, roles, joined_at, communication_disabled_until.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/members/{{userId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "member": "{{response}}"
+        }
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Get User",
+      "description": "Fetch a Discord user by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{userId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      }
+    },
+    "members.kick": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Kick Member",
+      "description": "Remove a member from the server. They can rejoin with an invite. Give the rule broken as the reason.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "kicked": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/guilds/{{guildId}}/members/{{userId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "kicked": true
+        }
+      }
+    },
+    "members.timeout": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Time Out Member",
+      "description": "Mute a member until an ISO8601 time (at most 28 days ahead). Reversible with Clear Timeout. Give the rule broken as the reason.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "until": {
+            "type": "string",
+            "description": "ISO8601 timestamp when the timeout ends."
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "userId",
+          "until"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/guilds/{{guildId}}/members/{{userId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "body": {
+          "communication_disabled_until": "{{until}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "member": "{{response}}"
+        }
+      }
+    },
+    "members.clearTimeout": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Clear Timeout",
+      "description": "End a member's timeout early.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/guilds/{{guildId}}/members/{{userId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "body": {
+          "communication_disabled_until": null
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "member": "{{response}}"
+        }
+      }
+    },
+    "members.addRole": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Add Role to Member",
+      "description": "Give a member a role, e.g. the welcomed role after onboarding. The bot's own role must sit above the role given.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "userId",
+          "roleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/guilds/{{guildId}}/members/{{userId}}/roles/{{roleId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "added": true
+        }
+      }
+    },
+    "members.removeRole": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Remove Role from Member",
+      "description": "Take a role away from a member.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "userId",
+          "roleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/guilds/{{guildId}}/members/{{userId}}/roles/{{roleId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "removed": true
+        }
+      }
+    },
+    "roles.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Roles",
+      "description": "List a server's roles with id, name, position and permissions. Use it to resolve a role name to its id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/roles",
+        "success": [
+          200
+        ],
+        "result": {
+          "roles": "{{response}}"
+        }
+      }
+    },
+    "roles.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Role",
+      "description": "Create a role. color is an integer RGB value; permissions is a permission bitfield as a string.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "number",
+            "description": "RGB integer, 0 for none."
+          },
+          "hoist": {
+            "type": "boolean",
+            "description": "Show members separately in the sidebar."
+          },
+          "mentionable": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "string",
+            "description": "Permission bitfield as a decimal string."
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/guilds/{{guildId}}/roles",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "color": "{{color}}",
+          "hoist": "{{hoist}}",
+          "mentionable": "{{mentionable}}",
+          "permissions": "{{permissions}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "role": "{{response}}"
+        }
+      }
+    },
+    "roles.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Role",
+      "description": "Change a role's name, colour, hoist, mentionable or permissions. Only supplied fields change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "number"
+          },
+          "hoist": {
+            "type": "boolean"
+          },
+          "mentionable": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "roleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/guilds/{{guildId}}/roles/{{roleId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "color": "{{color}}",
+          "hoist": "{{hoist}}",
+          "mentionable": "{{mentionable}}",
+          "permissions": "{{permissions}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "role": "{{response}}"
+        }
+      }
+    },
+    "roles.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Delete Role",
+      "description": "Delete a role from the server. Members lose it immediately. Cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "roleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/guilds/{{guildId}}/roles/{{roleId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    },
+    "bans.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Bans",
+      "description": "List banned users with the reason recorded for each.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "bans": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/bans",
+        "query": {
+          "limit": "{{limit}}",
+          "before": "{{before}}",
+          "after": "{{after}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "bans": "{{response}}"
+        }
+      }
+    },
+    "bans.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Ban Member",
+      "description": "Ban a user from the server, optionally deleting their recent messages. A person must approve this; post the case to the mod-log first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "deleteMessageSeconds": {
+            "type": "number",
+            "description": "Delete the user's messages from the last N seconds (0-604800)."
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "banned": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/guilds/{{guildId}}/bans/{{userId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "body": {
+          "delete_message_seconds": "{{deleteMessageSeconds}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "banned": true
+        }
+      }
+    },
+    "bans.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Unban User",
+      "description": "Lift a ban.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "unbanned": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/guilds/{{guildId}}/bans/{{userId}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "unbanned": true
+        }
+      }
+    },
+    "invites.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Invites",
+      "description": "List a server's active invite links with their code, channel, inviter and uses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invites": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/invites",
+        "success": [
+          200
+        ],
+        "result": {
+          "invites": "{{response}}"
+        }
+      }
+    },
+    "invites.revoke": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Revoke Invite",
+      "description": "Delete an invite link so it stops working.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The invite code (the part after discord.gg/)."
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invite": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/invites/{{code}}",
+        "headers": {
+          "X-Audit-Log-Reason": "{{reason}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "invite": "{{response}}"
+        }
+      }
+    },
+    "dm.open": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Open Direct Message",
+      "description": "Open (or return) the bot's DM channel with a user. Then use Send Message with the returned channel id. Members who block DMs from server members cannot be reached this way.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/@me/channels",
+        "body": {
+          "recipient_id": "{{userId}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "channel": "{{response}}"
+        }
+      }
+    },
+    "events.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Scheduled Events",
+      "description": "List a server's scheduled events with how many members are interested.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/scheduled-events",
+        "query": {
+          "with_user_count": "true"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "events": "{{response}}"
+        }
+      }
+    },
+    "events.createExternal": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create External Event",
+      "description": "Schedule an event that happens somewhere other than a voice channel (a link or a place). Needs a start, an end and a location.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "1-100 characters."
+          },
+          "description": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "ISO8601 start time."
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "ISO8601 end time."
+          },
+          "location": {
+            "type": "string",
+            "description": "Where it happens: a URL or an address, up to 100 characters."
+          }
+        },
+        "required": [
+          "guildId",
+          "name",
+          "startsAt",
+          "endsAt",
+          "location"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/guilds/{{guildId}}/scheduled-events",
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "scheduled_start_time": "{{startsAt}}",
+          "scheduled_end_time": "{{endsAt}}",
+          "privacy_level": 2,
+          "entity_type": 3,
+          "entity_metadata": {
+            "location": "{{location}}"
+          }
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "event": "{{response}}"
+        }
+      }
+    },
+    "events.createVoice": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Voice Channel Event",
+      "description": "Schedule an event held in one of the server's voice channels (entity_type 2). A stage-channel event needs entity_type 1, which this connector does not offer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "ISO8601 start time."
+          },
+          "channelId": {
+            "type": "string",
+            "description": "The voice or stage channel id."
+          }
+        },
+        "required": [
+          "guildId",
+          "name",
+          "startsAt",
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/guilds/{{guildId}}/scheduled-events",
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "scheduled_start_time": "{{startsAt}}",
+          "privacy_level": 2,
+          "entity_type": 2,
+          "channel_id": "{{channelId}}"
+        },
+        "success": [
+          200,
+          201
+        ],
+        "result": {
+          "event": "{{response}}"
+        }
+      }
+    },
+    "events.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Scheduled Event",
+      "description": "Change an event's name, description, times or status (1 scheduled, 2 active, 3 completed, 4 cancelled). Only supplied fields change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "guildId",
+          "eventId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/guilds/{{guildId}}/scheduled-events/{{eventId}}",
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "scheduled_start_time": "{{startsAt}}",
+          "scheduled_end_time": "{{endsAt}}",
+          "status": "{{status}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "event": "{{response}}"
+        }
+      }
+    },
+    "events.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "title": "Delete Scheduled Event",
+      "description": "Remove an event from the server. Interested members are not told. Prefer Update with status 4 (cancelled) so they are.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId",
+          "eventId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/guilds/{{guildId}}/scheduled-events/{{eventId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    },
+    "emojis.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Custom Emojis",
+      "description": "List the server's custom emojis (name and id); react with them as name:id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "guildId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "guildId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "emojis": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/guilds/{{guildId}}/emojis",
+        "success": [
+          200
+        ],
+        "result": {
+          "emojis": "{{response}}"
+        }
+      }
+    },
+    "guilds.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List bot guilds",
+      "description": "List guilds joined by the bot. Pass the last returned guild ID as after to fetch the next page; stop on an empty page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Page size, 1\u2013200."
+          },
+          "after": {
+            "type": "string",
+            "description": "Return guilds after this guild ID."
+          }
+        },
+        "required": []
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/@me/guilds",
+        "success": [
+          200
+        ],
+        "result": {
+          "guilds": "{{response}}"
+        },
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "guilds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Provider resource ID, preserved as a string."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Guild name."
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          }
+        },
+        "required": [
+          "guilds"
+        ]
+      }
+    },
+    "messages.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get message",
+      "description": "Read one accessible channel message. Content availability depends on bot permissions and intents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "Provider resource identifier."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "Provider resource identifier."
+          }
+        },
+        "required": [
+          "channelId",
+          "messageId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channelId}}/messages/{{messageId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "message": "{{response}}"
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Provider resource ID, preserved as a string."
+              },
+              "channel_id": {
+                "type": "string",
+                "description": "Provider resource ID, preserved as a string."
+              },
+              "content": {
+                "type": "string",
+                "description": "Message text; may be empty when access to content is restricted."
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        "required": [
+          "message"
+        ]
+      }
+    },
+    "messages.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create text message",
+      "description": "Send a text-only bot message; requires SEND_MESSAGES. Mentions are suppressed. Content limit is 2000 characters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "Provider resource identifier."
+          },
+          "content": {
+            "type": "string",
+            "description": "Non-empty message text, up to 2000 characters."
+          }
+        },
+        "required": [
+          "channelId",
+          "content"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/channels/{{channelId}}/messages",
+        "success": [
+          200
+        ],
+        "result": {
+          "message": "{{response}}"
+        },
+        "body": {
+          "content": "{{content}}",
+          "allowed_mentions": {
+            "parse": []
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Provider resource ID, preserved as a string."
+              },
+              "channel_id": {
+                "type": "string",
+                "description": "Provider resource ID, preserved as a string."
+              },
+              "content": {
+                "type": "string",
+                "description": "Message text; may be empty when access to content is restricted."
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        "required": [
+          "message"
+        ]
+      }
+    },
+    "normalized.post.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create normalized text post",
+      "description": "Publish text and return the versioned appcall Post model. Send a text-only bot message; requires SEND_MESSAGES. Mentions are suppressed. Content limit is 2000 characters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "Provider resource identifier."
+          },
+          "text": {
+            "type": "string",
+            "description": "Non-empty message text, up to 2000 characters."
+          }
+        },
+        "required": [
+          "channelId",
+          "text"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/channels/{{channelId}}/messages",
+        "success": [
+          200
+        ],
+        "result": {
+          "id": "discord:{{response.channel_id}}:{{response.id}}",
+          "provider": "discord",
+          "providerPostId": "{{response.id}}",
+          "authorId": "{{response.author.id}}",
+          "text": "{{input.text}}",
+          "publishedAt": "{{response.timestamp}}",
+          "modelVersion": "2026-09-05",
+          "raw": "{{response}}"
+        },
+        "body": {
+          "content": "{{text}}",
+          "allowed_mentions": {
+            "parse": []
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "providerPostId": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "modelVersion": {
+            "type": "string",
+            "enum": [
+              "2026-09-05"
+            ]
+          },
+          "raw": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "providerPostId",
+          "modelVersion",
+          "raw"
+        ]
+      }
+    }
+  },
+  "models": [
+    "message",
+    "channel",
+    "member",
+    "role",
+    "thread",
+    "event"
+  ]
+}

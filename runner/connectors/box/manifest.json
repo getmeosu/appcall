@@ -1,0 +1,467 @@
+{
+  "key": "box",
+  "name": "Box",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "description": "Box JSON metadata operations using a manually supplied OAuth2 access token.",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "root_readonly",
+      "root_readwrite"
+    ],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "accessToken",
+          "label": "OAuth2 access token (manual; no automatic refresh)",
+          "secret": true,
+          "required": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.box.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://api.box.com/2.0",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": [
+        "error_summary",
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read the current Box user to verify the access token",
+      "description": "Read the current Box user to verify the access token.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions.",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Authenticated provider account identifier."
+              }
+            }
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/me",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      }
+    },
+    "folders.listItems": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List folder items with marker pagination",
+      "description": "List folder items with marker pagination. Pass nextMarker back as marker until it is absent.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string",
+            "description": "Box folder ID as a string; 0 is the root folder."
+          },
+          "marker": {
+            "type": "string",
+            "description": "Opaque nextMarker from the previous page; omit on the first request."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size, at most 1000; enforced by Box."
+          }
+        },
+        "required": [
+          "folderId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "description": "Provider file, folder and web-link metadata.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextMarker": {
+            "type": "string",
+            "description": "Opaque next page marker, absent when no next page is available."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Provider page size."
+          }
+        },
+        "required": [
+          "entries",
+          "limit"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/folders/{{folderId}}/items",
+        "success": [
+          200
+        ],
+        "result": {
+          "entries": "{{response.entries}}",
+          "nextMarker": "{{response.next_marker}}",
+          "limit": "{{response.limit}}"
+        },
+        "query": {
+          "usemarker": true,
+          "marker": "{{marker}}",
+          "limit": "{{limit}}"
+        }
+      }
+    },
+    "folders.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read a Box folder and its metadata",
+      "description": "Read a Box folder and its metadata. Use folders.listItems to paginate its children.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string",
+            "description": "Box folder ID as a string; 0 is the root folder."
+          }
+        },
+        "required": [
+          "folderId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "folder"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/folders/{{folderId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "folder": "{{response}}"
+        }
+      }
+    },
+    "files.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read Box file metadata without downloading its contents",
+      "description": "Read Box file metadata without downloading its contents.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "Box file ID as a string."
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/files/{{fileId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "file": "{{response}}"
+        }
+      }
+    },
+    "folders.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create a folder beneath an explicit Box parent folder",
+      "description": "Create a folder beneath an explicit Box parent folder. Name conflicts fail.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "New folder name, subject to Box naming restrictions."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Parent folder ID as a string; 0 is the root folder."
+          }
+        },
+        "required": [
+          "name",
+          "parentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "folder"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/folders",
+        "success": [
+          201
+        ],
+        "result": {
+          "folder": "{{response}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "parent": {
+            "id": "{{parentId}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.move": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Move a Box file into another folder without renaming it",
+      "description": "Move a Box file into another folder without renaming it. Requires permission to modify the file and target folder.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "Box file ID as a string."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Destination folder ID as a string; 0 is the root folder."
+          }
+        },
+        "required": [
+          "fileId",
+          "parentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/files/{{fileId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "file": "{{response}}"
+        },
+        "body": {
+          "parent": {
+            "id": "{{parentId}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete a Box file",
+      "description": "Delete a Box file. Box trash and retention policies apply.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "Box file ID as a string."
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "True when Box acknowledges deletion with HTTP 204."
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/files/{{fileId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true
+        }
+      }
+    },
+    "folders.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete an empty Box folder",
+      "description": "Delete an empty Box folder. Recursive deletion is disabled; a nonempty folder fails.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string",
+            "description": "Box folder ID as a string; 0 is the root folder."
+          }
+        },
+        "required": [
+          "folderId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "True when Box acknowledges deletion with HTTP 204."
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/folders/{{folderId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true
+        },
+        "query": {
+          "recursive": false
+        }
+      }
+    }
+  },
+  "models": [
+    "file",
+    "folder",
+    "user"
+  ]
+}

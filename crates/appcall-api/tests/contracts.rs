@@ -1,0 +1,227 @@
+use appcall_actions::{ExecuteRequest, ExecuteResult};
+use appcall_api::*;
+use appcall_connectors::Registry;
+use appcall_store::Connection;
+use serde_json::{json, Value};
+use std::sync::Mutex;
+
+#[derive(Default)]
+struct Fixture {
+    inputs: Mutex<Vec<Value>>,
+    executions: Mutex<Vec<(String, String, bool, String)>>,
+}
+impl Backend for Fixture {
+    async fn authorize(&self, h: &[(String, String)]) -> Result<Identity> {
+        if h.iter()
+            .any(|(k, v)| k.eq_ignore_ascii_case("X-API-Key") && v == "fixture-key")
+        {
+            Ok(Identity {
+                project_id: "project".into(),
+                account_id: "brand".into(),
+                admin_scope: false,
+            })
+        } else {
+            Err(ApiError::new("UNAUTHORIZED"))
+        }
+    }
+    async fn ready(&self) -> Result<()> {
+        Ok(())
+    }
+    async fn connections(&self, _: &Identity) -> Result<Vec<Connection>> {
+        Ok(vec![])
+    }
+    async fn platform_connectors(&self, i: &Identity) -> Result<Vec<String>> {
+        assert_eq!(i.project_id, "project");
+        Ok(vec!["slack".into()])
+    }
+    async fn connection(&self, _: &Identity, _: &str) -> Result<Connection> {
+        Err(ApiError::new("CONNECTION_NOT_FOUND"))
+    }
+    async fn test_connection(&self, i: &Identity, id: &str) -> Result<Connection> {
+        self.connection(i, id).await
+    }
+    async fn disconnect(&self, _: &Identity, _: &str) -> Result<()> {
+        Ok(())
+    }
+    async fn execute(&self, r: ExecuteRequest) -> Result<ExecuteResult> {
+        self.inputs.lock().unwrap().push(r.input.clone());
+        let warn = r
+            .input
+            .get("warn")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        self.executions.lock().unwrap().push((
+            r.project_id,
+            r.external_account_id,
+            r.admin_scope,
+            r.idempotency_key,
+        ));
+        Ok(ExecuteResult {
+            request_id: "req1".into(),
+            output: json!({"sent":true}),
+            replay_log_id: String::new(),
+            usage_warning: warn,
+            usage: appcall_actions::UsageSnapshot {
+                month: "2026-09".into(),
+                current: 9,
+                projected: 10,
+                soft_limit: 10,
+                hard_limit: 20,
+            },
+        })
+    }
+}
+
+#[tokio::test]
+async fn optional_input_and_usage_warning_match_go_contract() {
+    let api = api();
+    assert_eq!(
+        api.handle(request("POST", "/v1/connections/c/actions/a", json!({})))
+            .await
+            .status,
+        200
+    );
+    let response = api
+        .handle(request(
+            "POST",
+            "/v1/connections/c/actions/a",
+            json!({"input":{"warn":true}}),
+        ))
+        .await;
+    assert_eq!(response.body["usageWarning"], true);
+    assert_eq!(
+        response.body["usage"],
+        json!({"month":"2026-09","current":9,"projected":10,"softLimit":10,"hardLimit":20})
+    );
+}
+fn api() -> Api<Fixture> {
+    Api {
+        registry: Registry::load(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../runner/connectors"
+        ))
+        .unwrap(),
+        backend: Fixture::default(),
+    }
+}
+fn request(method: &str, uri: &str, body: Value) -> Request {
+    Request {
+        method: method.into(),
+        uri: uri.into(),
+        headers: vec![("X-API-Key".into(), "fixture-key".into())],
+        body: serde_json::to_vec(&body).unwrap(),
+    }
+}
+
+#[tokio::test]
+async fn catalog_contract_is_scoped_and_internal_connectors_are_hidden() {
+    let api = api();
+    let response = api
+        .handle(request("GET", "/v1/connectors", Value::Null))
+        .await;
+    assert_eq!(response.status, 200);
+    let connectors = response.body["connectors"].as_array().unwrap();
+    assert!(connectors
+        .iter()
+        .any(|c| c["key"] == "slack" && c["platformConnected"] == true));
+    for c in connectors {
+        assert!(c.get("authType").is_some());
+        assert!(c.get("operations").is_none());
+    }
+    let mut unauth = request("GET", "/v1/connectors", Value::Null);
+    unauth.headers.clear();
+    assert_eq!(api.handle(unauth).await.status, 401);
+}
+#[tokio::test]
+async fn actions_use_verified_scope_and_preserve_legacy_response_shape() {
+    let api = api();
+    let mut req = request(
+        "POST",
+        "/v1/connections/connection/actions/messages.send",
+        json!({"input":{"text":"hello"}}),
+    );
+    req.headers.push(("Idempotency-Key".into(), "one".into()));
+    req.headers.push(("X-Admin-Scope".into(), "true".into()));
+    let response = api.handle(req).await;
+    assert_eq!(response.status, 200);
+    assert_eq!(
+        response.body,
+        json!({"requestId":"req1","output":{"sent":true}})
+    );
+    assert_eq!(
+        *api.backend.executions.lock().unwrap(),
+        vec![("project".into(), "brand".into(), false, "one".into())]
+    );
+}
+#[tokio::test]
+async fn ambiguous_headers_and_nonobject_action_body_never_dispatch() {
+    let api = api();
+    let mut req = request("POST", "/v1/connections/c/actions/a", json!({"input":{}}));
+    req.headers.push(("x-api-key".into(), "other".into()));
+    assert_eq!(api.handle(req).await.status, 400);
+    for input in [
+        json!(false),
+        json!([]),
+        json!({"input":{},"projectId":"attacker"}),
+    ] {
+        assert_eq!(
+            api.handle(request("POST", "/v1/connections/c/actions/a", input))
+                .await
+                .status,
+            400
+        );
+    }
+    assert!(api.backend.executions.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+#[ignore = "opens local TCP sockets"]
+async fn transport_rejects_unauthenticated_body_without_waiting_and_serves_health() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let local = tokio::task::LocalSet::new();
+    local.run_until(async {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address=listener.local_addr().unwrap();
+        let (stop,shutdown)=tokio::sync::oneshot::channel();
+        let server=tokio::task::spawn_local(serve(listener,std::rc::Rc::new(api()),async{let _=shutdown.await;}));
+        for (request,status) in [("GET /healthz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n","200 OK"),("POST /v1/connections/c/actions/a HTTP/1.1\r\nHost: localhost\r\nContent-Length: 1000000\r\n\r\n","401 Unauthorized")] {
+            let mut stream=tokio::net::TcpStream::connect(address).await.unwrap();
+            stream.write_all(request.as_bytes()).await.unwrap();
+            let mut bytes=Vec::new();
+            tokio::time::timeout(std::time::Duration::from_secs(2),stream.read_to_end(&mut bytes)).await.unwrap().unwrap();
+            assert!(String::from_utf8(bytes).unwrap().contains(status));
+        }
+        stop.send(()).unwrap();server.await.unwrap().unwrap();
+    }).await;
+}
+
+#[tokio::test]
+async fn empty_action_body_defaults_to_object_without_bypassing_authentication() {
+    let api = api();
+    let mut req = request("POST", "/v1/connections/c/actions/a", json!({}));
+    req.body.clear();
+    assert_eq!(api.handle(req).await.status, 200);
+    assert_eq!(*api.backend.inputs.lock().unwrap(), vec![json!({})]);
+    let mut unauth = request("POST", "/v1/connections/c/actions/a", json!({}));
+    unauth.body.clear();
+    unauth.headers.clear();
+    assert_eq!(api.handle(unauth).await.status, 401);
+    let mut malformed = request("POST", "/v1/connections/c/actions/a", json!({}));
+    malformed.body = b"  ".to_vec();
+    assert_eq!(api.handle(malformed).await.status, 400);
+    assert_eq!(api.backend.inputs.lock().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn null_action_body_matches_go_zero_value_binding() {
+    let api = api();
+    for raw in [b"null".as_slice(), b" \nnull\t".as_slice()] {
+        let mut req = request("POST", "/v1/connections/c/actions/a", json!({}));
+        req.body = raw.to_vec();
+        assert_eq!(api.handle(req).await.status, 200);
+    }
+    assert_eq!(
+        *api.backend.inputs.lock().unwrap(),
+        vec![json!({}), json!({})]
+    );
+}

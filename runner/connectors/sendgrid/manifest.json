@@ -1,0 +1,530 @@
+{
+  "key": "sendgrid",
+  "name": "SendGrid",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["email-marketing"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [],
+      "routes": [
+        {
+          "id": "api_key",
+          "label": "API Key",
+          "fields": [
+            { "key": "apiKey", "label": "API Key", "required": true, "secret": true }
+          ]
+        },
+        {
+          "id": "smtp",
+          "label": "SMTP relay",
+          "fields": [
+            { "key": "smtpHost", "label": "SMTP host (e.g. smtp.sendgrid.net)", "required": true, "secret": false },
+            { "key": "smtpPort", "label": "Port (587 or 465)", "required": true, "secret": false },
+            { "key": "smtpUser", "label": "SMTP login (usually 'apikey')", "required": true, "secret": false },
+            { "key": "smtpPassword", "label": "SMTP password / API key", "required": true, "secret": true }
+          ]
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.sendgrid.com",
+      "smtp.sendgrid.net"
+    ]
+  },
+  "operations": {
+    "contacts.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "lists.list": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576
+    },
+    "campaigns.list": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "contacts.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Contact",
+      "description": "Create or upsert a SendGrid marketing contact by email, optionally setting name and adding it to lists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email address of the contact to create or update. Required."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Contact's first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Contact's last name."
+          },
+          "listIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs of marketing lists to add the contact to."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contact": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "provider": { "type": "string" },
+              "providerContactId": { "type": "string" },
+              "email": { "type": "string" },
+              "firstName": { "type": "string" },
+              "lastName": { "type": "string" },
+              "listIds": { "type": "array", "items": { "type": "string" } },
+              "createdAt": { "type": "string" },
+              "updatedAt": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the SendGrid connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    },
+    "mail.send": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 65536,
+      "title": "Send Email",
+      "description": "Send a transactional email via SendGrid v3 /mail/send. Supports plain text, HTML, and dynamic templates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": { "type": "string", "description": "Recipient email address." },
+                "name": { "type": "string", "description": "Recipient display name." }
+              },
+              "required": ["email"]
+            },
+            "description": "List of recipient addresses."
+          },
+          "from": {
+            "type": "object",
+            "properties": {
+              "email": { "type": "string", "description": "Sender email address." },
+              "name": { "type": "string", "description": "Sender display name." }
+            },
+            "required": ["email"],
+            "description": "Sender address."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject line. Not needed when using a dynamic template."
+          },
+          "text": {
+            "type": "string",
+            "description": "Plain text body of the email."
+          },
+          "html": {
+            "type": "string",
+            "description": "HTML body of the email."
+          },
+          "replyTo": {
+            "type": "object",
+            "properties": {
+              "email": { "type": "string" },
+              "name": { "type": "string" }
+            },
+            "required": ["email"],
+            "description": "Reply-to address."
+          },
+          "templateId": {
+            "type": "string",
+            "description": "SendGrid dynamic template ID (e.g. d-xxxxxxxx)."
+          },
+          "dynamicTemplateData": {
+            "type": "object",
+            "description": "Key/value data for the dynamic template."
+          }
+        },
+        "required": ["to", "from", "subject"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "messageId": { "type": "string", "description": "X-Message-Id header returned by SendGrid." }
+        }
+      }
+    },
+    "contacts.upsert": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 65536,
+      "title": "Upsert Contacts",
+      "description": "Bulk upsert marketing contacts via PUT /v3/marketing/contacts. Returns a job ID for async processing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": { "type": "string", "description": "Contact email address." },
+                "firstName": { "type": "string" },
+                "lastName": { "type": "string" },
+                "customFields": { "type": "object", "description": "Custom field key/value map." }
+              },
+              "required": ["email"]
+            },
+            "description": "Contacts to upsert."
+          },
+          "listIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional list IDs to add the contacts to."
+          }
+        },
+        "required": ["contacts"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "jobId": { "type": "string", "description": "Async job ID returned by SendGrid." }
+        }
+      }
+    },
+    "contacts.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search Contacts",
+      "description": "Search marketing contacts using a SGQL query string via POST /v3/marketing/contacts/search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "SGQL query string, e.g. \"email LIKE '%@example.com'\"."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Maximum number of contacts to return (1–1000)."
+          }
+        },
+        "required": ["query"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contacts": { "type": "array", "items": { "type": "object" } }
+        }
+      }
+    },
+    "contacts.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Contacts",
+      "description": "Permanently delete one or more marketing contacts by ID via DELETE /v3/marketing/contacts?ids=.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Contact IDs to delete."
+          }
+        },
+        "required": ["ids"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "jobId": { "type": "string" }
+        }
+      }
+    },
+    "lists.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create List",
+      "description": "Create a new marketing contact list via POST /v3/marketing/lists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the new list."
+          }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "list": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "provider": { "type": "string" },
+              "providerListId": { "type": "string" },
+              "name": { "type": "string" },
+              "contactCount": { "type": "number" },
+              "createdAt": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "lists.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Get List",
+      "description": "Retrieve a marketing contact list by its ID via GET /v3/marketing/lists/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "string",
+            "description": "The ID of the list to retrieve."
+          }
+        },
+        "required": ["listId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "list": { "type": "object" }
+        }
+      }
+    },
+    "lists.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete List",
+      "description": "Delete a marketing contact list by ID via DELETE /v3/marketing/lists/{id}. Optionally deletes associated contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "string",
+            "description": "The ID of the list to delete."
+          },
+          "deleteContacts": {
+            "type": "boolean",
+            "description": "If true, also delete all contacts in the list."
+          }
+        },
+        "required": ["listId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "templates.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create Template",
+      "description": "Create a new transactional email template via POST /v3/templates. Defaults to dynamic generation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Template name."
+          },
+          "generation": {
+            "type": "string",
+            "description": "Template generation: \"legacy\" or \"dynamic\" (default: \"dynamic\")."
+          }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "template": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "provider": { "type": "string" },
+              "providerTemplateId": { "type": "string" },
+              "name": { "type": "string" },
+              "generation": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "templates.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Get Template",
+      "description": "Retrieve a transactional email template by ID via GET /v3/templates/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "description": "The ID of the template to retrieve."
+          }
+        },
+        "required": ["templateId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "template": { "type": "object" }
+        }
+      }
+    },
+    "suppression.bounces.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Bounced Emails",
+      "description": "Retrieve the list of email addresses that have bounced via GET /v3/suppression/bounces. Supports time range and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "startTime": {
+            "type": "number",
+            "description": "Start of time range as Unix timestamp."
+          },
+          "endTime": {
+            "type": "number",
+            "description": "End of time range as Unix timestamp."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of results to return."
+          },
+          "offset": {
+            "type": "number",
+            "description": "Number of records to skip for pagination."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "bounces": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": { "type": "string" },
+                "status": { "type": "string" },
+                "reason": { "type": "string" },
+                "created": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "contact",
+    "list",
+    "campaign"
+  ]
+}

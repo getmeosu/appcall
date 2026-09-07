@@ -1,0 +1,159 @@
+{
+  "key": "linkedin",
+  "name": "LinkedIn",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["social"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "r_liteprofile",
+      "r_emailaddress",
+      "w_member_social",
+      "r_organization_social",
+      "r_organization_admin"
+    ],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.linkedin.com",
+      "www.linkedin.com"
+    ]
+  },
+  "operations": {
+    "profile.get": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576
+    },
+    "posts.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "organizations.list": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576
+    },
+    "posts.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Post",
+      "description": "Publish a text post to a LinkedIn feed on behalf of a member or organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The text body of the post to publish."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Post visibility. Defaults to PUBLIC if omitted.",
+            "enum": [
+              "PUBLIC",
+              "CONNECTIONS"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "Optional title for the post."
+          },
+          "authorUrn": {
+            "type": "string",
+            "description": "URN of the author (e.g. urn:li:person:{id} or urn:li:organization:{id}). Defaults to urn:li:person:me."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "post": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "provider": {
+                "type": "string"
+              },
+              "providerPostId": {
+                "type": "string"
+              },
+              "authorId": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "postType": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "number"
+              },
+              "likeCount": {
+                "type": "number"
+              },
+              "commentCount": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the LinkedIn connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    }
+  },
+  "models": [
+    "profile",
+    "post",
+    "organization"
+  ]
+}

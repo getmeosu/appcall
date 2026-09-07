@@ -1,0 +1,382 @@
+{
+  "key": "shopify",
+  "name": "Shopify",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "categories": ["ecommerce"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": [
+      "read_products",
+      "write_products",
+      "read_orders",
+      "write_orders",
+      "read_customers",
+      "write_customers"
+    ],
+    "setup": {
+      "mode": "oauth2",
+      "fields": []
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "*.myshopify.com"
+    ]
+  },
+  "operations": {
+    "products.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "orders.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "customers.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880
+    },
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify connectivity and credentials for the Shopify connector. Takes no input and returns the connector health status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          }
+        }
+      }
+    },
+    "products.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Get Product",
+      "description": "Retrieve a single product by its ID from the Shopify store using the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain, e.g. my-store or my-store.myshopify.com." },
+          "productId": { "type": "number", "description": "Numeric Shopify product ID." }
+        },
+        "required": ["accessToken", "shopDomain", "productId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "product": { "type": "object", "description": "Normalized product object." }
+        }
+      }
+    },
+    "products.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Create Product",
+      "description": "Create a new product in the Shopify store via the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "title": { "type": "string", "description": "Product title (required)." },
+          "productType": { "type": "string", "description": "Product type / category." },
+          "vendor": { "type": "string", "description": "Vendor or brand name." },
+          "status": { "type": "string", "description": "Product status: active, draft, or archived.", "enum": ["active", "draft", "archived"] },
+          "bodyHtml": { "type": "string", "description": "HTML description of the product." }
+        },
+        "required": ["accessToken", "shopDomain", "title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "product": { "type": "object", "description": "Normalized created product." }
+        }
+      }
+    },
+    "products.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Update Product",
+      "description": "Update an existing product in the Shopify store via the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "productId": { "type": "number", "description": "Numeric Shopify product ID." },
+          "title": { "type": "string", "description": "New product title." },
+          "productType": { "type": "string", "description": "Product type / category." },
+          "vendor": { "type": "string", "description": "Vendor or brand name." },
+          "status": { "type": "string", "description": "Product status: active, draft, or archived.", "enum": ["active", "draft", "archived"] },
+          "bodyHtml": { "type": "string", "description": "HTML description of the product." }
+        },
+        "required": ["accessToken", "shopDomain", "productId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "product": { "type": "object", "description": "Normalized updated product." }
+        }
+      }
+    },
+    "products.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Product",
+      "description": "Permanently delete a product from the Shopify store via the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "productId": { "type": "number", "description": "Numeric Shopify product ID to delete." }
+        },
+        "required": ["accessToken", "shopDomain", "productId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "orders.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Get Order",
+      "description": "Retrieve a single order by its ID from the Shopify store using the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "orderId": { "type": "number", "description": "Numeric Shopify order ID." }
+        },
+        "required": ["accessToken", "shopDomain", "orderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "order": { "type": "object", "description": "Normalized order object." }
+        }
+      }
+    },
+    "orders.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Update Order",
+      "description": "Update mutable fields on an existing Shopify order via the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "orderId": { "type": "number", "description": "Numeric Shopify order ID." },
+          "email": { "type": "string", "description": "Customer email address." },
+          "note": { "type": "string", "description": "Internal order note." },
+          "tags": { "type": "string", "description": "Comma-separated list of tags." }
+        },
+        "required": ["accessToken", "shopDomain", "orderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "order": { "type": "object", "description": "Normalized updated order." }
+        }
+      }
+    },
+    "orders.close": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Close Order",
+      "description": "Close a Shopify order, archiving it and preventing further fulfillment changes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "orderId": { "type": "number", "description": "Numeric Shopify order ID to close." }
+        },
+        "required": ["accessToken", "shopDomain", "orderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "order": { "type": "object", "description": "Normalized closed order." }
+        }
+      }
+    },
+    "orders.cancel": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Cancel Order",
+      "description": "Cancel a Shopify order, optionally specifying a cancellation reason and whether to notify the customer by email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "orderId": { "type": "number", "description": "Numeric Shopify order ID to cancel." },
+          "reason": { "type": "string", "description": "Reason for cancellation: customer, fraud, inventory, declined, or other." },
+          "email": { "type": "boolean", "description": "Whether to send a cancellation confirmation email to the customer." }
+        },
+        "required": ["accessToken", "shopDomain", "orderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "order": { "type": "object", "description": "Normalized cancelled order." }
+        }
+      }
+    },
+    "customers.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 524288,
+      "title": "Get Customer",
+      "description": "Retrieve a single customer by their ID from the Shopify store using the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "customerId": { "type": "number", "description": "Numeric Shopify customer ID." }
+        },
+        "required": ["accessToken", "shopDomain", "customerId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "customer": { "type": "object", "description": "Normalized customer object." }
+        }
+      }
+    },
+    "customers.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Create Customer",
+      "description": "Create a new customer record in the Shopify store via the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "email": { "type": "string", "description": "Customer email address (required)." },
+          "firstName": { "type": "string", "description": "Customer first name." },
+          "lastName": { "type": "string", "description": "Customer last name." },
+          "phone": { "type": "string", "description": "Customer phone number." }
+        },
+        "required": ["accessToken", "shopDomain", "email"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "customer": { "type": "object", "description": "Normalized created customer." }
+        }
+      }
+    },
+    "customers.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Update Customer",
+      "description": "Update an existing customer record in the Shopify store via the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "customerId": { "type": "number", "description": "Numeric Shopify customer ID." },
+          "email": { "type": "string", "description": "New email address." },
+          "firstName": { "type": "string", "description": "New first name." },
+          "lastName": { "type": "string", "description": "New last name." },
+          "phone": { "type": "string", "description": "New phone number." },
+          "note": { "type": "string", "description": "Internal note about this customer." }
+        },
+        "required": ["accessToken", "shopDomain", "customerId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "customer": { "type": "object", "description": "Normalized updated customer." }
+        }
+      }
+    }
+  },
+  "models": [
+    "product",
+    "order",
+    "customer"
+  ]
+}

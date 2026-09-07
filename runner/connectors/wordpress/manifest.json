@@ -1,0 +1,462 @@
+{
+  "key": "wordpress",
+  "name": "WordPress",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["social"],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "host",
+          "label": "Canonical instance hostname (no scheme, path or port)",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "username",
+          "label": "WordPress username",
+          "required": true,
+          "secret": false
+        },
+        {
+          "key": "applicationPassword",
+          "label": "Application password",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "derive": [
+        {
+          "field": "basicAuth",
+          "kind": "basic",
+          "from": ["username", "applicationPassword"]
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": ["{{host}}"]
+  },
+  "http": {
+    "baseUrl": "https://{{host}}/wp-json/wp/v2",
+    "auth": {
+      "field": "applicationPassword",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Basic {{basicAuth}}"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [429],
+      "retryAfterHeader": "retry-after",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 60,
+      "messagePaths": ["message", "code"]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Check connection",
+      "description": "Authenticate with GET users/me; this fails for invalid application passwords.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Connection status."
+          },
+          "user": {
+            "type": "object",
+            "description": "Provider resource."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/me",
+        "success": [200],
+        "result": {
+          "status": "ok",
+          "user": "{{response}}"
+        },
+        "echo": {
+          "status": "ok"
+        }
+      }
+    },
+    "post.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List posts",
+      "description": "Read one page of posts. Increment page until totalPages is reached; totals are header strings. An out-of-range page can return an upstream error.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "One-based page number; default 1."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size, 1\u2013100; default 10."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search text."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "posts": {
+            "type": "array",
+            "description": "Provider resources.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "X-WP-Total header."
+          },
+          "totalPages": {
+            "type": "string",
+            "description": "X-WP-TotalPages header."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/posts",
+        "success": [200],
+        "result": {
+          "posts": "{{response}}",
+          "total": "{{headers.x-wp-total}}",
+          "totalPages": "{{headers.x-wp-totalpages}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "search": "{{search}}"
+        }
+      }
+    },
+    "page.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List pages",
+      "description": "Read one page of pages. Increment page until totalPages is reached; totals are header strings. An out-of-range page can return an upstream error.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "One-based page number; default 1."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size, 1\u2013100; default 10."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search text."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pages": {
+            "type": "array",
+            "description": "Provider resources.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "X-WP-Total header."
+          },
+          "totalPages": {
+            "type": "string",
+            "description": "X-WP-TotalPages header."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/pages",
+        "success": [200],
+        "result": {
+          "pages": "{{response}}",
+          "total": "{{headers.x-wp-total}}",
+          "totalPages": "{{headers.x-wp-totalpages}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "search": "{{search}}"
+        }
+      }
+    },
+    "category.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "List categories",
+      "description": "Read one page of categories. Increment page until totalPages is reached; totals are header strings. An out-of-range page can return an upstream error.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "One-based page number; default 1."
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size, 1\u2013100; default 10."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search text."
+          }
+        },
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "description": "Provider resources.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total": {
+            "type": "string",
+            "description": "X-WP-Total header."
+          },
+          "totalPages": {
+            "type": "string",
+            "description": "X-WP-TotalPages header."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/categories",
+        "success": [200],
+        "result": {
+          "categories": "{{response}}",
+          "total": "{{headers.x-wp-total}}",
+          "totalPages": "{{headers.x-wp-totalpages}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "search": "{{search}}"
+        }
+      }
+    },
+    "post.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "read",
+      "title": "Get post",
+      "description": "Read a post by numeric WordPress ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Post ID."
+          }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object",
+            "description": "Provider resource."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/posts/{{id}}",
+        "success": [200],
+        "result": {
+          "post": "{{response}}"
+        }
+      }
+    },
+    "post.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Create post",
+      "description": "Create a draft or publish explicitly using status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Post title."
+          },
+          "content": {
+            "type": "string",
+            "description": "Post body, including supported HTML."
+          },
+          "status": {
+            "type": "string",
+            "description": "Publishing state; omitted create defaults to draft.",
+            "enum": ["draft", "pending", "private", "publish", "future"]
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Post excerpt."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Post slug."
+          },
+          "date": {
+            "type": "string",
+            "description": "Publication date in site timezone; use with future status."
+          }
+        },
+        "required": ["title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object",
+            "description": "Provider resource."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/posts",
+        "success": [201],
+        "result": {
+          "post": "{{response}}"
+        },
+        "body": {
+          "title": "{{title}}",
+          "content": "{{content}}",
+          "status": "{{status}}",
+          "excerpt": "{{excerpt}}",
+          "slug": "{{slug}}",
+          "date": "{{date}}"
+        }
+      }
+    },
+    "post.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 2097152,
+      "sideEffect": "write",
+      "title": "Update post",
+      "description": "Update supplied post fields; omitted fields are preserved. The user must have permission to edit this post.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Existing post ID."
+          },
+          "title": {
+            "type": "string",
+            "description": "Post title."
+          },
+          "content": {
+            "type": "string",
+            "description": "Post body, including supported HTML."
+          },
+          "status": {
+            "type": "string",
+            "description": "Publishing state; omitted create defaults to draft.",
+            "enum": ["draft", "pending", "private", "publish", "future"]
+          },
+          "excerpt": {
+            "type": "string",
+            "description": "Post excerpt."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Post slug."
+          },
+          "date": {
+            "type": "string",
+            "description": "Publication date in site timezone; use with future status."
+          }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "object",
+            "description": "Provider resource."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/posts/{{id}}",
+        "success": [200],
+        "result": {
+          "post": "{{response}}"
+        },
+        "body": {
+          "title": "{{title}}",
+          "content": "{{content}}",
+          "status": "{{status}}",
+          "excerpt": "{{excerpt}}",
+          "slug": "{{slug}}",
+          "date": "{{date}}"
+        }
+      }
+    }
+  },
+  "models": ["post", "user", "page", "category"]
+}
