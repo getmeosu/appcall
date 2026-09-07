@@ -100,11 +100,7 @@ impl DevelopmentBrowserHost {
                 fields: parsed.fields,
                 now: chrono::Utc::now().timestamp(),
             };
-            Ok(drive(dashboard.handle(&r), cancel)?.map(|r| RawResponse {
-                status: r.status,
-                headers: r.headers,
-                body: r.body.into_bytes(),
-            }))
+            Ok(drive(dashboard.handle(&r), cancel)?.map(crate::browser_host::web_response))
         });
         tokio::time::timeout(Duration::from_secs(15), task)
             .await

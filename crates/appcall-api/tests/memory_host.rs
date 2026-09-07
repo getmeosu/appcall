@@ -8,6 +8,43 @@ use std::{
 };
 
 const KEY: &str = "synthetic-memory-platform-key";
+#[test]
+fn signal_fonts_survive_real_http_without_text_conversion() {
+    let host = Host::start(&[]);
+    for name in [
+        "archivo-latin-variable.woff2",
+        "ibm-plex-mono-regular.woff2",
+        "ibm-plex-mono-medium.woff2",
+    ] {
+        let mut socket = TcpStream::connect(host.address).unwrap();
+        socket
+            .set_read_timeout(Some(Duration::from_secs(10)))
+            .unwrap();
+        write!(
+            socket,
+            "GET /static/fonts/{name} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+            host.address
+        )
+        .unwrap();
+        let mut bytes = Vec::new();
+        socket.read_to_end(&mut bytes).unwrap();
+        let split = bytes.windows(4).position(|v| v == b"\r\n\r\n").unwrap();
+        let headers = std::str::from_utf8(&bytes[..split])
+            .unwrap()
+            .to_ascii_lowercase();
+        assert!(headers.starts_with("http/1.1 200"), "{name}: {headers}");
+        assert!(headers.contains("content-type: font/woff2"));
+        assert!(headers.contains("x-content-type-options: nosniff"));
+        let expected = std::fs::read(format!(
+            "{}/../appcall-web/static/fonts/{name}",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap();
+        assert_eq!(&expected[..4], b"wOF2");
+        assert!(std::str::from_utf8(&expected).is_err());
+        assert_eq!(&bytes[split + 4..], expected);
+    }
+}
 struct Host {
     child: Child,
     address: SocketAddr,

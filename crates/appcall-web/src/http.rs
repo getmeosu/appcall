@@ -24,12 +24,15 @@ pub struct Response {
     pub status: u16,
     pub headers: Vec<(String, String)>,
     pub body: String,
+    /// Embedded binary assets bypass UTF-8 conversion. Text responses retain body.
+    pub binary_body: Option<&'static [u8]>,
 }
 impl Response {
     pub(crate) fn new(status: u16, body: String) -> Self {
         Self {
             status,
             body,
+            binary_body: None,
             headers: vec![
                 ("Cache-Control".into(), "no-store".into()),
                 ("Referrer-Policy".into(), "no-referrer".into()),

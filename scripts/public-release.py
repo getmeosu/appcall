@@ -34,10 +34,18 @@ EXACT_FILES = {
 }
 REQUIRED_THIRD_PARTY = {
     'third_party/NOTICE', 'third_party/anusa-sdk-go-NOTICE',
+    'third_party/licenses/archivo-LICENSE.txt',
+    'third_party/licenses/ibm-plex-mono-LICENSE.txt',
     *(f'third_party/licenses/{name}-LICENSE' for name in
       ('anusa-sdk-go', 'datastar', 'tailwindcss', 'activepieces')),
 }
 EXACT_FILES |= REQUIRED_THIRD_PARTY
+SIGNAL_FONTS = {
+    'crates/appcall-web/static/fonts/archivo-latin-variable.woff2': '8f704806dbedeaaeca334b11ec348bc3ac3a439d6431544b3afb54f534ee4967',
+    'crates/appcall-web/static/fonts/ibm-plex-mono-regular.woff2': 'ba204497f16b6d334cee9d1e963a831b73e3a56e1d6300a8489d18df7214b350',
+    'crates/appcall-web/static/fonts/ibm-plex-mono-medium.woff2': '33faf307fa6031fb4062276d7320a6d632de890cbb347576fd80cfa01077bc25',
+}
+EXACT_FILES |= SIGNAL_FONTS.keys()
 
 DENIED_PARTS = {
     '.git', '.agents', '.codex', '.claude', '.githooks', 'node_modules',
@@ -174,6 +182,10 @@ def audit(files):
         except (ValueError, KeyError, TypeError, AttributeError):
             errors.append(issue(policy_path, 'invalid-exception-policy'))
     for path, data in sorted(files.items()):
+        if path in SIGNAL_FONTS:
+            if hashlib.sha256(data).hexdigest() != SIGNAL_FONTS[path]:
+                errors.append(issue(path, 'font-asset-hash-mismatch'))
+            continue
         try:
             content = data.decode('utf-8')
         except UnicodeError:

@@ -251,13 +251,7 @@ impl BrowserHost {
                 fields: parsed.fields,
                 now: chrono::Utc::now().timestamp(),
             };
-            Ok(
-                drive(dashboard.handle(&request), cancel)?.map(|response| RawResponse {
-                    status: response.status,
-                    headers: response.headers,
-                    body: response.body.into_bytes(),
-                }),
-            )
+            Ok(drive(dashboard.handle(&request), cancel)?.map(web_response))
         })
         .await
     }
@@ -426,6 +420,35 @@ pub fn parse_request(request: &Request) -> Result<ParsedRequest> {
         fields,
     })
 }
+pub(crate) fn web_response(response: appcall_web::Response) -> RawResponse {
+    RawResponse {
+        status: response.status,
+        headers: response.headers,
+        body: response
+            .binary_body
+            .map_or_else(|| response.body.into_bytes(), |b| b.to_vec()),
+    }
+}
+
+#[test]
+fn browser_response_adapter_preserves_binary_and_utf8_contracts() {
+    for binary_body in [None, Some(&b"wOF2\xff\x00\xfe"[..])] {
+        let headers = vec![("Content-Type".into(), "font/woff2".into())];
+        let response = web_response(appcall_web::Response {
+            status: 200,
+            headers: headers.clone(),
+            body: "UTF-8 café ✓".into(),
+            binary_body,
+        });
+        assert_eq!(response.status, 200);
+        assert_eq!(response.headers, headers);
+        assert_eq!(
+            response.body,
+            binary_body.unwrap_or("UTF-8 café ✓".as_bytes())
+        );
+    }
+}
+
 pub fn public_path(method: &str, path: &str) -> bool {
     if !matches!(method, "GET" | "POST")
         || path.contains(['%', '\\'])
@@ -475,6 +498,9 @@ pub fn public_path(method: &str, path: &str) -> bool {
                 | "/static/palette.js"
                 | "/static/oauth-callback.js"
                 | "/static/favicon.svg"
+                | "/static/fonts/archivo-latin-variable.woff2"
+                | "/static/fonts/ibm-plex-mono-regular.woff2"
+                | "/static/fonts/ibm-plex-mono-medium.woff2"
         )
     {
         return true;
