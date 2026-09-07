@@ -157,7 +157,13 @@ async fn main() {
                 fields,
                 now: 1800000000,
             };
-            let response = if method == "GET" {
+            let response = if method == "GET" && parsed.path() == "/preview/components" {
+                let revision = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos();
+                Some(Response { status: 200, headers: vec![("Content-Type".into(), "text/html; charset=utf-8".into())], body: format!("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Signal component sheet</title><link rel=\"stylesheet\" href=\"/static/app.css?preview={revision}\"><script defer src=\"/static/dashboard.js?preview={revision}\"></script></head><body>{}</body></html>",ui::component_sheet()), binary_body: None })
+            } else if method == "GET" {
                 dashboard.handle(&request).await
             } else {
                 None

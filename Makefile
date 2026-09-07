@@ -41,11 +41,15 @@ run-auth: assets ## Run with Anusa-backed auth loaded from .env
 dev: run ## Run development API (rerun after source changes)
 
 .PHONY: test
-test: test-runner test-rust ## Run Bun and Rust tests
+test: test-runner test-web test-rust ## Run Bun and Rust tests
 
 .PHONY: test-runner
 test-runner: ## Run all Bun connector and supervisor tests
 	bun test runner/
+
+.PHONY: test-web
+test-web: ## Test delegated dashboard interactions
+	bun test crates/appcall-web/tests/dialog.test.js
 
 .PHONY: test-rust
 test-rust: ## Test Rust core, hosts and adapters

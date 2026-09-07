@@ -16,6 +16,33 @@
   });
 })();
 
+// Delegation survives Datastar replacements. Native dialog supplies the focus
+// trap and Escape/cancel behavior; close restores the actual invoking control.
+(() => {
+  const invokers = new WeakMap();
+  document.addEventListener('click', (event) => {
+    const trigger = event.target.closest?.('[data-confirm-open]');
+    if (trigger) {
+      if (trigger.disabled || trigger.getAttribute('aria-disabled') === 'true') return;
+      const dialog = document.getElementById(trigger.dataset.confirmOpen);
+      if (!dialog?.matches('dialog.ui-confirm-dialog') || dialog.open) return;
+      event.preventDefault();
+      invokers.set(dialog, trigger);
+      dialog.showModal();
+      dialog.querySelector('[data-confirm-cancel]')?.focus();
+      return;
+    }
+    const cancel = event.target.closest?.('[data-confirm-cancel]');
+    const dialog = cancel?.closest('dialog.ui-confirm-dialog');
+    if (dialog?.open) { event.preventDefault(); dialog.close(); }
+  });
+  document.addEventListener('close', (event) => {
+    const trigger = invokers.get(event.target);
+    if (trigger?.isConnected) trigger.focus();
+    invokers.delete(event.target);
+  }, true);
+})();
+
 // Keep the OAuth consent preview local; only image URLs with an HTTPS origin
 // are ever assigned. User strings are rendered through textContent.
 const brandingName = document.getElementById('wl-name');
