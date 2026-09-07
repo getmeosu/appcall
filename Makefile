@@ -49,7 +49,7 @@ test-runner: ## Run all Bun connector and supervisor tests
 
 .PHONY: test-web
 test-web: ## Test delegated dashboard interactions
-	bun test crates/appcall-web/tests/dialog.test.js
+	bun test crates/appcall-web/tests/*.test.js
 
 .PHONY: test-rust
 test-rust: ## Test Rust core, hosts and adapters

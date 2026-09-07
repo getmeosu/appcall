@@ -1,24 +1,255 @@
 use crate::{http::escape, Response, Session};
-const NAV: &[(&str, &str)] = &[
-    ("/app", "Getting Started"),
-    ("/app/toolkits", "Toolkits"),
-    ("/app/users", "Users"),
-    ("/app/sessions", "Sessions"),
-    ("/app/auth-configs", "Auth Configs"),
-    ("/app/triggers", "Triggers"),
-    ("/app/logs", "Logs"),
-    ("/app/qa", "QA"),
-    ("/app/support", "Support"),
-    ("/app/docs", "Documentation"),
-    ("/app/settings", "Settings"),
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn signal_navigation_and_accessibility() {
+        let s = Session {
+            user_id: "u".into(),
+            tenant_id: "t".into(),
+            tenant_name: "<Tenant>".into(),
+            email: "<email>".into(),
+            access_token: "a".into(),
+            refresh_token: "r".into(),
+        };
+        let html = layout("<Title>", &s, "<p>Content</p>", "/app");
+        for expected in [
+            ">BUILD<",
+            ">OBSERVE<",
+            ">Overview<",
+            ">Connectors<",
+            ">Connections<",
+            ">Events<",
+            "id=\"main-content\"",
+            "href=\"#main-content\"",
+            "aria-label=\"Search pages\"",
+            "/static/app.css?v=",
+            "&lt;Tenant&gt;",
+        ] {
+            assert!(html.contains(expected), "missing {expected}");
+        }
+        for forbidden in [
+            "h-screen",
+            "href=\"/app/runs\"",
+            "href=\"/app/qa\"",
+            "fonts.googleapis.com",
+        ] {
+            assert!(!html.contains(forbidden), "unexpected {forbidden}");
+        }
+    }
+    #[test]
+    fn active_routes_have_one_owner_and_segment_boundaries() {
+        for (path, expected) in [
+            ("/app", Some("/app")),
+            ("/app/toolkits/slack", Some("/app/toolkits")),
+            ("/app/toolkits-extra", None),
+            ("/app/settings/usage?month=9", Some("/app/settings/usage")),
+            ("/app/settings/account", Some("/app/settings")),
+            ("/app/users/member", Some("/app/settings")),
+            ("/app/sessions", Some("/app/settings")),
+            ("/app/support", Some("/app/settings")),
+            ("/app/runs", None),
+        ] {
+            assert_eq!(active_destination(path), expected, "{path}");
+            let s = Session {
+                user_id: String::new(),
+                tenant_id: String::new(),
+                tenant_name: String::new(),
+                email: String::new(),
+                access_token: String::new(),
+                refresh_token: String::new(),
+            };
+            let html = layout("Title", &s, "", path);
+            assert_eq!(
+                html.matches("aria-current=\"page\"").count(),
+                usize::from(expected.is_some())
+            );
+        }
+    }
+    #[test]
+    fn fingerprints_are_content_derived() {
+        assert_eq!(
+            asset_url("/static/test.js", b"abc"),
+            "/static/test.js?v=ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        assert_ne!(
+            asset_url("/static/test.js", b"old"),
+            asset_url("/static/test.js", b"new")
+        );
+    }
+    #[test]
+    fn shell_geometry_and_hidden_results_are_explicit() {
+        let css = include_str!("../static/dashboard.css");
+        for expected in [
+            "grid-template-columns: 236px",
+            "min-height: 48px",
+            "padding: 24px",
+            "max-width: 1279px",
+            "[hidden]",
+            "::backdrop",
+            ".shell-skip",
+        ] {
+            assert!(css.contains(expected), "missing {expected}");
+        }
+    }
+}
+#[derive(Clone, Copy, PartialEq)]
+enum Group {
+    Build,
+    Observe,
+    Footer,
+}
+struct Destination {
+    href: &'static str,
+    label: &'static str,
+    glyph: &'static str,
+    group: Group,
+}
+const NAV: &[Destination] = &[
+    Destination {
+        href: "/app",
+        label: "Overview",
+        glyph: "◫",
+        group: Group::Build,
+    },
+    Destination {
+        href: "/app/toolkits",
+        label: "Connectors",
+        glyph: "◇",
+        group: Group::Build,
+    },
+    Destination {
+        href: "/app/auth-configs",
+        label: "Connections",
+        glyph: "⇄",
+        group: Group::Build,
+    },
+    Destination {
+        href: "/app/logs",
+        label: "Logs",
+        glyph: "≡",
+        group: Group::Observe,
+    },
+    Destination {
+        href: "/app/triggers",
+        label: "Events",
+        glyph: "↯",
+        group: Group::Observe,
+    },
+    Destination {
+        href: "/app/settings/usage",
+        label: "Usage",
+        glyph: "▥",
+        group: Group::Observe,
+    },
+    Destination {
+        href: "/app/docs",
+        label: "Docs",
+        glyph: "▤",
+        group: Group::Footer,
+    },
+    Destination {
+        href: "/app/settings",
+        label: "Settings",
+        glyph: "⚙",
+        group: Group::Footer,
+    },
 ];
-// Markup/classes ported from internal/web/components/layout.templ. Assets are
-// copied verbatim so the Rust binary no longer needs the Go source tree.
-pub(crate) fn layout(title: &str, s: &Session, content: &str) -> String {
-    let nav=NAV.iter().map(|(href,label)|format!("<a href=\"{href}\" class=\"group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition text-dusk-blue-300 hover:bg-space-indigo-900 hover:text-dusk-blue-100\">{label}</a>")).collect::<String>();
-    let commands=NAV.iter().map(|(href,label)|format!("<a href=\"{href}\" data-cmd=\"{label}\" class=\"flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-dusk-blue-300 hover:bg-space-indigo-900 data-[active]:bg-space-indigo-800 data-[active]:text-dusk-blue-50\">{label}</a>")).collect::<String>();
+fn active_destination(path: &str) -> Option<&'static str> {
+    let path = path.split(['?', '#']).next().unwrap_or(path);
+    if ["/app/users", "/app/sessions", "/app/support"]
+        .iter()
+        .any(|prefix| owns_path(prefix, path))
+    {
+        return Some("/app/settings");
+    }
+    NAV.iter()
+        .filter(|item| owns_path(item.href, path))
+        .max_by_key(|item| item.href.len())
+        .map(|item| item.href)
+}
+fn owns_path(prefix: &str, path: &str) -> bool {
+    path == prefix
+        || (prefix != "/app"
+            && path
+                .strip_prefix(prefix)
+                .is_some_and(|rest| rest.starts_with('/')))
+}
+fn asset_url(path: &str, contents: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let hash = Sha256::digest(contents)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    format!("{path}?v={hash}")
+}
+fn shell_button(label: &str, action: crate::ui::ShellAction) -> String {
+    let mut button = crate::ui::Button::new(label);
+    button.variant = crate::ui::ButtonVariant::Quiet;
+    button.shell_action = Some(action);
+    button.render()
+}
+pub(crate) fn layout(title: &str, s: &Session, content: &str, path: &str) -> String {
+    use crate::ui::{Control, Field, InputType, ShellAction};
+    let owner = active_destination(path);
+    let mut nav = String::new();
+    for (group, name) in [
+        (Group::Build, "BUILD"),
+        (Group::Observe, "OBSERVE"),
+        (Group::Footer, "RESOURCES"),
+    ] {
+        if group == Group::Footer {
+            nav.push_str("<div class=\"shell-nav-footer\">");
+        } else {
+            nav.push_str(&format!(
+                "<div class=\"shell-nav-group\"><p class=\"shell-group-label\">{name}</p>"
+            ));
+        }
+        for item in NAV.iter().filter(|item| item.group == group) {
+            let current = if owner == Some(item.href) {
+                " aria-current=\"page\""
+            } else {
+                ""
+            };
+            nav.push_str(&format!("<a href=\"{}\" title=\"{}\" aria-label=\"{}\"{current}><span class=\"shell-nav-glyph\" aria-hidden=\"true\">{}</span><span class=\"shell-nav-label\">{}</span></a>", item.href, item.label, item.label, item.glyph, item.label));
+        }
+        nav.push_str("</div>");
+    }
+    let commands = NAV
+        .iter()
+        .map(|item| {
+            format!(
+                "<a href=\"{}\" data-cmd=\"{}\">{}</a>",
+                item.href, item.label, item.label
+            )
+        })
+        .collect::<String>();
+    let mut field = Field::new(
+        "cmdk-input",
+        "search",
+        "Search pages",
+        Control::Input(InputType::Search),
+    );
+    field.placeholder = "Search pages…";
+    field.autocomplete = Some("off");
+    field.aria_label = Some("Search pages");
+    let search_field = field.render();
+    let menu = shell_button("Menu", ShellAction::Navigation);
+    let close_nav = shell_button("Close navigation", ShellAction::CloseNavigation);
+    let search = shell_button("Search · ⌘K", ShellAction::Search);
+    let close_search = shell_button("Close search", ShellAction::CloseSearch);
+    let app_css = asset_url("/static/app.css", include_bytes!("../static/app.css"));
+    let dashboard_css = asset_url(
+        "/static/dashboard.css",
+        include_bytes!("../static/dashboard.css"),
+    );
+    let dashboard_js = asset_url(
+        "/static/dashboard.js",
+        include_bytes!("../static/dashboard.js"),
+    );
+    let palette_js = asset_url("/static/palette.js", include_bytes!("../static/palette.js"));
     format!(
-        r#"<!DOCTYPE html><html lang="en" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{title} · appcall</title><link rel="icon" type="image/svg+xml" href="/static/favicon.svg"><link rel="preload" href="/static/fonts/archivo-latin-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/static/fonts/ibm-plex-mono-regular.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/static/app.css"><link rel="stylesheet" href="/static/dashboard.css"><script src="/static/dashboard.js" defer></script><script type="module" src="/static/datastar.js"></script><script src="/static/palette.js" defer></script></head><body data-dashboard class="h-screen overflow-hidden bg-surface text-dusk-blue-100 antialiased"><div class="flex h-screen"><button id="nav-backdrop" aria-label="Close navigation" type="button"></button><aside id="dashboard-sidebar" class="flex w-64 shrink-0 flex-col border-r border-space-indigo-800 bg-prussian-blue-900"><div class="flex h-14 items-center gap-2.5 border-b border-space-indigo-800 px-4"><div class="flex size-7 shrink-0 items-center justify-center rounded-md bg-neon-ice-500 font-semibold text-prussian-blue-950">a</div><div class="flex min-w-0 flex-col"><span class="text-sm font-semibold leading-tight tracking-tight text-dusk-blue-50">appcall</span><span class="truncate text-[11px] leading-tight text-dusk-blue-400">{tenant}</span></div></div><div class="mx-3 mt-3 rounded-lg border border-space-indigo-800 bg-space-indigo-950 px-3 py-2"><span class="flex min-w-0 flex-col"><span class="text-[11px] uppercase tracking-wider text-dusk-blue-500">Project</span><span class="truncate text-sm font-medium text-dusk-blue-100">{tenant}</span></span></div><nav class="mt-4 flex flex-1 flex-col gap-0.5 overflow-y-auto px-3">{nav}</nav><div class="border-t border-space-indigo-800 p-3"><div class="flex items-center gap-2.5 rounded-lg px-2 py-1.5"><span class="min-w-0 flex-1 truncate text-xs text-dusk-blue-300">{email}</span><a href="/app/logout" class="text-dusk-blue-500 transition hover:text-neon-ice-400" title="Sign out">Sign out</a></div></div></aside><div class="flex min-w-0 flex-1 flex-col"><header class="flex h-14 shrink-0 items-center gap-4 border-b border-space-indigo-800 bg-prussian-blue-950/60 px-8 backdrop-blur"><button id="nav-toggle" type="button" aria-controls="dashboard-sidebar" aria-expanded="false">Menu</button><h1 class="text-sm font-semibold text-dusk-blue-50">{title}</h1><div class="flex-1"></div><button type="button" data-cmdk-open class="flex items-center gap-2 rounded-lg border border-space-indigo-800 bg-space-indigo-950 px-3 py-1.5 text-sm text-dusk-blue-400 transition hover:border-space-indigo-700"><span>Search</span><kbd class="rounded border border-space-indigo-700 px-1.5 text-[11px] text-dusk-blue-500">⌘K</kbd></button></header><main class="flex-1 overflow-y-auto px-8 py-7">{content}</main></div></div><div id="cmdk" hidden class="fixed inset-0 z-50 flex items-start justify-center bg-prussian-blue-950/70 px-4 pt-[12vh] backdrop-blur-sm"><div class="w-full max-w-lg overflow-hidden rounded-xl border border-space-indigo-700 bg-space-indigo-950 shadow-2xl"><div class="flex items-center gap-2 border-b border-space-indigo-800 px-4"><input id="cmdk-input" type="text" placeholder="Search pages…" autocomplete="off" class="w-full bg-transparent py-3.5 text-sm text-dusk-blue-100 placeholder:text-dusk-blue-600 focus:outline-none"><kbd class="rounded border border-space-indigo-700 px-1.5 text-[11px] text-dusk-blue-500">esc</kbd></div><div id="cmdk-list" class="max-h-80 overflow-y-auto p-2">{commands}</div></div></div></body></html>"#,
+        r##"<!DOCTYPE html><html lang="en" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{title} · appcall</title><link rel="icon" type="image/svg+xml" href="/static/favicon.svg"><link rel="preload" href="/static/fonts/archivo-latin-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/static/fonts/ibm-plex-mono-regular.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="{app_css}"><link rel="stylesheet" href="{dashboard_css}"><script src="{dashboard_js}" defer></script><script type="module" src="/static/datastar.js"></script><script src="{palette_js}" defer></script></head><body data-dashboard><a class="shell-skip" href="#main-content">Skip to content</a><div class="shell"><aside id="dashboard-sidebar" aria-label="Workspace navigation"><div class="shell-brand"><span class="shell-mark" aria-hidden="true">a</span><span class="shell-brand-name">appcall</span>{close_nav}</div><div class="shell-project"><span class="shell-group-label">Project</span><span title="{tenant}">{tenant}</span></div><nav aria-label="Main navigation">{nav}</nav><div class="shell-account"><span title="{email}">{email}</span><a href="/app/logout" aria-label="Sign out">Sign out</a></div></aside><div id="shell-workspace"><header class="shell-topbar">{menu}<span class="shell-breadcrumb">{title}</span>{search}</header><main id="main-content" tabindex="-1">{content}</main></div></div><dialog id="nav-drawer" aria-label="Workspace navigation"></dialog><dialog id="cmdk" aria-label="Search pages"><div class="shell-search-heading">{search_field}{close_search}</div><div id="cmdk-list">{commands}</div><p id="cmdk-status" role="status" aria-live="polite"></p><p class="shell-search-help">↑ ↓ to choose · Enter to open · Esc to close</p></dialog></body></html>"##,
         title = escape(title),
         tenant = escape(&s.tenant_name),
         email = escape(&s.email)

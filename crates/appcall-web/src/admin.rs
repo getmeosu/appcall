@@ -53,6 +53,7 @@ impl Browser<'_> {
                         },
                         &session,
                         &(crate::admin_ui::flash(r).unwrap_or_default() + &response.body),
+                        r.path,
                     );
                 }
                 response
@@ -83,6 +84,7 @@ impl Browser<'_> {
                         },
                         false,
                     ),
+                    r.path,
                 ),
             ),
             Err(e) => Response::new(
