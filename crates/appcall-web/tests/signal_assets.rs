@@ -2,6 +2,37 @@ use appcall_web::*;
 use std::{collections::BTreeMap, future::Future, pin::Pin};
 
 struct Data;
+
+#[tokio::test]
+async fn logs_client_is_embedded_fingerprinted_and_get_only() {
+    use sha2::{Digest, Sha256};
+    let dashboard = DevelopmentDashboard {
+        public_origin: "http://127.0.0.1:5080",
+        data: &Data,
+    };
+    let asset = dashboard.handle(&request("/static/logs.js")).await.unwrap();
+    assert_eq!(asset.status, 200, "Logs client must be served");
+    let source =
+        std::fs::read_to_string(format!("{}/static/logs.js", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    assert_eq!(asset.body, source);
+    assert!(asset
+        .headers
+        .contains(&("Content-Type".into(), "text/javascript".into())));
+    assert!(asset
+        .headers
+        .contains(&("X-Content-Type-Options".into(), "nosniff".into())));
+    let hash: String = Sha256::digest(source.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    let page = dashboard.handle(&request("/app/settings")).await.unwrap();
+    assert!(page
+        .body
+        .contains(&format!("src=\"/static/logs.js?v={hash}\" defer")));
+    let mut post = request("/static/logs.js");
+    post.method = "POST";
+    assert_eq!(dashboard.handle(&post).await.unwrap().status, 405);
+}
 fn request(path: &str) -> Request<'_> {
     Request {
         method: "GET",

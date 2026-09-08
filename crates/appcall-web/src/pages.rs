@@ -260,17 +260,14 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
    let items=rows(v,&["connections","rows","items"])?;
    header("Auth Configs","Connections authorize accounts for use with connectors.")+&if items.is_empty(){empty("No connections to show.","Browse connectors to configure a connection.","Browse connectors","/app/toolkits")}else{table(items,&[("Connector","connector"),("Auth Type","authType"),("Status","status"),("Last Test","lastTest")],Some(("/app/auth-configs","id",&["test","disconnect"])))?}
   },
-  Op::Logs=>{
-   let items=rows(v,&["logs","items","rows"])?;
-   header("Logs","Inspect recorded tool executions.")+"<div class=\"flex items-center gap-2\"><a href=\"/app/logs\">All</a><a href=\"/app/logs?status=succeeded\">Succeeded</a><a href=\"/app/logs?status=failed\">Failed</a></div>"+&if items.is_empty(){if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No tool runs match these filters.","Clear the filters to view recorded runs.","Clear filters","/app/logs")}else{empty("No tool runs to show.","Browse connectors to choose a tool to run.","Browse connectors","/app/toolkits")}}else{table(items,&[("Time","createdAt"),("Connector","connector"),("Action","action"),("Status","status"),("Error Code","errorCode"),("Request ID","requestId")],Some(("/app/logs","requestId",&[])))?}
-  },
+  Op::Logs=>crate::logs::render(v, &crate::logs::Filters::default(), v.get("hasFilters").and_then(Value::as_bool)==Some(true))?,
   Op::Triggers=>{
    let items=rows(v,&["events","items","rows"])?;
    let mut events=table(items,&[("Connector","connector"),("Operation","operation"),("Connection","connectionId"),("Received","createdAt")],Some(("/app/triggers","id",&["replay"])))?.replace("<tbody class=", "<tbody id=\"trigger-rows\" aria-live=\"polite\" class=").replace("<table class=", "<table data-init=\"@get('/app/triggers/stream')\" class=");
    if items.is_empty(){events=events.replace("</tbody>",&format!("<tr id=\"trigger-empty-state\"><td colspan=\"5\">{}</td></tr></tbody>",empty("No webhook events to show.","Browse connectors to inspect their declared events.","Browse connectors","/app/toolkits")));}
    header("Triggers","Receive and replay provider webhook events.")+&events
   },
-  Op::Trace=>{let id=resource.ok_or(Error::Invalid)?; header("Request Trace",id)+&json(v)+&confirmation(&format!("/app/logs/{id}/replay"),"Run this again","Run this tool again?",&format!("Run the tool for recorded request {id} again using saved input? This creates another tool execution and may repeat changes at the provider."))?},
+  Op::Trace=>crate::trace::standalone(v, resource.ok_or(Error::Invalid)?)?,
   Op::Qa if v.get("unavailable").and_then(Value::as_bool)==Some(true)=>header("QA","Connector certification and manifest fingerprint drift.")+&card("<p>QA status unavailable</p><p class=\"text-sm text-dusk-blue-400\">Configure PostgreSQL and run connector QA to view certification results.</p>"),
   Op::Qa=>{
    let items=rows(v,&["certifications","rows","items"])?;

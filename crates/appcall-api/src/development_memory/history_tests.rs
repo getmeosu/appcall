@@ -3,6 +3,116 @@ use crate::{Identity, Request};
 use appcall_actions::{ActionRepository, Attempt};
 use appcall_store::{AuthType, Connection, CredentialOwner, Status, TestStatus};
 use std::sync::Arc;
+#[test]
+fn action_created_bounds_match_edges_filters_and_tuple_pagination() {
+    use chrono::DateTime;
+    use serde_json::{json, Value};
+    let repo = fixture();
+    {
+        let mut data = repo.lock().unwrap();
+        for (id, at, brand, project) in [
+            ("old", "2026-09-07T09:59:59Z", "brand", "proj_dev"),
+            ("a", "2026-09-07T10:00:00Z", "brand", "proj_dev"),
+            ("b", "2026-09-07T10:00:00Z", "brand", "proj_dev"),
+            ("end", "2026-09-07T11:00:00Z", "brand", "proj_dev"),
+            ("other-brand", "2026-09-07T10:00:00Z", "other", "proj_dev"),
+            ("other-project", "2026-09-07T10:00:00Z", "brand", "other"),
+        ] {
+            data.action_logs.insert(
+                id.into(),
+                super::state::ActionLog {
+                    attempt: Attempt {
+                        request_id: "request".into(),
+                        project_id: project.into(),
+                        connection_id: "c".into(),
+                        connector: "slack".into(),
+                        external_account_id: brand.into(),
+                        action: "messages.send".into(),
+                        key: id.into(),
+                        input_hash: "hash".into(),
+                        lease_ms: 1000,
+                    },
+                    status: "failed".into(),
+                    error_code: "ACTION_TIMEOUT".into(),
+                    created_at: DateTime::parse_from_rfc3339(at).unwrap().to_utc(),
+                },
+            );
+        }
+    }
+    let history = MemoryHistory::new(repo);
+    let read = |query: &str| -> Value {
+        history
+            .read(
+                &identity("brand"),
+                &url::Url::parse(&format!("http://x/v1/action-logs?{query}")).unwrap(),
+            )
+            .unwrap()
+            .unwrap()
+            .body
+    };
+    let bounds = "createdFrom=2026-09-07T15:30:00%2B05:30&createdBefore=2026-09-07T11:00:00Z";
+    let combined = format!("{bounds}&connectionId=c&connector=slack&action=messages.send&requestId=request&status=failed&errorCode=ACTION_TIMEOUT");
+    let page = read(&format!("{combined}&limit=1"));
+    assert_eq!(page["logs"][0]["id"], "b");
+    assert_eq!(page["pagination"]["hasMore"], true);
+    let next = read(&format!(
+        "{combined}&limit=1&cursor={}",
+        page["pagination"]["nextCursor"].as_str().unwrap()
+    ));
+    assert_eq!(next["logs"][0]["id"], "a");
+    assert_eq!(next["pagination"]["hasMore"], false);
+    for filter in [
+        "connectionId=missing",
+        "connector=missing",
+        "action=missing",
+        "requestId=missing",
+        "status=succeeded",
+        "errorCode=ACTION_FAILED",
+    ] {
+        assert_eq!(read(&format!("{bounds}&{filter}"))["logs"], json!([]));
+    }
+    assert_eq!(
+        read("createdBefore=2026-09-07T10:00:00Z")["logs"][0]["id"],
+        "old"
+    );
+    assert_eq!(
+        read("createdFrom=2026-09-07T11:00:00Z")["logs"][0]["id"],
+        "end"
+    );
+    assert_eq!(
+        read("createdFrom=&createdBefore=")["logs"]
+            .as_array()
+            .unwrap()
+            .len(),
+        4
+    );
+    let after_nano = read("createdFrom=2026-09-07T10:00:00.0000001Z");
+    assert_eq!(after_nano["logs"].as_array().unwrap().len(), 1);
+    assert_eq!(after_nano["logs"][0]["id"], "end");
+    assert_eq!(
+        read("createdBefore=2026-09-07T10:00:00.0000001Z")["logs"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    assert_eq!(
+        read("createdFrom=2026-09-07T09:59:59.9999999Z")["logs"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    let before_rollover = read("createdBefore=2026-09-07T09:59:59.9999999Z");
+    assert_eq!(before_rollover["logs"].as_array().unwrap().len(), 1);
+    assert_eq!(before_rollover["logs"][0]["id"], "old");
+    assert_eq!(
+        read("createdFrom=2026-09-07T10:00:00.0000001Z&createdBefore=2026-09-07T10:00:00.0000002Z")
+            ["logs"],
+        json!([])
+    );
+}
+
 pub(super) fn fixture() -> MemoryRepository {
     let registry = appcall_connectors::Registry::load("../../runner/connectors").unwrap();
     let repo = MemoryRepository::new(
