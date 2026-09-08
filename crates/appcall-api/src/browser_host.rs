@@ -657,6 +657,10 @@ impl ApiDashboard {
     }
     async fn run(&self, r: DashboardRequest) -> std::result::Result<Value, DashboardFailure> {
         use appcall_web::Error;
+        // Global certification data requires trusted operator authority, not tenant grants.
+        if r.operation == appcall_web::DashboardOperation::Qa {
+            return Err(Error::Forbidden.into());
+        }
         let account = r
             .account_id
             .as_deref()

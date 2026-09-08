@@ -5,7 +5,7 @@ pub(crate) fn title(op: Op) -> &'static str {
         Op::Overview => "Getting Started",
         Op::Catalog | Op::Toolkit | Op::Setup => "Toolkits",
         Op::AuthConfigs => "Auth Configs",
-        Op::Triggers => "Triggers",
+        Op::Triggers => "Events",
         Op::Logs | Op::Trace => "Logs",
         Op::Qa => "QA",
         Op::Usage => "Usage",
@@ -161,19 +161,14 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
    let items=rows(v,&["logs","items","rows"])?;
    header("Logs","Inspect recorded tool executions.")+"<div class=\"flex items-center gap-2\"><a href=\"/app/logs\">All</a><a href=\"/app/logs?status=succeeded\">Succeeded</a><a href=\"/app/logs?status=failed\">Failed</a></div>"+&if items.is_empty(){if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No tool runs match these filters.","Clear the filters to view recorded runs.","Clear filters","/app/logs")}else{empty("No tool runs to show.","Browse connectors to choose a tool to run.","Browse connectors","/app/toolkits")}}else{table(items,&[("Time","createdAt"),("Connector","connector"),("Action","action"),("Status","status"),("Error Code","errorCode"),("Request ID","requestId")],Some(("/app/logs","requestId",&[])))?}
   },
-  Op::Triggers=>{
-   let items=rows(v,&["events","items","rows"])?;
-   let mut events=table(items,&[("Connector","connector"),("Operation","operation"),("Connection","connectionId"),("Received","createdAt")],Some(("/app/triggers","id",&["replay"])))?.replace("<tbody class=", "<tbody id=\"trigger-rows\" aria-live=\"polite\" class=").replace("<table class=", "<table data-init=\"@get('/app/triggers/stream')\" class=");
-   if items.is_empty(){events=events.replace("</tbody>",&format!("<tr id=\"trigger-empty-state\"><td colspan=\"5\">{}</td></tr></tbody>",empty("No webhook events to show.","Browse connectors to inspect their declared events.","Browse connectors","/app/toolkits")));}
-   header("Triggers","Receive and replay provider webhook events.")+&events
-  },
+  Op::Triggers=>crate::remaining_pages::events(v)?,
   Op::Trace=>{let id=resource.ok_or(Error::Invalid)?; header("Request Trace",id)+&json(v)+&confirmation(&format!("/app/logs/{id}/replay"),"Run this again","Run this tool again?",&format!("Run the tool for recorded request {id} again using saved input? This creates another tool execution and may repeat changes at the provider."))?},
   Op::Qa if v.get("unavailable").and_then(Value::as_bool)==Some(true)=>header("QA","Connector certification and manifest fingerprint drift.")+&card("<p>QA status unavailable</p><p class=\"text-sm text-dusk-blue-400\">Configure PostgreSQL and run connector QA to view certification results.</p>"),
   Op::Qa=>{
    let items=rows(v,&["certifications","rows","items"])?;
    header("QA","Connector certification and manifest fingerprint drift.")+&if items.is_empty(){"<section class=\"ui-empty-state\" aria-labelledby=\"qa-empty-heading\"><h3 id=\"qa-empty-heading\">No connector QA results to show.</h3><p>Connector QA results are not available in this list.</p></section>".into()}else{table(items,&[("Connector","connector"),("Status","status"),("Total","total"),("Passed","passed"),("Failed","failed"),("Not certified","notCertified"),("Manifest drift","drifted"),("Manifest fingerprint","manifestFingerprint"),("Last run","certifiedAt")],None)?}
   },
-  Op::Usage=>{let mut body=header("Usage",string(v,&["month"]));body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");for (label,key) in [("Tool calls","toolCalls"),("Synced records","syncedRecords"),("Webhook events","webhookEvents")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?));}body.push_str("</div>");body},
+  Op::Usage=>crate::remaining_pages::usage(v)?,
   Op::Branding=>crate::branding::render(v),
   Op::Test=>crate::toolkit::result(Some(v)),
   Op::Setup=>json(v),
@@ -248,9 +243,9 @@ fn table(
 }
 pub(crate) fn static_page(path: &str) -> String {
     if path == "/app/support" {
-        return header("Support","Contact the team for help with connectors, the API, or your account.")+&card("<p class=\"text-sm font-medium text-dusk-blue-100\">Email support</p><a href=\"mailto:info@manavritti.com\" class=\"mt-3 inline-flex items-center gap-2 rounded-lg bg-neon-ice-500 px-3.5 py-2 text-sm font-semibold text-prussian-blue-950\">info@manavritti.com</a>");
+        return crate::remaining_pages::heading("Help","Contact the team for help with connectors, the API, or your account.")+&crate::remaining_pages::panel("<p class=\"text-sm font-medium text-ink-100\">Email support</p><a href=\"mailto:info@manavritti.com\" class=\"remaining-contact-link\">info@manavritti.com</a>");
     }
-    let mut content = header(
+    let mut content = crate::remaining_pages::heading(
         "Documentation",
         "Guides and API reference for building on appcall.",
     );
@@ -276,7 +271,7 @@ pub(crate) fn static_page(path: &str) -> String {
             "/app/logs",
         ),
     ] {
-        content.push_str(&format!("<a href=\"{href}\" class=\"flex items-center justify-between rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-4 transition hover:border-space-indigo-700\"><span><span class=\"block text-sm font-medium text-dusk-blue-100\">{title}</span><span class=\"mt-0.5 block text-sm text-dusk-blue-500\">{body}</span></span><span class=\"text-dusk-blue-500\">→</span></a>"));
+        content.push_str(&format!("<a href=\"{href}\" class=\"flex items-center justify-between rounded-panel border border-line bg-panel p-4 transition hover:border-iris-400\"><span><span class=\"block text-sm font-medium text-ink-100\">{title}</span><span class=\"mt-0.5 block text-sm text-ink-300\">{body}</span></span><span class=\"text-ink-300\">→</span></a>"));
     }
     content
 }

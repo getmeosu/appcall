@@ -148,6 +148,10 @@ impl DashboardRenderer<'_> {
             ));
         }
         let operation = operation.ok_or(Error::Invalid)?;
+        // No trusted operator authority is configured; tenant grants cannot authorize QA.
+        if operation == DashboardOperation::Qa {
+            return Err(Error::Forbidden);
+        }
         let has_filters = match operation {
             DashboardOperation::Catalog => !r.field("category")?.is_empty(),
             DashboardOperation::Logs => ["status", "connector", "action", "connectionId"]

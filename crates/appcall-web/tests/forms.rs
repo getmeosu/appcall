@@ -242,7 +242,8 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
         tbody.find("/app/triggers/second/replay").unwrap()
             < tbody.find("/app/triggers/first/replay").unwrap()
     );
-    assert_eq!(tbody.matches("<tr ").count(), 2);
+    // Rows now inherit table styling; an opening tag need not have attributes.
+    assert_eq!(tbody.matches("</tr>").count(), 2);
     for invalid in ["", "../bad", "a\nevent: injected"] {
         assert_eq!(
             render_trigger_patch(&json!({"id":invalid})),
