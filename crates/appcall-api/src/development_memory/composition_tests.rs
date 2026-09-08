@@ -92,7 +92,7 @@ async fn logs_dashboard_invalid_filter_classifications_memory() {
     .await;
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn copy_dashboard_failures_have_backend_parity_memory() {
     let transport = copy_failure_cases::TransportServer::new();
     let (backend, dashboard) = composition_with_manifest_and_runner(
@@ -164,6 +164,10 @@ async fn copy_dashboard_failures_have_backend_parity_memory() {
         &transport.calls,
     )
     .await;
+    assert!(
+        transport.calls.load(std::sync::atomic::Ordering::SeqCst) > 0,
+        "transport fixture must observe a runner request"
+    );
 }
 
 #[tokio::test]
