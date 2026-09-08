@@ -34,6 +34,13 @@ impl TokenProvider for NoTokens {
     }
 }
 fn fixture(url: &str, runtime: tokio::runtime::Handle) -> (MemoryRepository, MemorySetup) {
+    fixture_with_effects(url, runtime, 1)
+}
+fn fixture_with_effects(
+    url: &str,
+    runtime: tokio::runtime::Handle,
+    effects: usize,
+) -> (MemoryRepository, MemorySetup) {
     let manifest = serde_json::json!({"key":"keyed","name":"Keyed","version":"1","runtime":"bun","models":["item"],"auth":{"type":"api_key","setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"API Key","required":true,"secret":true}]}},"network":{"egress":"none"},"operations":{"write":{"kind":"action","timeoutMs":1000,"maxInputBytes":1024,"maxResponseBytes":1024,"sideEffect":"write"}}});
     let registry =
         appcall_connectors::Registry::from_connectors([appcall_connectors::Connector::from_bytes(
@@ -45,7 +52,7 @@ fn fixture(url: &str, runtime: tokio::runtime::Handle) -> (MemoryRepository, Mem
         DevelopmentPermit::validate(false, None).unwrap(),
         Arc::new(registry),
         MemoryLimits {
-            concurrent_effects: 1,
+            concurrent_effects: effects,
             ..Default::default()
         },
     )
@@ -97,6 +104,128 @@ fn attempt(id: &str) -> Attempt {
         key: id.into(),
         input_hash: "hash".into(),
         lease_ms: 10000,
+    }
+}
+
+#[test]
+fn selected_setup_rejects_authorizing_without_mutation() {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .unwrap();
+    let (repo, _) = fixture("http://127.0.0.1:1", rt.handle().clone());
+    let (mut current, revision) = repo.get_connection("proj_dev", Some("brand"), "c").unwrap();
+    current.status = Status::Authorizing;
+    repo.replace_connection("proj_dev", Some("brand"), revision, current, None)
+        .unwrap();
+    let before = repo.get_connection("proj_dev", Some("brand"), "c").unwrap();
+    let oauth =
+        Arc::new(MemoryOAuth::new(repo.clone(), BTreeMap::new(), Arc::new(NoTokens)).unwrap());
+    let setup = MemorySetup::new(repo.clone(), None, oauth);
+    let fields = BTreeMap::from([("apiKey".into(), "replacement-synthetic".into())]);
+    let result = setup.submit_checked("proj_dev", Some("brand"), "keyed", "", &fields, &|| true);
+    assert!(
+        matches!(result, Err(appcall_setup::Error::Conflict)),
+        "selected authorizing row must not be overwritten"
+    );
+    assert_eq!(
+        repo.get_connection("proj_dev", Some("brand"), "c").unwrap(),
+        before
+    );
+}
+
+#[test]
+fn concurrent_memory_reuse_is_atomic_but_explicit_new_and_accounts_stay_distinct() {
+    for (explicit_new, separate_accounts) in [(true, false), (false, true), (false, false)] {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()
+            .unwrap();
+        let (repo, setup) = fixture_with_effects(
+            &format!("http://{}", listener.local_addr().unwrap()),
+            rt.handle().clone(),
+            2,
+        );
+        let server = std::thread::spawn(move || {
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            let mut pending = Vec::new();
+            // Both lookups precede validation in the regression. Do not release
+            // either validator until both requests reached the fixture server.
+            while pending.len() < 2 {
+                match listener.accept() {
+                    Ok((mut socket, _)) => {
+                        socket.set_nonblocking(false).unwrap();
+                        let request = rpc(&mut socket);
+                        pending.push((socket, request));
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        assert!(
+                            std::time::Instant::now() < deadline,
+                            "both concurrent validators must arrive before release"
+                        );
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(error) => panic!("synthetic validator accept failed: {error}"),
+                }
+            }
+            for (mut socket, request) in pending {
+                reply(&mut socket, &request);
+            }
+        });
+        let spawn = |account: &'static str| {
+            let setup = setup.clone();
+            std::thread::spawn(move || {
+                let fields = BTreeMap::from([("apiKey".into(), "synthetic-concurrent-key".into())]);
+                if explicit_new {
+                    setup.submit_new_checked(
+                        "proj_dev",
+                        Some(account),
+                        "keyed",
+                        "",
+                        &fields,
+                        &|| true,
+                    )
+                } else {
+                    setup.submit_checked("proj_dev", Some(account), "keyed", "", &fields, &|| true)
+                }
+            })
+        };
+        let first = spawn("concurrent-a");
+        let second = spawn(if separate_accounts {
+            "concurrent-b"
+        } else {
+            "concurrent-a"
+        });
+        let first = first.join().unwrap();
+        let second = second.join().unwrap();
+        server.join().unwrap();
+        let first = first.unwrap();
+        let second = second.unwrap();
+        let first_rows = setup.list("proj_dev", Some("concurrent-a")).unwrap();
+        if explicit_new {
+            assert_ne!(first.id, second.id);
+            assert_eq!(first_rows.len(), 2);
+        } else if separate_accounts {
+            assert_ne!(first.id, second.id);
+            assert_eq!(first_rows.len(), 1);
+            assert_eq!(
+                setup.list("proj_dev", Some("concurrent-b")).unwrap().len(),
+                1
+            );
+            assert!(repo
+                .get_connection("proj_dev", Some("concurrent-a"), &second.id)
+                .is_err());
+        } else {
+            assert_eq!(
+                first.id, second.id,
+                "reuse submissions must converge on one identity"
+            );
+            assert_eq!(first_rows.len(), 1);
+        }
     }
 }
 fn rpc(socket: &mut std::net::TcpStream) -> serde_json::Value {

@@ -4,6 +4,8 @@ use super::*;
 pub enum Scenario {
     Preview,
     Populated,
+    Connections,
+    ConnectionsMalformed,
     Logs,
     Logs401,
     Logs403,
@@ -56,6 +58,8 @@ impl Scenario {
         Ok(match name {
             "preview" => Self::Preview,
             "populated" => Self::Populated,
+            "connections" => Self::Connections,
+            "connections-malformed" => Self::ConnectionsMalformed,
             "logs" => Self::Logs,
             "logs-401" => Self::Logs401,
             "logs-403" => Self::Logs403,

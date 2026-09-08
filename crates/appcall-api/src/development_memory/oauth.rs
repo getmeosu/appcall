@@ -195,20 +195,7 @@ impl MemoryOAuth {
                     .get_connection(project, account, id)
                     .map_err(memory_error)?,
             ),
-            None => self
-                .repository
-                .list_connections(project, account)
-                .map_err(memory_error)?
-                .into_iter()
-                .find(|c| {
-                    c.connector == connector && c.external_account_id == account.unwrap_or_default()
-                })
-                .map(|c| {
-                    self.repository
-                        .get_connection(project, account, &c.id)
-                        .map_err(memory_error)
-                })
-                .transpose()?,
+            None => None,
         };
         if selected.as_ref().is_some_and(|(c, _)| {
             c.connector != connector
