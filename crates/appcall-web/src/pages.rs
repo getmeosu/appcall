@@ -160,15 +160,15 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::Logs=>crate::logs::render(v, &crate::logs::Filters::default(), v.get("hasFilters").and_then(Value::as_bool)==Some(true))?,
   Op::Events=>{
    let items=rows(v,&["events","items","rows"])?;
-   let mut events=table(items,&[("Connector","connector"),("Operation","operation"),("Connection","connectionId"),("Received","createdAt")],Some(("/app/events","id",&["replay"])))?.replace("<tbody class=", "<tbody id=\"trigger-rows\" aria-live=\"polite\" class=").replace("<table class=", "<table data-init=\"@get('/app/events/stream')\" class=");
+   let mut events=table(items,&[("Connector","connector"),("Tool","operation"),("Connection","connectionId"),("Received","createdAt")],Some(("/app/events","id",&["replay"])))?.replace("<tbody class=", "<tbody id=\"trigger-rows\" aria-live=\"polite\" class=").replace("<table class=", "<table data-init=\"@get('/app/events/stream')\" class=");
    if items.is_empty(){events=events.replace("</tbody>",&format!("<tr id=\"trigger-empty-state\"><td colspan=\"5\">{}</td></tr></tbody>",empty("No webhook events to show.","Browse connectors to inspect their declared events.","Browse connectors","/app/connectors")));}
    header("Events","Receive and replay provider webhook events.")+&events
   },
   Op::Trace=>crate::trace::standalone(v, resource.ok_or(Error::Invalid)?)?,
-  Op::Certification if v.get("unavailable").and_then(Value::as_bool)==Some(true)=>header("Certification","Connector certification and manifest fingerprint drift.")+&card("<p>QA status unavailable</p><p class=\"text-sm text-dusk-blue-400\">Configure PostgreSQL and run connector QA to view certification results.</p>"),
+  Op::Certification if v.get("unavailable").and_then(Value::as_bool)==Some(true)=>header("Certification","Connector certification and manifest fingerprint drift.")+&card("<p>Certification status unavailable</p><p class=\"text-sm text-dusk-blue-400\">Configure PostgreSQL and run connector certification to view results.</p>"),
   Op::Certification=>{
    let items=rows(v,&["certifications","rows","items"])?;
-   header("Certification","Connector certification and manifest fingerprint drift.")+&if items.is_empty(){"<section class=\"ui-empty-state\" aria-labelledby=\"qa-empty-heading\"><h3 id=\"qa-empty-heading\">No connector QA results to show.</h3><p>Connector QA results are not available in this list.</p></section>".into()}else{table(items,&[("Connector","connector"),("Status","status"),("Total","total"),("Passed","passed"),("Failed","failed"),("Not certified","notCertified"),("Manifest drift","drifted"),("Manifest fingerprint","manifestFingerprint"),("Last run","certifiedAt")],None)?}
+   header("Certification","Connector certification and manifest fingerprint drift.")+&if items.is_empty(){"<section class=\"ui-empty-state\" aria-labelledby=\"qa-empty-heading\"><h3 id=\"qa-empty-heading\">No connector certification results to show.</h3><p>Connector certification results are not available in this list.</p></section>".into()}else{table(items,&[("Connector","connector"),("Status","status"),("Total","total"),("Passed","passed"),("Failed","failed"),("Not certified","notCertified"),("Manifest drift","drifted"),("Manifest fingerprint","manifestFingerprint"),("Last run","certifiedAt")],None)?}
   },
   Op::Usage=>{let mut body=header("Usage",string(v,&["month"]));body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");for (label,key) in [("Tool calls","toolCalls"),("Synced records","syncedRecords"),("Webhook events","webhookEvents")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?));}body.push_str("</div>");body},
   Op::Branding=>crate::branding::render(v),
@@ -258,7 +258,7 @@ pub(crate) fn static_page(path: &str) -> String {
             "/app/connectors",
         ),
         (
-            "Toolkits & connectors",
+            "Connectors",
             "Browse the connector catalog, configure auth, and test actions live.",
             "/app/connectors",
         ),
@@ -355,8 +355,8 @@ mod rendering_contract_tests {
             (
                 Op::Certification,
                 vec!["certifications", "rows", "items"],
-                "No connector QA results to show.",
-                "Connector QA results are not available in this list.",
+                "No connector certification results to show.",
+                "Connector certification results are not available in this list.",
                 "",
             ),
         ] {
@@ -393,8 +393,8 @@ mod rendering_contract_tests {
             None,
         )
         .unwrap();
-        assert!(unavailable.contains("QA status unavailable"));
-        assert!(!unavailable.contains("No connector QA results to show."));
+        assert!(unavailable.contains("Certification status unavailable"));
+        assert!(!unavailable.contains("No connector certification results to show."));
     }
 
     #[test]
@@ -426,6 +426,42 @@ mod rendering_contract_tests {
         assert!(render(Op::Connections, &json!([]), None)
             .unwrap()
             .contains("Connections authorize accounts for use with connectors."));
+    }
+
+    #[test]
+    fn signal_pages_use_connector_tool_and_certification_vocabulary() {
+        let events = render(
+            Op::Events,
+            &json!({"events":[{"id":"event-1","connector":"mail","operation":"messages.list","connectionId":"connection-1","createdAt":"2026-09-08T00:00:00Z"}]}),
+            None,
+        )
+        .unwrap();
+        assert!(events.contains(">Tool</th>"));
+        assert!(events.contains("messages.list"));
+        assert!(!events.contains(">Operation</th>"));
+
+        let certification_unavailable = render(
+            Op::Certification,
+            &json!({"unavailable":true,"certifications":[]}),
+            None,
+        )
+        .unwrap();
+        assert!(certification_unavailable.contains("Certification status unavailable"));
+        assert!(certification_unavailable
+            .contains("Configure PostgreSQL and run connector certification to view results."));
+        assert!(!certification_unavailable.contains("QA status unavailable"));
+        assert!(!certification_unavailable.contains("connector QA"));
+
+        let certification_empty =
+            render(Op::Certification, &json!({"certifications":[]}), None).unwrap();
+        assert!(certification_empty.contains("No connector certification results to show."));
+        assert!(certification_empty
+            .contains("Connector certification results are not available in this list."));
+        assert!(!certification_empty.contains("connector QA"));
+
+        let docs = static_page("/app/docs");
+        assert!(docs.contains(">Connectors</span>"));
+        assert!(!docs.contains("Toolkits & connectors"));
     }
 
     #[test]
@@ -676,7 +712,7 @@ mod memory_qa_tests {
             None,
         )
         .unwrap();
-        assert!(html.contains("QA status unavailable"));
+        assert!(html.contains("Certification status unavailable"));
         assert!(!html.contains("<table"));
         let persisted = super::render(
             super::Op::Certification,
@@ -684,6 +720,6 @@ mod memory_qa_tests {
             None,
         )
         .unwrap();
-        assert!(!persisted.contains("QA status unavailable"));
+        assert!(!persisted.contains("Certification status unavailable"));
     }
 }
