@@ -1,3 +1,4 @@
+use crate::evidence::DispatchEvidence;
 use crate::*;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -71,10 +72,10 @@ impl<
                 .all(|b| (33..=126).contains(&b))
             || !request.input.is_object()
         {
-            return Err(ActionError::new("INVALID_ACTION_INPUT"));
+            return Err(ActionError::new("INVALID_ACTION_INPUT").local_validation());
         }
         if request.external_account_id.is_empty() && !request.admin_scope {
-            return Err(ActionError::new("MISSING_ACCOUNT_SCOPE"));
+            return Err(ActionError::new("MISSING_ACCOUNT_SCOPE").local_validation());
         }
         let connection = self
             .repository
@@ -86,27 +87,31 @@ impl<
                 && !connection.external_account_id.is_empty()
                 && connection.external_account_id != request.external_account_id)
         {
-            return Err(ActionError::new("CONNECTION_NOT_FOUND"));
+            return Err(ActionError::new("CONNECTION_NOT_FOUND").local_validation());
         }
         if connection.status != "active" {
-            return Err(ActionError::new("CONNECTION_DISCONNECTED"));
+            return Err(ActionError::new("CONNECTION_DISCONNECTED").local_validation());
         }
         let operation = self
             .catalog
-            .operation(&connection.connector, &request.action)?;
+            .operation(&connection.connector, &request.action)
+            .map_err(ActionError::local_validation)?;
         if operation.timeout_ms == 0
             || operation.timeout_ms > 300_000
             || operation.max_input_bytes == 0
             || operation.max_response_bytes == 0
         {
-            return Err(ActionError::new("UNKNOWN_ACTION"));
+            return Err(ActionError::new("UNKNOWN_ACTION").local_validation());
         }
-        if encoded_len(&request.input)? > operation.max_input_bytes {
-            return Err(ActionError::new("ACTION_INPUT_TOO_LARGE"));
+        if encoded_len(&request.input).map_err(ActionError::local_validation)?
+            > operation.max_input_bytes
+        {
+            return Err(ActionError::new("ACTION_INPUT_TOO_LARGE").local_validation());
         }
         self.policy
             .authorize(request, &connection, &operation)
-            .await?;
+            .await
+            .map_err(ActionError::local_admission)?;
         let attempt = Attempt {
             request_id: request_id.clone(),
             project_id: request.project_id.clone(),
@@ -115,7 +120,8 @@ impl<
             external_account_id: request.external_account_id.clone(),
             action: request.action.clone(),
             key: request.idempotency_key.clone(),
-            input_hash: scoped_input_hash(&request.input, &request.external_account_id)?,
+            input_hash: scoped_input_hash(&request.input, &request.external_account_id)
+                .map_err(ActionError::local_validation)?,
             lease_ms: operation.timeout_ms as i64 + 30_000,
         };
         match self.repository.acquire(&attempt).await? {
@@ -125,9 +131,10 @@ impl<
         // Deadline cancellation leaves a durable pending/dispatched claim. Pending
         // leases can expire; a dispatched mutation is never automatically retried.
         let duration = Duration::from_millis(operation.timeout_ms);
+        let evidence = DispatchEvidence::new();
         let output = tokio::time::timeout(
             duration,
-            self.dispatch(request, &connection, &operation, &attempt),
+            self.dispatch(request, &connection, &operation, &attempt, &evidence),
         )
         .await;
         match output {
@@ -138,8 +145,8 @@ impl<
                 result.replay_log_id = replay_log_id;
                 Ok(result)
             }
-            Ok(Err(error)) => Err(error),
-            Err(_) => Err(ActionError::new("ACTION_TIMEOUT")),
+            Ok(Err(error)) => Err(evidence.attach(error)),
+            Err(_) => Err(evidence.attach(ActionError::new("ACTION_TIMEOUT"))),
         }
     }
     async fn dispatch(
@@ -148,6 +155,7 @@ impl<
         connection: &Connection,
         operation: &Operation,
         attempt: &Attempt,
+        evidence: &DispatchEvidence,
     ) -> Result<(Value, UsageSnapshot, String)> {
         let prepared = self.prepare(request, connection, operation, attempt).await;
         let Prepared {
@@ -158,6 +166,7 @@ impl<
         } = match prepared {
             Ok(v) => v,
             Err(e) => {
+                evidence.local_error(&e);
                 self.repository.release_pending(attempt).await?;
                 return Err(e);
             }
@@ -179,6 +188,8 @@ impl<
         {
             Ok(v) => v,
             Err(e) => {
+                let e = e.local_admission();
+                evidence.local_error(&e);
                 self.repository.release_pending(attempt).await?;
                 return Err(e);
             }
@@ -196,7 +207,10 @@ impl<
         }
         let attempts = if operation.read_only { 3 } else { 1 };
         for index in 0..attempts {
-            match self.runner.execute(attempt, input.clone(), deadline).await {
+            let prior = evidence.begin_attempt();
+            let outcome = self.runner.execute(attempt, input.clone(), deadline).await;
+            evidence.finish_attempt(prior, outcome.as_ref().err());
+            match outcome {
                 Ok(output) => {
                     admission.resolve(false);
                     let valid = if encoded_len(&output)? > operation.max_response_bytes {
@@ -265,13 +279,16 @@ impl<
             || revision.auth_type != connection.auth_type
             || revision.status != "active"
         {
-            return Err(ActionError::new("CONNECTION_CHANGED"));
+            return Err(ActionError::new("CONNECTION_CHANGED").local_validation());
         }
-        self.policy.authorize(request, &revision, operation).await?;
+        self.policy
+            .authorize(request, &revision, operation)
+            .await
+            .map_err(ActionError::local_admission)?;
         let connection = &revision;
         let fields = resolved.fields;
         if self.catalog.requires_credentials(&connection.connector)? && fields.is_empty() {
-            return Err(ActionError::new("MISSING_CREDENTIAL"));
+            return Err(ActionError::new("MISSING_CREDENTIAL").local_validation());
         }
         let replay_secrets = crate::history::credential_values(&fields, &request.caller_credential);
         let replay_input = sanitize_replay_input(
@@ -284,7 +301,7 @@ impl<
             .input
             .as_object()
             .cloned()
-            .ok_or_else(|| ActionError::new("INVALID_ACTION_INPUT"))?;
+            .ok_or_else(|| ActionError::new("INVALID_ACTION_INPUT").local_validation())?;
         for key in operation
             .credential_fields
             .iter()
@@ -299,12 +316,14 @@ impl<
         let input = self
             .policy
             .prepare_input(request, connection, Value::Object(input))
-            .await?;
-        if encoded_len(&input)? > operation.max_input_bytes {
-            return Err(ActionError::new("ACTION_INPUT_TOO_LARGE"));
+            .await
+            .map_err(ActionError::local_admission)?;
+        if encoded_len(&input).map_err(ActionError::local_validation)? > operation.max_input_bytes {
+            return Err(ActionError::new("ACTION_INPUT_TOO_LARGE").local_validation());
         }
         self.catalog
-            .validate_input(&connection.connector, &request.action, &input)?;
+            .validate_input(&connection.connector, &request.action, &input)
+            .map_err(ActionError::local_validation)?;
         Ok(Prepared {
             input,
             admission,

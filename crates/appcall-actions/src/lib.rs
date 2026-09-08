@@ -4,6 +4,7 @@ mod adapters;
 mod canonical;
 mod circuit;
 mod credentials;
+mod evidence;
 mod normalized;
 pub use credentials::*;
 mod policy;
@@ -22,8 +23,34 @@ pub use service::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+/// RPC evidence, not a claim that the provider operation succeeded.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ActionDispatchOutcome {
+    NotDispatched,
+    ResponseReceived,
+    #[default]
+    Unknown,
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ActionFailureOrigin {
+    #[default]
+    Unknown,
+    /// Rejection by an owned policy authorization, input preparation or reservation.
+    LocalAdmission,
+    LocalValidation,
+    Runner,
+}
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ActionFailureEvidence {
+    pub outcome: ActionDispatchOutcome,
+    pub origin: ActionFailureOrigin,
+    /// Final failed runner attempt's supplied hint, never an internal backoff.
+    pub retry_after_seconds: Option<u64>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ActionError {
+    pub evidence: Box<ActionFailureEvidence>,
     pub code: String,
     pub request_id: String,
     pub usage: Option<UsageSnapshot>,
@@ -32,6 +59,7 @@ pub struct ActionError {
 impl ActionError {
     pub fn new(code: &str) -> Self {
         Self {
+            evidence: Box::default(),
             code: code.into(),
             request_id: String::new(),
             usage: None,
@@ -40,6 +68,22 @@ impl ActionError {
     }
 }
 impl ActionError {
+    pub(crate) fn local_admission(mut self) -> Self {
+        self.evidence = Box::new(ActionFailureEvidence {
+            outcome: ActionDispatchOutcome::NotDispatched,
+            origin: ActionFailureOrigin::LocalAdmission,
+            retry_after_seconds: None,
+        });
+        self
+    }
+    pub(crate) fn local_validation(mut self) -> Self {
+        self.evidence = Box::new(ActionFailureEvidence {
+            outcome: ActionDispatchOutcome::NotDispatched,
+            origin: ActionFailureOrigin::LocalValidation,
+            retry_after_seconds: None,
+        });
+        self
+    }
     pub fn with_detail(mut self, detail: Option<FailureDetail>) -> Self {
         self.detail = detail.map(Box::new);
         self
@@ -227,6 +271,8 @@ pub trait ActionCatalog: Send + Sync {
 }
 #[derive(Clone, Debug, Default)]
 pub struct RunnerFailure {
+    pub outcome: ActionDispatchOutcome,
+    pub retry_after_seconds: Option<u64>,
     pub code: String,
     pub transient: bool,
     pub retry_after_ms: u64,

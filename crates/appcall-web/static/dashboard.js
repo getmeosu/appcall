@@ -77,6 +77,73 @@ if (brandingName && brandingLogo && brandingColor) {
   brandingColor.addEventListener('input', () => { if (/^#[0-9a-f]{6}$/i.test(brandingColor.value)) initial.style.backgroundColor = brandingColor.value; });
 }
 
+// Catalog request lifecycle is independent of the connector detail page. The
+// existing Datastar form owns the POST and FormData snapshot; this only guards
+// submissions and presents applied results or an uncertain receipt.
+(() => {
+  const form = document.getElementById('toolkit-request-form');
+  if (!form) return;
+  const result = () => document.getElementById('toolkit-request-result');
+  const button = form.querySelector('button[type="submit"]');
+  let pending = null;
+  document.addEventListener('submit', event => {
+    if (event.target !== form) return;
+    if (pending || !form.checkValidity()) {
+      event.preventDefault(); event.stopImmediatePropagation(); return;
+    }
+    // Capture phase guards keyboard and repeated submissions before Datastar's
+    // target listener. Leave all controls available for its synchronous snapshot.
+    const request = { disabled: button?.disabled, labels: new Map() };
+    pending = request;
+    form.setAttribute('aria-busy', 'true');
+    const target = result();
+    if (target) {
+      target.removeAttribute('data-request-state');
+      target.textContent = 'Submitting connector request…';
+      target.setAttribute('aria-busy', 'true');
+    }
+    for (const [element, attribute, value] of [
+      [button, 'aria-busy', 'true'],
+      [button?.querySelector('.ui-button-idle'), 'aria-hidden', 'true'],
+      [button?.querySelector('.ui-button-working'), 'aria-hidden', 'false'],
+    ]) {
+      if (!element) continue;
+      request.labels.set(element, { attribute, previous: element.getAttribute(attribute) });
+      element.setAttribute(attribute, value);
+    }
+  }, true);
+  document.addEventListener('datastar-fetch', event => {
+    const { el, type } = event.detail || {};
+    if (el !== form || !pending) return;
+    if (type === 'started') {
+      // Datastar takes FormData immediately after this synchronous event. A
+      // capture-submit microtask would be too early between native listeners.
+      const request = pending;
+      queueMicrotask(() => { if (pending === request && button) button.disabled = true; });
+      return;
+    }
+    if (type !== 'finished') return;
+    const target = result();
+    // Requery after replacement. Event arguments describe an intended patch,
+    // not proof that the renderer actually applied a current terminal result.
+    if (target) {
+      if (!['success', 'error'].includes(target.getAttribute('data-request-state'))) {
+        const recovery = document.getElementById('toolkit-request-recovery');
+        target.replaceChildren(recovery.content.cloneNode(true));
+      }
+      target.setAttribute('aria-busy', 'false');
+    }
+    form.setAttribute('aria-busy', 'false');
+    for (const [element, { attribute, previous }] of pending.labels) {
+      if (!element.isConnected) continue;
+      if (previous === null) element.removeAttribute(attribute);
+      else element.setAttribute(attribute, previous);
+    }
+    if (button?.isConnected) button.disabled = pending.disabled;
+    pending = null;
+  });
+})();
+
 // Connector navigation enhances native GET links. Executions remain owned by
 // the form's Datastar POST; this module never fetches or retries an operation.
 (() => {

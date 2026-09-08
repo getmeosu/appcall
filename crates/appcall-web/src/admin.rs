@@ -411,11 +411,7 @@ impl Browser<'_> {
                     ));
                 }
                 content.push_str("</tbody></table></div>");
-                if sessions.is_empty() {
-                    content.push_str(
-                        "<p class=\"mt-4 text-sm text-dusk-blue-400\">No active sessions.</p>",
-                    );
-                }
+                content.push_str(session_empty_state(sessions.is_empty()));
                 content
             }
             "/app/settings/organization" => form(
@@ -485,7 +481,7 @@ impl Browser<'_> {
         ))
     }
 }
-fn identifier(v: &str) -> bool {
+pub(crate) fn identifier(v: &str) -> bool {
     !v.is_empty()
         && v.len() <= 256
         && v.bytes()
@@ -493,6 +489,13 @@ fn identifier(v: &str) -> bool {
 }
 fn text(v: &Value, key: &str) -> String {
     escape(v.get(key).and_then(Value::as_str).unwrap_or(""))
+}
+pub(crate) fn session_empty_state(empty: bool) -> &'static str {
+    if empty {
+        "<p class=\"mt-4 text-sm text-dusk-blue-400\">No sessions to show.</p>"
+    } else {
+        ""
+    }
 }
 pub(crate) fn plan_price(cents: i64, currency: &str, interval: &str) -> String {
     let currency = currency.to_ascii_uppercase();
@@ -507,16 +510,17 @@ pub(crate) fn plan_price(cents: i64, currency: &str, interval: &str) -> String {
         _ => "/mo",
     };
     format!(
-        "{symbol}{}{:.2}{suffix}",
+        "{symbol}{}{}.{:02}{suffix}",
         if cents < 0 { "-" } else { "" },
-        cents.unsigned_abs() as f64 / 100.0
+        cents.unsigned_abs() / 100,
+        cents.unsigned_abs() % 100
     )
 }
 
 pub(crate) fn form(action: &str, fields: &[(&str, &str, &str, &str)]) -> String {
     let label = match action {
         "/app/users/invite" => "Send invitation",
-        "/app/settings/organization" => "Save changes",
+        "/app/settings/organization" => "Rename organisation",
         "/app/settings/account/change-password" => "Change password",
         "/app/settings/account/mfa/setup" => "Enable MFA",
         "/app/settings/account/mfa/verify" => "Verify and enable MFA",

@@ -75,7 +75,9 @@ pub fn collect_fields(
             .unwrap_or("")
             .trim();
         if field.required && value.is_empty() {
-            return Err(Error::MissingField);
+            return Err(DeclaredFieldKey::new(&field.key)
+                .map(Error::MissingDeclaredField)
+                .unwrap_or(Error::MissingField));
         }
         if !value.is_empty() {
             result.0.insert(field.key.clone(), value.to_owned());

@@ -139,6 +139,18 @@ fn runner_failure(e: appcall_runner_client::Error, input: &Value) -> RunnerFailu
         transient,
         retry_after_ms: e.retry_after_seconds.unwrap_or(0).saturating_mul(1000),
         detail,
+        retry_after_seconds: e.retry_after_seconds,
+        outcome: match e.outcome {
+            appcall_runner_client::DispatchOutcome::NotDispatched => {
+                crate::ActionDispatchOutcome::NotDispatched
+            }
+            appcall_runner_client::DispatchOutcome::ResponseReceived => {
+                crate::ActionDispatchOutcome::ResponseReceived
+            }
+            appcall_runner_client::DispatchOutcome::Unknown => {
+                crate::ActionDispatchOutcome::Unknown
+            }
+        },
     }
 }
 fn collect_input_strings<'a>(value: &'a Value, secrets: &mut Vec<&'a str>, depth: usize) -> bool {
@@ -184,6 +196,39 @@ mod metadata_tests {
     use super::*;
     use appcall_runner_client::DispatchOutcome;
     use serde_json::json;
+    #[test]
+    fn evidence_adapter_preserves_rpc_outcome_and_optional_retry_hint() {
+        for (outcome, expected) in [
+            (
+                DispatchOutcome::Unknown,
+                crate::ActionDispatchOutcome::Unknown,
+            ),
+            (
+                DispatchOutcome::NotDispatched,
+                crate::ActionDispatchOutcome::NotDispatched,
+            ),
+            (
+                DispatchOutcome::ResponseReceived,
+                crate::ActionDispatchOutcome::ResponseReceived,
+            ),
+        ] {
+            for hint in [None, Some(0), Some(11)] {
+                let error = runner_failure(
+                    appcall_runner_client::Error {
+                        kind: ErrorKind::Transport,
+                        outcome,
+                        code: None,
+                        retry_after_seconds: hint,
+                        message: "private diagnostic".into(),
+                    },
+                    &json!({}),
+                );
+                assert_eq!(error.outcome, expected);
+                assert_eq!(error.retry_after_seconds, hint);
+                assert!(error.detail.is_none());
+            }
+        }
+    }
     fn failure(kind: ErrorKind, message: &str) -> appcall_runner_client::Error {
         appcall_runner_client::Error {
             kind,

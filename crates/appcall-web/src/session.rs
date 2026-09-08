@@ -16,15 +16,35 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
-            Self::Invalid => "invalid browser request",
-            Self::Unauthorized => "sign-in required",
-            Self::Forbidden => "access denied",
-            Self::Unavailable => "identity service unavailable",
-            Self::Configuration => "invalid identity configuration",
+            Self::Invalid => "Appcall could not accept this request. Review the submitted details.",
+            Self::Unauthorized => "Sign in to continue.",
+            Self::Forbidden => "Appcall denied this request. Check that you have access to this action.",
+            Self::Unavailable => "Appcall could not complete this request. Check the current state before repeating a change, or contact support.",
+            Self::Configuration => "Appcall could not complete this request because its service configuration needs attention. Contact the service administrator.",
         })
     }
 }
 impl std::error::Error for Error {}
+#[cfg(test)]
+mod copy_tests {
+    use super::Error;
+
+    #[test]
+    fn copy_browser_errors_do_not_invent_identity_outages() {
+        fn require_copy<T: Copy>(_: T) {}
+        for (error, expected) in [
+            (Error::Invalid, "Appcall could not accept this request. Review the submitted details."),
+            (Error::Unauthorized, "Sign in to continue."),
+            (Error::Forbidden, "Appcall denied this request. Check that you have access to this action."),
+            (Error::Unavailable, "Appcall could not complete this request. Check the current state before repeating a change, or contact support."),
+            (Error::Configuration, "Appcall could not complete this request because its service configuration needs attention. Contact the service administrator."),
+        ] {
+            require_copy(error);
+            assert_eq!(error.to_string(), expected);
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Session {
     #[serde(rename = "a")]

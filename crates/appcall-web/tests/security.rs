@@ -597,7 +597,7 @@ async fn mfa_qr_uses_broker_url_and_admin_errors_redirect_without_secrets() {
     let response = browser.handle(&request).await.unwrap();
     assert!(response
         .body
-        .contains("Failed to send invitation. Please try again."));
+        .contains("Check the members list before sending another invitation."));
     assert!(response.body.contains("role=\"alert\""));
     server.await.unwrap();
 }

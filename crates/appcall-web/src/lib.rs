@@ -9,6 +9,8 @@ mod http;
 pub use http::*;
 mod admin;
 mod dashboard;
+mod dashboard_failure;
+pub use dashboard_failure::*;
 mod pages;
 mod shell;
 mod toolkit;

@@ -78,6 +78,35 @@ fn health_runner(response: Value) -> (RunnerClient, std::thread::JoinHandle<()>)
     )
 }
 
+fn failed_health_runner(timeout: bool) -> (RunnerClient, std::thread::JoinHandle<()>) {
+    use std::{io::Read, net::TcpListener, time::Duration};
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let task = std::thread::spawn(move || {
+        let (mut socket, _) = listener.accept().unwrap();
+        socket
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .unwrap();
+        let mut bytes = [0; 4096];
+        assert!(socket.read(&mut bytes).unwrap() > 0);
+        if timeout {
+            std::thread::sleep(Duration::from_millis(300));
+        }
+    });
+    (
+        RunnerClient::new(
+            &url,
+            "",
+            ClientOptions {
+                timeout: Duration::from_millis(100),
+                ..Default::default()
+            },
+        )
+        .unwrap(),
+        task,
+    )
+}
+
 #[test]
 #[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL and local TCP"]
 fn health_and_local_disconnect_match_go_without_weakening_scope() {
@@ -141,6 +170,22 @@ fn health_and_local_disconnect_match_go_without_weakening_scope() {
             "disconnected",
             "passed",
         ),
+        (
+            "active",
+            "api_key",
+            None,
+            Some("transport"),
+            "degraded",
+            "passed",
+        ),
+        (
+            "active",
+            "api_key",
+            None,
+            Some("timeout"),
+            "degraded",
+            "passed",
+        ),
     ] {
         let schema = format!("connection_health_{}", uuid::Uuid::new_v4().simple());
         let mut client = Client::connect(&url, NoTls).unwrap();
@@ -164,6 +209,10 @@ fn health_and_local_disconnect_match_go_without_weakening_scope() {
             Some(reply) => {
                 let (r, t) = health_runner(reply);
                 (r, Some(t))
+            }
+            None if matches!(error, Some("transport" | "timeout")) => {
+                let (runner, task) = failed_health_runner(error == Some("timeout"));
+                (runner, Some(task))
             }
             None => (
                 RunnerClient::new("http://127.0.0.1:1", "", ClientOptions::default()).unwrap(),
@@ -195,9 +244,23 @@ fn health_and_local_disconnect_match_go_without_weakening_scope() {
             error.is_some(),
             "case {status}/{auth}/{error:?}: {result:?}"
         );
-        if matches!(error, Some("runner" | "credential")) {
+        if matches!(
+            error,
+            Some("runner" | "credential" | "transport" | "timeout")
+        ) {
             assert_eq!(result.as_ref().unwrap_err().code, "INTERNAL_ERROR");
             assert!(result.as_ref().unwrap_err().detail.is_none());
+            let evidence = format!("{:?}", result.as_ref().unwrap_err().evidence);
+            assert!(!evidence.contains("private provider detail"));
+            let expected = match error.unwrap() {
+                "credential" => ConnectionCheckFailure::CredentialsUnavailable,
+                "transport" => ConnectionCheckFailure::Transport,
+                "timeout" => ConnectionCheckFailure::Timeout,
+                _ => ConnectionCheckFailure::VerificationFailed,
+            };
+            assert!(
+                matches!(result.as_ref().unwrap_err().evidence.as_deref(), Some(ApiFailureEvidence::ConnectionCheck(cause)) if *cause == expected)
+            );
         }
         if let Some(task) = task {
             task.join().unwrap();

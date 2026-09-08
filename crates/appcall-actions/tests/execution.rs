@@ -1,9 +1,12 @@
 use appcall_actions::*;
 use serde_json::{json, Map, Value};
 use std::sync::{Arc, Mutex};
+#[path = "execution/evidence.rs"]
+mod evidence;
 #[derive(Default)]
 struct State {
     claims: usize,
+    releases: usize,
     revision: Option<Connection>,
     marked: bool,
     cached: Option<Value>,
@@ -54,6 +57,7 @@ impl ActionRepository for Repo {
         Ok(())
     }
     async fn release_pending(&self, _: &Attempt) -> Result<()> {
+        self.state.lock().unwrap().releases += 1;
         Ok(())
     }
     async fn finish(&self, _: &Attempt, v: Option<&Value>, _: Option<&str>) -> Result<()> {

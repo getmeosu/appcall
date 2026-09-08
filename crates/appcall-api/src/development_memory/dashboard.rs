@@ -4,7 +4,9 @@ use super::{
     MemoryCore,
 };
 use crate::{ApiError, Identity, Request};
-use appcall_web::{DashboardData, DashboardOperation as Op, DashboardRequest, Error};
+use appcall_web::{
+    DashboardData, DashboardFailure, DashboardOperation as Op, DashboardRequest, Error,
+};
 use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
@@ -28,7 +30,7 @@ impl MemoryDashboard {
             state: Mutex::new(Presentation::default()),
         }
     }
-    async fn run(&self, r: DashboardRequest) -> Result<Value, Error> {
+    async fn run(&self, r: DashboardRequest) -> Result<Value, DashboardFailure> {
         let account_id = r
             .account_id
             .as_deref()
@@ -44,7 +46,7 @@ impl MemoryDashboard {
             || !r.principal.allowed_brands.permits(account_id)
             || r.principal.scopes != appcall_auth::Grant::All
         {
-            return Err(Error::Forbidden);
+            return Err(Error::Forbidden.into());
         }
         self.core
             .repository
@@ -58,7 +60,7 @@ impl MemoryDashboard {
         let resource = r.resource.as_deref().unwrap_or("");
         let field = |key: &str| r.fields.get(key).map(String::as_str).unwrap_or("");
         if !active() {
-            return Err(Error::Unavailable);
+            return Err(Error::Unavailable.into());
         }
         match r.operation {
             Op::Catalog => Ok(
@@ -173,7 +175,9 @@ impl MemoryDashboard {
                 } else {
                     self.core.history.read(&identity, &url).map_err(web_error)?
                 };
-                response.map(|r| r.body).ok_or(Error::Invalid)
+                response
+                    .map(|r| r.body)
+                    .ok_or_else(|| Error::Invalid.into())
             }
             Op::ReplayTrace => {
                 let request = Request {
@@ -206,7 +210,7 @@ impl MemoryDashboard {
                     .await
                     .map_err(web_error)?
                     .map(|r| r.body)
-                    .ok_or(Error::Invalid)
+                    .ok_or_else(|| Error::Invalid.into())
             }
             Op::Branding => Ok(self
                 .state
@@ -232,14 +236,14 @@ impl MemoryDashboard {
                         && color.starts_with('#')
                         && color[1..].bytes().all(|b| b.is_ascii_hexdigit()))
                 {
-                    return Err(Error::Invalid);
+                    return Err(Error::Invalid.into());
                 }
                 let value = json!({"appName":if name.is_empty(){"appcall"}else{name},"logoURL":logo,"tagColor":color});
                 let mut state = self.state.lock().map_err(|_| Error::Unavailable)?;
                 if state.branding.len() >= 1000
                     && !state.branding.contains_key(&identity.project_id)
                 {
-                    return Err(Error::Unavailable);
+                    return Err(Error::Unavailable.into());
                 }
                 let old = state
                     .branding
@@ -264,11 +268,11 @@ impl MemoryDashboard {
                     || field("email").len() > 256
                     || field("notes").len() > 4000
                 {
-                    return Err(Error::Invalid);
+                    return Err(Error::Invalid.into());
                 }
                 let mut state = self.state.lock().map_err(|_| Error::Unavailable)?;
                 if state.requests.len() >= 1000 {
-                    return Err(Error::Unavailable);
+                    return Err(Error::Unavailable.into());
                 }
                 let value = json!({"event":"toolkit_requested","projectId":identity.project_id,"name":field("name"),"email":field("email"),"notes":field("notes")});
                 let bytes = value.to_string().len() + 128;
@@ -287,12 +291,10 @@ impl MemoryDashboard {
             Op::Setup => {
                 let setup = self.core.setup.clone();
                 let resource = resource.to_owned();
-                let mode = setup
+                let description = setup
                     .describe(&resource)
                     .map_err(setup_error)
-                    .map_err(web_error)?
-                    .setup
-                    .mode;
+                    .map_err(web_error)?;
                 let route = field("route").to_owned();
                 let existing = field("connectionId").to_owned();
                 let fields = r
@@ -304,10 +306,21 @@ impl MemoryDashboard {
                     })
                     .map(|(k, v)| (k.clone(), v.clone()))
                     .collect();
-                memory_work(move|| {
-                    if mode=="oauth2" {let start=setup.start_checked(&identity.project_id,account(&identity),&resource,(!existing.is_empty()).then_some(existing.as_str()),&active).map_err(setup_error)?;let local=start.authorization_url.starts_with("/oauth/local/authorize?");Ok(json!({"redirectUrl":start.authorization_url,"connectionId":start.connection.id,"developmentOAuth":local}))}
-                    else {setup.submit_checked(&identity.project_id,account(&identity),&resource,&route,&fields,&active).map(|c|crate::browser_host::connection_value(&c)).map_err(setup_error)}
-                }).await.map_err(web_error)
+                memory_work(move || {
+                    let map = |error: appcall_setup::Error| {
+                        let classification = web_error(ApiError::from(error.clone())).classification();
+                        crate::browser_host::dashboard_failure::setup_failure(error, classification, &description.setup, &route)
+                    };
+                    let result = if description.setup.mode == "oauth2" {
+                        setup.start_checked(&identity.project_id, account(&identity), &resource, (!existing.is_empty()).then_some(existing.as_str()), &active)
+                            .map(|start| { let local = start.authorization_url.starts_with("/oauth/local/authorize?"); json!({"redirectUrl":start.authorization_url,"connectionId":start.connection.id,"developmentOAuth":local}) })
+                            .map_err(map)
+                    } else {
+                        setup.submit_checked(&identity.project_id, account(&identity), &resource, &route, &fields, &active)
+                            .map(|c| crate::browser_host::connection_value(&c)).map_err(map)
+                    };
+                    Ok(result)
+                }).await.map_err(web_error)?
             }
             Op::Test | Op::Options | Op::RunInputFields => {
                 let id = field("connectionId");
@@ -328,7 +341,7 @@ impl MemoryDashboard {
                     .await
                     .map_err(web_error)?;
                 if connection.connector != resource {
-                    return Err(Error::Forbidden);
+                    return Err(Error::Forbidden.into());
                 }
                 let operation = self
                     .core
@@ -336,7 +349,7 @@ impl MemoryDashboard {
                     .operation(resource, action)
                     .map_err(|_| Error::Invalid)?;
                 if r.operation != Op::Test && !operation.is_read_only() {
-                    return Err(Error::Forbidden);
+                    return Err(Error::Forbidden.into());
                 }
                 let input = match r.operation {
                     Op::Options => {
@@ -355,13 +368,14 @@ impl MemoryDashboard {
                             field("input_raw")
                         };
                         if raw.is_empty() {
-                            crate::browser_host::guided_action_input(
+                            crate::browser_host::guided_action_input_detailed(
                                 operation.input_schema.as_ref().unwrap_or(&json!({})),
                                 &r.form_values,
                                 field("runInputSchema"),
                             )?
                         } else {
-                            serde_json::from_str(raw).map_err(|_| Error::Invalid)?
+                            serde_json::from_str(raw)
+                                .map_err(crate::browser_host::dashboard_failure::invalid_json)?
                         }
                     }
                 };
@@ -415,15 +429,22 @@ impl MemoryDashboard {
     }
 }
 impl DashboardData for MemoryDashboard {
+    fn execute_detailed(
+        &self,
+        r: DashboardRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<Value, DashboardFailure>> + Send + '_>> {
+        Box::pin(self.run(r))
+    }
+
     fn execute(
         &self,
         r: DashboardRequest,
     ) -> Pin<Box<dyn Future<Output = Result<Value, Error>> + Send + '_>> {
-        Box::pin(self.run(r))
+        Box::pin(async move { self.run(r).await.map_err(|e| e.classification()) })
     }
 }
-fn web_error(error: ApiError) -> Error {
-    match error.code {
+fn web_error(error: ApiError) -> DashboardFailure {
+    let classification = match error.code {
         "UNAUTHORIZED" => Error::Unauthorized,
         "FORBIDDEN" | "CONNECTION_NOT_FOUND" | "ACTION_NOT_PERMITTED" => Error::Forbidden,
         "INVALID_REQUEST"
@@ -433,5 +454,6 @@ fn web_error(error: ApiError) -> Error {
         | "UNKNOWN_ACTION"
         | "MISSING_SETUP_FIELD" => Error::Invalid,
         _ => Error::Unavailable,
-    }
+    };
+    crate::browser_host::dashboard_failure::map_classified(error, classification)
 }

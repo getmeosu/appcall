@@ -40,6 +40,8 @@ pub fn render_trigger_patch(event: &Value) -> Result<String, Error> {
         return Err(Error::Invalid);
     }
     let text = |key| escape(event.get(key).and_then(Value::as_str).unwrap_or(""));
-    let row=format!("<tr class=\"hover:bg-space-indigo-900/40 transition-colors\"><td class=\"px-4 py-3 text-sm text-dusk-blue-100\">{}</td><td class=\"px-4 py-3 text-sm text-dusk-blue-100\">{}</td><td class=\"px-4 py-3 text-sm\"><span class=\"font-mono text-xs text-dusk-blue-300\">{}</span></td><td class=\"px-4 py-3 text-sm text-dusk-blue-300\">{}</td><td class=\"px-4 py-3 text-sm\"><form method=\"post\" action=\"/app/triggers/{id}/replay\"><button type=\"submit\" class=\"inline-flex items-center gap-1.5 rounded-md border border-space-indigo-700 bg-space-indigo-900 px-2.5 py-1 text-xs font-medium text-dusk-blue-200\">Replay</button></form></td></tr>",text("connector"),text("operation"),text("connectionId"),text("createdAt"));
-    Ok(patch(&row, Some("#trigger-rows"), true))
+    let row=format!("<tr class=\"hover:bg-space-indigo-900/40 transition-colors\"><td class=\"px-4 py-3 text-sm text-dusk-blue-100\">{}</td><td class=\"px-4 py-3 text-sm text-dusk-blue-100\">{}</td><td class=\"px-4 py-3 text-sm\"><span class=\"font-mono text-xs text-dusk-blue-300\">{}</span></td><td class=\"px-4 py-3 text-sm text-dusk-blue-300\">{}</td><td class=\"px-4 py-3 text-sm\">{}</td></tr>",text("connector"),text("operation"),text("connectionId"),text("createdAt"),crate::pages::event_replay(id)?);
+    let mut frames = patch(&row, Some("#trigger-rows"), true);
+    frames.push_str("event: datastar-patch-elements\ndata: selector #trigger-empty-state\ndata: mode remove\n\n");
+    Ok(frames)
 }

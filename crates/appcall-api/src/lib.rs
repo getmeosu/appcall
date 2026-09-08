@@ -49,16 +49,27 @@ pub struct Response {
     pub headers: Vec<(String, String)>,
 }
 #[derive(Clone, Debug)]
+pub enum ApiFailureEvidence {
+    Action(appcall_actions::ActionFailureEvidence),
+    Setup(SetupFailureEvidence),
+    ConnectionCheck(ConnectionCheckFailure),
+}
+mod setup_failure;
+pub use setup_failure::{ConnectionCheckFailure, SetupFailureEvidence};
+#[derive(Clone, Debug)]
 pub struct ApiError {
+    /// Internal presentation evidence; not part of the public response envelope.
+    pub evidence: Option<Box<ApiFailureEvidence>>,
     pub code: &'static str,
     pub request_id: String,
-    pub usage: Option<appcall_actions::UsageSnapshot>,
+    pub usage: Option<Box<appcall_actions::UsageSnapshot>>,
     pub retry_after_seconds: Option<u64>,
     pub detail: Option<Box<appcall_actions::FailureDetail>>,
 }
 impl ApiError {
     pub fn new(code: &'static str) -> Self {
         Self {
+            evidence: None,
             code,
             request_id: String::new(),
             usage: None,
@@ -135,8 +146,9 @@ impl From<appcall_actions::ActionError> for ApiError {
             .unwrap_or("ACTION_FAILED");
         let mut result = Self::new(code);
         result.request_id = error.request_id;
-        result.usage = error.usage;
+        result.usage = error.usage.map(Box::new);
         result.detail = error.detail;
+        result.evidence = Some(Box::new(ApiFailureEvidence::Action(*error.evidence)));
         if code == "IDEMPOTENCY_IN_PROGRESS" {
             result.retry_after_seconds = Some(2)
         }
@@ -691,5 +703,61 @@ mod action_error_tests {
         )));
         assert_eq!(response.body["error"]["code"], "ACTION_FAILED");
         assert!(!response.body.to_string().contains("secret-provider-body"));
+    }
+    #[test]
+    fn action_evidence_conversion_preserves_internal_context_and_public_contract() {
+        use appcall_actions::{ActionDispatchOutcome, ActionFailureEvidence, ActionFailureOrigin};
+        for hint in [None, Some(0), Some(19)] {
+            let mut error = appcall_actions::ActionError::new("provider-private-code");
+            error.evidence = Box::new(ActionFailureEvidence {
+                outcome: ActionDispatchOutcome::ResponseReceived,
+                origin: ActionFailureOrigin::Runner,
+                retry_after_seconds: hint,
+            });
+            error.usage = Some(appcall_actions::UsageSnapshot {
+                current: 23,
+                projected: 24,
+                hard_limit: 22,
+                ..Default::default()
+            });
+            error.detail = Some(Box::new(appcall_actions::FailureDetail {
+                safe_message: None,
+                response_size: Some(appcall_actions::ResponseSize {
+                    actual_bytes: 1234,
+                    limit_bytes: 1024,
+                }),
+            }));
+            let expected = error.evidence.clone();
+            let api = ApiError::from(error);
+            match api.evidence.as_deref() {
+                Some(ApiFailureEvidence::Action(actual)) => assert_eq!(actual, expected.as_ref()),
+                _ => panic!("action evidence was lost"),
+            }
+            assert_eq!(api.code, "ACTION_FAILED");
+            assert_eq!(api.usage.as_ref().unwrap().current, 23);
+            assert_eq!(
+                api.detail
+                    .as_ref()
+                    .unwrap()
+                    .response_size
+                    .as_ref()
+                    .unwrap()
+                    .actual_bytes,
+                1234
+            );
+            let response = error_response(api);
+            assert!(response.body["error"].get("evidence").is_none());
+            assert!(!response.body.to_string().contains("provider-private-code"));
+        }
+        let api = ApiError::from(appcall_actions::ActionError::new("IDEMPOTENCY_IN_PROGRESS"));
+        assert_eq!(api.retry_after_seconds, Some(2));
+        match api.evidence.as_deref() {
+            Some(ApiFailureEvidence::Action(evidence)) => {
+                assert_eq!(evidence.outcome, ActionDispatchOutcome::Unknown);
+                assert_eq!(evidence.origin, ActionFailureOrigin::Unknown);
+                assert_eq!(evidence.retry_after_seconds, None);
+            }
+            _ => panic!("default action evidence was lost"),
+        }
     }
 }

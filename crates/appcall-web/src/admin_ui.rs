@@ -31,56 +31,76 @@ pub(crate) fn failure_target(path: &str) -> Option<&'static str> {
     })
 }
 pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
+    let hint = |message: &str, success| {
+        let mut html = banner(message, success);
+        if r.path == "/app/settings/organization" {
+            html.push_str(
+                &crate::ui::Button {
+                    variant: crate::ui::ButtonVariant::Quiet,
+                    target: crate::ui::ButtonTarget::Link(
+                        crate::ui::LocalPath::new("/app/settings/organization")
+                            .expect("fixed local path"),
+                    ),
+                    ..crate::ui::Button::new("Review organisation settings")
+                }
+                .render(),
+            );
+        }
+        html
+    };
     let err = r.field("error")?;
     let message = match (r.path, err) {
-        ("/app/users", "invite") => "Failed to send invitation. Please try again.",
-        ("/app/users", "remove") => "Failed to remove member. Please try again.",
-        ("/app/users", "role") => "Failed to update role. Please try again.",
-        ("/app/sessions", "revoke") => "Could not revoke session. Please try again.",
+        ("/app/users", "invite") => "Check the members list before sending another invitation.",
+        ("/app/users", "remove") => "Review the members list before repeating a removal.",
+        ("/app/users", "role") => "Review the member's current role before making another change.",
+        ("/app/sessions", "revoke") => "Review the sessions list before repeating a revocation.",
         ("/app/settings/organization", "org") => {
-            "Could not save organization settings. Please try again."
+            "Check the current organisation name before making another change."
         }
-        ("/app/settings/account", "setup") => "Could not start MFA setup. Please try again.",
-        ("/app/settings/account", "verify") => {
-            "Could not verify your MFA code. Please start setup again."
+        ("/app/settings/account", "setup" | "verify" | "disable" | "password") => {
+            "Review your account security settings before making another change."
         }
-        ("/app/settings/account", "disable") => {
-            "Could not disable MFA. Check your verification code."
+        ("/app/settings/billing", "checkout") => {
+            "Check your billing status before starting another checkout."
         }
-        ("/app/settings/account", "password") => {
-            "Could not change your password. Check your current password and try again."
-        }
-        ("/app/settings/billing", "checkout") => "Could not start checkout. Please try again.",
-        ("/app/settings/billing", "portal") => {
-            "Could not open the billing portal. Please try again."
-        }
+        ("/app/settings/billing", "portal") => "Open Support for help accessing billing settings.",
         _ => "",
     };
     if !message.is_empty() {
-        return Ok(banner(message, false));
+        return Ok(hint(message, false));
     }
     let success = match r.path {
-        "/app/users" if r.field("invited")? == "1" => "Invitation sent successfully.",
-        "/app/users" if r.field("removed")? == "1" => "Member removed successfully.",
-        "/app/users" if r.field("role")? == "updated" => "Role updated successfully.",
-        "/app/sessions" if r.field("revoked")? == "1" => "Session revoked successfully.",
-        "/app/settings/account" if r.field("password")? == "changed" => {
-            "Password changed successfully."
+        "/app/users" if r.field("invited")? == "1" => {
+            "Check the members list before sending another invitation."
         }
-        "/app/settings/organization" if r.field("saved")? == "1" => "Organization settings saved.",
+        "/app/users" if r.field("removed")? == "1" => {
+            "Review the members list before repeating a removal."
+        }
+        "/app/users" if r.field("role")? == "updated" => {
+            "Review the member's current role before making another change."
+        }
+        "/app/sessions" if r.field("revoked")? == "1" => {
+            "Review the sessions list before repeating a revocation."
+        }
+        "/app/settings/account" if r.field("password")? == "changed" => {
+            "Review your account security settings before making another change."
+        }
+        "/app/settings/organization" if r.field("saved")? == "1" => {
+            "Check the current organisation name before making another change."
+        }
         _ => "",
     };
     Ok(if success.is_empty() {
         String::new()
     } else {
-        banner(success, true)
+        hint(success, true)
     })
 }
 pub(crate) fn billing(status: Result<Value, Error>, plans: Result<Value, Error>) -> String {
     let mut body = String::from("<div class=\"space-y-8\"><section><h3 class=\"mb-3 text-sm font-semibold uppercase tracking-wider text-dusk-blue-500\">Current Plan</h3>");
     let status = match status {
-        Ok(v) => v,
-        Err(_) => {
+        Ok(v) if v.is_object() => v,
+        _ => {
             body.push_str(&banner(
                 "Could not load your subscription status. Please refresh.",
                 false,
@@ -96,33 +116,24 @@ pub(crate) fn billing(status: Result<Value, Error>, plans: Result<Value, Error>)
         "active" => ("Active", "bg-tropical-teal-900 text-tropical-teal-300"),
         "past_due" => ("Past due", "text-yellow-300"),
         "canceled" => ("Canceled", "text-dusk-blue-300"),
-        _ => ("No subscription", "text-dusk-blue-300"),
+        _ => ("Subscription status unavailable", "text-dusk-blue-300"),
     };
-    let plan = status["plan"]["name"].as_str().unwrap_or("No active plan");
+    let plan = status["plan"]["name"]
+        .as_str()
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or("Plan unavailable");
     let credits = status["subscriptionCredits"]
         .as_i64()
-        .unwrap_or(0)
-        .saturating_add(status["purchasedCredits"].as_i64().unwrap_or(0));
-    let digits = credits.unsigned_abs().to_string();
-    let grouped = digits
-        .chars()
-        .enumerate()
-        .map(|(i, c)| {
-            format!(
-                "{}{c}",
-                if i > 0 && (digits.len() - i) % 3 == 0 {
-                    ","
-                } else {
-                    ""
-                }
-            )
-        })
-        .collect::<String>();
-    body.push_str(&format!("<div class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><div class=\"flex flex-wrap items-start justify-between gap-4\"><div class=\"space-y-3\"><p class=\"text-base font-semibold text-dusk-blue-50\">{} <span class=\"text-xs {tone}\">{label}</span></p><p class=\"text-xs uppercase text-dusk-blue-500\">Credits</p><p class=\"text-lg font-semibold\">{}{grouped}</p>",escape(plan),if credits<0 {"-"} else {""}));
-    if let Some(date) = status["currentPeriodEnd"].as_str() {
+        .zip(status["purchasedCredits"].as_i64())
+        .and_then(|(subscription, purchased)| subscription.checked_add(purchased));
+    let grouped = credits
+        .map(group_credits)
+        .unwrap_or_else(|| "Credits unavailable".into());
+    body.push_str(&format!("<div class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><div class=\"flex flex-wrap items-start justify-between gap-4\"><div class=\"space-y-3\"><p class=\"text-base font-semibold text-dusk-blue-50\">{} <span class=\"text-xs {tone}\">{label}</span></p><p class=\"text-xs uppercase text-dusk-blue-500\">Credits</p><p class=\"text-lg font-semibold\">{grouped}</p>",escape(plan)));
+    if let Some(date) = status["currentPeriodEnd"].as_str().and_then(billing_date) {
         body.push_str(&format!(
-            "<p>Renews <time>{}</time></p>",
-            escape(&display_date(date, false))
+            "<p>Current period ends <time>{}</time></p>",
+            escape(&date)
         ));
     }
     body.push_str("</div>");
@@ -131,22 +142,165 @@ pub(crate) fn billing(status: Result<Value, Error>, plans: Result<Value, Error>)
     }
     body.push_str("</div></div></section><section><h3 class=\"mb-3 text-sm font-semibold uppercase tracking-wider text-dusk-blue-500\">Available Plans</h3>");
     match plans {
-        Ok(v) if v["plans"].as_array().is_some() => {
+        Ok(v)
+            if v["plans"]
+                .as_array()
+                .is_some_and(|plans| plans.iter().all(Value::is_object)) =>
+        {
             let plans = v["plans"].as_array().unwrap();
             if plans.is_empty() {
-                body.push_str("<p>No plans available</p><p>Check back soon or contact support to get started.</p>");
+                body.push_str("<p>No plans are available.</p>");
+                body.push_str(
+                    &crate::ui::Button {
+                        target: crate::ui::ButtonTarget::Link(
+                            crate::ui::LocalPath::new("/app/support").expect("fixed local path"),
+                        ),
+                        ..crate::ui::Button::new("Contact support")
+                    }
+                    .render(),
+                );
             }
             body.push_str("<div class=\"grid gap-4 sm:grid-cols-2 lg:grid-cols-3\">");
             for plan in plans {
                 let str = |key: &str| plan[key].as_str().unwrap_or("");
-                body.push_str(&format!("<article class=\"flex flex-col rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><h3 class=\"text-base font-semibold\">{}</h3><p class=\"text-2xl font-bold text-neon-ice-400\">{}</p><p class=\"text-sm text-dusk-blue-400\">{}</p>{}</article>",escape(str("name")),escape(&crate::admin::plan_price(plan["price"].as_i64().unwrap_or(0),str("currency"),str("billingInterval"))),escape(str("description")),crate::admin::form("/app/settings/billing/checkout",&[("planId","","hidden",str("id"))])));
+                let checkout = if crate::admin::identifier(str("id")) {
+                    crate::admin::form(
+                        "/app/settings/billing/checkout",
+                        &[("planId", "", "hidden", str("id"))],
+                    )
+                } else {
+                    "<p>Plan selection unavailable.</p>".into()
+                };
+                body.push_str(&format!("<article class=\"flex flex-col rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><h3 class=\"text-base font-semibold\">{}</h3><p class=\"text-2xl font-bold text-neon-ice-400\">{}</p><p class=\"text-sm text-dusk-blue-400\">{}</p>{checkout}</article>",escape(str("name")),escape(&billing_price(plan)),escape(str("description"))));
             }
             body.push_str("</div>");
         }
-        _ => body.push_str(&banner("Could not load plans.", false)),
+        _ => body.push_str(&banner(
+            "Could not load plans. Refresh this page to try again.",
+            false,
+        )),
     }
     body.push_str("</section></div>");
     body
+}
+
+fn group_credits(credits: i64) -> String {
+    let digits = credits.unsigned_abs().to_string();
+    let grouped = digits
+        .chars()
+        .enumerate()
+        .map(|(i, c)| {
+            format!(
+                "{}{c}",
+                if i > 0 && (digits.len() - i).is_multiple_of(3) {
+                    ","
+                } else {
+                    ""
+                }
+            )
+        })
+        .collect::<String>();
+    format!("{}{grouped}", if credits < 0 { "-" } else { "" })
+}
+
+fn billing_price(plan: &Value) -> String {
+    let supplied = plan["price"]
+        .as_i64()
+        .zip(plan["currency"].as_str())
+        .zip(plan["billingInterval"].as_str());
+    match supplied {
+        Some(((cents, currency), interval))
+            if currency.len() == 3
+                && currency.bytes().all(|v| v.is_ascii_alphabetic())
+                && matches!(
+                    interval.to_ascii_lowercase().as_str(),
+                    "month" | "monthly" | "year" | "yearly" | "annual"
+                ) =>
+        {
+            crate::admin::plan_price(cents, currency, interval)
+        }
+        _ => "Price unavailable".into(),
+    }
+}
+
+fn billing_date(value: &str) -> Option<String> {
+    let date = value.get(..10)?;
+    if !date.bytes().enumerate().all(|(i, b)| {
+        if i == 4 || i == 7 {
+            b == b'-'
+        } else {
+            b.is_ascii_digit()
+        }
+    }) || !valid_billing_time(value.get(10..)?)
+    {
+        return None;
+    }
+    let formatted = display_date(value, false);
+    if formatted.is_empty() {
+        return None;
+    }
+    let year = value.get(..4)?.parse::<u32>().ok()?;
+    let month = value.get(5..7)?.parse::<usize>().ok()?;
+    let day = value.get(8..10)?.parse::<u8>().ok()?;
+    let leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+    let days = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    (year > 0 && day <= days[month - 1]).then_some(formatted)
+}
+
+fn valid_billing_time(suffix: &str) -> bool {
+    if suffix.is_empty() {
+        return true;
+    }
+    let bytes = suffix.as_bytes();
+    if bytes.len() < 10 || !matches!(bytes[0], b'T' | b't') || bytes[3] != b':' || bytes[6] != b':'
+    {
+        return false;
+    }
+    let number = |start: usize, end: usize, maximum: u8| {
+        suffix
+            .get(start..end)
+            .filter(|v| v.bytes().all(|b| b.is_ascii_digit()))
+            .and_then(|v| v.parse::<u8>().ok())
+            .is_some_and(|v| v <= maximum)
+    };
+    if !number(1, 3, 23) || !number(4, 6, 59) || !number(7, 9, 59) {
+        return false;
+    }
+    let mut zone = &suffix[9..];
+    if let Some(fraction) = zone.strip_prefix('.') {
+        let digits = fraction.bytes().take_while(u8::is_ascii_digit).count();
+        if digits == 0 {
+            return false;
+        }
+        zone = &fraction[digits..];
+    }
+    if matches!(zone, "Z" | "z") {
+        return true;
+    }
+    let bytes = zone.as_bytes();
+    if bytes.len() != 6 || !matches!(bytes[0], b'+' | b'-') || bytes[3] != b':' {
+        return false;
+    }
+    let part = |start, end, max| {
+        zone.get(start..end)
+            .filter(|v| v.bytes().all(|b| b.is_ascii_digit()))
+            .and_then(|v| v.parse::<u8>().ok())
+            .is_some_and(|v| v <= max)
+    };
+    part(1, 3, 23) && part(4, 6, 59)
 }
 
 /// The QR matrix is encoded locally and rendered as inert SVG rectangles. Neither
@@ -268,58 +422,7 @@ pub(crate) fn settings(project_id: &str, project_name: &str, organization: &str)
     body
 }
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-    #[test]
-    fn settings_hub_exposes_all_subpages_and_verified_project() {
-        let html = settings("proj_verified", "Project", "Organization");
-        for path in [
-            "organization",
-            "account",
-            "billing",
-            "usage",
-            "white-labeling",
-        ] {
-            assert!(html.contains(&format!("href=\"/app/settings/{path}\"")));
-        }
-        assert!(html.contains("proj_verified"));
-        for path in ["/app/users", "/app/sessions", "/app/support"] {
-            assert!(html.contains(&format!("href=\"{path}\"")), "missing {path}");
-        }
-    }
-    #[test]
-    fn billing_preserves_partial_failures_and_only_active_portal() {
-        let active = billing(
-            Ok(
-                json!({"billingStatus":"active","plan":{"name":"Pro"},"subscriptionCredits":900,"purchasedCredits":120,"currentPeriodEnd":"2026-10-01T00:00:00Z"}),
-            ),
-            Err(crate::Error::Unavailable),
-        );
-        assert!(active.contains("1,020"));
-        assert!(active.contains("Manage billing"));
-        assert!(active.contains("Could not load plans."));
-        let inactive = billing(
-            Ok(json!({"billingStatus":"past_due"})),
-            Ok(json!({"plans":[]})),
-        );
-        assert!(inactive.contains("Past due"));
-        assert!(!inactive.contains("Manage billing"));
-        assert!(inactive.contains("No plans available"));
-    }
-    #[test]
-    fn redirect_errors_are_fixed_and_unknown_paths_fail_closed() {
-        assert_eq!(
-            failure_target("/app/users/member-1/remove"),
-            Some("/app/users?error=remove")
-        );
-        assert_eq!(
-            failure_target("/app/settings/billing/portal"),
-            Some("/app/settings/billing?error=portal")
-        );
-        assert_eq!(failure_target("/app/users/x/unknown"), None);
-    }
-}
+mod tests;
 #[cfg(test)]
 mod qr_tests {
     #[test]

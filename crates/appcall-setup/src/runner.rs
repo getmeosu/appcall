@@ -1,4 +1,4 @@
-use crate::{Credentials, Error, Result, Validator};
+use crate::{Credentials, Error, Result, ValidationFailure, Validator};
 use appcall_connectors::Registry;
 use appcall_runner_client::{ActionExecuteRequest, RequestContext, RunnerClient};
 use std::{
@@ -78,7 +78,7 @@ impl RunnerValidator {
             self.client
                 .healthcheck(&context, connector, input)
                 .await
-                .map_err(|_| Error::ValidationFailed)
+                .map_err(validation_error)
         });
         if !active() {
             return Err(Error::Cancelled);
@@ -133,7 +133,7 @@ impl RunnerValidator {
                 .client
                 .healthcheck(&context, connector, input.clone())
                 .await
-                .map_err(|_| Error::ValidationFailed)?;
+                .map_err(validation_error)?;
             check()?;
             if response.status != "ok" {
                 return Err(Error::ValidationFailed);
@@ -150,7 +150,7 @@ impl RunnerValidator {
                         },
                     )
                     .await
-                    .map_err(|_| Error::ValidationFailed)?;
+                    .map_err(validation_error)?;
                 check()?;
                 let output = validation
                     .output
@@ -179,4 +179,8 @@ impl RunnerValidator {
             })
         })
     }
+}
+
+fn validation_error(error: appcall_runner_client::Error) -> Error {
+    Error::Validation(ValidationFailure::from_runner_kind(error.kind))
 }

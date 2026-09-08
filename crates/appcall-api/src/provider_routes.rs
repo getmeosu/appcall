@@ -320,6 +320,9 @@ pub(crate) fn setup_error(error: appcall_setup::Error, callback: bool) -> Respon
     use appcall_oauth::Error as O;
     use appcall_setup::Error as S;
     match error {
+        S::CredentialResolutionFailed(cause) => {
+            setup_error(S::OAuth(cause.oauth_error()), callback)
+        }
         S::OAuth(O::InvalidState | O::StateExpired | O::StateBinding) => failure(
             400,
             "INVALID_OAUTH_STATE",
@@ -338,9 +341,9 @@ pub(crate) fn setup_error(error: appcall_setup::Error, callback: bool) -> Respon
         S::OAuth(O::Transport | O::InvalidToken | O::OutcomeUnknown) => failure(
             502,
             "OAUTH_EXCHANGE_FAILED",
-            "The provider rejected the authorization code exchange.",
+            "The authorization code exchange could not be completed.",
         ),
-        S::MissingField => failure(
+        S::MissingField | S::MissingDeclaredField(_) => failure(
             400,
             "MISSING_SETUP_FIELD",
             "A required connector setup field is missing.",
@@ -350,10 +353,10 @@ pub(crate) fn setup_error(error: appcall_setup::Error, callback: bool) -> Respon
             "UNSUPPORTED_SETUP_MODE",
             "This connector does not support that setup mode.",
         ),
-        S::ValidationFailed => failure(
+        S::ValidationFailed | S::Validation(_) => failure(
             502,
             "CONNECTOR_SETUP_VALIDATION_FAILED",
-            "The upstream connector rejected the provided credentials.",
+            "The connector credentials could not be verified.",
         ),
         S::InvalidInput | S::UnknownRoute | S::OAuth(O::InvalidInput) => failure(
             400,

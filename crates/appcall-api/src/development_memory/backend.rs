@@ -85,7 +85,7 @@ impl MemoryCore {
         memory_work(move || {
             setup
                 .test_checked(&i.project_id, account(&i), &id, &active)
-                .map_err(setup_error)
+                .map_err(crate::setup_failure::memory_connection_check_error)
         })
         .await
     }
@@ -607,27 +607,7 @@ pub(crate) fn memory_error(e: MemoryError) -> ApiError {
     })
 }
 pub(crate) fn setup_error(e: appcall_setup::Error) -> ApiError {
-    use appcall_setup::Error as E;
-    ApiError::new(match e {
-        E::MissingField => "MISSING_SETUP_FIELD",
-        E::InvalidInput | E::UnknownRoute => "INVALID_REQUEST",
-        E::NotFound => "CONNECTION_NOT_FOUND",
-        E::Conflict => "CONNECTION_CHANGED",
-        E::Unsupported => "UNSUPPORTED_SETUP_MODE",
-        E::ValidationFailed => "CONNECTOR_SETUP_VALIDATION_FAILED",
-        E::OAuth(
-            appcall_oauth::Error::InvalidState
-            | appcall_oauth::Error::StateExpired
-            | appcall_oauth::Error::StateBinding,
-        ) => "INVALID_OAUTH_STATE",
-        E::OAuth(appcall_oauth::Error::NotConfigured) => "OAUTH_APP_NOT_CONFIGURED",
-        E::OAuth(
-            appcall_oauth::Error::Transport
-            | appcall_oauth::Error::InvalidToken
-            | appcall_oauth::Error::OutcomeUnknown,
-        ) => "OAUTH_EXCHANGE_FAILED",
-        _ => "STORAGE_UNAVAILABLE",
-    })
+    ApiError::from(e)
 }
 pub(crate) async fn memory_work<T: Send + 'static>(
     work: impl FnOnce() -> Result<T> + Send + 'static,

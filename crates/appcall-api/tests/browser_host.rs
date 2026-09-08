@@ -1,5 +1,7 @@
 use appcall_api::browser_host::{parse_request, public_path};
 use appcall_api::Request;
+#[path = "browser_host/failure_cases.rs"]
+mod copy_failure_cases;
 #[test]
 fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     assert!(public_path("GET", "/app/login"));
@@ -191,7 +193,7 @@ fn guided_input_preserves_types_and_restricts_actor_schema_scope() {
 }
 #[test]
 #[ignore = "requires isolated local PostgreSQL"]
-fn browser_dashboard_reads_real_services_and_establishes_only_verified_project() {
+fn copy_dashboard_failures_have_backend_parity_production_and_verified_project() {
     use appcall_api::browser_host::*;
     use serde_json::Value;
     use std::{
@@ -231,10 +233,14 @@ fn browser_dashboard_reads_real_services_and_establishes_only_verified_project()
             appcall_store::LocalProvider::new(&[7; 32]).unwrap(),
         )
     };
-    let registry = appcall_connectors::Registry::load(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../runner/connectors"
-    ))
+    let registry = appcall_connectors::Registry::from_connectors(
+        std::iter::once(copy_failure_cases::manifest())
+            .chain(copy_failure_cases::extra_manifests())
+            .map(|manifest| {
+                appcall_connectors::Connector::from_bytes(&serde_json::to_vec(&manifest).unwrap())
+                    .unwrap()
+            }),
+    )
     .unwrap();
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -254,8 +260,9 @@ fn browser_dashboard_reads_real_services_and_establishes_only_verified_project()
             .unwrap(),
         ),
     ));
+    let transport = copy_failure_cases::TransportServer::new();
     let runner =
-        appcall_runner_client::RunnerClient::new("http://127.0.0.1:1", "", Default::default())
+        appcall_runner_client::RunnerClient::new(&transport.endpoint, "", Default::default())
             .unwrap();
     let repository = appcall_actions::PgActionRepository::new(connect());
     let policy = appcall_actions::PgPolicy::new(repository.clone(), Default::default()).unwrap();
@@ -290,6 +297,63 @@ fn browser_dashboard_reads_real_services_and_establishes_only_verified_project()
         setup,
         Default::default(),
     ));
+    admin.batch_execute("INSERT INTO projects(id,name) VALUES('proj_copy-test','fixture'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('copy-connection','proj_copy-test','test','api_key','active','brand','brand')").unwrap();
+    store()
+        .store_secret(
+            "proj_copy-test",
+            "copy-secret",
+            "api_key",
+            br#"{"apiKey":"synthetic-copy-key"}"#,
+        )
+        .unwrap();
+    admin.batch_execute("INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,secret_ref_id) VALUES('copy-check','proj_copy-test','copy-check-toolkit','api_key','active','brand','brand','copy-secret'); INSERT INTO action_replay_logs(id,project_id,connection_id,connector,action,request_id,sanitized_input,external_account_id) VALUES('copy-replay','proj_copy-test','copy-connection','test','write','original-copy-request','[]','brand')").unwrap();
+    let mut principal = appcall_auth::Principal::project("proj_copy-test").unwrap();
+    principal.user_id = Some("11111111-1111-1111-1111-111111111111".into());
+    let copy_data = data.clone();
+    let runner_calls = transport.calls.clone();
+    runtime.block_on(async move {
+        tokio::task::spawn_blocking(move || {
+            // Poll outside Tokio's async executor, as BrowserHost does, while
+            // retaining its reactor handle for the actual service futures.
+            struct Signal(std::thread::Thread);
+            impl std::task::Wake for Signal {
+                fn wake(self: Arc<Self>) {
+                    self.0.unpark();
+                }
+                fn wake_by_ref(self: &Arc<Self>) {
+                    self.0.unpark();
+                }
+            }
+            let waker = std::task::Waker::from(Arc::new(Signal(std::thread::current())));
+            let mut context = std::task::Context::from_waker(&waker);
+            let mut future = std::pin::pin!(async {
+                copy_failure_cases::assert_failures(copy_data.as_ref(), principal.clone()).await;
+                copy_failure_cases::assert_service_failures(
+                    copy_data.as_ref(),
+                    principal,
+                    appcall_web::Error::Invalid,
+                    false,
+                    &runner_calls,
+                )
+                .await;
+            });
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+            loop {
+                assert!(
+                    std::time::Instant::now() < deadline,
+                    "production dashboard fixture timed out"
+                );
+                match std::future::Future::poll(future.as_mut(), &mut context) {
+                    std::task::Poll::Ready(()) => break,
+                    std::task::Poll::Pending => {
+                        std::thread::park_timeout(std::time::Duration::from_millis(50))
+                    }
+                }
+            }
+        })
+        .await
+        .unwrap();
+    });
     let fixture: Value =
         serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
     let host = BrowserHost::new(

@@ -28,6 +28,14 @@ pub(crate) fn active(check: &dyn Fn() -> bool) -> Result<()> {
         Err(Error::Cancelled)
     }
 }
+fn credential_resolution_error(error: Error) -> Error {
+    match error {
+        Error::OAuth(cause) => appcall_setup::CredentialResolutionFailure::from_oauth_error(cause)
+            .map(Error::CredentialResolutionFailed)
+            .unwrap_or(Error::OAuth(cause)),
+        other => other,
+    }
+}
 pub(crate) fn scope(project: &str, account: Option<&str>) -> Result<()> {
     if project.is_empty()
         || project.len() > 128
@@ -253,7 +261,8 @@ impl MemorySetup {
         };
         let (mut c, revision, credentials) = self
             .oauth
-            .resolve_checked_versioned(project, account, id, check)?;
+            .resolve_checked_versioned(project, account, id, check)
+            .map_err(credential_resolution_error)?;
         if c.status == Status::Disconnected || c.status == Status::Authorizing {
             return Err(Error::Conflict);
         }

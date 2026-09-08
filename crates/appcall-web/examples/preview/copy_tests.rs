@@ -1,0 +1,394 @@
+use super::*;
+use crate::tests::dashboard_request;
+
+#[test]
+fn startup_scenarios_are_fixed_and_unknown_values_are_rejected() {
+    for (name, expected) in [
+        ("preview", Scenario::Preview),
+        ("populated", Scenario::Populated),
+        ("empty", Scenario::Empty),
+        ("unavailable", Scenario::Unavailable),
+        ("billing-partial", Scenario::BillingPartial),
+        ("billing-missing", Scenario::BillingMissing),
+        (
+            "billing-status-unavailable",
+            Scenario::BillingStatusUnavailable,
+        ),
+        (
+            "billing-plans-unavailable",
+            Scenario::BillingPlansUnavailable,
+        ),
+        ("billing-empty-plans", Scenario::BillingEmptyPlans),
+        ("auth-rejected", Scenario::AuthRejected),
+        ("auth-accepted", Scenario::AuthAccepted),
+        ("auth-unavailable", Scenario::AuthUnavailable),
+        ("no-session", Scenario::NoSession),
+        ("untrusted-origin", Scenario::UntrustedOrigin),
+        ("events-stream", Scenario::EventsStream),
+        ("request-success", Scenario::RequestSuccess),
+        ("request-delayed", Scenario::RequestDelayed),
+        ("request-invalid", Scenario::RequestInvalid),
+        ("request-unavailable", Scenario::RequestUnavailable),
+        ("request-missing-patch", Scenario::RequestMissingPatch),
+        ("request-drop", Scenario::RequestDrop),
+    ] {
+        assert_eq!(Scenario::parse(name).unwrap(), expected);
+    }
+    for unknown in [
+        "",
+        "EMPTY",
+        "empty?mode=accepted",
+        "secret-input",
+        "../empty",
+    ] {
+        assert!(Scenario::parse(unknown).is_err());
+    }
+}
+
+#[test]
+fn posts_are_exact_native_routes_without_test_form_alias() {
+    for path in [
+        "/app/toolkits/connector-0/setup",
+        "/app/toolkits/connector-0/test",
+        "/app/toolkits/connector-3/test",
+        "/app/auth-configs/preview_connection/test",
+        "/app/auth-configs/preview_connection/disconnect",
+        "/app/logs/preview_original/replay",
+        "/app/triggers/preview_event/replay",
+        "/app/toolkits/request",
+        "/app/login",
+        "/app/login/mfa",
+        "/app/signup",
+        "/app/otp/verify",
+        "/app/forgot-password",
+        "/app/magic-link",
+    ] {
+        assert!(allowed("POST", path), "{path}");
+    }
+    for path in [
+        "/app/toolkits/other/test",
+        "/app/toolkits/connector-0/test-form",
+        "/app/auth-configs/other/disconnect",
+        "/api/auth/login",
+        "/app/users/remove",
+        "/app/toolkits/connector-0/setup/extra",
+    ] {
+        assert!(!allowed("POST", path), "{path}");
+    }
+    assert!(allowed("GET", "/app/toolkits/connector-0/test-form"));
+    assert!(!allowed(
+        "DELETE",
+        "/app/auth-configs/preview_connection/disconnect"
+    ));
+}
+
+#[tokio::test]
+async fn empty_and_unavailable_collections_are_distinct() {
+    for (op, key) in [
+        (DashboardOperation::Catalog, "connectors"),
+        (DashboardOperation::AuthConfigs, "connections"),
+        (DashboardOperation::Logs, "logs"),
+        (DashboardOperation::Triggers, "events"),
+        (DashboardOperation::Qa, "certifications"),
+    ] {
+        let result = ScenarioData::new(Scenario::Empty)
+            .execute(dashboard_request(op))
+            .await;
+        assert!(result.is_ok(), "{op:?}");
+        assert_eq!(result.unwrap()[key], json!([]));
+        assert_eq!(
+            ScenarioData::new(Scenario::Unavailable)
+                .execute(dashboard_request(op))
+                .await,
+            Err(Error::Unavailable)
+        );
+    }
+}
+
+#[tokio::test]
+async fn real_filters_produce_real_empty_copy() {
+    let data = ScenarioData::new(Scenario::Populated);
+    let dashboard = DevelopmentDashboard {
+        public_origin: "http://127.0.0.1:55589",
+        data: &data,
+    };
+    for (target, message) in [
+        (
+            "/app/toolkits?category=unmatched",
+            "No connectors match this category.",
+        ),
+        (
+            "/app/logs?status=failed",
+            "No tool runs match these filters.",
+        ),
+    ] {
+        let request = Request {
+            method: "GET",
+            path: target.split('?').next().unwrap(),
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields: preview_fields(target, b"").unwrap(),
+            now: 0,
+        };
+        let response = dashboard.handle(&request).await.unwrap();
+        assert_eq!(response.status, 200);
+        assert!(response.body.contains(message), "{target}");
+    }
+}
+
+#[tokio::test]
+async fn fixture_counters_count_one_execution_without_retaining_fields() {
+    let data = ScenarioData::new(Scenario::RequestSuccess);
+    let mut request = dashboard_request(DashboardOperation::RequestToolkit);
+    request.fields.insert("name".into(), "PRIVATE-NAME".into());
+    request
+        .form_values
+        .insert("notes".into(), vec!["PRIVATE-NOTES".into()]);
+    data.execute(request).await.unwrap();
+    assert_eq!(data.stats()["operations"]["request"], 1);
+    data.execute_detailed(dashboard_request(DashboardOperation::RequestToolkit))
+        .await
+        .unwrap();
+    assert_eq!(data.stats()["operations"]["request"], 2);
+    assert!(!data.stats().to_string().contains("PRIVATE"));
+    for (scenario, expected) in [
+        (Scenario::RequestInvalid, Error::Invalid),
+        (Scenario::RequestUnavailable, Error::Unavailable),
+    ] {
+        let data = ScenarioData::new(scenario);
+        assert_eq!(
+            data.execute(dashboard_request(DashboardOperation::RequestToolkit))
+                .await,
+            Err(expected)
+        );
+        assert_eq!(data.stats()["operations"]["request"], 1);
+    }
+    for scenario in [
+        Scenario::RequestDelayed,
+        Scenario::RequestMissingPatch,
+        Scenario::RequestDrop,
+    ] {
+        assert_eq!(scenario.delay(), std::time::Duration::from_secs(2));
+    }
+}
+
+#[test]
+fn billing_and_auth_broker_contracts_are_independent() {
+    assert_eq!(
+        broker_fixture(Scenario::Preview, "GET", "/api/auth/providers"),
+        (
+            200,
+            json!({"google":false,"github":false,"microsoft":false,"magicLink":true,"otp":true})
+        )
+    );
+    let call = |scenario, path| broker_fixture(scenario, "GET", path);
+    let (_, partial) = call(Scenario::BillingPartial, "/api/billing/status");
+    assert_eq!(partial["billingStatus"], "active");
+    assert!(partial.get("subscriptionCredits").is_none());
+    assert_eq!(
+        call(Scenario::BillingMissing, "/api/billing/status"),
+        (200, json!({}))
+    );
+    assert_eq!(
+        call(Scenario::BillingStatusUnavailable, "/api/billing/status").0,
+        503
+    );
+    assert_eq!(
+        call(Scenario::BillingStatusUnavailable, "/api/plans").0,
+        200
+    );
+    assert_eq!(
+        call(Scenario::BillingPlansUnavailable, "/api/billing/status").0,
+        200
+    );
+    assert_eq!(call(Scenario::BillingPlansUnavailable, "/api/plans").0, 503);
+    assert_eq!(
+        call(Scenario::BillingEmptyPlans, "/api/plans").1["plans"],
+        json!([])
+    );
+    for (endpoint, status) in [
+        ("/api/auth/login", 401),
+        ("/api/auth/mfa/challenge", 401),
+        ("/api/auth/register", 400),
+        ("/api/auth/otp/verify", 401),
+    ] {
+        let result = broker_fixture(Scenario::AuthRejected, "POST", endpoint);
+        assert_eq!(result.0, status);
+        assert!(result.1["error"].is_string());
+    }
+    for endpoint in ["/api/auth/forgot-password", "/api/auth/magic-link"] {
+        assert_eq!(
+            broker_fixture(Scenario::AuthAccepted, "POST", endpoint).0,
+            200
+        );
+        assert_eq!(
+            broker_fixture(Scenario::AuthUnavailable, "POST", endpoint).0,
+            503
+        );
+    }
+    assert_eq!(broker_fixture(Scenario::Preview, "POST", "/unknown").0, 404);
+}
+
+#[test]
+fn typed_failures_use_fixed_bounded_evidence_and_distinct_current_id() {
+    for (name, kind, cause) in [
+        (
+            "invalid-json",
+            FailureFixture::InvalidJson,
+            FailureCause::InvalidJson,
+        ),
+        (
+            "invalid-input",
+            FailureFixture::InvalidInput,
+            FailureCause::InvalidActionInput,
+        ),
+        (
+            "missing-field",
+            FailureFixture::MissingField,
+            FailureCause::MissingSetupField,
+        ),
+        (
+            "credentials",
+            FailureFixture::Credentials,
+            FailureCause::CredentialsUnavailable,
+        ),
+        (
+            "disconnected",
+            FailureFixture::Disconnected,
+            FailureCause::ConnectionDisconnected,
+        ),
+        (
+            "timeout-not-dispatched",
+            FailureFixture::TimeoutNotDispatched,
+            FailureCause::Timeout,
+        ),
+        (
+            "timeout-unknown",
+            FailureFixture::TimeoutUnknown,
+            FailureCause::Timeout,
+        ),
+        (
+            "rate-known",
+            FailureFixture::RateKnown,
+            FailureCause::RateLimited,
+        ),
+        (
+            "rate-unknown",
+            FailureFixture::RateUnknown,
+            FailureCause::RateLimited,
+        ),
+        (
+            "usage-known",
+            FailureFixture::UsageKnown,
+            FailureCause::UsageLimited,
+        ),
+        (
+            "usage-unknown",
+            FailureFixture::UsageUnknown,
+            FailureCause::UsageLimited,
+        ),
+        (
+            "response-size",
+            FailureFixture::ResponseSize,
+            FailureCause::ResponseTooLarge,
+        ),
+        (
+            "input-size",
+            FailureFixture::InputSize,
+            FailureCause::InputTooLarge,
+        ),
+        (
+            "verification",
+            FailureFixture::Verification,
+            FailureCause::VerificationFailed,
+        ),
+        (
+            "unavailable",
+            FailureFixture::Unavailable,
+            FailureCause::ServiceUnavailable,
+        ),
+        ("unknown", FailureFixture::Unknown, FailureCause::Unknown),
+    ] {
+        let scenario = Scenario::parse(&format!("error-{name}")).unwrap();
+        assert_eq!(scenario, Scenario::Failure(kind));
+        let failure = scenario.failure().unwrap();
+        assert_eq!(failure.cause(), cause);
+        assert_eq!(failure.request_id(), Some("preview_current"));
+    }
+    let failure = |kind| Scenario::Failure(kind).failure().unwrap();
+    assert_eq!(
+        failure(FailureFixture::TimeoutNotDispatched).outcome(),
+        ExecutionOutcome::NotDispatched
+    );
+    assert_eq!(
+        failure(FailureFixture::TimeoutUnknown).outcome(),
+        ExecutionOutcome::Unknown
+    );
+    assert_eq!(
+        failure(FailureFixture::RateKnown).retry_after_seconds(),
+        Some(30)
+    );
+    assert_eq!(
+        failure(FailureFixture::RateUnknown).retry_after_seconds(),
+        None
+    );
+    assert!(failure(FailureFixture::UsageKnown).usage().is_some());
+    assert!(failure(FailureFixture::UsageUnknown).usage().is_none());
+    assert_eq!(
+        failure(FailureFixture::MissingField)
+            .setup_field()
+            .unwrap()
+            .label(),
+        "Workspace & \"region\""
+    );
+    let p = failure(FailureFixture::InvalidJson)
+        .json_position()
+        .unwrap();
+    assert_eq!((p.line(), p.column()), (2, 11));
+}
+
+#[tokio::test]
+async fn empty_events_stream_has_one_binding_and_two_independent_delayed_rows() {
+    let data = ScenarioData::new(Scenario::EventsStream);
+    let dashboard = DevelopmentDashboard {
+        public_origin: "http://127.0.0.1:55589",
+        data: &data,
+    };
+    let request = Request {
+        method: "GET",
+        path: "/app/triggers",
+        cookies: "",
+        origin: None,
+        referer: None,
+        fields: Default::default(),
+        now: 0,
+    };
+    let response = dashboard.handle(&request).await.unwrap();
+    assert!(response.body.contains("trigger-empty-state"));
+    assert_eq!(
+        response
+            .body
+            .matches("data-init=\"@get('/app/triggers/stream')\"")
+            .count(),
+        1
+    );
+    let frames = event_frames().unwrap();
+    assert_eq!(frames.len(), 2);
+    let dialog = |frame: &str| {
+        frame
+            .split("<dialog id=\"")
+            .nth(1)
+            .unwrap()
+            .split('"')
+            .next()
+            .unwrap()
+            .to_owned()
+    };
+    assert_ne!(dialog(&frames[0]), dialog(&frames[1]));
+    for frame in frames {
+        assert!(frame.contains("selector #trigger-rows\ndata: mode prepend"));
+        assert!(frame.contains("selector #trigger-empty-state\ndata: mode remove"));
+        assert!(frame.contains("/app/triggers/preview_event/replay"));
+    }
+}

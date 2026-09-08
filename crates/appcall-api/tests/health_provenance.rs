@@ -51,7 +51,7 @@ impl CredentialResolver for Refresh {
 fn refreshed_credentials_pass_health_but_concurrent_reconnect_does_not() {
     use std::io::{Read, Write};
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
-    for reconnect in [false, true] {
+    for (reconnect, failed_rpc) in [(false, false), (true, false), (true, true)] {
         let schema = format!("health_fence_{}", uuid::Uuid::new_v4().simple());
         let mut client = Client::connect(&url, NoTls).unwrap();
         client
@@ -118,6 +118,9 @@ fn refreshed_credentials_pass_health_but_concurrent_reconnect_does_not() {
                     )
                     .unwrap();
             }
+            if failed_rpc {
+                return; // A dropped transport must not survive a newer reconnect.
+            }
             let body =
                 json!({"id":request["id"],"ok":true,"result":{"status":"ok","source":"provider"}})
                     .to_string();
@@ -152,7 +155,9 @@ fn refreshed_credentials_pass_health_but_concurrent_reconnect_does_not() {
             .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
             .unwrap();
         if reconnect {
-            assert_eq!(result.unwrap_err().code, "CONNECTION_CHANGED")
+            let error = result.unwrap_err();
+            assert_eq!(error.code, "CONNECTION_CHANGED");
+            assert!(error.evidence.is_none());
         } else {
             assert_eq!(result.unwrap().last_test_status, TestStatus::Passed)
         }

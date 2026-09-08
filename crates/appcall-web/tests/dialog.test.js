@@ -35,3 +35,20 @@ test('Escape uses native cancel and restores focus on close; disabled/missing tr
   c.dialog.close();f.emit('close',c.dialog);assert.equal(c.trigger.focused,true);
   f.nodes.delete('delete');assert.doesNotThrow(()=>f.emit('click',c.trigger));
 });
+
+test('disconnect, saved request replay, and independently streamed event dialogs keep native confirm submission', () => {
+  const f = fixture();
+  for (const id of ['disconnect-conn', 'replay-request', 'event-initial', 'event-stream-one', 'event-stream-two']) {
+    const c = controls(id); f.nodes.set(id, c.dialog);
+    f.emit('click', c.trigger);
+    assert.equal(c.dialog.open, true);
+    // Browser form ownership and the POST are verified with real rendered HTML
+    // separately. The delegated handler must leave native submit unprevented.
+    const confirm = { closest: () => null };
+    assert.equal(f.emit('click', confirm).prevented, undefined);
+    assert.equal(f.emit('submit', confirm).prevented, undefined);
+    f.emit('click', c.cancelTarget);
+    f.emit('close', c.dialog);
+    assert.equal(c.trigger.focused, true);
+  }
+});

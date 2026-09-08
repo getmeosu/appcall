@@ -3,6 +3,23 @@ use crate::http::escape;
 mod sheet;
 pub use sheet::component_sheet;
 
+/// A fresh association for each rendering, including repeated streamed rows.
+/// This identifies DOM controls only; it is not an execution or deduplication ID.
+pub(crate) fn document_id() -> Result<String, crate::Error> {
+    use aes_gcm::aead::{rand_core::RngCore, OsRng};
+    let mut bytes = [0_u8; 16];
+    OsRng
+        .try_fill_bytes(&mut bytes)
+        .map_err(|_| crate::Error::Unavailable)?;
+    Ok(format!(
+        "confirm-{}",
+        bytes
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>()
+    ))
+}
+
 /// Same-origin destinations keep actions and links free of executable schemes.
 #[derive(Clone, Copy)]
 pub struct LocalPath<'a>(&'a str);

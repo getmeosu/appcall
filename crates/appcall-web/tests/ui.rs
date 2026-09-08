@@ -116,6 +116,27 @@ fn confirmation_with_existing_form_never_creates_a_nested_form() {
 }
 
 #[test]
+fn copy_confirmations_escape_target_text_and_keep_native_standalone_submission() {
+    let html = ConfirmButton {
+        id: "replay-one",
+        trigger: "Run this again",
+        heading: "Dispatch this event again?",
+        body: "Dispatch event <event&\"one> again? Consumers may process the event again.",
+        confirm: "Run this again",
+        action: LocalPath::new("/app/triggers/event_1/replay").unwrap(),
+        form: None,
+    }
+    .render();
+    assert!(html.contains("Dispatch event &lt;event&amp;&quot;one&gt; again?"));
+    assert_eq!(html.matches("<form ").count(), 1);
+    assert!(html.contains(
+        "form=\"replay-one-form\" formaction=\"/app/triggers/event_1/replay\" formmethod=\"post\""
+    ));
+    assert!(html.contains("data-confirm-cancel autofocus"));
+    assert!(html.find("</dialog>").unwrap() < html.find("<form ").unwrap());
+}
+
+#[test]
 fn sheet_renders_every_button_variant_size_and_honest_working_state() {
     let html = component_sheet();
     for variant in ["primary", "secondary", "quiet", "danger", "icon"] {
