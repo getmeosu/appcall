@@ -86,6 +86,12 @@ impl ScenarioData {
         Ok(match r.operation {
             Op::Toolkit | Op::TestForm => {
                 let mut value = connector_fixture(&r)?;
+                if self.scenario == Scenario::Connections
+                    && r.resource.as_deref() == Some("connector-0")
+                {
+                    value["connections"] = json!(connections_fixture());
+                    value["synthetic"] = true.into();
+                }
                 if self.scenario != Scenario::Preview
                     && r.resource.as_deref() == Some("connector-0")
                 {
@@ -100,6 +106,7 @@ impl ScenarioData {
                 return Err(Error::Unavailable.into())
             }
             Op::Overview => overview_fixture(self.scenario),
+            Op::Runs => runs_fixture(self.scenario, &r)?,
             Op::Usage => match self.scenario {
                 Scenario::Unavailable => return Err(Error::Unavailable.into()),
                 Scenario::Empty => {
@@ -235,6 +242,18 @@ fn collection(scenario: Scenario, r: &DashboardRequest) -> Option<Result<Value, 
     if scenario == Scenario::Unavailable {
         return Some(Err(Error::Unavailable));
     }
+    if r.operation == Op::AuthConfigs {
+        if scenario == Scenario::Connections {
+            return Some(Ok(
+                json!({"synthetic":true,"connections":connections_fixture()}),
+            ));
+        }
+        if scenario == Scenario::ConnectionsMalformed {
+            return Some(Ok(json!({"synthetic":true,"connections":[{
+                "id":"synthetic/invalid-id","connector":"connector-0","status":"active"
+            }]})));
+        }
+    }
     if scenario == Scenario::Empty
         || scenario == Scenario::EventsStream && r.operation == Op::Triggers
     {
@@ -251,6 +270,20 @@ fn collection(scenario: Scenario, r: &DashboardRequest) -> Option<Result<Value, 
         _ => unreachable!("collection operation checked above"),
     };
     Some(Ok(json!({key:rows})))
+}
+
+/// Fixed display evidence only. Ages are synthetic DTO values, not claims
+/// about a provider request or a live OAuth intent. No secrets are present.
+fn connections_fixture() -> Vec<Value> {
+    vec![
+        json!({"id":"preview_connection","connector":"connector-0","authType":"api_key","status":"active","lastTestStatus":"passed","createdAgeSeconds":3600}),
+        json!({"id":"synthetic_authorizing","connector":"connector-0","authType":"oauth2","status":"authorizing","lastTestStatus":"unknown","createdAgeSeconds":86400,"authorizationAgeSeconds":42}),
+        json!({"id":"synthetic_authorizing_no_intent","connector":"connector-0","authType":"oauth2","status":"authorizing","lastTestStatus":"unknown","createdAgeSeconds":86400}),
+        json!({"id":"synthetic_degraded","connector":"connector-0","authType":"oauth2","status":"degraded","lastTestStatus":"failed","createdAgeSeconds":7200}),
+        json!({"id":"synthetic_disconnected","connector":"connector-0","authType":"api_key","status":"disconnected","lastTestStatus":"unknown","createdAgeSeconds":172800}),
+        json!({"id":"synthetic_unknown","connector":"connector-0","authType":"","status":"","lastTestStatus":"unknown"}),
+        json!({"id":format!("synthetic_long_{}", "workspace_region_".repeat(12)),"connector":"connector-0","authType":"external_bearer","status":"disconnected","lastTestStatus":"unknown","createdAgeSeconds":604800}),
+    ]
 }
 fn event_fixture(operation: &str) -> Value {
     json!({"id":"preview_event","connector":"Synthetic Workspace & \"regional operations\"","operation":operation,"connectionId":"preview_connection","createdAt":"2026-09-08T10:00:00Z"})

@@ -10,6 +10,8 @@ pub enum Error {
     Invalid,
     Unauthorized,
     Forbidden,
+    NotFound,
+    Conflict,
     Unavailable,
     Configuration,
 }
@@ -19,6 +21,8 @@ impl std::fmt::Display for Error {
             Self::Invalid => "Appcall could not accept this request. Review the submitted details.",
             Self::Unauthorized => "Sign in to continue.",
             Self::Forbidden => "Appcall denied this request. Check that you have access to this action.",
+            Self::NotFound => "Appcall could not find that resource.",
+            Self::Conflict => "Appcall could not apply this change because the run state changed. Refresh and review the current state.",
             Self::Unavailable => "Appcall could not complete this request. Check the current state before repeating a change, or contact support.",
             Self::Configuration => "Appcall could not complete this request because its service configuration needs attention. Contact the service administrator.",
         })
@@ -36,6 +40,8 @@ mod copy_tests {
             (Error::Invalid, "Appcall could not accept this request. Review the submitted details."),
             (Error::Unauthorized, "Sign in to continue."),
             (Error::Forbidden, "Appcall denied this request. Check that you have access to this action."),
+            (Error::NotFound, "Appcall could not find that resource."),
+            (Error::Conflict, "Appcall could not apply this change because the run state changed. Refresh and review the current state."),
             (Error::Unavailable, "Appcall could not complete this request. Check the current state before repeating a change, or contact support."),
             (Error::Configuration, "Appcall could not complete this request because its service configuration needs attention. Contact the service administrator."),
         ] {

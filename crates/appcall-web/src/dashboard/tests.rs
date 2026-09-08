@@ -2,6 +2,26 @@ use super::*;
 use serde_json::json;
 use std::sync::Mutex;
 
+#[test]
+fn runs_control_recovery_releases_page_lock_after_navigation_abort_or_bfcache_restore() {
+    let script = include_str!("../../static/dashboard.js");
+    for marker in [
+        "const markRunsUncertain = () =>",
+        "[data-runs-control] button",
+        "window.addEventListener('pageshow'",
+        "window.addEventListener('pagehide'",
+        "event.persisted",
+        "Run control outcome is unknown.",
+        "runs-recovery",
+    ] {
+        assert!(
+            script.contains(marker),
+            "runs controls missing recovery marker: {marker}"
+        );
+    }
+    assert!(!script.contains("page.querySelectorAll('button')"));
+}
+
 #[path = "tests/logs_filter_tests.rs"]
 mod logs_filter_tests;
 
@@ -627,6 +647,108 @@ async fn toolkit_operation_failures_replace_their_live_region_without_fake_resul
         .await,
         Err(Error::Forbidden)
     ));
+}
+
+#[tokio::test]
+async fn runs_account_alias_preserves_effective_filter_and_pagination() {
+    for wrapped in [false, true] {
+        for (account, alias, expected) in [
+            (None, "brand-alias", "brand-alias"),
+            (Some(""), "brand-alias", "brand-alias"),
+            (Some("brand-primary"), "brand-alias", "brand-primary"),
+        ] {
+            let value = json!({
+                "runs": [], "pendingRuns": 0, "runningRuns": 0,
+                "backingoffRuns": 0, "deadRuns": 0, "records24h": 0,
+                "workerHeartbeatUnavailable": true,
+                "pagination": {"hasMore": true, "nextCursor": "next+cursor="}
+            });
+            let data = fixture(if wrapped {
+                json!({"data": value})
+            } else {
+                value
+            });
+            let mut request = request("/app/runs");
+            request
+                .fields
+                .insert("externalAccountId".into(), vec![alias.into()]);
+            if let Some(account) = account {
+                request
+                    .fields
+                    .insert("accountId".into(), vec![account.into()]);
+            }
+            let response = render(&data, &request, Some(DashboardOperation::Runs))
+                .await
+                .unwrap();
+            let input = response
+                .body
+                .split("<input")
+                .find(|input| {
+                    input
+                        .split('>')
+                        .next()
+                        .unwrap()
+                        .contains("id=\"runs-account-filter\"")
+                })
+                .expect("account filter input")
+                .split('>')
+                .next()
+                .unwrap();
+            assert!(
+                input.contains(&format!("value=\"{expected}\"")),
+                "effective account must remain selected: {input}"
+            );
+            assert!(response
+                .body
+                .contains("No durable runs match these filters."));
+            assert!(!response.body.contains("No durable runs to show."));
+            assert!(
+                response.body.contains(&format!(
+                    "href=\"/app/runs?accountId={expected}&amp;cursor=next%2Bcursor%3D\""
+                )),
+                "next page must retain the effective account filter"
+            );
+            assert!(
+                !response.body.contains("externalAccountId="),
+                "navigation must use the canonical filter key"
+            );
+            let requests = data.requests.lock().unwrap();
+            assert_eq!(requests.len(), 1);
+            assert_eq!(
+                requests[0]
+                    .fields
+                    .get("externalAccountId")
+                    .map(String::as_str),
+                Some(alias)
+            );
+            assert_eq!(
+                requests[0].fields.get("accountId").map(String::as_str),
+                account
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn run_controls_report_confirmed_success_after_redirect() {
+    let data = fixture(json!({
+        "runs": [],
+        "pendingRuns": 0,
+        "runningRuns": 0,
+        "backingoffRuns": 0,
+        "deadRuns": 0,
+        "records24h": 0,
+        "workerHeartbeatUnavailable": true
+    }));
+    let mut request = request("/app/runs");
+    request
+        .fields
+        .insert("success".into(), vec!["run-now".into()]);
+    let response = render(&data, &request, Some(DashboardOperation::Runs))
+        .await
+        .unwrap();
+    assert!(response.body.contains("Run queued now."));
+    assert!(response.body.contains("No durable runs to show."));
 }
 fn location(response: &Response) -> Option<&str> {
     response

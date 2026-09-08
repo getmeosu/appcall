@@ -11,6 +11,7 @@ mod admin;
 mod dashboard;
 mod dashboard_failure;
 pub use dashboard_failure::*;
+mod connections;
 mod logs;
 mod overview;
 mod pages;

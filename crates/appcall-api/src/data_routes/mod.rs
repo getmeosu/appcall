@@ -14,6 +14,8 @@ mod usage;
 pub use unified::*;
 pub use usage::*;
 pub(crate) mod overview;
+mod runs;
+pub use runs::{dead_runs_projection, list as runs_list, RunQuery};
 
 // Go QueryParam/url.Values.Get selects the first scalar value.
 fn first_query_values(url: &url::Url) -> BTreeMap<String, String> {
@@ -390,6 +392,7 @@ pub fn read(
         ),
         ["v1", "webhook-events", id] => detail(client, identity, LogKind::Webhook, id, false),
         ["v1", "requests", id] => trace(client, identity, id),
+        ["v1", "sync-runs"] => runs::list(client, identity, &RunQuery::parse(url)?),
         _ => return Ok(None),
     }
     .map_err(|error| {
@@ -398,6 +401,7 @@ pub fn read(
                 Some("action-logs") => "ACTION_LOGS_FAILED",
                 Some("replay-logs") => "REPLAY_LOGS_FAILED",
                 Some("webhook-events") => "WEBHOOK_EVENTS_FAILED",
+                Some("sync-runs") => "RUNS_FAILED",
                 _ => "REQUEST_TRACE_FAILED",
             })
         } else {

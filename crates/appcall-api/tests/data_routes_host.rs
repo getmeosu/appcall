@@ -179,3 +179,108 @@ fn data_routes_dispatch_with_authenticated_scope_and_replay_once() {
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
 }
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn ordinary_api_key_can_read_runs_but_cannot_control_them() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut client = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+    let schema = format!("runs_control_auth_test_{}", uuid::Uuid::new_v4().simple());
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    let mut scoped_url = url::Url::parse(&url).unwrap();
+    scoped_url
+        .query_pairs_mut()
+        .append_pair("options", &format!("-csearch_path={schema}"));
+    appcall_runtime::SqlxMigration::new(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../../migrations"),
+        scoped_url.as_str(),
+        std::time::Duration::from_secs(30),
+    )
+    .unwrap()
+    .apply()
+    .unwrap();
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','p'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('c','p','slack','api_key','active','brand','brand'); INSERT INTO sync_jobs(id,project_id,connection_id,operation,status,run_after,dedup_key,input) VALUES('ordinary-run','p','c','messages.list','pending',now(),'ordinary-run','{}')",
+        )
+        .unwrap();
+    let key = StaticApiKey::from_hash(
+        &appcall_auth::hash_api_key("ordinary-key"),
+        Principal::project("p").unwrap(),
+    )
+    .unwrap();
+    let api = Api {
+        registry: appcall_connectors::Registry::load(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../runner/connectors"
+        ))
+        .unwrap(),
+        backend: Services::new(
+            Store::new(client, LocalProvider::new(&[7; 32]).unwrap()),
+            Arc::new(key),
+            ExecutorSpy(Arc::new(Mutex::new(vec![]))),
+            NoCredentials,
+            RunnerClient::new("http://127.0.0.1:1", "", ClientOptions::default()).unwrap(),
+        ),
+    };
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let request = |method: &str, path: &str| Request {
+            method: method.into(),
+            uri: path.into(),
+            headers: vec![
+                ("X-Api-Key".into(), "ordinary-key".into()),
+                ("X-External-Account-Id".into(), "brand".into()),
+            ],
+            body: vec![],
+        };
+        let list = api.handle(request("GET", "/v1/sync-runs")).await;
+        assert_eq!(
+            list.status, 200,
+            "ordinary scoped reads must remain available"
+        );
+        assert_eq!(list.body["runs"][0]["id"], "ordinary-run");
+        let control = api
+            .handle(request("POST", "/v1/sync-runs/ordinary-run/cancel"))
+            .await;
+        assert_eq!(
+            control.status, 403,
+            "ordinary API keys must not mutate runs"
+        );
+        let direct_service = api
+            .backend
+            .auxiliary_route(
+                &Identity {
+                    project_id: "p".into(),
+                    account_id: "brand".into(),
+                    admin_scope: false,
+                },
+                &request("POST", "/v1/sync-runs/ordinary-run/cancel"),
+            )
+            .await;
+        assert_eq!(
+            direct_service.unwrap_err().code,
+            "FORBIDDEN",
+            "the service boundary must not bypass the API gate"
+        );
+    });
+    drop(api);
+    let mut admin = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+    admin
+        .batch_execute(&format!("SET search_path TO {schema}"))
+        .unwrap();
+    assert_eq!(
+        admin
+            .query_one("SELECT status FROM sync_jobs WHERE id='ordinary-run'", &[])
+            .unwrap()
+            .get::<_, String>(0),
+        "pending"
+    );
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
