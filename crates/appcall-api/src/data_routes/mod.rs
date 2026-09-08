@@ -1,7 +1,7 @@
 //! Project-owned audit history. SQL selections intentionally exclude credentials.
 use crate::{ApiError, Identity, Response, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use chrono::DateTime;
+use chrono::{DateTime, Datelike, TimeDelta, Utc};
 use postgres::GenericClient;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -31,13 +31,16 @@ pub struct LogQuery {
     pub filters: BTreeMap<String, String>,
     time: String,
     id: String,
+    created_from: Option<DateTime<Utc>>,
+    created_before: Option<DateTime<Utc>>,
+    postgres_created_bounds: (String, String),
 }
 impl LogQuery {
     pub fn parse(url: &url::Url) -> Result<Self> {
         Self::parse_for(url, LogKind::Action)
     }
     pub fn parse_for(url: &url::Url, kind: LogKind) -> Result<Self> {
-        let filters = first_query_values(url);
+        let mut filters = first_query_values(url);
         let raw = filters.get("limit").map(String::as_str).unwrap_or("");
         let limit = if raw.is_empty() {
             50
@@ -85,6 +88,48 @@ impl LogQuery {
         {
             return Err(ApiError::new("INVALID_ERROR_CODE"));
         }
+        let (created_from, created_before) = if matches!(kind, LogKind::Action) {
+            let parse_bound = |key: &str| -> Result<Option<DateTime<Utc>>> {
+                filters
+                    .get(key)
+                    .filter(|s| !s.is_empty())
+                    .map(|raw| {
+                        if raw.len() > 64 {
+                            return Err(ApiError::new("INVALID_TIME_RANGE"));
+                        }
+                        // Chrono stores nanoseconds and would silently truncate extra digits.
+                        if raw.split_once('.').is_some_and(|(_, fraction)| {
+                            fraction.bytes().take_while(u8::is_ascii_digit).count() > 9
+                        }) {
+                            return Err(ApiError::new("INVALID_TIME_RANGE"));
+                        }
+                        DateTime::parse_from_rfc3339(raw)
+                            .map(|time| time.with_timezone(&Utc))
+                            .map_err(|_| ApiError::new("INVALID_TIME_RANGE"))
+                    })
+                    .transpose()
+            };
+            let from = parse_bound("createdFrom")?;
+            let before = parse_bound("createdBefore")?;
+            if from
+                .zip(before)
+                .is_some_and(|(from, before)| from >= before)
+            {
+                return Err(ApiError::new("INVALID_TIME_RANGE"));
+            }
+            for (key, bound) in [("createdFrom", from), ("createdBefore", before)] {
+                if let Some(bound) = bound {
+                    filters.insert(key.into(), bound.to_rfc3339());
+                }
+            }
+            (from, before)
+        } else {
+            (None, None)
+        };
+        let postgres_created_bounds = (
+            postgres_created_bound(created_from)?,
+            postgres_created_bound(created_before)?,
+        );
         let (time, id) = match filters.get("cursor").filter(|s| !s.is_empty()) {
             None => (String::new(), String::new()),
             Some(raw) => {
@@ -109,14 +154,37 @@ impl LogQuery {
             filters,
             time,
             id,
+            created_from,
+            created_before,
+            postgres_created_bounds,
         })
     }
     pub(crate) fn cursor_boundary(&self) -> (&str, &str) {
         (&self.time, &self.id)
     }
+    pub(crate) fn created_bounds(&self) -> (Option<DateTime<Utc>>, Option<DateTime<Utc>>) {
+        (self.created_from, self.created_before)
+    }
     pub(crate) fn get(&self, key: &str) -> &str {
         self.filters.get(key).map(String::as_str).unwrap_or("")
     }
+}
+
+// PostgreSQL timestamps lie on a microsecond grid. Ceiling both bounds preserves
+// >= from and < before against exact nanosecond inputs without rounding rows.
+fn postgres_created_bound(bound: Option<DateTime<Utc>>) -> Result<String> {
+    let Some(bound) = bound else {
+        return Ok(String::new());
+    };
+    if bound.timestamp_subsec_nanos() >= 1_000_000_000 || !(1..=9999).contains(&bound.year()) {
+        return Err(ApiError::new("INVALID_TIME_RANGE"));
+    }
+    let remainder = bound.timestamp_subsec_nanos() % 1000;
+    let rounded = bound
+        .checked_add_signed(TimeDelta::nanoseconds(i64::from((1000 - remainder) % 1000)))
+        .filter(|time| (1..=9999).contains(&time.year()))
+        .ok_or_else(|| ApiError::new("INVALID_TIME_RANGE"))?;
+    Ok(rounded.to_rfc3339())
 }
 
 #[derive(Clone, Copy)]
@@ -165,7 +233,15 @@ pub fn list(
     } else {
         "action"
     };
-    let sql=format!("SELECT ({})::text FROM {} l WHERE {OWNERSHIP} AND ($3='' OR l.connection_id=$3) AND ($4='' OR l.connector=$4) AND ($5='' OR l.{operation}=$5) AND ($6='' OR (l.created_at,l.id)<(NULLIF($6,'')::timestamptz,$7)){specific} ORDER BY l.created_at DESC,l.id DESC LIMIT $11",kind.fields(false),kind.table());
+    let sql=format!("SELECT ({})::text FROM {} l WHERE {OWNERSHIP} AND ($3='' OR l.connection_id=$3) AND ($4='' OR l.connector=$4) AND ($5='' OR l.{operation}=$5) AND ($6='' OR (l.created_at,l.id)<(NULLIF($6,'')::timestamptz,$7)){specific} AND ($12='' OR l.created_at>=NULLIF($12,'')::timestamptz) AND ($13='' OR l.created_at<NULLIF($13,'')::timestamptz) ORDER BY l.created_at DESC,l.id DESC LIMIT $11",kind.fields(false),kind.table());
+    let (created_from, created_before) = if matches!(kind, LogKind::Action) {
+        (
+            q.postgres_created_bounds.0.as_str(),
+            q.postgres_created_bounds.1.as_str(),
+        )
+    } else {
+        ("", "")
+    };
     let req = if matches!(kind, LogKind::Webhook) {
         ""
     } else {
@@ -196,6 +272,8 @@ pub fn list(
                 &status,
                 &error,
                 &(q.limit + 1),
+                &created_from,
+                &created_before,
             ],
         )
         .map_err(db_error)?;

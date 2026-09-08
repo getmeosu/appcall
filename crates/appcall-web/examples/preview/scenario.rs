@@ -4,6 +4,11 @@ use super::*;
 pub enum Scenario {
     Preview,
     Populated,
+    Logs,
+    Logs401,
+    Logs403,
+    Logs503,
+    LogsMalformed,
     Empty,
     Unavailable,
     BillingPartial,
@@ -51,6 +56,11 @@ impl Scenario {
         Ok(match name {
             "preview" => Self::Preview,
             "populated" => Self::Populated,
+            "logs" => Self::Logs,
+            "logs-401" => Self::Logs401,
+            "logs-403" => Self::Logs403,
+            "logs-503" => Self::Logs503,
+            "logs-malformed" => Self::LogsMalformed,
             "empty" => Self::Empty,
             "unavailable" => Self::Unavailable,
             "billing-partial" => Self::BillingPartial,

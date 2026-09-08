@@ -150,6 +150,8 @@ impl MemoryDashboard {
                         "operation",
                     ]
                     .contains(&k.as_str())
+                        || r.operation == Op::Logs
+                            && ["createdFrom", "createdBefore"].contains(&k.as_str())
                     {
                         url.query_pairs_mut().append_pair(k, v);
                     }
@@ -455,9 +457,24 @@ fn web_error(error: ApiError) -> DashboardFailure {
         | "INVALID_JSON"
         | "INVALID_LIMIT"
         | "INVALID_CURSOR"
+        | "INVALID_TIME_RANGE"
+        | "INVALID_STATUS"
+        | "INVALID_ERROR_CODE"
         | "UNKNOWN_ACTION"
         | "MISSING_SETUP_FIELD" => Error::Invalid,
         _ => Error::Unavailable,
     };
     crate::browser_host::dashboard_failure::map_classified(error, classification)
+}
+
+#[cfg(test)]
+#[test]
+fn logs_filter_errors_are_invalid_in_memory_dashboard() {
+    for code in ["INVALID_TIME_RANGE", "INVALID_STATUS", "INVALID_ERROR_CODE"] {
+        assert_eq!(
+            web_error(ApiError::new(code)).classification(),
+            Error::Invalid,
+            "{code}"
+        );
+    }
 }

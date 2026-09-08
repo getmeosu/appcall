@@ -2,6 +2,12 @@ use super::*;
 use serde_json::json;
 use std::sync::Mutex;
 
+#[path = "tests/logs_filter_tests.rs"]
+mod logs_filter_tests;
+
+#[path = "tests/trace_tests.rs"]
+mod trace_tests;
+
 struct DetailedFailureFixture {
     failure: crate::DashboardFailure,
     detailed_calls: std::sync::atomic::AtomicUsize,

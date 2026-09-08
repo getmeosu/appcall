@@ -1,4 +1,5 @@
 use crate::*;
+use appcall_auth::Principal;
 use serde_json::json;
 
 fn signal(html: &str) {
@@ -82,6 +83,7 @@ fn remaining_sessions_current_and_malformed_data_remain_distinct() {
     ));
     assert!(current.contains("Current session"));
     assert!(current.contains("<caption class=\"sr-only\">Account sessions</caption>"));
+    assert_eq!(current.matches("<th scope=\"col\">").count(), 5);
     assert!(current.contains("ui-state"));
     assert!(!current.contains("/current/revoke"));
     assert!(current.contains("&lt;device&gt;"));
@@ -161,6 +163,63 @@ impl DashboardData for CertificationData {
             )
         })
     }
+}
+
+struct FlashData;
+impl DashboardData for FlashData {
+    fn execute(
+        &self,
+        _: DashboardRequest,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>> + Send + '_>,
+    > {
+        Box::pin(async {
+            Ok(json!({
+                "connections": [{
+                    "id": "connection_1",
+                    "connector": "mail",
+                    "status": "active"
+                }]
+            }))
+        })
+    }
+}
+
+#[tokio::test]
+async fn remaining_connection_flash_uses_a_live_shared_notice() {
+    let data = FlashData;
+    let session = Session {
+        access_token: String::new(),
+        refresh_token: String::new(),
+        user_id: "user".into(),
+        email: "user@example.test".into(),
+        tenant_id: "tenant".into(),
+        tenant_name: "Tenant".into(),
+    };
+    let mut fields = std::collections::BTreeMap::new();
+    fields.insert("success".into(), vec!["test-passed".into()]);
+    let request = Request {
+        method: "GET",
+        path: "/app/auth-configs",
+        cookies: "",
+        origin: None,
+        referer: None,
+        fields,
+        now: 100,
+    };
+    let response = DashboardRenderer { data: &data }
+        .render(
+            &request,
+            Some(DashboardOperation::AuthConfigs),
+            &session,
+            Principal::project("project").unwrap(),
+        )
+        .await
+        .unwrap();
+    let notice = admin_ui::banner("Review the connection's recorded check result below.", true);
+    assert!(response.body.contains(&notice));
+    assert!(notice.contains("aria-live=\"polite\""));
+    assert!(!notice.contains("border-space-indigo"));
 }
 
 #[tokio::test]

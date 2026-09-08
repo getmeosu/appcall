@@ -9,6 +9,9 @@ pub use data::*;
 #[path = "broker.rs"]
 mod broker;
 pub use broker::*;
+#[path = "logs.rs"]
+mod logs;
+pub use logs::*;
 /// Exact synthetic write targets. GET routes still use the real router.
 pub fn allowed(method: &str, path: &str) -> bool {
     method == "GET"
@@ -37,3 +40,7 @@ pub fn allowed(method: &str, path: &str) -> bool {
 #[cfg(test)]
 #[path = "copy_tests.rs"]
 mod copy_tests;
+
+#[cfg(test)]
+#[path = "logs_tests.rs"]
+mod logs_tests;
