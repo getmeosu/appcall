@@ -116,6 +116,17 @@ fn activation() -> String {
     )
 }
 
+pub(crate) fn unavailable() -> String {
+    let retry = ui::Button {
+        target: ui::ButtonTarget::Link(ui::LocalPath::new("/app").expect("static overview path")),
+        ..ui::Button::new("Try again")
+    }
+    .render();
+    format!(
+        "<section class=\"ui-empty-state overview-unavailable\" role=\"alert\" aria-labelledby=\"overview-unavailable-title\"><h3 id=\"overview-unavailable-title\">Overview temporarily unavailable</h3><p>Current project health could not be loaded. Try again shortly.</p>{retry}</section>"
+    )
+}
+
 fn kpi(key: &str, label: &str, value: &str, note: &str) -> String {
     format!(
         "<article class=\"overview-kpi\" data-overview-kpi=\"{}\"><p class=\"overview-kpi-label\">{}</p><p class=\"overview-kpi-value\">{}</p>{}</article>",
@@ -286,7 +297,8 @@ fn state_word(kind: &str) -> &'static str {
     match kind {
         "failure" | "failed" => "Failed",
         "dead_run" | "dead" => "Dead",
-        "connection" | "disconnected" => "Disconnected",
+        "connection" => "Connection",
+        "disconnected" => "Disconnected",
         "degraded" => "Degraded",
         "authorizing" => "Authorizing",
         _ => "Review",
@@ -561,6 +573,37 @@ mod tests {
     }
 
     #[test]
+    fn generic_connection_attention_state_does_not_claim_disconnected() {
+        let mut value = json!({
+            "toolkitCount": 1,
+            "connectionCount": 1,
+            "activeConnectionCount": 1,
+            "actionCalls": 1,
+            "successfulCalls": 1,
+            "failedCalls": 0,
+            "activity": [{"label":"15:00","calls":1}],
+            "failureActivity": [{"label":"15:00","failures":0}],
+            "attention": [{
+                "kind":"connection",
+                "title":"Notion connection is degraded",
+                "body":"Reconnect this account.",
+                "href":"/app/auth-configs/conn_notion"
+            }],
+            "deadRuns": []
+        });
+
+        let html = render(&value).unwrap();
+        assert!(html.contains(">Connection</span>"));
+        assert!(!html.contains(">Disconnected</span>"));
+
+        for (state, expected) in [("degraded", "Degraded"), ("disconnected", "Disconnected")] {
+            value["attention"][0]["state"] = json!(state);
+            let html = render(&value).unwrap();
+            assert!(html.contains(&format!(">{expected}</span>")));
+        }
+    }
+
+    #[test]
     fn connected_accounts_kpi_reports_active_connections_not_total_rows() {
         let html = render(&json!({
             "toolkitCount": 1,
@@ -681,6 +724,69 @@ mod tests {
     #[test]
     fn missing_required_read_model_is_unavailable() {
         assert_eq!(render(&json!({})), Err(Error::Unavailable));
+    }
+
+    #[tokio::test]
+    async fn unavailable_overview_keeps_shell_alert_and_recovery_action() {
+        struct MissingOverview {
+            data_error: bool,
+        }
+        impl crate::DashboardData for MissingOverview {
+            fn execute(
+                &self,
+                _: crate::DashboardRequest,
+            ) -> std::pin::Pin<
+                Box<dyn std::future::Future<Output = Result<Value, Error>> + Send + '_>,
+            > {
+                let result = if self.data_error {
+                    Err(Error::Unavailable)
+                } else {
+                    Ok(json!({}))
+                };
+                Box::pin(async move { result })
+            }
+        }
+
+        let session = crate::Session {
+            access_token: String::new(),
+            refresh_token: String::new(),
+            user_id: "user".into(),
+            email: "user@example.test".into(),
+            tenant_id: "tenant".into(),
+            tenant_name: "Tenant".into(),
+        };
+        let request = crate::Request {
+            method: "GET",
+            path: "/app",
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields: Default::default(),
+            now: 100,
+        };
+        for data_error in [false, true] {
+            let data = MissingOverview { data_error };
+            let response = crate::dashboard::DashboardRenderer { data: &data }
+                .render(
+                    &request,
+                    Some(crate::DashboardOperation::Overview),
+                    &session,
+                    appcall_auth::Principal::project("project").unwrap(),
+                )
+                .await
+                .expect("overview unavailability needs a rendered recovery page");
+
+            assert_eq!(response.status, 503);
+            for expected in [
+                "<title>Overview · appcall</title>",
+                "role=\"alert\"",
+                "Try again",
+            ] {
+                assert!(response.body.contains(expected), "missing {expected}");
+            }
+            assert!(!response.body.contains("overview-kpi"));
+            assert!(!response.body.contains("Calls per hour"));
+        }
     }
 
     #[test]

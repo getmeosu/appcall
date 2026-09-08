@@ -73,7 +73,8 @@ fn browser_host_runs_cookie_membership_and_broker_on_current_thread_runtime() {
                     "failedCalls":0,
                     "activity":[{"label":"Sep 08","calls":3}],
                     "failureActivity":[{"label":"Sep 08","failures":0}],
-                    "attention":[]
+                    "attention":[],
+                    "deadRunsUnavailable":true
                 }))
             })
         }
