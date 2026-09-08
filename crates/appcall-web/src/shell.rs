@@ -24,6 +24,8 @@ pub(crate) fn layout(title: &str, s: &Session, content: &str) -> String {
         email = escape(&s.email)
     )
 }
+/// Serves the exact embedded asset allowlist; fonts use `Response::binary_body`.
+/// Non-GET requests return 405, and unknown GET paths return 404.
 pub(crate) fn asset(path: &str, method: &str) -> Response {
     if method != "GET" {
         return Response::new(405, "Method not allowed".into());

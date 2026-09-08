@@ -69,6 +69,9 @@ impl DevelopmentBrowserHost {
         parse_request(r)?;
         Principal::project("proj_dev").map_err(|_| ApiError::new("UNAUTHORIZED"))
     }
+    /// Handles browser routes after development Host-header and request validation.
+    /// Returns `Ok(None)` outside the browser surface and preserves binary assets.
+    /// Admission or deadline exhaustion returns `SERVICE_BUSY`.
     pub async fn handle(&self, r: &Request) -> Result<Option<RawResponse>> {
         let path = r.uri.split('?').next().unwrap_or("");
         if !crate::browser_host::public_path(&r.method, path) {

@@ -158,6 +158,11 @@ def inventory(files):
 
 
 def audit(files):
+    """Return release-policy violations for a mapping of paths to file bytes.
+
+    Pinned SHA256 values validate allowlisted fonts; they bypass UTF-8 and
+    secret-content checks. A mismatched binary is reported as a violation.
+    """
     errors = []
     exceptions = {}
     policy_path = '.github/public-release-policy.json'

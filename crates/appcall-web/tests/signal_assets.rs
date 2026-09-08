@@ -40,6 +40,7 @@ fn signal_replaces_old_ramps_and_defines_accessible_base() {
         "--color-ink-950: #08090C",
         "--color-iris-400: #9A90FF",
         "--radius-ctl: 4px",
+        "--radius-panel: 10px",
         "font-variant-numeric: tabular-nums",
         ":focus-visible",
         "prefers-reduced-motion: reduce",
