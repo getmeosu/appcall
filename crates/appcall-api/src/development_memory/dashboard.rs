@@ -31,6 +31,10 @@ impl MemoryDashboard {
         }
     }
     async fn run(&self, r: DashboardRequest) -> Result<Value, DashboardFailure> {
+        // Development mode does not confer trusted operator authority.
+        if r.operation == Op::Qa {
+            return Err(Error::Forbidden.into());
+        }
         let account_id = r
             .account_id
             .as_deref()

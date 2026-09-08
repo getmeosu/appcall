@@ -255,12 +255,42 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
         tbody.find("/app/triggers/second/replay").unwrap()
             < tbody.find("/app/triggers/first/replay").unwrap()
     );
-    assert_eq!(tbody.matches("<tr ").count(), 2);
-    for invalid in ["", "../bad", "a\nevent: injected"] {
-        assert_eq!(
-            render_trigger_patch(&json!({"id":invalid})),
-            Err(Error::Invalid)
+    // Rows now inherit table styling; an opening tag need not have attributes.
+    assert_eq!(tbody.matches("</tr>").count(), 2);
+    for id in ["../bad", "bad/id", "<event>", "a?b", "a b"] {
+        let initial = action_page(
+            "/app/triggers",
+            json!({"events":[{"id":id,"connector":"<connector>"}]}),
+        )
+        .await;
+        assert!(initial.contains("Replay unavailable"), "{id}");
+        assert!(initial.contains("&lt;connector&gt;"), "{id}");
+        assert!(
+            !initial.contains(&format!("/app/triggers/{id}/replay")),
+            "{id}"
         );
+        let streamed = render_trigger_patch(&json!({
+            "id": id,
+            "connector": "<connector>",
+        }))
+        .unwrap();
+        assert!(streamed.contains("Replay unavailable"), "{id}");
+        assert!(streamed.contains("&lt;connector&gt;"), "{id}");
+        assert!(
+            !streamed.contains(&format!("/app/triggers/{id}/replay")),
+            "{id}"
+        );
+    }
+    let oversized = "x".repeat(1025);
+    for invalid in [
+        json!({}),
+        json!({"id": null}),
+        json!({"id": 42}),
+        json!({"id": ""}),
+        json!({"id": "a\nevent: injected"}),
+        json!({"id": oversized}),
+    ] {
+        assert_eq!(render_trigger_patch(&invalid), Err(Error::Invalid));
     }
 }
 
