@@ -58,6 +58,7 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
         include_str!("../../../migrations/202609040001_sync_job_terminal_failure.sql"),
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
+        include_str!("../../../migrations/202609090001_sync_job_history.sql"),
     ] {
         db.batch_execute(sql).unwrap();
     }

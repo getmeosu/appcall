@@ -44,6 +44,7 @@ fn fixture() -> (Client, String) {
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
         include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+        include_str!("../../../migrations/202609090001_sync_job_history.sql"),
     ] {
         db.batch_execute(migration).unwrap();
     }

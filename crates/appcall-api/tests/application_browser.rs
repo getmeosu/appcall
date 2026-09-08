@@ -11,6 +11,8 @@ use std::{
     time::{Duration, Instant},
 };
 const SESSION_SECRET: &str = "application-browser-synthetic-session";
+#[path = "application_browser/run_history_cases.rs"]
+mod run_history_cases;
 #[path = "application_browser/run_operator_cases.rs"]
 mod run_operator_cases;
 #[path = "application_browser/trace_cases.rs"]

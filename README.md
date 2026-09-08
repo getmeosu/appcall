@@ -59,6 +59,30 @@ are unchanged. Sessions links recover to Account's sessions section.
 
 ## Database upgrades
 
+Run details at `/app/runs/:id` read persisted sync transitions from
+`sync_job_events`, introduced by migration `202609090001_sync_job_history.sql`.
+New schedules, claims, page progress, retries, expired leases, terminal results,
+and operator controls append bounded metadata in the same transaction as their
+state change. History does not contain credentials, provider payloads, or raw
+error messages. Page progress does not spend a failure attempt.
+
+Existing jobs are not backfilled. Their earlier history and lifetime record
+totals remain explicitly partial. Retry policy is shown only when a service
+claim recorded its actual configuration; direct repository claims have no
+policy evidence. Worker heartbeat is not inferred from a job lease.
+
+The new `/v1/sync-runs/:id/history` endpoint and console detail links accept
+1–256 ASCII letters, digits, hyphens, underscores or dots, excluding `.` and
+`..`. Generated run IDs fit this contract. Existing engine, list and control
+API limits are unchanged; custom engine IDs outside this console-safe subset
+are not supported by the history/detail surface.
+
+Back up and qualify the target database before rolling out this migration.
+Do not roll back to a binary whose migration set predates this table: startup
+checks migration history, and older writers do not record transitions. Use a
+qualified forward fix or a coordinated database-and-binary restore instead.
+Do not delete migration history or event data to force an older binary to start.
+
 SQLx runs the existing numbered SQL files at startup and records checksums in
 `_sqlx_migrations`. Keep applied migration files unchanged; add a new numbered
 file for each schema change. No external migration executable or checksum

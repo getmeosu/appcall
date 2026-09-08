@@ -395,5 +395,8 @@ async fn main() -> std::io::Result<()> {
 mod tests;
 
 #[cfg(test)]
+#[path = "preview/history_tests.rs"]
+mod history_tests;
+#[cfg(test)]
 #[path = "preview/operator_tests.rs"]
 mod operator_tests;

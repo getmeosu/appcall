@@ -107,6 +107,7 @@ impl ScenarioData {
             }
             Op::Overview => overview_fixture(self.scenario),
             Op::Runs => runs_fixture(self.scenario, &r)?,
+            Op::RunDetail => run_history_fixture(self.scenario, &r)?,
             Op::Usage => match self.scenario {
                 Scenario::Unavailable => return Err(Error::Unavailable.into()),
                 Scenario::Empty => {

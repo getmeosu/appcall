@@ -7,7 +7,7 @@ pub(crate) fn title(op: Op) -> &'static str {
         Op::Connections => "Connections",
         Op::Events => "Events",
         Op::Logs | Op::Trace => "Logs",
-        Op::Runs | Op::RunNow | Op::ResetRun | Op::CancelRun => "Runs",
+        Op::Runs | Op::RunDetail | Op::RunNow | Op::ResetRun | Op::CancelRun => "Runs",
         Op::Certification => "Certification",
         Op::Usage => "Usage",
         Op::Branding => "White Labeling",
@@ -225,11 +225,12 @@ fn optional_text(value: &Value, key: &str, label: &str, empty: &str) -> String {
         None => unavailable_telemetry(label),
     }
 }
-fn run_control(
+pub(crate) fn run_control(
     action: &str,
     id: &str,
     value: &Value,
     operator_controls_unavailable: bool,
+    account_scope: &str,
 ) -> Result<String, Error> {
     if operator_controls_unavailable {
         return Ok(String::new());
@@ -261,8 +262,53 @@ fn run_control(
         return Ok(String::new());
     }
     let destination = format!("/app/runs/{id}/{action}");
-    let confirmation = confirmation(&destination, label, &heading, &body)?;
+    if account_scope.len() > 512 || account_scope.chars().any(char::is_control) {
+        return Err(Error::Invalid);
+    }
+    let confirmation = if account_scope.is_empty() {
+        confirmation(&destination, label, &heading, &body)?
+    } else {
+        let dialog_id = crate::ui::document_id()?;
+        let form_id = format!("{dialog_id}-form");
+        let field_id = format!("{dialog_id}-account");
+        let field = crate::ui::Field {
+            value: account_scope,
+            ..crate::ui::Field::new(
+                &field_id,
+                "externalAccountId",
+                "",
+                crate::ui::Control::Input(crate::ui::InputType::Hidden),
+            )
+        }
+        .render();
+        let dialog = crate::ui::ConfirmButton {
+            id: &dialog_id,
+            trigger: label,
+            heading: &heading,
+            body: &body,
+            confirm: label,
+            action: crate::ui::LocalPath::new(&destination).ok_or(Error::Invalid)?,
+            form: Some(&form_id),
+        }
+        .render();
+        format!(
+            "<form id=\"{}\" method=\"post\" action=\"{}\">{field}</form>{dialog}",
+            escape(&form_id),
+            escape(&destination)
+        )
+    };
     Ok(format!("<span data-runs-control>{confirmation}</span>"))
+}
+pub(crate) fn runs_feedback() -> Result<String, Error> {
+    let reload = runs_link_button(
+        "Reload Runs status",
+        crate::ui::ButtonVariant::Quiet,
+        "/app/runs",
+    )?
+    .replacen("<a ", "<a id=\"runs-reload\" ", 1);
+    Ok(format!(
+        "<p id=\"runs-live-status\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-busy=\"false\"></p><div id=\"runs-recovery\" class=\"runs-card runs-recovery\" hidden><p id=\"runs-recovery-message\">Run control outcome is unknown. Reload Runs status before trying again.</p>{reload}</div>"
+    ))
 }
 fn runs_header() -> String {
     "<header class=\"runs-header\"><h2 id=\"runs-heading\">Runs</h2><p>Monitor durable message sync work and recover queue state.</p></header>".to_owned()
@@ -353,6 +399,16 @@ fn runs_link_button(
         crate::ui::ButtonTarget::Link(crate::ui::LocalPath::new(href).ok_or(Error::Invalid)?);
     Ok(button.render())
 }
+fn run_detail_link(id: &str) -> Result<String, Error> {
+    let href = format!("/app/runs/{id}");
+    crate::ui::LocalPath::new(&href).ok_or(Error::Invalid)?;
+    Ok(format!(
+        "<a class=\"runs-detail-link\" href=\"{}\" aria-label=\"Open run {}\"><code class=\"runs-code\">{}</code></a>",
+        escape(&href),
+        escape(id),
+        escape(id)
+    ))
+}
 fn runs(v: &Value) -> Result<String, Error> {
     if value_bool(v, "unavailable") {
         return Ok(format!(
@@ -384,16 +440,7 @@ fn runs(v: &Value) -> Result<String, Error> {
     let mut body =
         String::from("<section id=\"runs-page\" data-runs-page aria-labelledby=\"runs-heading\">");
     body.push_str(&runs_header());
-    body.push_str("<p id=\"runs-live-status\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-busy=\"false\"></p>");
-    let reload = runs_link_button(
-        "Reload Runs status",
-        crate::ui::ButtonVariant::Quiet,
-        "/app/runs",
-    )?
-    .replacen("<a ", "<a id=\"runs-reload\" ", 1);
-    body.push_str(&format!(
-        "<div id=\"runs-recovery\" class=\"runs-card runs-recovery\" hidden><p id=\"runs-recovery-message\">Run control outcome is unknown. Reload Runs status before trying again.</p>{reload}</div>"
-    ));
+    body.push_str(&runs_feedback()?);
     let operator_controls_available = v.get("operatorAuthorized").and_then(Value::as_bool)
         == Some(true)
         && v.get("operatorControlsUnavailable")
@@ -495,6 +542,7 @@ fn runs(v: &Value) -> Result<String, Error> {
     body.push_str("</tr></thead><tbody aria-live=\"polite\">");
     for item in items {
         let id = id(item, &["id"])?;
+        let detail_link = run_detail_link(&id)?;
         let (health_label, tone) = run_health(item)?;
         let health = item
             .get("health")
@@ -527,11 +575,11 @@ fn runs(v: &Value) -> Result<String, Error> {
             Some(error) => escape(error),
         };
         body.push_str(&format!(
-            "<tr data-run-id=\"{}\" data-run-health=\"{}\"><td>{}</td><td><code class=\"runs-code\">{}</code></td><td>{}</td><td><code class=\"runs-code\">{}</code></td><td>{}</td><td><code class=\"runs-code\">{} / {}</code><span class=\"runs-secondary\">{} remaining</span></td><td><code class=\"runs-code\">{}</code></td><td><code class=\"runs-code\">{}</code></td><td><code class=\"runs-code\">{}</code></td><td>{}</td><td class=\"runs-actions\">{}{}{}{}</td></tr>",
+            "<tr data-run-id=\"{}\" data-run-health=\"{}\"><td>{}</td><td>{}</td><td>{}</td><td><code class=\"runs-code\">{}</code></td><td>{}</td><td><code class=\"runs-code\">{} / {}</code><span class=\"runs-secondary\">{} remaining</span></td><td><code class=\"runs-code\">{}</code></td><td><code class=\"runs-code\">{}</code></td><td><code class=\"runs-code\">{}</code></td><td>{}</td><td class=\"runs-actions\">{}{}{}{}</td></tr>",
             escape(&id),
             escape(health),
             crate::ui::state(tone, health_label),
-            escape(&id),
+            detail_link,
             escape(&value_text(item, "connector")),
             escape(&value_text(item, "tool")),
             escape(&value_text(item, "accountId")),
@@ -542,9 +590,9 @@ fn runs(v: &Value) -> Result<String, Error> {
             lease,
             cursor,
             error,
-            run_control("run-now", &id, item, operator_controls_unavailable)?,
-            run_control("reset", &id, item, operator_controls_unavailable)?,
-            run_control("cancel", &id, item, operator_controls_unavailable)?,
+            run_control("run-now", &id, item, operator_controls_unavailable, &value_text(v, "selectedAccountId"))?,
+            run_control("reset", &id, item, operator_controls_unavailable, &value_text(v, "selectedAccountId"))?,
+            run_control("cancel", &id, item, operator_controls_unavailable, &value_text(v, "selectedAccountId"))?,
             if operator_controls_unavailable {
                 "<span class=\"runs-muted\">Operator controls unavailable</span>".to_owned()
             } else if !value_bool(item, "runNowAllowed")
@@ -638,6 +686,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::RunInputFields=>{let schema=v.get("inputSchema").or_else(||v.get("schema")).unwrap_or(v);format!("<div id=\"tk-runinput\" aria-live=\"polite\"><input type=\"hidden\" name=\"runInputSchema\" value=\"{}\">{}</div>",escape(&schema.to_string()),crate::forms::render_guided_fields(schema,&Value::Null,"f.runInput",resource)?)},
   Op::Connections=>crate::connections::render(v)?,
   Op::Runs=>runs(v)?,
+  Op::RunDetail=>crate::run_detail::standalone(v, resource.ok_or(Error::Invalid)?)?,
   Op::Logs=>crate::logs::render(v, &crate::logs::Filters::default(), v.get("hasFilters").and_then(Value::as_bool)==Some(true))?,
   Op::Events=>crate::remaining_pages::events(v)?,
   Op::Trace=>crate::trace::standalone(v, resource.ok_or(Error::Invalid)?)?,
@@ -750,6 +799,130 @@ mod rendering_contract_tests {
         assert!(!html.contains("data-confirm-open="));
         assert!(!html.contains("workerHeartbeat"));
         assert!(!html.contains("attemptTimeline"));
+    }
+
+    #[test]
+    fn runs_list_links_each_row_to_the_persisted_run_detail_route() {
+        let html = render(
+            Op::Runs,
+            &json!({
+                "runs": [{
+                    "id": "run_1",
+                    "connector": "slack",
+                    "tool": "messages.list",
+                    "accountId": "brand-a",
+                    "health": "running",
+                    "attemptsSpent": 2,
+                    "attemptsRemaining": 8,
+                    "maxAttempts": 10,
+                    "wakeAt": "2026-09-08T10:00:00Z",
+                    "leaseUntil": "2026-09-08T10:01:00Z",
+                    "leaseRemainingSeconds": 42,
+                    "currentCursor": "cursor-1",
+                    "lastError": "",
+                    "runNowAllowed": false,
+                    "resetAllowed": false,
+                    "cancelAllowed": false
+                }],
+                "pendingRuns": 0,
+                "runningRuns": 1,
+                "backingoffRuns": 0,
+                "records24hUnavailable": true,
+                "deadRuns": 0,
+                "workerHeartbeatUnavailable": true
+            }),
+            None,
+        )
+        .unwrap();
+
+        assert!(
+            html.contains("href=\"/app/runs/run_1\""),
+            "run row did not link to detail route: {html}"
+        );
+        assert!(
+            html.contains("aria-label=\"Open run run_1\""),
+            "run detail link lacks an accessible label: {html}"
+        );
+        assert!(!html.contains("/app/runs/run_1/cancel"));
+    }
+
+    #[test]
+    fn run_detail_operation_dispatches_through_the_persisted_renderer() {
+        let html = render(
+            Op::RunDetail,
+            &json!({
+                "run": {
+                    "id": "run_1",
+                    "connector": "slack",
+                    "tool": "messages.list",
+                    "accountId": "brand-a",
+                    "health": "succeeded",
+                    "currentCursor": "cursor-1",
+                    "attemptsSpent": 1,
+                    "attemptsRemaining": 9
+                },
+                "history": {
+                    "complete": true,
+                    "events": [{
+                        "seq": 1,
+                        "kind": "scheduled",
+                        "at": "2026-09-08T10:00:00Z",
+                        "detail": {"reason": "new_job"}
+                    }]
+                },
+                "recordsObserved": 0,
+                "recordsPartial": false,
+                "pagination": {"hasMore": false}
+            }),
+            Some("run_1"),
+        )
+        .unwrap();
+
+        assert!(html.contains("id=\"run-detail\""));
+        assert!(html.contains("data-event-seq=\"1\""));
+        assert_eq!(
+            html.matches("Succeeded").count(),
+            1,
+            "run detail should not duplicate the health label: {html}"
+        );
+        assert_eq!(title(Op::RunDetail), "Runs");
+    }
+
+    #[test]
+    fn overview_dead_run_links_to_the_same_persisted_run_detail_route() {
+        let html = render(
+            Op::Overview,
+            &json!({
+                "toolkitCount": 1,
+                "connectionCount": 1,
+                "activeConnectionCount": 1,
+                "actionCalls": 1,
+                "successfulCalls": 1,
+                "failedCalls": 0,
+                "activity": [{"label":"10:00","calls":1}],
+                "failureActivity": [{"label":"10:00","failures":0}],
+                "attention": [],
+                "deadRuns": [{
+                    "runId": "run_1",
+                    "kind": "dead_run",
+                    "state": "dead",
+                    "title": "Sync run stopped",
+                    "body": "Review the terminal run.",
+                    "href": "/app/runs?status=dead"
+                }]
+            }),
+            None,
+        )
+        .unwrap();
+
+        assert!(
+            html.contains("href=\"/app/runs/run_1\""),
+            "overview dead run did not link to detail route: {html}"
+        );
+        assert!(
+            !html.contains("href=\"/app/runs?status=dead\""),
+            "overview retained the list-only dead-run link: {html}"
+        );
     }
 
     #[test]

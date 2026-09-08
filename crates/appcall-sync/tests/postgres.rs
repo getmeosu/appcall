@@ -30,6 +30,10 @@ fn fixture() -> (Client, String) {
     ))
     .unwrap();
     c.batch_execute("CREATE TABLE connections(id text primary key,project_id text,connector text,external_account_id text,credential_owner text NOT NULL DEFAULT 'brand');CREATE TABLE sync_jobs(id text primary key,project_id text,connection_id text,operation text,status text,worker_id text NOT NULL DEFAULT '',attempts integer NOT NULL DEFAULT 0,run_after timestamptz,leased_until timestamptz,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz DEFAULT now(),last_error text NOT NULL DEFAULT '',dedup_key text,input jsonb,UNIQUE(project_id,dedup_key));CREATE TABLE sync_job_checkpoints(job_id text primary key,cursor text);CREATE TABLE sync_job_cursor_visits(job_id text,cursor text,primary key(job_id,cursor));CREATE TABLE synced_messages(id text,project_id text,connection_id text,provider text,provider_message_id text,channel_id text,sender_id text,text text,model_version text,raw jsonb,updated_at timestamptz DEFAULT now(),PRIMARY KEY(project_id,connection_id,id));CREATE TABLE usage_events(id text primary key,project_id text,connection_id text,connector text,action text,kind text,occurred_at timestamptz,external_account_id text,quantity bigint);CREATE TABLE usage_monthly_rollups(project_id text,external_account_id text,month text,kind text,quantity bigint,updated_at timestamptz DEFAULT now(),PRIMARY KEY(project_id,external_account_id,month,kind));INSERT INTO connections(id,project_id,connector,external_account_id) VALUES('c','p','slack','brand')").unwrap();
+    c.batch_execute(include_str!(
+        "../../../migrations/202609090001_sync_job_history.sql"
+    ))
+    .unwrap();
     (c, schema)
 }
 fn request(id: &str) -> ScheduleRequest {
@@ -41,6 +45,286 @@ fn request(id: &str) -> ScheduleRequest {
         dedup_key: id.into(),
         input: json!({"channelId":"C123"}),
     }
+}
+
+fn history(client: &mut Client, job_id: &str) -> Vec<(i32, String, serde_json::Value)> {
+    client
+        .query(
+            "SELECT seq,kind,detail FROM sync_job_events WHERE job_id=$1 ORDER BY seq",
+            &[&job_id],
+        )
+        .unwrap()
+        .into_iter()
+        .map(|r| (r.get(0), r.get(1), r.get(2)))
+        .collect()
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn history_enqueue_is_atomic_and_dedup_does_not_duplicate_initial_schedule() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.enqueue(&request("history-dedup")).unwrap();
+    let mut client = repo.into_client();
+    assert_eq!(
+        history(&mut client, "history-dedup"),
+        vec![(1, "scheduled".into(), json!({"reason":"new_job"}))]
+    );
+
+    let mut repo = Repository::new(client);
+    repo.enqueue(&request("history-dedup")).unwrap();
+    let mut client = repo.into_client();
+    assert_eq!(history(&mut client, "history-dedup").len(), 1);
+
+    client
+        .batch_execute("ALTER TABLE sync_job_events ADD CONSTRAINT reject_scheduled CHECK(kind <> 'scheduled') NOT VALID")
+        .unwrap();
+    let mut repo = Repository::new(client);
+    assert_eq!(
+        repo.enqueue(&request("history-rollback")).unwrap_err(),
+        Error::Storage
+    );
+    let mut client = repo.into_client();
+    assert_eq!(
+        client
+            .query_one(
+                "SELECT count(*) FROM sync_jobs WHERE id='history-rollback'",
+                &[]
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn history_records_transition_kinds_and_progress_does_not_spend_attempts() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.enqueue(&request("history-transitions")).unwrap();
+    let claim = repo
+        .claim("worker-1", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    repo.commit_page(&claim, "", &page("next")).unwrap();
+    let next = repo
+        .claim("worker-2", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    assert_eq!(next.attempts, 0);
+    repo.fail(&next, Duration::from_secs(1), false).unwrap();
+    let mut client = repo.into_client();
+    client
+        .execute(
+            "UPDATE sync_jobs SET run_after=now()-interval '1 second' WHERE id='history-transitions'",
+            &[],
+        )
+        .unwrap();
+    let mut repo = Repository::new(client);
+    let retry = repo
+        .claim("worker-3", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    repo.commit_page(&retry, "next", &page("")).unwrap();
+    let mut client = repo.into_client();
+    assert_eq!(
+        history(&mut client, "history-transitions"),
+        vec![
+            (1, "scheduled".into(), json!({"reason":"new_job"})),
+            (2, "claimed".into(), json!({})),
+            (3, "page".into(), json!({"recordsWritten":1,"hasMore":true})),
+            (4, "claimed".into(), json!({})),
+            (
+                5,
+                "retry".into(),
+                json!({"retryDelayMs":1000,"code":"SYNC_PROCESSING_FAILED"})
+            ),
+            (6, "claimed".into(), json!({})),
+            (
+                7,
+                "page".into(),
+                json!({"recordsWritten":1,"hasMore":false})
+            ),
+            (8, "succeeded".into(), json!({})),
+        ]
+    );
+    assert_eq!(
+        client
+            .query_one(
+                "SELECT attempts,status FROM sync_jobs WHERE id='history-transitions'",
+                &[]
+            )
+            .unwrap()
+            .get::<_, i32>(0),
+        1
+    );
+    assert_eq!(
+        client
+            .query_one(
+                "SELECT status FROM sync_jobs WHERE id='history-transitions'",
+                &[]
+            )
+            .unwrap()
+            .get::<_, String>(0),
+        "succeeded"
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn history_reclaims_expired_lease_and_fences_stale_owner() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.enqueue(&request("history-lease")).unwrap();
+    let stale = repo
+        .claim("stale-worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    let mut client = repo.into_client();
+    client
+        .execute(
+            "UPDATE sync_jobs SET leased_until=now()-interval '1 second' WHERE id='history-lease'",
+            &[],
+        )
+        .unwrap();
+    let mut repo = Repository::new(client);
+    let fresh = repo
+        .claim("fresh-worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    assert_eq!(fresh.worker_id, "fresh-worker");
+    assert_eq!(repo.cursor(&stale), Err(Error::LeaseLost));
+    assert_eq!(
+        repo.commit_page(&stale, "", &page("")),
+        Err(Error::LeaseLost)
+    );
+    assert_eq!(
+        repo.fail(&stale, Duration::ZERO, true),
+        Err(Error::LeaseLost)
+    );
+    let mut client = repo.into_client();
+    assert_eq!(
+        history(&mut client, "history-lease"),
+        vec![
+            (1, "scheduled".into(), json!({"reason":"new_job"})),
+            (2, "claimed".into(), json!({})),
+            (3, "lease_expired".into(), json!({})),
+            (4, "claimed".into(), json!({})),
+        ]
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn history_operator_events_are_truthful_and_reasons_are_bounded() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.enqueue(&request("history-reset")).unwrap();
+    let claim = repo
+        .claim("worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    repo.fail(&claim, Duration::ZERO, true).unwrap();
+    repo.reset_attempts("p", "brand", "history-reset").unwrap();
+    repo.enqueue(&request("history-runnow")).unwrap();
+    repo.run_now("p", "brand", "history-runnow").unwrap();
+    repo.enqueue(&request("history-cancel")).unwrap();
+    repo.cancel("p", "brand", "history-cancel").unwrap();
+    let mut client = repo.into_client();
+    assert_eq!(
+        history(&mut client, "history-runnow"),
+        vec![
+            (1, "scheduled".into(), json!({"reason":"new_job"})),
+            (2, "scheduled".into(), json!({"reason":"run_now"})),
+        ]
+    );
+    assert_eq!(
+        history(&mut client, "history-reset"),
+        vec![
+            (1, "scheduled".into(), json!({"reason":"new_job"})),
+            (2, "claimed".into(), json!({})),
+            (3, "failed".into(), json!({"code":"SYNC_PROCESSING_FAILED"})),
+            (4, "scheduled".into(), json!({"reason":"reset_attempts"})),
+        ]
+    );
+    assert_eq!(
+        history(&mut client, "history-cancel"),
+        vec![
+            (1, "scheduled".into(), json!({"reason":"new_job"})),
+            (
+                2,
+                "cancelled".into(),
+                json!({"reason":"operator_cancelled"})
+            ),
+        ]
+    );
+    assert_eq!(client.query_one("SELECT count(*) FROM sync_job_events WHERE job_id='history-cancel' AND kind='failed'", &[]).unwrap().get::<_, i64>(0), 0);
+    assert!(client.execute("INSERT INTO sync_job_events(job_id,seq,kind,detail) VALUES('history-cancel',3,'scheduled',jsonb_build_object('reason',repeat('x',301)))", &[]).is_err());
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn history_event_failure_rolls_back_page_side_effects() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.enqueue(&request("history-page-rollback")).unwrap();
+    let claim = repo
+        .claim("worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    let mut client = repo.into_client();
+    client
+        .batch_execute(
+            "ALTER TABLE sync_job_events ADD CONSTRAINT reject_page CHECK(kind <> 'page')",
+        )
+        .unwrap();
+    let mut repo = Repository::new(client);
+    assert_eq!(
+        repo.commit_page(&claim, "", &page("next")),
+        Err(Error::Storage)
+    );
+    let mut client = repo.into_client();
+    for table in [
+        "synced_messages",
+        "usage_events",
+        "sync_job_checkpoints",
+        "sync_job_cursor_visits",
+    ] {
+        assert_eq!(
+            client
+                .query_one(&format!("SELECT count(*) FROM {table}"), &[])
+                .unwrap()
+                .get::<_, i64>(0),
+            0
+        );
+    }
+    assert_eq!(
+        client
+            .query_one(
+                "SELECT status,attempts FROM sync_jobs WHERE id='history-page-rollback'",
+                &[]
+            )
+            .unwrap()
+            .get::<_, String>(0),
+        "running"
+    );
+    assert_eq!(history(&mut client, "history-page-rollback").len(), 2);
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
 }
 
 #[test]

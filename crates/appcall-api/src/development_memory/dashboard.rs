@@ -52,6 +52,9 @@ impl MemoryDashboard {
         {
             return Err(Error::Forbidden.into());
         }
+        if r.operation == Op::RunDetail {
+            return Err(Error::NotFound.into());
+        }
         if matches!(r.operation, Op::RunNow | Op::ResetRun | Op::CancelRun) {
             // The product has not defined a trusted operator principal yet;
             // keep browser mutations fail-closed while scoped reads remain
@@ -191,6 +194,7 @@ impl MemoryDashboard {
             }
             Op::Certification => Ok(json!({"unavailable":true,"certifications":[]})),
             Op::Runs => Ok(json!({"unavailable":true})),
+            Op::RunDetail => Err(Error::NotFound.into()),
             Op::RunNow | Op::ResetRun | Op::CancelRun => Err(Error::Forbidden.into()),
             Op::Logs | Op::Trace | Op::Events | Op::Stream => {
                 let path = match r.operation {

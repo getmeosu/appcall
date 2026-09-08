@@ -586,6 +586,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
     let id = |s: &str| {
         !s.is_empty()
             && s.len() <= 256
+            && !matches!(s, "." | "..")
             && s.bytes()
                 .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
     };
@@ -594,6 +595,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
             matches!(*provider, "google" | "github" | "microsoft")
         }
         ("GET", ["", "app", "connectors" | "logs", key]) => id(key),
+        ("GET", ["", "app", "runs", key]) => id(key),
         ("GET", ["", "app", "runs"]) => true,
         ("GET", ["", "app", "connectors", key, "test-form" | "options" | "runinput-fields"]) => {
             id(key)
@@ -799,6 +801,21 @@ impl ApiDashboard {
                     .ok_or(Error::Invalid)?;
                 Ok(enrich_runs_operator(value, operator_authorized))
             },
+            Op::RunDetail=>{
+                let url = run_history_url(resource, &r.fields)?;
+                self.db(|client| crate::data_routes::read(client,&identity,&url).map_err(api_error))?
+                    .map(|r| {
+                        let mut body = r.body;
+                        if let Some(object) = body.as_object_mut() {
+                            object.insert(
+                                "historyAccountScope".into(),
+                                identity.account_id.clone().into(),
+                            );
+                        }
+                        enrich_runs_operator(body, operator_authorized)
+                    })
+                    .ok_or_else(|| Error::Invalid.into())
+            },
             Op::RunNow|Op::ResetRun|Op::CancelRun=>{
                 let action=match r.operation {Op::RunNow=>appcall_sync::OperatorAction::RunNow,Op::ResetRun=>appcall_sync::OperatorAction::ResetAttempts,Op::CancelRun=>appcall_sync::OperatorAction::Cancel,_=>unreachable!()};
                 let run_id=resource.to_owned();
@@ -967,30 +984,87 @@ fn enrich_runs_operator(mut value: Value, authorized: bool) -> Value {
             let Some(row) = row.as_object_mut() else {
                 continue;
             };
-            let run_now_eligible = row
-                .get("runNowEligible")
-                .and_then(Value::as_bool)
-                .unwrap_or(false);
-            let reset_eligible = row
-                .get("resetEligible")
-                .and_then(Value::as_bool)
-                .unwrap_or(false);
-            let cancel_eligible = row
-                .get("cancelEligible")
-                .and_then(Value::as_bool)
-                .unwrap_or(false);
-            row.insert(
-                "runNowAllowed".into(),
-                (authorized && run_now_eligible).into(),
-            );
-            row.insert("resetAllowed".into(), (authorized && reset_eligible).into());
-            row.insert(
-                "cancelAllowed".into(),
-                (authorized && cancel_eligible).into(),
-            );
+            enrich_run_operator(row, authorized);
         }
     }
+    if let Some(row) = value.get_mut("run").and_then(Value::as_object_mut) {
+        enrich_run_operator(row, authorized);
+    }
     value
+}
+
+fn enrich_run_operator(row: &mut serde_json::Map<String, Value>, authorized: bool) {
+    for (eligible, allowed) in [
+        ("runNowEligible", "runNowAllowed"),
+        ("resetEligible", "resetAllowed"),
+        ("cancelEligible", "cancelAllowed"),
+    ] {
+        let permitted = authorized && row.get(eligible).and_then(Value::as_bool) == Some(true);
+        row.insert(allowed.into(), permitted.into());
+    }
+}
+
+#[cfg(test)]
+mod run_history_route_tests {
+    use super::*;
+
+    #[test]
+    fn detail_operator_projection_overwrites_untrusted_allowed_flags() {
+        let value = json!({"run":{"runNowEligible":true,"resetEligible":false,"cancelEligible":true,"runNowAllowed":true,"resetAllowed":true,"cancelAllowed":true}});
+        let allowed = enrich_runs_operator(value.clone(), true);
+        assert_eq!(allowed["run"]["resetAllowed"], false);
+        assert_eq!(allowed["run"]["cancelAllowed"], true);
+        let denied = enrich_runs_operator(value, false);
+        assert_eq!(denied["run"]["runNowAllowed"], false);
+        assert_eq!(denied["run"]["cancelAllowed"], false);
+    }
+
+    #[test]
+    fn history_url_uses_exact_run_id_and_forwards_only_history_query_fields() {
+        let fields = BTreeMap::from([
+            ("accountId".to_owned(), "acct-primary".to_owned()),
+            ("cursor".to_owned(), "Mw".to_owned()),
+            ("limit".to_owned(), "7".to_owned()),
+            ("status".to_owned(), "failed".to_owned()),
+        ]);
+        let url = run_history_url("run-42", &fields).expect("history URL should be valid");
+        assert_eq!(url.path(), "/v1/sync-runs/run-42/history");
+        assert_eq!(
+            url.query_pairs().collect::<Vec<_>>(),
+            vec![("cursor".into(), "Mw".into()), ("limit".into(), "7".into()),]
+        );
+    }
+
+    #[test]
+    fn history_url_rejects_untrusted_resource_path_bytes() {
+        for id in ["run/42", ".", ".."] {
+            let error = run_history_url(id, &BTreeMap::new()).unwrap_err();
+            assert_eq!(error, appcall_web::Error::Invalid, "id={id}");
+        }
+    }
+}
+
+fn run_history_url(
+    id: &str,
+    fields: &BTreeMap<String, String>,
+) -> std::result::Result<url::Url, appcall_web::Error> {
+    if id.is_empty()
+        || id.len() > 256
+        || matches!(id, "." | "..")
+        || !id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    {
+        return Err(appcall_web::Error::Invalid);
+    }
+    let mut url = url::Url::parse(&format!("http://local.invalid/v1/sync-runs/{id}/history"))
+        .map_err(|_| appcall_web::Error::Invalid)?;
+    for key in ["cursor", "limit"] {
+        if let Some(value) = fields.get(key) {
+            url.query_pairs_mut().append_pair(key, value);
+        }
+    }
+    Ok(url)
 }
 fn api_error(error: ApiError) -> appcall_web::Error {
     match error.code {

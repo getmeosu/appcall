@@ -24,12 +24,20 @@ pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Va
     }
     if !matches!(
         scenario,
-        Scenario::Runs | Scenario::RunsOperator | Scenario::RunsEmpty | Scenario::Empty
+        Scenario::Runs
+            | Scenario::RunsOperator
+            | Scenario::RunsEmpty
+            | Scenario::Empty
+            | Scenario::RunHistory
+            | Scenario::RunHistoryOperator
     ) {
         return Ok(json!({"synthetic":true,"unavailable":true}));
     }
     let empty = matches!(scenario, Scenario::RunsEmpty | Scenario::Empty);
-    let operator_controls_available = scenario == Scenario::RunsOperator;
+    let operator_controls_available = matches!(
+        scenario,
+        Scenario::RunsOperator | Scenario::RunHistoryOperator
+    );
     let mut rows = Vec::new();
     if !empty {
         for (index, health) in ["pending", "running", "backingoff", "dead", "succeeded"]
@@ -60,6 +68,61 @@ pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Va
                 "runNowAllowed":operator_controls_available && run_now_eligible,
                 "resetAllowed":operator_controls_available && reset_eligible,
                 "cancelAllowed":operator_controls_available && cancel_eligible
+            }));
+        }
+        if scenario == Scenario::RunHistory {
+            rows.push(json!({
+                "id":"synthetic-history-run",
+                "connectionId":"synthetic-history-connection",
+                "connector":"synthetic-mail",
+                "tool":"messages.sync",
+                "accountId":"synthetic-account",
+                "status":"succeeded",
+                "health":"succeeded",
+                "attemptsSpent":1,
+                "maxAttempts":8,
+                "attemptsRemaining":7,
+                "wakeAt":"2026-09-09T09:00:07.000000Z",
+                "leaseUntil":"",
+                "leaseRemainingSeconds":0,
+                "createdAt":"2026-09-09T09:00:00.000000Z",
+                "updatedAt":"2026-09-09T09:00:07.000000Z",
+                "currentCursor":"",
+                "lastError":"",
+                "runNowEligible":false,
+                "resetEligible":false,
+                "cancelEligible":false,
+                "runNowAllowed":false,
+                "resetAllowed":false,
+                "cancelAllowed":false,
+            }));
+        }
+        if scenario == Scenario::RunHistoryOperator {
+            rows.clear();
+            rows.push(json!({
+                "id":"synthetic-history-run",
+                "connectionId":"synthetic-history-connection",
+                "connector":"synthetic-mail",
+                "tool":"messages.sync",
+                "accountId":"synthetic-account",
+                "status":"pending",
+                "health":"backingoff",
+                "attemptsSpent":1,
+                "maxAttempts":8,
+                "attemptsRemaining":7,
+                "wakeAt":"2026-09-09T09:00:04.000000Z",
+                "leaseUntil":"",
+                "leaseRemainingSeconds":0,
+                "createdAt":"2026-09-09T09:00:00.000000Z",
+                "updatedAt":"2026-09-09T09:00:04.000000Z",
+                "currentCursor":"cursor-history-next",
+                "lastError":"Synthetic retry scheduled; no provider request was made.",
+                "runNowEligible":true,
+                "resetEligible":true,
+                "cancelEligible":true,
+                "runNowAllowed":true,
+                "resetAllowed":true,
+                "cancelAllowed":true,
             }));
         }
     }
