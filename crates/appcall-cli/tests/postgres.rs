@@ -9,21 +9,207 @@ struct Fixture {
     db: Client,
     schema: String,
     url: String,
+    // SQLx's migration advisory lock is database-wide, not schema-wide. Keep
+    // admission through caller-owned child work and Drop's schema cleanup.
+    _admission: std::sync::MutexGuard<'static, ()>,
 }
+
+static FIXTURE_ADMISSION: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn acquire_fixture_admission() -> std::sync::MutexGuard<'static, ()> {
+    // A failed test must not poison unrelated UUID-scoped fixtures. Unwinding
+    // drops child guards and runs fixture cleanup before releasing admission.
+    FIXTURE_ADMISSION
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+#[test]
+fn fixture_admission_serializes_until_guard_is_dropped() {
+    let admission = acquire_fixture_admission();
+    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+    let (acquired_tx, acquired_rx) = std::sync::mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        ready_tx.send(()).unwrap();
+        let _admission = acquire_fixture_admission();
+        acquired_tx.send(()).unwrap();
+    });
+    let ready = ready_rx.recv_timeout(Duration::from_secs(2));
+    let premature = acquired_rx.recv_timeout(Duration::from_millis(100));
+    drop(admission);
+    // Admission is not FIFO: unrelated PostgreSQL fixtures may run first.
+    // This wait does not change the exclusion check or any QA deadline.
+    let acquired = acquired_rx.recv_timeout(Duration::from_secs(30));
+    let joined = worker.join();
+    ready.unwrap();
+    assert!(matches!(
+        premature,
+        Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+    ));
+    acquired.unwrap();
+    joined.unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated local PostgreSQL"]
+fn fixture_admission_is_held_until_schema_cleanup_completes() {
+    for migration_only in [false, true] {
+        let fixture = if migration_only {
+            Fixture::migration_only()
+        } else {
+            Fixture::new()
+        };
+        let schema = fixture.schema.clone();
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+        let (cleaned_tx, cleaned_rx) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            ready_tx.send(()).unwrap();
+            let _admission = acquire_fixture_admission();
+            let base = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+            let mut config: postgres::Config = base.parse().unwrap();
+            config.connect_timeout(Duration::from_secs(5));
+            let mut client = config.connect(NoTls).unwrap();
+            client.batch_execute("SET statement_timeout='5s'").unwrap();
+            let exists: bool = client
+                .query_one(
+                    "SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=$1)",
+                    &[&schema],
+                )
+                .unwrap()
+                .get(0);
+            cleaned_tx.send(!exists).unwrap();
+        });
+        let ready = ready_rx.recv_timeout(Duration::from_secs(2));
+        // The fixture stays alive through all child-process work in its caller.
+        let premature = cleaned_rx.recv_timeout(Duration::from_millis(100));
+        drop(fixture);
+        let cleaned = cleaned_rx.recv_timeout(Duration::from_secs(30));
+        let joined = worker.join();
+        ready.unwrap();
+        assert!(matches!(
+            premature,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+        ));
+        assert!(cleaned.unwrap());
+        joined.unwrap();
+    }
+}
+
+fn scoped_fixture_url(base: &str, schema: &str) -> Result<String, &'static str> {
+    const INVALID: &str = "invalid isolated PostgreSQL fixture URL";
+    if !(base.starts_with("postgres://") || base.starts_with("postgresql://"))
+        || base.contains('#')
+        || !schema.starts_with("cli_")
+        || schema.len() > 63
+        || !schema
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
+    {
+        return Err(INVALID);
+    }
+    let config: postgres::Config = base.parse().map_err(|_| INVALID)?;
+    if config.get_options().is_some() {
+        return Err(INVALID);
+    }
+    let scoped = format!(
+        "{base}{}options=-csearch_path%3D{schema}",
+        if base.contains('?') { "&" } else { "?" }
+    );
+    let config: postgres::Config = scoped.parse().map_err(|_| INVALID)?;
+    if config.get_options() != Some(format!("-csearch_path={schema}").as_str()) {
+        return Err(INVALID);
+    }
+    Ok(scoped)
+}
+
+#[test]
+fn fixture_url_rejects_literal_fragments_before_database_work() {
+    for base in [
+        "postgres://user:private_fixture_password@localhost/db#fragment",
+        "postgresql://localhost/db?application_name=probe#fragment",
+        "postgres://localhost/db#",
+    ] {
+        assert_eq!(
+            scoped_fixture_url(base, "cli_probe"),
+            Err("invalid isolated PostgreSQL fixture URL")
+        );
+    }
+}
+
+#[test]
+fn fixture_url_preserves_encoded_hashes_and_query_parameters() {
+    for base in [
+        "postgres://user:encoded%23password@localhost/db",
+        "postgresql://localhost/db?application_name=probe%23encoded",
+    ] {
+        let scoped = scoped_fixture_url(base, "cli_probe").unwrap();
+        assert!(scoped.starts_with(base));
+        assert_eq!(scoped.matches("options=").count(), 1);
+        let parsed: postgres::Config = scoped.parse().unwrap();
+        assert_eq!(parsed.get_options(), Some("-csearch_path=cli_probe"));
+        assert!(scoped.contains("%23"));
+    }
+}
+
+#[test]
+fn fixture_url_rejects_unsupported_configuration_with_redacted_errors() {
+    for base in [
+        "",
+        "host=localhost dbname=db password=private_fixture_password",
+        "https://user:private_fixture_password@localhost/db",
+        "postgres://localhost:invalid/db",
+        "postgres://localhost/db?unknown=private_fixture_password",
+        "postgres://localhost/db?options=-csearch_path%3Dpublic",
+        "postgres://localhost/db?%6fptions=-csearch_path%3Dpublic",
+    ] {
+        assert_eq!(
+            scoped_fixture_url(base, "cli_probe"),
+            Err("invalid isolated PostgreSQL fixture URL")
+        );
+    }
+}
+
+#[test]
+fn fixture_url_only_accepts_bounded_private_schema_names() {
+    let oversized = format!("cli_{}", "a".repeat(60));
+    for schema in [
+        "",
+        "public",
+        "cli_bad;DROP SCHEMA public",
+        "cli_bad/path",
+        &oversized,
+    ] {
+        assert_eq!(
+            scoped_fixture_url("postgres://localhost/db", schema),
+            Err("invalid isolated PostgreSQL fixture URL")
+        );
+    }
+    for prefix in ["cli_", "cli_migration_"] {
+        let first = format!("{prefix}{}", uuid::Uuid::new_v4().simple());
+        let second = format!("{prefix}{}", uuid::Uuid::new_v4().simple());
+        let first_url = scoped_fixture_url("postgres://localhost/db", &first).unwrap();
+        let second_url = scoped_fixture_url("postgres://localhost/db", &second).unwrap();
+        assert_ne!(first_url, second_url);
+        let parsed: postgres::Config = first_url.parse().unwrap();
+        assert_eq!(
+            parsed.get_options(),
+            Some(format!("-csearch_path={first}").as_str())
+        );
+    }
+}
+
 impl Fixture {
     fn new() -> Self {
+        let admission = acquire_fixture_admission();
         let base = std::env::var("APPCALL_ENGINE_POSTGRES_URL")
             .expect("explicit isolated PostgreSQL URL required");
-        let mut db = Client::connect(&base, NoTls).unwrap();
         let schema = format!("cli_{}", uuid::Uuid::new_v4().simple());
+        let url = scoped_fixture_url(&base, &schema).expect("fixture URL preflight failed");
+        let mut db = Client::connect(&base, NoTls).unwrap();
         db.batch_execute(&format!(
             "CREATE SCHEMA {schema};SET search_path TO {schema}"
         ))
         .unwrap();
-        let url = format!(
-            "{base}{}options=-csearch_path%3D{schema}",
-            if base.contains('?') { "&" } else { "?" }
-        );
         appcall_runtime::SqlxMigration::new(
             concat!(env!("CARGO_MANIFEST_DIR"), "/../../migrations"),
             &url,
@@ -34,7 +220,39 @@ impl Fixture {
         .unwrap();
         db.batch_execute("INSERT INTO projects(id,name) VALUES('p','p')")
             .unwrap();
-        Self { db, schema, url }
+        Self {
+            db,
+            schema,
+            url,
+            _admission: admission,
+        }
+    }
+    fn migration_only() -> Self {
+        let admission = acquire_fixture_admission();
+        let base = std::env::var("APPCALL_ENGINE_POSTGRES_URL")
+            .expect("explicit isolated PostgreSQL URL required");
+        let schema = format!("cli_migration_{}", uuid::Uuid::new_v4().simple());
+        let url = scoped_fixture_url(&base, &schema).expect("fixture URL preflight failed");
+        let mut db = Client::connect(&base, NoTls).unwrap();
+        db.batch_execute(&format!(
+            "CREATE SCHEMA {schema};\
+             SET search_path TO {schema};\
+             CREATE TABLE _sqlx_migrations (\
+                 version BIGINT PRIMARY KEY,\
+                 description TEXT NOT NULL,\
+                 installed_on TIMESTAMPTZ NOT NULL DEFAULT now(),\
+                 success BOOLEAN NOT NULL,\
+                 checksum BYTEA NOT NULL,\
+                 execution_time BIGINT NOT NULL\
+             )"
+        ))
+        .unwrap();
+        Self {
+            db,
+            schema,
+            url,
+            _admission: admission,
+        }
     }
     fn plan(&self, args: &[&str]) -> std::process::Output {
         Command::new(env!("CARGO_BIN_EXE_planctl"))
@@ -113,6 +331,78 @@ fn copy_migrations(root: &std::path::Path) {
         if entry.file_type().unwrap().is_file() {
             std::fs::copy(entry.path(), target.join(entry.file_name())).unwrap();
         }
+    }
+}
+fn write_probe_migration(root: &std::path::Path) {
+    let target = root.join("migrations");
+    std::fs::create_dir(&target).unwrap();
+    std::fs::write(target.join("1_probe.sql"), "SELECT 1;\n").unwrap();
+}
+struct ChildGuard(Option<std::process::Child>);
+impl ChildGuard {
+    fn new(child: std::process::Child) -> Self {
+        Self(Some(child))
+    }
+    fn as_mut(&mut self) -> &mut std::process::Child {
+        self.0.as_mut().expect("child already reaped")
+    }
+    fn finish(&mut self) -> std::process::Output {
+        self.0
+            .take()
+            .expect("child already reaped")
+            .wait_with_output()
+            .unwrap()
+    }
+}
+impl Drop for ChildGuard {
+    fn drop(&mut self) {
+        let Some(mut child) = self.0.take() else {
+            return;
+        };
+        let _ = child.kill();
+        let _ = child.wait_with_output();
+    }
+}
+fn wait_for_migration_lock(
+    observer: &mut Client,
+    ledger_oid: u32,
+    child: &mut ChildGuard,
+    started: std::time::Instant,
+) -> i32 {
+    observer
+        .batch_execute("SET statement_timeout='250ms'")
+        .unwrap();
+    let ready_by = started + Duration::from_secs(5);
+    loop {
+        if let Some(status) = child.as_mut().try_wait().unwrap() {
+            let _output = child.finish();
+            panic!(
+                "QA exited before migration lock readiness (status={status}; child diagnostics redacted)"
+            );
+        }
+        let blocked = match observer.query_opt(
+            "SELECT a.pid \
+             FROM pg_stat_activity a \
+             JOIN pg_locks l ON l.pid=a.pid \
+             WHERE a.application_name='appcall-migrations' \
+               AND a.wait_event_type='Lock' \
+               AND NOT l.granted \
+               AND l.relation=$1::oid \
+             LIMIT 1",
+            &[&ledger_oid],
+        ) {
+            Ok(row) => row,
+            Err(error) if error.code().is_some_and(|code| code.code() == "57014") => None,
+            Err(_) => panic!("migration lock observer query failed"),
+        };
+        if let Some(row) = blocked {
+            return row.get(0);
+        }
+        assert!(
+            std::time::Instant::now() < ready_by,
+            "migration lock was not observed within the bounded readiness window"
+        );
+        std::thread::sleep(Duration::from_millis(5));
     }
 }
 fn manifest() -> Value {
@@ -302,19 +592,21 @@ fn sigterm_during_report_persistence_is_not_swallowed() {
     let mut tx = lockdb.transaction().unwrap();
     tx.batch_execute("LOCK TABLE qa_connector_status IN ACCESS EXCLUSIVE MODE")
         .unwrap();
-    let child = Command::new(env!("CARGO_BIN_EXE_qa"))
-        .current_dir(root.path())
-        .env_clear()
-        .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|v| ("LLVM_PROFILE_FILE", v)))
-        .env("APPCALL_DATABASE_URL", url)
-        .env("APPCALL_SECRET_KEY", "07".repeat(32))
-        .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
-        .env("APPCALL_RUNNER_TOKEN", "fixture")
-        .args(["run", "--project=p", "--read-only", "--json"])
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .unwrap();
+    let mut child = ChildGuard::new(
+        Command::new(env!("CARGO_BIN_EXE_qa"))
+            .current_dir(root.path())
+            .env_clear()
+            .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|v| ("LLVM_PROFILE_FILE", v)))
+            .env("APPCALL_DATABASE_URL", url)
+            .env("APPCALL_SECRET_KEY", "07".repeat(32))
+            .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
+            .env("APPCALL_RUNNER_TOKEN", "fixture")
+            .args(["run", "--project=p", "--read-only", "--json"])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap(),
+    );
     let until = std::time::Instant::now() + Duration::from_secs(5);
     loop {
         let waiting:bool=f.db.query_one("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name=$1 AND wait_event_type='Lock' AND query LIKE 'INSERT INTO qa_connector_status%')",&[&app]).unwrap().get(0);
@@ -328,11 +620,11 @@ fn sigterm_during_report_persistence_is_not_swallowed() {
         std::thread::sleep(Duration::from_millis(10));
     }
     assert!(Command::new("kill")
-        .args(["-TERM", &child.id().to_string()])
+        .args(["-TERM", &child.as_mut().id().to_string()])
         .status()
         .unwrap()
         .success());
-    let out = child.wait_with_output().unwrap();
+    let out = child.finish();
     assert_eq!(
         out.status.code(),
         Some(1),
@@ -348,9 +640,9 @@ fn sigterm_during_report_persistence_is_not_swallowed() {
 #[ignore = "requires isolated local PostgreSQL and process signals"]
 fn qa_total_deadline_and_sigterm_cancel_blocked_sqlx_migration() {
     for signal in [false, true] {
-        let mut f = Fixture::new();
+        let mut f = Fixture::migration_only();
         let root = tempfile::tempdir().unwrap();
-        copy_migrations(root.path());
+        write_probe_migration(root.path());
         let manifests = root.path().join("runner/connectors/test");
         std::fs::create_dir_all(&manifests).unwrap();
         std::fs::write(
@@ -360,60 +652,53 @@ fn qa_total_deadline_and_sigterm_cancel_blocked_sqlx_migration() {
         .unwrap();
         let app = format!("migration_cancel_{}", uuid::Uuid::new_v4().simple());
         let url = format!("{}&application_name={app}", f.url);
+        let ledger_oid: u32 =
+            f.db.query_one("SELECT '_sqlx_migrations'::regclass::oid", &[])
+                .unwrap()
+                .get(0);
         let mut lockdb = Client::connect(&f.url, NoTls).unwrap();
         let mut tx = lockdb.transaction().unwrap();
         tx.batch_execute("LOCK TABLE _sqlx_migrations IN ACCESS EXCLUSIVE MODE")
             .unwrap();
+        let mut observer = Client::connect(&f.url, NoTls).unwrap();
         let started = std::time::Instant::now();
-        let mut child = Command::new(env!("CARGO_BIN_EXE_qa"))
-            .current_dir(root.path())
-            .env_clear()
-            .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|v| ("LLVM_PROFILE_FILE", v)))
-            .env("APPCALL_DATABASE_URL", &url)
-            .env("APPCALL_SECRET_KEY", "07".repeat(32))
-            .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
-            .args([
-                "run",
-                "--project=p",
-                "--timeout",
-                if signal { "10s" } else { "3s" },
-            ])
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .unwrap();
-        let migration_pid: i32 = loop {
-            let blocked = f.db.query_opt(
-                "SELECT a.pid FROM pg_stat_activity a JOIN pg_locks l ON l.pid=a.pid JOIN pg_class c ON c.oid=l.relation JOIN pg_namespace n ON n.oid=c.relnamespace WHERE a.application_name='appcall-migrations' AND NOT l.granted AND n.nspname=$1 AND c.relname='_sqlx_migrations'",
-                &[&f.schema],
-            ).unwrap();
-            if let Some(row) = blocked {
-                break row.get(0);
-            }
-            assert!(started.elapsed() < Duration::from_secs(5));
-            assert!(
-                child.try_wait().unwrap().is_none(),
-                "QA exited before migration waited on ledger"
-            );
-            std::thread::sleep(Duration::from_millis(5));
-        };
+        let mut child = ChildGuard::new(
+            Command::new(env!("CARGO_BIN_EXE_qa"))
+                .current_dir(root.path())
+                .env_clear()
+                .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|v| ("LLVM_PROFILE_FILE", v)))
+                .env("APPCALL_DATABASE_URL", &url)
+                .env("APPCALL_SECRET_KEY", "07".repeat(32))
+                .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
+                .args([
+                    "run",
+                    "--project=p",
+                    "--timeout",
+                    if signal { "10s" } else { "3s" },
+                ])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
+                .unwrap(),
+        );
+        let migration_pid = wait_for_migration_lock(&mut observer, ledger_oid, &mut child, started);
         let migration_started = std::time::Instant::now();
         if signal {
             assert!(Command::new("kill")
-                .args(["-TERM", &child.id().to_string()])
+                .args(["-TERM", &child.as_mut().id().to_string()])
                 .status()
                 .unwrap()
                 .success());
         }
-        while child.try_wait().unwrap().is_none() {
+        while child.as_mut().try_wait().unwrap().is_none() {
             if migration_started.elapsed() > Duration::from_secs(6) {
-                child.kill().unwrap();
-                let _ = child.wait();
+                let _ = child.as_mut().kill();
+                let _ = child.as_mut().wait();
                 panic!("blocked migration did not stop within its bounded drain");
             }
             std::thread::sleep(Duration::from_millis(5));
         }
-        let output = child.wait_with_output().unwrap();
+        let output = child.finish();
         assert!(!output.status.success());
         assert!(
             migration_started.elapsed() < Duration::from_secs(if signal { 2 } else { 4 }),
