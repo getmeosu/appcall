@@ -7,6 +7,8 @@ pub use sheet::component_sheet;
 #[derive(Clone, Copy)]
 pub struct LocalPath<'a>(&'a str);
 impl<'a> LocalPath<'a> {
+    /// Accepts root-relative destinations without a `//` prefix, backslashes, or
+    /// control characters. Does not validate route existence or authorize access.
     pub fn new(value: &'a str) -> Option<Self> {
         (value.starts_with('/')
             && !value.starts_with("//")
@@ -57,6 +59,8 @@ pub struct Button<'a> {
     pub progress: Option<u8>,
 }
 impl<'a> Button<'a> {
+    /// Creates a primary, medium control with `type="button"`.
+    /// Select `ButtonType::Submit` explicitly to submit a form.
     pub fn new(label: &'a str) -> Self {
         Self {
             label,
@@ -74,6 +78,9 @@ impl<'a> Button<'a> {
             progress: None,
         }
     }
+    /// Renders escaped HTML; busy or disabled controls cannot be activated.
+    /// Unavailable links omit `href`. Progress appears only while busy and only
+    /// for percentages at most 100.
     pub fn render(&self) -> String {
         self.render_with("")
     }
@@ -202,6 +209,9 @@ impl<'a> Field<'a> {
             on_input_debounced: None,
         }
     }
+    /// Renders a control with associated labels, help, and validation errors.
+    /// The caller must supply a document-unique ID for these associations.
+    /// Hidden controls omit those wrappers; visible errors set `aria-invalid`.
     pub fn render(&self) -> String {
         let hidden = matches!(self.control, Control::Input(InputType::Hidden));
         let mut html = if hidden {
@@ -373,6 +383,10 @@ pub struct ConfirmButton<'a> {
     pub form: Option<&'a str>,
 }
 impl ConfirmButton<'_> {
+    /// Renders a confirmation dialog requiring `/static/dashboard.js` for
+    /// opening, cancellation, and focus restoration. Confirmation submits POST
+    /// through the associated form, or a generated standalone form. Callers must
+    /// supply required hidden fields; this renderer does not create CSRF tokens.
     pub fn render(&self) -> String {
         let trigger = Button {
             variant: ButtonVariant::Danger,
