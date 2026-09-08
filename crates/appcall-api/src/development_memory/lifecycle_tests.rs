@@ -108,6 +108,48 @@ fn setup_reconnect_scope_cancellation_and_unverified_health() {
         Status::Disconnected
     );
 }
+
+#[test]
+fn new_setup_does_not_replace_existing_without_an_explicit_connection_id() {
+    let (repo, s) = fixture(BTreeMap::new(), Arc::new(Tokens(AtomicUsize::new(0))));
+    let fields = BTreeMap::from([("apiKey".into(), "synthetic-key".into())]);
+    let existing = s
+        .submit_checked("proj_dev", Some("a"), "keyed", "", &fields, &|| true)
+        .unwrap();
+    let created = s
+        .submit_new_checked("proj_dev", Some("a"), "keyed", "", &fields, &|| true)
+        .unwrap();
+    assert_ne!(created.id, existing.id);
+    assert_eq!(
+        repo.list_connections("proj_dev", Some("a")).unwrap().len(),
+        2
+    );
+    assert_ne!(created.secret_ref_id, existing.secret_ref_id);
+    assert_eq!(
+        repo.get_connection("proj_dev", Some("a"), &existing.id)
+            .unwrap()
+            .0
+            .secret_ref_id,
+        existing.secret_ref_id
+    );
+}
+
+#[test]
+fn new_oauth_setup_does_not_replace_existing_without_an_explicit_connection_id() {
+    let (repo, s) = fixture(apps(), Arc::new(Tokens(AtomicUsize::new(0))));
+    let first = s
+        .start_checked("proj_dev", Some("a"), "oauth", None, &|| true)
+        .unwrap();
+    let second = s
+        .start_checked("proj_dev", Some("a"), "oauth", None, &|| true)
+        .unwrap();
+    assert_ne!(first.connection.id, second.connection.id);
+    assert_eq!(
+        repo.list_connections("proj_dev", Some("a")).unwrap().len(),
+        2
+    );
+}
+
 #[test]
 fn local_oauth_once_only_no_secret_and_cancelled_start() {
     let (repo, s) = fixture(BTreeMap::new(), Arc::new(Tokens(AtomicUsize::new(0))));
