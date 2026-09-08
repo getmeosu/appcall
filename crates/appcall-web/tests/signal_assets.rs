@@ -3,6 +3,17 @@ use std::{collections::BTreeMap, future::Future, pin::Pin};
 
 struct Data;
 
+const SIGNAL_FONT_ASSETS: &[(&str, &str)] = &[
+    (
+        "archivo-latin-variable.woff2",
+        "8f704806dbedeaaeca334b11ec348bc3ac3a439d6431544b3afb54f534ee4967",
+    ),
+    (
+        "ibm-plex-mono-variable.woff2",
+        "ef55d69e81baa6523a9b6e015d746e707bc7e9579f18703a169cb18c36dd567b",
+    ),
+];
+
 #[tokio::test]
 async fn logs_client_is_embedded_fingerprinted_and_get_only() {
     use sha2::{Digest, Sha256};
@@ -82,6 +93,30 @@ fn signal_replaces_old_ramps_and_defines_accessible_base() {
     assert!(!compiled.contains("fonts.googleapis.com"));
 }
 
+#[test]
+fn signal_mono_uses_a_self_hosted_variable_weight_axis() {
+    use sha2::{Digest, Sha256};
+
+    let css = include_str!("../styles/app.css");
+    assert!(css.contains("font-family: \"IBM Plex Mono\""));
+    assert!(css.contains("font-weight: 100 700"));
+    assert!(css.contains("ibm-plex-mono-variable.woff2"));
+    assert!(!css.contains("ibm-plex-mono-regular.woff2"));
+    assert!(!css.contains("ibm-plex-mono-medium.woff2"));
+
+    let bytes = std::fs::read(format!(
+        "{}/static/fonts/ibm-plex-mono-variable.woff2",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let hash = Sha256::digest(bytes);
+    let hash: String = hash.iter().map(|byte| format!("{byte:02x}")).collect();
+    assert_eq!(
+        hash,
+        "ef55d69e81baa6523a9b6e015d746e707bc7e9579f18703a169cb18c36dd567b"
+    );
+}
+
 #[tokio::test]
 async fn shell_preloads_local_fonts_and_embeds_assets() {
     let dashboard = DevelopmentDashboard {
@@ -90,17 +125,10 @@ async fn shell_preloads_local_fonts_and_embeds_assets() {
     };
     let page = dashboard.handle(&request("/app/settings")).await.unwrap();
     assert_eq!(page.status, 200);
-    for name in [
-        "archivo-latin-variable.woff2",
-        "ibm-plex-mono-regular.woff2",
-    ] {
-        assert!(page.body.contains(&format!("rel=\"preload\" href=\"/static/fonts/{name}\" as=\"font\" type=\"font/woff2\" crossorigin")), "missing preload {name}");
+    for &(name, hash) in SIGNAL_FONT_ASSETS {
+        assert!(page.body.contains(&format!("rel=\"preload\" href=\"/static/fonts/{name}?v={hash}\" as=\"font\" type=\"font/woff2\" crossorigin")), "missing preload {name}");
     }
-    for name in [
-        "archivo-latin-variable.woff2",
-        "ibm-plex-mono-regular.woff2",
-        "ibm-plex-mono-medium.woff2",
-    ] {
+    for &(name, _) in SIGNAL_FONT_ASSETS {
         let path = format!("/static/fonts/{name}");
         let response = dashboard.handle(&request(&path)).await.unwrap();
         assert_eq!(response.status, 200, "{path}");
@@ -113,6 +141,44 @@ async fn shell_preloads_local_fonts_and_embeds_assets() {
         ))
         .unwrap();
         assert_eq!(response.binary_body.unwrap(), expected);
+    }
+    for name in ["ibm-plex-mono-regular.woff2", "ibm-plex-mono-medium.woff2"] {
+        let path = format!("/static/fonts/{name}");
+        assert_eq!(
+            dashboard.handle(&request(&path)).await.unwrap().status,
+            404,
+            "retired {path}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn fingerprinted_font_urls_keep_the_embedded_bytes() {
+    let dashboard = DevelopmentDashboard {
+        public_origin: "http://127.0.0.1:5080",
+        data: &Data,
+    };
+    let page = dashboard.handle(&request("/app/settings")).await.unwrap();
+    let css = include_str!("../styles/app.css");
+    for &(name, hash) in SIGNAL_FONT_ASSETS {
+        let url = format!("/static/fonts/{name}?v={hash}");
+        assert!(
+            css.contains(&format!("url(\"{url}\") format(\"woff2\")")),
+            "missing hashed CSS source {url}"
+        );
+        assert!(
+            page.body.contains(&format!("href=\"{url}\" as=\"font\"")),
+            "missing hashed preload {url}"
+        );
+
+        let raw = dashboard
+            .handle(&request(&format!("/static/fonts/{name}")))
+            .await
+            .unwrap();
+        let fingerprinted = dashboard.handle(&request(&url)).await.unwrap();
+        assert_eq!(raw.status, 200, "raw {url}");
+        assert_eq!(fingerprinted.status, 200, "fingerprinted {url}");
+        assert_eq!(fingerprinted.binary_body, raw.binary_body, "bytes {url}");
     }
 }
 

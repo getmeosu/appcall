@@ -13,8 +13,7 @@ fn signal_fonts_survive_real_http_without_text_conversion() {
     let host = Host::start(&[]);
     for name in [
         "archivo-latin-variable.woff2",
-        "ibm-plex-mono-regular.woff2",
-        "ibm-plex-mono-medium.woff2",
+        "ibm-plex-mono-variable.woff2",
     ] {
         let mut socket = TcpStream::connect(host.address).unwrap();
         socket
