@@ -217,6 +217,13 @@ impl MemorySetup {
         }) {
             return Err(Error::NotFound);
         }
+        // A save must not replace credentials owned by an in-flight authorization.
+        if selected
+            .as_ref()
+            .is_some_and(|(c, _)| c.status == Status::Authorizing)
+        {
+            return Err(Error::Conflict);
+        }
         active(check)?;
         if credentialed {
             if let Some(validator) = &self.validator {
@@ -235,6 +242,12 @@ impl MemorySetup {
             c.last_test_status = TestStatus::Unknown;
             self.repository
                 .replace_connection_checked(project, account, revision, c, secret, check)
+        } else if reuse_existing {
+            self.repository.create_or_reuse_connection_checked(
+                new_connection(project, account, connector, auth),
+                secret,
+                check,
+            )
         } else {
             self.repository.create_connection_checked(
                 new_connection(project, account, connector, auth),

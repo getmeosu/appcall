@@ -8,7 +8,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
+        Arc, Condvar, Mutex,
     },
 };
 struct Provider {
@@ -122,6 +122,15 @@ impl Database {
             store: Arc::new(Mutex::new(store)),
         }
     }
+    fn client(&self) -> std::result::Result<Client, postgres::Error> {
+        let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").expect("explicit local test URL");
+        let mut client = Client::connect(&url, NoTls)?;
+        client.batch_execute(&format!(
+            "SET search_path TO {schema};SET statement_timeout='5s'",
+            schema = self.schema
+        ))?;
+        Ok(client)
+    }
     fn service(&self, provider: Arc<dyn TokenProvider>) -> Lifecycle {
         Lifecycle::new(
             self.store.clone(),
@@ -163,7 +172,52 @@ impl appcall_setup::Validator for Validate {
         }
     }
 }
+struct BlockingValidate {
+    entered: Arc<std::sync::Barrier>,
+    release: Arc<ReleaseGate>,
+}
+impl appcall_setup::Validator for BlockingValidate {
+    fn validate(
+        &self,
+        _: &str,
+        _: &str,
+        _: &appcall_setup::Credentials,
+    ) -> appcall_setup::Result<()> {
+        self.entered.wait();
+        self.release.wait();
+        Ok(())
+    }
+}
+#[derive(Default)]
+struct ReleaseGate {
+    released: Mutex<bool>,
+    changed: Condvar,
+}
+impl ReleaseGate {
+    fn wait(&self) {
+        let mut released = self.released.lock().unwrap();
+        while !*released {
+            released = self.changed.wait(released).unwrap();
+        }
+    }
+    fn release(&self) {
+        *self.released.lock().unwrap() = true;
+        self.changed.notify_all();
+    }
+}
+struct ReleaseGuard(Arc<ReleaseGate>);
+impl Drop for ReleaseGuard {
+    fn drop(&mut self) {
+        self.0.release();
+    }
+}
 fn setup(db: &Database) -> appcall_setup::Service {
+    setup_with_validator(db, Arc::new(Validate))
+}
+fn setup_with_validator(
+    db: &Database,
+    validator: Arc<dyn appcall_setup::Validator>,
+) -> appcall_setup::Service {
     appcall_setup::Service::new(
         db.store.clone(),
         registry(),
@@ -171,7 +225,7 @@ fn setup(db: &Database) -> appcall_setup::Service {
             calls: AtomicUsize::new(0),
             fail: false,
         }))),
-        Arc::new(Validate),
+        validator,
     )
 }
 #[test]
@@ -242,6 +296,91 @@ fn atomic_replacement_ownership_and_validation() {
             .secret_ref_id,
         updated.secret_ref_id
     );
+}
+
+#[test]
+#[ignore = "explicit PostgreSQL isolated schema"]
+fn setup_fences_authorization_started_during_validation() {
+    let db = Database::new();
+    let platform = appcall_setup::SetupScope::new("p", None).unwrap();
+    let initial = setup(&db)
+        .submit(
+            &platform,
+            "brevo",
+            "",
+            &BTreeMap::from([("apiKey".into(), "old".into())]),
+        )
+        .unwrap();
+    let old_secret = initial.secret_ref_id.clone();
+    let entered = Arc::new(std::sync::Barrier::new(2));
+    let release = Arc::new(ReleaseGate::default());
+    let _release_guard = ReleaseGuard(release.clone());
+    let service = Arc::new(setup_with_validator(
+        &db,
+        Arc::new(BlockingValidate {
+            entered: entered.clone(),
+            release: release.clone(),
+        }),
+    ));
+    let worker_service = service.clone();
+    let worker_platform = platform.clone();
+    let connection_id = initial.id.clone();
+    let worker = std::thread::spawn(move || {
+        worker_service.update(
+            &worker_platform,
+            &connection_id,
+            "brevo",
+            "",
+            &BTreeMap::from([("apiKey".into(), "new".into())]),
+        )
+    });
+
+    entered.wait();
+    let concurrent_result = (|| -> std::result::Result<(), postgres::Error> {
+        let mut concurrent = db.client()?;
+        let mut tx = concurrent.transaction()?;
+        tx.execute(
+            "UPDATE connections SET status='authorizing',updated_at=now() WHERE project_id=$1 AND id=$2",
+            &[&"p", &initial.id],
+        )?;
+        tx.execute(
+            "INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,state_digest) VALUES($1,$2,$3,$4,'authorization','authorizing',$5)",
+            &[&"p", &initial.id, &"auth-race", &old_secret, &"digest-race"],
+        )?;
+        tx.commit()?;
+        Ok(())
+    })();
+    release.release();
+
+    let result = worker.join().unwrap();
+    concurrent_result.unwrap();
+    assert!(
+        matches!(result, Err(appcall_setup::Error::Conflict)),
+        "setup must reject a connection changed during validation: {result:?}"
+    );
+    let current = db
+        .store
+        .lock()
+        .unwrap()
+        .get(&Scope::new("p", None).unwrap(), &initial.id)
+        .unwrap();
+    assert_eq!(current.status, Status::Authorizing);
+    assert_eq!(current.secret_ref_id, old_secret);
+    let intent = db
+        .store
+        .lock()
+        .unwrap()
+        .transaction(|tx| {
+            Ok(tx.client().query_one(
+                "SELECT attempt_id,secret_ref_id,operation,state FROM oauth_refresh_intents WHERE project_id=$1 AND connection_id=$2",
+                &[&"p", &initial.id],
+            )?)
+        })
+        .unwrap();
+    assert_eq!(intent.get::<_, String>("attempt_id"), "auth-race");
+    assert_eq!(intent.get::<_, String>("secret_ref_id"), old_secret);
+    assert_eq!(intent.get::<_, String>("operation"), "authorization");
+    assert_eq!(intent.get::<_, String>("state"), "authorizing");
 }
 
 #[test]
