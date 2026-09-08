@@ -9,6 +9,90 @@ struct Fixture {
     db: Client,
     schema: String,
     url: String,
+    // SQLx's migration advisory lock is database-wide, not schema-wide. Keep
+    // admission through caller-owned child work and Drop's schema cleanup.
+    _admission: std::sync::MutexGuard<'static, ()>,
+}
+
+static FIXTURE_ADMISSION: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn acquire_fixture_admission() -> std::sync::MutexGuard<'static, ()> {
+    // A failed test must not poison unrelated UUID-scoped fixtures. Unwinding
+    // drops child guards and runs fixture cleanup before releasing admission.
+    FIXTURE_ADMISSION
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+#[test]
+fn fixture_admission_serializes_until_guard_is_dropped() {
+    let admission = acquire_fixture_admission();
+    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+    let (acquired_tx, acquired_rx) = std::sync::mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        ready_tx.send(()).unwrap();
+        let _admission = acquire_fixture_admission();
+        acquired_tx.send(()).unwrap();
+    });
+    let ready = ready_rx.recv_timeout(Duration::from_secs(2));
+    let premature = acquired_rx.recv_timeout(Duration::from_millis(100));
+    drop(admission);
+    // Admission is not FIFO: unrelated PostgreSQL fixtures may run first.
+    // This wait does not change the exclusion check or any QA deadline.
+    let acquired = acquired_rx.recv_timeout(Duration::from_secs(30));
+    let joined = worker.join();
+    ready.unwrap();
+    assert!(matches!(
+        premature,
+        Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+    ));
+    acquired.unwrap();
+    joined.unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated local PostgreSQL"]
+fn fixture_admission_is_held_until_schema_cleanup_completes() {
+    for migration_only in [false, true] {
+        let fixture = if migration_only {
+            Fixture::migration_only()
+        } else {
+            Fixture::new()
+        };
+        let schema = fixture.schema.clone();
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+        let (cleaned_tx, cleaned_rx) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            ready_tx.send(()).unwrap();
+            let _admission = acquire_fixture_admission();
+            let base = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+            let mut config: postgres::Config = base.parse().unwrap();
+            config.connect_timeout(Duration::from_secs(5));
+            let mut client = config.connect(NoTls).unwrap();
+            client.batch_execute("SET statement_timeout='5s'").unwrap();
+            let exists: bool = client
+                .query_one(
+                    "SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname=$1)",
+                    &[&schema],
+                )
+                .unwrap()
+                .get(0);
+            cleaned_tx.send(!exists).unwrap();
+        });
+        let ready = ready_rx.recv_timeout(Duration::from_secs(2));
+        // The fixture stays alive through all child-process work in its caller.
+        let premature = cleaned_rx.recv_timeout(Duration::from_millis(100));
+        drop(fixture);
+        let cleaned = cleaned_rx.recv_timeout(Duration::from_secs(30));
+        let joined = worker.join();
+        ready.unwrap();
+        assert!(matches!(
+            premature,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+        ));
+        assert!(cleaned.unwrap());
+        joined.unwrap();
+    }
 }
 
 fn scoped_fixture_url(base: &str, schema: &str) -> Result<String, &'static str> {
@@ -116,6 +200,7 @@ fn fixture_url_only_accepts_bounded_private_schema_names() {
 
 impl Fixture {
     fn new() -> Self {
+        let admission = acquire_fixture_admission();
         let base = std::env::var("APPCALL_ENGINE_POSTGRES_URL")
             .expect("explicit isolated PostgreSQL URL required");
         let schema = format!("cli_{}", uuid::Uuid::new_v4().simple());
@@ -135,9 +220,15 @@ impl Fixture {
         .unwrap();
         db.batch_execute("INSERT INTO projects(id,name) VALUES('p','p')")
             .unwrap();
-        Self { db, schema, url }
+        Self {
+            db,
+            schema,
+            url,
+            _admission: admission,
+        }
     }
     fn migration_only() -> Self {
+        let admission = acquire_fixture_admission();
         let base = std::env::var("APPCALL_ENGINE_POSTGRES_URL")
             .expect("explicit isolated PostgreSQL URL required");
         let schema = format!("cli_migration_{}", uuid::Uuid::new_v4().simple());
@@ -156,7 +247,12 @@ impl Fixture {
              )"
         ))
         .unwrap();
-        Self { db, schema, url }
+        Self {
+            db,
+            schema,
+            url,
+            _admission: admission,
+        }
     }
     fn plan(&self, args: &[&str]) -> std::process::Output {
         Command::new(env!("CARGO_BIN_EXE_planctl"))
@@ -496,19 +592,21 @@ fn sigterm_during_report_persistence_is_not_swallowed() {
     let mut tx = lockdb.transaction().unwrap();
     tx.batch_execute("LOCK TABLE qa_connector_status IN ACCESS EXCLUSIVE MODE")
         .unwrap();
-    let child = Command::new(env!("CARGO_BIN_EXE_qa"))
-        .current_dir(root.path())
-        .env_clear()
-        .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|v| ("LLVM_PROFILE_FILE", v)))
-        .env("APPCALL_DATABASE_URL", url)
-        .env("APPCALL_SECRET_KEY", "07".repeat(32))
-        .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
-        .env("APPCALL_RUNNER_TOKEN", "fixture")
-        .args(["run", "--project=p", "--read-only", "--json"])
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .unwrap();
+    let mut child = ChildGuard::new(
+        Command::new(env!("CARGO_BIN_EXE_qa"))
+            .current_dir(root.path())
+            .env_clear()
+            .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|v| ("LLVM_PROFILE_FILE", v)))
+            .env("APPCALL_DATABASE_URL", url)
+            .env("APPCALL_SECRET_KEY", "07".repeat(32))
+            .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
+            .env("APPCALL_RUNNER_TOKEN", "fixture")
+            .args(["run", "--project=p", "--read-only", "--json"])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap(),
+    );
     let until = std::time::Instant::now() + Duration::from_secs(5);
     loop {
         let waiting:bool=f.db.query_one("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name=$1 AND wait_event_type='Lock' AND query LIKE 'INSERT INTO qa_connector_status%')",&[&app]).unwrap().get(0);
@@ -522,11 +620,11 @@ fn sigterm_during_report_persistence_is_not_swallowed() {
         std::thread::sleep(Duration::from_millis(10));
     }
     assert!(Command::new("kill")
-        .args(["-TERM", &child.id().to_string()])
+        .args(["-TERM", &child.as_mut().id().to_string()])
         .status()
         .unwrap()
         .success());
-    let out = child.wait_with_output().unwrap();
+    let out = child.finish();
     assert_eq!(
         out.status.code(),
         Some(1),
