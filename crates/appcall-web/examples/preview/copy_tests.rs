@@ -158,11 +158,73 @@ async fn runs_preview_filters_and_cursor_pages_use_only_fixed_rows() {
     let dead = data.execute(request).await.unwrap();
     assert_eq!(dead["runs"].as_array().unwrap().len(), 1);
     assert_eq!(dead["runs"][0]["health"], "dead");
-    for (key, value) in [("limit", "0"), ("limit", "101"), ("cursor", "invented")] {
+    for (key, value) in [
+        ("limit", "-1"),
+        ("limit", "not-a-number"),
+        ("cursor", "invented"),
+    ] {
         let mut request = dashboard_request(DashboardOperation::Runs);
         request.fields.insert(key.into(), value.into());
         assert!(data.execute(request).await.is_err());
     }
+}
+
+#[tokio::test]
+async fn runs_preview_matches_api_status_validation() {
+    let data = ScenarioData::new(Scenario::parse("runs").unwrap());
+    for status in [
+        "pending",
+        "running",
+        "backingoff",
+        "dead",
+        "failed",
+        "cancelled",
+        "succeeded",
+    ] {
+        let mut request = dashboard_request(DashboardOperation::Runs);
+        request.fields.insert("status".into(), status.into());
+        assert!(
+            data.execute(request).await.is_ok(),
+            "API allowlisted status must remain valid: {status}"
+        );
+    }
+
+    let mut request = dashboard_request(DashboardOperation::Runs);
+    request.fields.insert("status".into(), "unknown".into());
+    assert_eq!(data.execute(request).await, Err(Error::Invalid));
+}
+
+#[tokio::test]
+async fn runs_preview_matches_api_limit_normalization() {
+    let data = ScenarioData::new(Scenario::parse("runs").unwrap());
+    let mut request = dashboard_request(DashboardOperation::Runs);
+    request.fields.insert("limit".into(), "0".into());
+    let zero = data.execute(request).await.unwrap();
+    assert_eq!(zero["runs"].as_array().unwrap().len(), 5);
+    assert_eq!(zero["pagination"]["hasMore"], false);
+
+    for raw_limit in ["101", "999"] {
+        let mut request = dashboard_request(DashboardOperation::Runs);
+        request.fields.insert("limit".into(), raw_limit.into());
+        let capped = data.execute(request).await.unwrap();
+        assert_eq!(capped["runs"].as_array().unwrap().len(), 5);
+        assert_eq!(capped["pagination"]["hasMore"], false);
+    }
+}
+
+#[tokio::test]
+async fn runs_preview_status_filter_uses_projected_health() {
+    let data = ScenarioData::new(Scenario::parse("runs").unwrap());
+    let mut request = dashboard_request(DashboardOperation::Runs);
+    request.fields.insert("status".into(), "pending".into());
+    let pending = data.execute(request).await.unwrap();
+    let rows = pending["runs"].as_array().unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["health"], "pending");
+    assert_eq!(pending["pendingRuns"], 1);
+    assert_eq!(pending["runningRuns"], 0);
+    assert_eq!(pending["backingoffRuns"], 0);
+    assert_eq!(pending["deadRuns"], 0);
 }
 
 #[tokio::test]

@@ -208,17 +208,32 @@ impl DashboardRenderer<'_> {
         } else {
             crate::logs::Filters::default()
         };
+        // Match the Runs API alias precedence without changing forwarded fields
+        // or the principal's account scope. Navigation emits the canonical key.
+        let run_account_filter = if operation == DashboardOperation::Runs {
+            let account = r.field("accountId")?;
+            if account.is_empty() {
+                r.field("externalAccountId")?
+            } else {
+                account
+            }
+        } else {
+            ""
+        };
         let has_filters = match operation {
             DashboardOperation::Catalog => {
                 !r.field("category")?.trim().is_empty() || !r.field("search")?.trim().is_empty()
             }
             DashboardOperation::Logs => log_filters.active(),
-            DashboardOperation::Runs => ["status", "connector", "tool", "accountId"]
-                .iter()
-                .map(|key| r.field(key))
-                .collect::<Result<Vec<_>, _>>()?
-                .iter()
-                .any(|value| !value.is_empty()),
+            DashboardOperation::Runs => {
+                ["status", "connector", "tool"]
+                    .iter()
+                    .map(|key| r.field(key))
+                    .collect::<Result<Vec<_>, _>>()?
+                    .iter()
+                    .any(|value| !value.is_empty())
+                    || !run_account_filter.is_empty()
+            }
             _ => false,
         };
         let mut fields = BTreeMap::new();
@@ -403,10 +418,10 @@ impl DashboardRenderer<'_> {
                 ("status", "selectedStatus"),
                 ("connector", "selectedConnector"),
                 ("tool", "selectedTool"),
-                ("accountId", "selectedAccountId"),
             ] {
                 map.insert(data_key.into(), r.field(query_key)?.into());
             }
+            map.insert("selectedAccountId".into(), run_account_filter.into());
         }
         if operation == DashboardOperation::Catalog {
             let target = if value.get("data").is_some() {
@@ -616,7 +631,11 @@ impl DashboardRenderer<'_> {
                     &["status", "connector", "action", "connectionId"]
                 };
                 for key in filter_keys {
-                    let value = r.field(key)?;
+                    let value = if operation == Runs && *key == "accountId" {
+                        run_account_filter
+                    } else {
+                        r.field(key)?
+                    };
                     if !value.is_empty() {
                         url.query_pairs_mut().append_pair(key, value);
                     }

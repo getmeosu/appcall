@@ -270,8 +270,10 @@ pub(crate) fn recovery(
     let message: String = match failure.classification() {
         Error::Unauthorized => "Appcall could not authorize this request. Sign in again before running the tool.".into(),
         Error::Forbidden => "Appcall denied this request. Check project access and select an account available to this project.".into(),
-        Error::NotFound => "This run is not available in the current project or account scope.".into(),
-        Error::Conflict => "This run changed state before the operator control completed. Refresh the Runs page before trying again.".into(),
+        Error::NotFound if matches!(operation, Op::RunNow | Op::ResetRun | Op::CancelRun) => "This run is not available in the current project or account scope.".into(),
+        Error::Conflict if matches!(operation, Op::RunNow | Op::ResetRun | Op::CancelRun) => "This run changed state before the operator control completed. Refresh the Runs page before trying again.".into(),
+        Error::NotFound => "This resource is not available in the current project or account scope.".into(),
+        Error::Conflict => "This resource changed before the request completed. Review its current state before trying again.".into(),
         Error::Configuration => "Appcall could not complete this request because a required service is not configured. Ask the operator to check server configuration.".into(),
         _ if fields => "Appcall could not load the fields for this tool. Select the tool again before running it.".into(),
         _ => match failure.cause() {
@@ -333,6 +335,9 @@ pub(crate) fn recovery(
         .filter(|_| operation == Op::ReplayTrace)
         .map(|id| format!("/app/logs/{id}"));
     let (link, label) = match failure.cause() {
+        _ if matches!(operation, Op::RunNow | Op::ResetRun | Op::CancelRun) => {
+            ("/app/runs", "Review Runs")
+        }
         _ if fields => (
             toolkit.as_deref().unwrap_or("/app/toolkits"),
             "Select the tool again",
@@ -401,6 +406,52 @@ fn recovery_link(path: &str, label: &str, quiet: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recovery_resource_errors_do_not_label_non_run_operations_as_runs() {
+        use crate::DashboardOperation as Op;
+        for operation in [
+            Op::Setup,
+            Op::TestConnection,
+            Op::DisconnectConnection,
+            Op::ReplayTrace,
+        ] {
+            for (error, expected) in [
+                (Error::NotFound, "This resource is not available in the current project or account scope."),
+                (Error::Conflict, "This resource changed before the request completed. Review its current state before trying again."),
+            ] {
+                let html = recovery(operation, Some("resource-one"), &error.into());
+                assert!(html.contains(expected), "{operation:?}: {html}");
+                assert!(html.contains("role=\"alert\""));
+                assert!(!html.contains("This run"));
+                assert!(!html.contains("operator control"));
+                assert!(!html.contains("Runs page"));
+                assert!(!html.contains("href=\"/app/runs\""));
+            }
+        }
+    }
+
+    #[test]
+    fn recovery_run_resource_errors_keep_run_context_and_review_link() {
+        use crate::DashboardOperation as Op;
+        for operation in [Op::RunNow, Op::ResetRun, Op::CancelRun] {
+            for (error, expected) in [
+                (
+                    Error::NotFound,
+                    "This run is not available in the current project or account scope.",
+                ),
+                (
+                    Error::Conflict,
+                    "This run changed state before the operator control completed.",
+                ),
+            ] {
+                let html = recovery(operation, Some("run-one"), &error.into());
+                assert!(html.contains(expected), "{operation:?}: {html}");
+                assert!(html.contains("href=\"/app/runs\""));
+                assert!(html.contains("Review Runs"));
+            }
+        }
+    }
 
     #[test]
     fn copy_direct_failures_local_usage_requires_current_nondispatch_evidence() {

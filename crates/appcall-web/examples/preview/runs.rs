@@ -2,6 +2,16 @@
 use super::*;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 
+const RUN_STATUSES: &[&str] = &[
+    "pending",
+    "running",
+    "backingoff",
+    "dead",
+    "failed",
+    "cancelled",
+    "succeeded",
+];
+
 pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Value, Error> {
     if matches!(scenario, Scenario::RunsUnavailable | Scenario::Unavailable) {
         return Ok(json!({"synthetic":true,"unavailable":true}));
@@ -47,23 +57,24 @@ pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Va
         }
     }
     let field = |key: &str| request.fields.get(key).map(String::as_str).unwrap_or("");
+    let status_filter = field("status");
+    if !status_filter.is_empty() && !RUN_STATUSES.contains(&status_filter) {
+        return Err(Error::Invalid);
+    }
     let account_filter = if field("accountId").is_empty() {
         field("externalAccountId")
     } else {
         field("accountId")
     };
     rows.retain(|row| {
-        [
-            ("status", "health"),
-            ("connector", "connector"),
-            ("tool", "tool"),
-        ]
-        .iter()
-        .all(|(input, key)| {
-            field(input).is_empty()
-                || row[*key].as_str() == Some(field(input))
-                || *input == "status" && row["status"].as_str() == Some(field(input))
-        }) && (account_filter.is_empty() || row["accountId"].as_str() == Some(account_filter))
+        [("connector", "connector"), ("tool", "tool")]
+            .iter()
+            .all(|(input, key)| field(input).is_empty() || row[*key].as_str() == Some(field(input)))
+            && (status_filter.is_empty()
+                || row["health"].as_str() == Some(status_filter)
+                || matches!(status_filter, "failed" | "cancelled")
+                    && row["status"].as_str() == Some(status_filter))
+            && (account_filter.is_empty() || row["accountId"].as_str() == Some(account_filter))
     });
     let count_health = |health: &str| {
         rows.iter()
@@ -101,10 +112,17 @@ pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Va
         50
     } else {
         field("limit")
-            .parse::<usize>()
-            .ok()
-            .filter(|v| (1..=100).contains(v))
-            .ok_or(Error::Invalid)?
+            .parse::<i32>()
+            .map_err(|_| Error::Invalid)
+            .and_then(|value| {
+                if value < 0 {
+                    Err(Error::Invalid)
+                } else if value == 0 {
+                    Ok(50)
+                } else {
+                    Ok(value.min(100) as usize)
+                }
+            })?
     };
     let selected = rows
         .iter()
