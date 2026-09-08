@@ -22,7 +22,13 @@ impl appcall_auth::MembershipVerifier for Members {
         }))
     }
 }
+#[cfg(test)]
 struct Data;
+#[path = "preview/fixtures.rs"]
+mod fixtures;
+use fixtures::*;
+#[path = "preview/transport.rs"]
+mod transport;
 async fn read_preview_request(
     stream: &mut (impl tokio::io::AsyncRead + Unpin),
 ) -> std::io::Result<Vec<u8>> {
@@ -62,6 +68,13 @@ fn preview_request_size(raw: &[u8]) -> std::io::Result<Option<usize>> {
     let mut length = None;
     for line in head.lines().skip(1) {
         let (key, value) = line.split_once(':').ok_or_else(invalid)?;
+        if key.is_empty()
+            || !key
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&byte))
+        {
+            return Err(invalid());
+        }
         if key.eq_ignore_ascii_case("transfer-encoding") {
             return Err(invalid());
         }
@@ -69,7 +82,11 @@ fn preview_request_size(raw: &[u8]) -> std::io::Result<Option<usize>> {
             if length.is_some() {
                 return Err(invalid());
             }
-            length = Some(value.trim().parse::<usize>().map_err(|_| invalid())?);
+            let value = value.trim();
+            if value.is_empty() || !value.bytes().all(|b| b.is_ascii_digit()) {
+                return Err(invalid());
+            }
+            length = Some(value.parse::<usize>().map_err(|_| invalid())?);
         }
     }
     let total = (boundary + 4)
@@ -84,8 +101,7 @@ fn preview_fields(
     target: &str,
     body: &[u8],
 ) -> Result<std::collections::BTreeMap<String, Vec<String>>, Error> {
-    let parsed =
-        reqwest::Url::parse(&format!("http://localhost{target}")).map_err(|_| Error::Invalid)?;
+    let parsed = preview_target(target)?;
     let mut form = reqwest::Url::parse("http://localhost/").map_err(|_| Error::Invalid)?;
     form.set_query(Some(std::str::from_utf8(body).map_err(|_| Error::Invalid)?));
     Ok(parsed.query_pairs().chain(form.query_pairs()).fold(
@@ -95,6 +111,22 @@ fn preview_fields(
             map
         },
     ))
+}
+fn preview_target(target: &str) -> Result<reqwest::Url, Error> {
+    if target.len() > 16384
+        || !target.starts_with('/')
+        || target.starts_with("//")
+        || target.contains(['#', '\\'])
+        || target.chars().any(|c| c.is_control())
+    {
+        return Err(Error::Invalid);
+    }
+    let parsed =
+        reqwest::Url::parse(&format!("http://localhost{target}")).map_err(|_| Error::Invalid)?;
+    if parsed.path() != target.split('?').next().ok_or(Error::Invalid)? {
+        return Err(Error::Invalid);
+    }
+    Ok(parsed)
 }
 fn connector_fixture(r: &DashboardRequest) -> Result<Value, Error> {
     let key = r.resource.as_deref().ok_or(Error::Invalid)?;
@@ -226,7 +258,7 @@ fn fixture_dynamic(r: &DashboardRequest) -> Result<Value, Error> {
     }
 }
 
-async fn fixture_run(r: &DashboardRequest) -> Result<Value, Error> {
+async fn fixture_run(r: &DashboardRequest) -> Result<Value, DashboardFailure> {
     let item = connector_fixture(r)?;
     let connection = r.fields.get("connectionId").ok_or(Error::Invalid)?;
     if !item["connections"]
@@ -235,12 +267,12 @@ async fn fixture_run(r: &DashboardRequest) -> Result<Value, Error> {
         .iter()
         .any(|c| c["id"] == *connection && c["status"] == "active")
     {
-        return Err(Error::Invalid);
+        return Err(Error::Invalid.into());
     }
     let input = if let Some(raw) = r.fields.get("input_raw").filter(|s| !s.is_empty()) {
-        let value: Value = serde_json::from_str(raw).map_err(|_| Error::Invalid)?;
+        let value: Value = serde_json::from_str(raw).map_err(|_| invalid_json_failure(raw))?;
         if !value.is_object() {
-            return Err(Error::Invalid);
+            return Err(Error::Invalid.into());
         }
         value
     } else {
@@ -248,7 +280,7 @@ async fn fixture_run(r: &DashboardRequest) -> Result<Value, Error> {
     };
     tokio::time::sleep(std::time::Duration::from_millis(250)).await;
     if item["action"] == "messages.simulated_failure" {
-        return Err(Error::Unavailable);
+        return Err(Error::Unavailable.into());
     }
     static REQUESTS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let sequence = REQUESTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
@@ -291,6 +323,7 @@ fn preview_response(method: &str, path: &str) -> Option<Response> {
     Some(Response { status: 200, headers: vec![("Content-Type".into(), "text/html; charset=utf-8".into())], body: format!("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Signal component sheet</title><link rel=\"stylesheet\" href=\"/static/app.css?preview={revision}\"><script defer src=\"/static/dashboard.js?preview={revision}\"></script></head><body>{}</body></html>",ui::component_sheet()), binary_body: None })
 }
 
+#[cfg(test)]
 impl DashboardData for Data {
     fn execute(
         &self,
@@ -298,176 +331,61 @@ impl DashboardData for Data {
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value, Error>> + Send + '_>>
     {
         Box::pin(async move {
-            match r.operation {
-                DashboardOperation::Toolkit | DashboardOperation::TestForm => connector_fixture(&r),
-                DashboardOperation::Test => fixture_run(&r).await,
-                DashboardOperation::Options | DashboardOperation::RunInputFields => {
-                    fixture_dynamic(&r)
-                }
-                DashboardOperation::Catalog => Ok(
-                    json!({"connectors":(0..24).map(|i|json!({"key":format!("connector-{i}"),"name":if i==0{"Google Workspace — long integration name for realistic layout inspection".to_owned()}else{format!("Integration {}",i+1)},"operations":[{"name":"list","kind":"action"},{"name":"create","kind":"action"}]})).collect::<Vec<_>>()}),
-                ),
-                DashboardOperation::Branding => {
-                    Ok(json!({"appName":"Sample App","tagColor":"#67e8f9"}))
-                }
-                DashboardOperation::Overview => {
-                    Ok(json!({"toolkitCount":24,"connectionCount":3,"toolCalls":1205}))
-                }
-                _ => Err(Error::Invalid),
-            }
+            self.execute_detailed(r)
+                .await
+                .map_err(|failure| failure.classification())
+        })
+    }
+    fn execute_detailed(
+        &self,
+        r: DashboardRequest,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Value, DashboardFailure>> + Send + '_>,
+    > {
+        Box::pin(async move {
+            ScenarioData::new(Scenario::Preview)
+                .execute_detailed(r)
+                .await
         })
     }
 }
 #[tokio::main(flavor = "current_thread")]
-async fn main() {
-    tokio::spawn(async {
-        let broker = TcpListener::bind("127.0.0.1:55590").await.unwrap();
-        loop {
-            let (mut socket, _) = broker.accept().await.unwrap();
+async fn main() -> std::io::Result<()> {
+    // Startup selection only: a browser request cannot change shared fixtures.
+    let name = match std::env::var("APPCALL_PREVIEW_SCENARIO") {
+        Ok(name) => name,
+        Err(std::env::VarError::NotPresent) => "preview".into(),
+        Err(_) => return Err(std::io::ErrorKind::InvalidInput.into()),
+    };
+    let scenario = Scenario::parse(&name).map_err(|_| {
+        eprintln!("Unknown synthetic preview scenario; no listener started.");
+        std::io::ErrorKind::InvalidInput
+    })?;
+    let broker = TcpListener::bind("127.0.0.1:55590").await?;
+    let listener = TcpListener::bind("127.0.0.1:55589").await?;
+    let data = std::sync::Arc::new(ScenarioData::new(scenario));
+    println!("Synthetic dashboard preview ({scenario:?}): http://127.0.0.1:55589/app/toolkits");
+    println!("Synthetic counts only: http://127.0.0.1:55589/preview/stats — no provider calls or retained inputs.");
+    tokio::spawn(async move {
+        while let Ok((mut socket, _)) = broker.accept().await {
             tokio::spawn(async move {
-                let mut bytes = [0; 8192];
-                let n = socket.read(&mut bytes).await.unwrap_or(0);
-                let raw = String::from_utf8_lossy(&bytes[..n]);
-                let path = raw
-                    .lines()
-                    .next()
-                    .unwrap_or("")
-                    .split_whitespace()
-                    .nth(1)
-                    .unwrap_or("");
-                let value = match path {
-                    "/api/auth/me" => {
-                        json!({"user":{"email":"preview@example.invalid","displayName":"Preview User","totpEnabled":false}})
-                    }
-                    "/api/auth/mfa/setup" => {
-                        json!({"url":"otpauth://totp/Appcall:preview?secret=JBSWY3DPEHPK3PXP&issuer=Appcall","secret":"JBSWY3DPEHPK3PXP"})
-                    }
-                    "/api/billing/status" => {
-                        json!({"billingStatus":"active","plan":{"name":"Pro"},"subscriptionCredits":900,"purchasedCredits":120,"currentPeriodEnd":"2026-10-01T00:00:00Z"})
-                    }
-                    "/api/plans" => {
-                        json!({"plans":[{"id":"starter","name":"Starter","description":"For your first integrations","price":2900,"currency":"USD","billingInterval":"month"},{"id":"pro","name":"Pro","description":"For growing integration traffic","price":29900,"currency":"USD","billingInterval":"annual"}]})
-                    }
-                    "/api/tenant/members" => {
-                        json!({"members":[{"userId":"owner","displayName":"Preview Owner","email":"owner@example.invalid","role":"owner"},{"userId":"member","displayName":"Preview Member","email":"member@example.invalid","role":"user"}]})
-                    }
-                    "/api/auth/sessions" => {
-                        json!({"sessions":[{"id":"current","userAgent":"Preview Browser","ipAddress":"127.0.0.1","current":true,"createdAt":"2026-09-07T10:00:00Z","expiresAt":"2026-10-07T10:00:00Z"}]})
-                    }
-                    _ => json!({}),
-                };
-                let body = value.to_string();
-                let response=format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
-                let _ = socket.write_all(response.as_bytes()).await;
+                let _ = tokio::time::timeout(
+                    std::time::Duration::from_secs(10),
+                    transport::serve_broker(&mut socket, scenario),
+                )
+                .await;
             });
         }
     });
-    let listener = TcpListener::bind("127.0.0.1:55589").await.unwrap();
-    println!("Read-only synthetic dashboard preview: http://127.0.0.1:55589/app/toolkits");
     loop {
-        let (mut stream, _) = listener.accept().await.unwrap();
+        let (mut stream, _) = listener.accept().await?;
+        let data = std::sync::Arc::clone(&data);
         tokio::spawn(async move {
-            let Ok(Ok(raw)) = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                read_preview_request(&mut stream),
+            let _ = tokio::time::timeout(
+                std::time::Duration::from_secs(12),
+                transport::serve_ui(&mut stream, &data),
             )
-            .await
-            else {
-                return;
-            };
-            let Ok(head) = std::str::from_utf8(&raw) else {
-                return;
-            };
-            let mut parts = head.lines().next().unwrap_or("").split_whitespace();
-            let method = parts.next().unwrap_or("");
-            let target = parts.next().unwrap_or("/");
-            let parsed = reqwest::Url::parse(&format!("http://localhost{target}")).unwrap();
-            let path = if parsed.path() == "/preview/mfa" {
-                "/app/settings/account/mfa/setup"
-            } else {
-                parsed.path()
-            };
-            let body = head
-                .split_once("\r\n\r\n")
-                .map(|(_, body)| body.as_bytes())
-                .unwrap_or(&[]);
-            let fields = preview_fields(target, if method == "POST" { body } else { &[] }).unwrap();
-            let f: Value =
-                serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json"))
-                    .unwrap();
-            let codec = SessionCodec::new("synthetic-preview", false).unwrap();
-            let jwt = appcall_auth::JwtVerifier::new(
-                f["jwt_secret"].as_str().unwrap(),
-                Default::default(),
-            )
-            .unwrap();
-            let broker = Broker::new("http://127.0.0.1:55590", "appcall").unwrap();
-            let browser = Browser {
-                codec: &codec,
-                identity: Identity {
-                    jwt: &jwt,
-                    memberships: &Members,
-                    broker: &broker,
-                },
-                public_origin: "http://127.0.0.1:55589",
-            };
-            let dashboard = Dashboard {
-                browser: &browser,
-                data: &Data,
-            };
-            let session = Session {
-                access_token: f["jwt"].as_str().unwrap().into(),
-                refresh_token: "synthetic".into(),
-                user_id: "11111111-1111-1111-1111-111111111111".into(),
-                tenant_id: "preview".into(),
-                tenant_name: "Synthetic Preview Organization".into(),
-                email: "long.realistic.preview.email@example.invalid".into(),
-            };
-            let cookies = format!("appcall_session={}", codec.seal_session(&session).unwrap());
-            let request = Request {
-                method: if parsed.path() == "/preview/mfa" {
-                    "POST"
-                } else {
-                    method
-                },
-                path,
-                cookies: &cookies,
-                origin: Some("http://127.0.0.1:55589"),
-                referer: None,
-                fields,
-                now: 1800000000,
-            };
-            let response = if let Some(response) = preview_response(method, parsed.path()) {
-                Some(response)
-            } else if method == "GET"
-                || (method == "POST"
-                    && path.starts_with("/app/toolkits/")
-                    && path.ends_with("/test"))
-            {
-                dashboard.handle(&request).await
-            } else {
-                None
-            };
-            let (status, headers, body) = response
-                .map(|r| {
-                    (
-                        r.status,
-                        r.headers,
-                        r.binary_body
-                            .map_or_else(|| r.body.into_bytes(), |b| b.to_vec()),
-                    )
-                })
-                .unwrap_or((404, vec![], b"Not found".to_vec()));
-            let mut output = format!(
-                "HTTP/1.1 {status} Response\r\nContent-Length: {}\r\nConnection: close\r\n",
-                body.len()
-            );
-            for (key, value) in headers {
-                output.push_str(&format!("{key}: {value}\r\n"));
-            }
-            output.push_str("\r\n");
-            let _ = stream.write_all(output.as_bytes()).await;
-            let _ = stream.write_all(&body).await;
+            .await;
         });
     }
 }

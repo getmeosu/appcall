@@ -222,10 +222,19 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
                         Value::Object(resolved.fields),
                     )
                     .await
-                    .map_err(|_| ApiError::new("INTERNAL_ERROR"));
+                    .map_err(|error| {
+                        crate::setup_failure::connection_check_error(
+                            appcall_setup::ValidationFailure::from_runner_kind(error.kind).into(),
+                        )
+                    });
                 (revision, result)
             }
-            Err(_) => (action_connection, Err(ApiError::new("INTERNAL_ERROR"))),
+            Err(_) => (
+                action_connection,
+                Err(crate::setup_failure::connection_check_error(
+                    crate::ConnectionCheckFailure::CredentialsUnavailable,
+                )),
+            ),
         };
         // Go records reachability separately from verification. Failed RPCs
         // degrade the connection without overwriting prior verification evidence;

@@ -43,6 +43,40 @@ fn page(v: &Value) -> String {
 }
 
 #[test]
+fn copy_setup_labels_follow_direct_modes_and_preserve_route_choices() {
+    let mut v = fixture();
+    v["setup"]["routes"] = json!([]);
+    for (mode, label) in [
+        ("api_key", "Connect &lt;Provider&gt;"),
+        ("oauth2", "Continue to &lt;Provider&gt;"),
+        ("external_bearer", "Connect"),
+    ] {
+        v["setup"]["mode"] = json!(mode);
+        let html = page(&v);
+        let settings = html.split("id=\"tk-setup\"").nth(1).unwrap();
+        assert!(settings.contains(&format!(">{label}</span>")), "{mode}");
+        assert!(settings.contains("action=\"/app/toolkits/provider/setup\""));
+        assert!(settings.contains("name=\"token\""));
+    }
+    v["name"] = json!("");
+    v["setup"]["mode"] = json!("api_key");
+    assert!(page(&v)
+        .split("id=\"tk-setup\"")
+        .nth(1)
+        .unwrap()
+        .contains(">Connect</span>"));
+    let routed = page(&fixture());
+    assert!(routed.contains(">Connect with key</span>"));
+    assert!(routed.contains("name=\"route\" type=\"hidden\" value=\"key\""));
+    v["setup"]["mode"] = json!("none");
+    assert!(!page(&v)
+        .split("id=\"tk-setup\"")
+        .nth(1)
+        .unwrap()
+        .contains("/setup\""));
+}
+
+#[test]
 fn signal_mobile_tool_selection_does_not_compete_with_primary_execution() {
     let html = page(&fixture());
     let selector = html

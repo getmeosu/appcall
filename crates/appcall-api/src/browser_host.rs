@@ -1,7 +1,8 @@
 //! Browser host boundary: exact routing, bounded parsing and off-reactor identity SQL.
+pub mod dashboard_failure;
 use crate::{ApiError, Backend, RawResponse, Request, Result};
 use appcall_auth::{JwtPolicy, JwtVerifier, PostgresApiKeys, PostgresMemberships};
-use appcall_web::{DashboardData, DashboardOperation as Op, DashboardRequest};
+use appcall_web::{DashboardData, DashboardFailure, DashboardOperation as Op, DashboardRequest};
 use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
@@ -654,7 +655,7 @@ impl ApiDashboard {
     pub fn shared_state(&self) -> Arc<DashboardSharedState> {
         self.state.clone()
     }
-    async fn run(&self, r: DashboardRequest) -> std::result::Result<Value, appcall_web::Error> {
+    async fn run(&self, r: DashboardRequest) -> std::result::Result<Value, DashboardFailure> {
         use appcall_web::Error;
         let account = r
             .account_id
@@ -673,7 +674,7 @@ impl ApiDashboard {
             || !r.principal.allowed_brands.permits(account)
             || r.principal.scopes != appcall_auth::Grant::All
         {
-            return Err(Error::Forbidden);
+            return Err(Error::Forbidden.into());
         }
         let identity = crate::Identity {
             project_id: r.principal.project_id.clone(),
@@ -698,32 +699,32 @@ impl ApiDashboard {
             Op::Catalog=>Ok(json!({"connectors":self.registry.public_list().map(|c|catalog_item(c.manifest())).collect::<Vec<_>>()})),
             Op::Toolkit|Op::TestForm=>{let c=self.registry.public_connector(resource).map_err(|_|Error::Invalid)?;let mut item=catalog_item(c.manifest());item["setup"]=serde_json::to_value(&c.manifest().auth.setup).map_err(|_|Error::Unavailable)?;
                 let selected=selected_action(c.manifest(),field("action"))?;
-                item["connections"]=self.core.connections(&identity).await.map_err(api_error)?.iter().filter(|c|c.connector==resource).map(connection_value).collect();
+                item["connections"]=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?.iter().filter(|c|c.connector==resource).map(connection_value).collect();
                 if let Some((action,op))=selected{item["action"]=action.clone().into();item["inputSchema"]=op.input_schema.clone().unwrap_or_else(||json!({"type":"object"}));item["sample"]=op.sample.clone().unwrap_or(Value::Null);item["connectionId"]=field("connectionId").into();}Ok(item)},
-            Op::Overview=>{let connections=self.core.connections(&identity).await.map_err(api_error)?;let usage=self.usage(&identity)?;Ok(json!({"toolkitCount":self.registry.public_list().count(),"connectionCount":connections.len(),"toolCalls":usage["actionCalls"]}))},
-            Op::AuthConfigs=>Ok(json!({"connections":self.core.connections(&identity).await.map_err(api_error)?.iter().map(|c|json!({"id":c.id,"connector":c.connector,"authType":c.auth_type,"status":c.status,"lastTest":c.last_test_status})).collect::<Vec<_>>()})),
-            Op::TestConnection=>Ok(connection_value(&self.core.test_connection(&identity,resource).await.map_err(api_error)?)),
-            Op::DisconnectConnection=>{self.core.disconnect(&identity,resource).await.map_err(api_error)?;Ok(json!({"disconnected":true}))},
+            Op::Overview=>{let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;let usage=self.usage(&identity)?;Ok(json!({"toolkitCount":self.registry.public_list().count(),"connectionCount":connections.len(),"toolCalls":usage["actionCalls"]}))},
+            Op::AuthConfigs=>Ok(json!({"connections":self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?.iter().map(|c|json!({"id":c.id,"connector":c.connector,"authType":c.auth_type,"status":c.status,"lastTest":c.last_test_status})).collect::<Vec<_>>()})),
+            Op::TestConnection=>Ok(connection_value(&self.core.test_connection(&identity,resource).await.map_err(dashboard_failure::map_api_error)?)),
+            Op::DisconnectConnection=>{self.core.disconnect(&identity,resource).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"disconnected":true}))},
             Op::Logs|Op::Triggers|Op::Stream|Op::Trace=>{
                 let mut url=url::Url::parse(&format!("http://local.invalid{}",match r.operation{Op::Logs=>"/v1/action-logs".to_owned(),Op::Trace=>format!("/v1/requests/{resource}"),_=>"/v1/webhook-events".to_owned()})).map_err(|_|Error::Invalid)?;
                 for (k,v) in &r.fields {if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
-                self.db(|client|crate::data_routes::read(client,&identity,&url).map_err(api_error)?.map(|r|r.body).ok_or(Error::Invalid))
+                self.db(|client| Ok(crate::data_routes::read(client,&identity,&url)))?.map_err(dashboard_failure::map_api_error)?.map(|r|r.body).ok_or_else(|| Error::Invalid.into())
             },
-            Op::ReplayTrace=>{let command=self.db(|client|crate::data_routes::prepare_replay(client,&identity,resource,true).map_err(api_error))?;let mut execute=command.execute;execute.admin_scope=account.is_empty();ensure_active()?;let result=self.core.execute(execute).await.map_err(api_error)?;Ok(json!({"requestId":command.request_id,"replayLogId":command.log_id,"output":result.output}))},
-            Op::ReplayEvent=>self.db(|client|crate::data_routes::webhook_replay(client,&r.principal,resource,&mut appcall_worker::SyncDispatchSink).map(|r|r.body).map_err(api_error)),
+            Op::ReplayTrace=>{let command=self.db(|client| Ok(crate::data_routes::prepare_replay(client,&identity,resource,true)))?.map_err(dashboard_failure::map_api_error)?;let mut execute=command.execute;execute.admin_scope=account.is_empty();ensure_active()?;let result=self.core.execute(execute).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"requestId":command.request_id,"replayLogId":command.log_id,"output":result.output}))},
+            Op::ReplayEvent=>self.db(|client|Ok(crate::data_routes::webhook_replay(client,&r.principal,resource,&mut appcall_worker::SyncDispatchSink)))?.map(|r|r.body).map_err(dashboard_failure::map_api_error),
             Op::Usage=>{let mut usage=self.usage_at(&identity,field("month"))?;usage["toolCalls"]=usage["actionCalls"].clone();Ok(usage)},
-            Op::Qa=>self.db(|client|{let rows=client.query("SELECT connector,overall,results::text,to_char(last_run_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),total,passed,failed,not_certified FROM qa_connector_status ORDER BY connector LIMIT 1000",&[]).map_err(|_|Error::Unavailable)?;Ok(json!({"certifications":rows.iter().map(|r|{let result:Value=serde_json::from_str(&r.get::<_,String>(2)).unwrap_or(Value::Null);json!({"connector":r.get::<_,String>(0),"status":r.get::<_,String>(1),"manifestFingerprint":result.get("manifestDigest").cloned().unwrap_or(Value::Null),"certifiedAt":r.get::<_,String>(3),"total":r.get::<_,i32>(4),"passed":r.get::<_,i32>(5),"failed":r.get::<_,i32>(6),"notCertified":r.get::<_,i32>(7),"drifted":self.registry.public_connector(&r.get::<_,String>(0)).ok().is_none_or(|c|result.get("manifestDigest").and_then(Value::as_str)!=Some(c.manifest_digest()))})}).collect::<Vec<_>>()}))}),
+            Op::Qa=>self.db(|client|{let rows=client.query("SELECT connector,overall,results::text,to_char(last_run_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),total,passed,failed,not_certified FROM qa_connector_status ORDER BY connector LIMIT 1000",&[]).map_err(|_|Error::Unavailable)?;Ok(json!({"certifications":rows.iter().map(|r|{let result:Value=serde_json::from_str(&r.get::<_,String>(2)).unwrap_or(Value::Null);json!({"connector":r.get::<_,String>(0),"status":r.get::<_,String>(1),"manifestFingerprint":result.get("manifestDigest").cloned().unwrap_or(Value::Null),"certifiedAt":r.get::<_,String>(3),"total":r.get::<_,i32>(4),"passed":r.get::<_,i32>(5),"failed":r.get::<_,i32>(6),"notCertified":r.get::<_,i32>(7),"drifted":self.registry.public_connector(&r.get::<_,String>(0)).ok().is_none_or(|c|result.get("manifestDigest").and_then(Value::as_str)!=Some(c.manifest_digest()))})}).collect::<Vec<_>>()}))}).map_err(DashboardFailure::from),
             Op::Branding=>Ok(self.state.branding.lock().map_err(|_|Error::Unavailable)?.get(&identity.project_id).cloned().unwrap_or_else(||json!({"appName":"appcall","logoURL":"","tagColor":"#5eead4"}))),
-            Op::SaveBranding=>{let name=field("appName").trim();let logo=field("logoURL");let color=field("tagColor");if name.len()>128||logo.len()>2048||(!logo.is_empty()&&url::Url::parse(logo).ok().is_none_or(|u|u.scheme()!="https"||!u.username().is_empty()||u.password().is_some()))||!(color.len()==7&&color.starts_with('#')&&color[1..].bytes().all(|b|b.is_ascii_hexdigit())){return Err(Error::Invalid)}let value=json!({"appName":if name.is_empty(){"appcall"}else{name},"logoURL":logo,"tagColor":color});self.state.branding.lock().map_err(|_|Error::Unavailable)?.insert(identity.project_id,value.clone());Ok(value)},
-            Op::RequestToolkit=>{if field("name").trim().is_empty()||field("name").len()>256||field("email").len()>256||field("notes").len()>4000{return Err(Error::Invalid)}let mut requests=self.state.requests.lock().map_err(|_|Error::Unavailable)?;if requests.len()>=1000{return Err(Error::Unavailable)}let event=json!({"event":"toolkit_requested","projectId":identity.project_id,"name":field("name"),"email":field("email"),"notes":field("notes")});eprintln!("{event}");requests.push(event);Ok(json!({"accepted":true}))},
-            Op::Setup=>{if identity.project_id=="proj_dev" { if let Some(local)=&self.dev_oauth { if let Some(result)=local.start_checked(&identity,resource,(!field("connectionId").is_empty()).then_some(field("connectionId")),&|| ensure_active().is_ok()).map_err(api_error)? { return Ok(json!({"redirectUrl":result.authorization_url,"connectionId":result.connection.id,"developmentOAuth":true})); } } }let scope=appcall_setup::SetupScope::new(&identity.project_id,(!account.is_empty()).then_some(account)).map_err(|_|Error::Invalid)?;let description=self.setup.describe(resource).map_err(|_|Error::Invalid)?;if description.setup.mode=="oauth2"{let result=self.setup.start_checked(&scope,resource,None,&|| ensure_active().is_ok()).map_err(|_|Error::Unavailable)?;Ok(json!({"redirectUrl":result.authorization_url,"connectionId":result.connection.id}))}else{let fields=r.fields.iter().filter(|(key,_)|!["externalAccountId","route","projectId"].contains(&key.as_str())).map(|(k,v)|(k.clone(),v.clone())).collect();let connection=self.setup.submit_checked(&scope,resource,field("route"),&fields,&|| ensure_active().is_ok()).map_err(|_|Error::Invalid)?;Ok(connection_value(&connection))}},
+            Op::SaveBranding=>{let name=field("appName").trim();let logo=field("logoURL");let color=field("tagColor");if name.len()>128||logo.len()>2048||(!logo.is_empty()&&url::Url::parse(logo).ok().is_none_or(|u|u.scheme()!="https"||!u.username().is_empty()||u.password().is_some()))||!(color.len()==7&&color.starts_with('#')&&color[1..].bytes().all(|b|b.is_ascii_hexdigit())){return Err(Error::Invalid.into())}let value=json!({"appName":if name.is_empty(){"appcall"}else{name},"logoURL":logo,"tagColor":color});self.state.branding.lock().map_err(|_|Error::Unavailable)?.insert(identity.project_id,value.clone());Ok(value)},
+            Op::RequestToolkit=>{if field("name").trim().is_empty()||field("name").len()>256||field("email").len()>256||field("notes").len()>4000{return Err(Error::Invalid.into())}let mut requests=self.state.requests.lock().map_err(|_|Error::Unavailable)?;if requests.len()>=1000{return Err(Error::Unavailable.into())}let event=json!({"event":"toolkit_requested","projectId":identity.project_id,"name":field("name"),"email":field("email"),"notes":field("notes")});eprintln!("{event}");requests.push(event);Ok(json!({"accepted":true}))},
+            Op::Setup=>{if identity.project_id=="proj_dev" { if let Some(local)=&self.dev_oauth { if let Some(result)=local.start_checked(&identity,resource,(!field("connectionId").is_empty()).then_some(field("connectionId")),&|| ensure_active().is_ok()).map_err(dashboard_failure::map_api_error)? { return Ok(json!({"redirectUrl":result.authorization_url,"connectionId":result.connection.id,"developmentOAuth":true})); } } }let scope=appcall_setup::SetupScope::new(&identity.project_id,(!account.is_empty()).then_some(account)).map_err(|_|Error::Invalid)?;let description=self.setup.describe(resource).map_err(|_|Error::Invalid)?;if description.setup.mode=="oauth2"{let result=self.setup.start_checked(&scope,resource,None,&|| ensure_active().is_ok()).map_err(|e|dashboard_failure::setup_failure(e,Error::Unavailable,&description.setup,field("route")))?;Ok(json!({"redirectUrl":result.authorization_url,"connectionId":result.connection.id}))}else{let fields=r.fields.iter().filter(|(key,_)|!["externalAccountId","route","projectId"].contains(&key.as_str())).map(|(k,v)|(k.clone(),v.clone())).collect();let connection=self.setup.submit_checked(&scope,resource,field("route"),&fields,&|| ensure_active().is_ok()).map_err(|e|dashboard_failure::setup_failure(e,Error::Invalid,&description.setup,field("route")))?;Ok(connection_value(&connection))}},
             Op::Test|Op::Options|Op::RunInputFields=>{
                 let connection=field("connectionId");let action=match r.operation{Op::Options=>field("source"),Op::RunInputFields=>if field("source").is_empty(){"actors.input_schema"}else{field("source")},_=>field("action")};
-                let c=self.core.connection(&identity,connection).await.map_err(api_error)?;if c.connector!=resource{return Err(Error::Forbidden)}
+                let c=self.core.connection(&identity,connection).await.map_err(dashboard_failure::map_api_error)?;if c.connector!=resource{return Err(Error::Forbidden.into())}
                 let operation=self.registry.operation(resource,action).map_err(|_|Error::Invalid)?;
-                if r.operation!=Op::Test&&!operation.is_read_only(){return Err(Error::Forbidden)}
-                let input=match r.operation {Op::Options=>{let key=if field("searchParam").is_empty(){"search"}else{field("searchParam")};json!({key:field("q")})},Op::RunInputFields=>json!({"actorId":field("actorId")}),_=>{let raw=if field("input_raw").is_empty(){field("input")}else{field("input_raw")};if raw.is_empty(){guided_action_input(operation.input_schema.as_ref().unwrap_or(&json!({})),&r.form_values,field("runInputSchema"))?}else{serde_json::from_str(raw).map_err(|_|Error::Invalid)?}}};
-                ensure_active()?;let result=self.core.execute(appcall_actions::ExecuteRequest{project_id:identity.project_id,connection_id:connection.into(),external_account_id:account.into(),admin_scope:account.is_empty(),action:action.into(),input,idempotency_key:String::new(),caller_credential:field("callerToken").into()}).await.map_err(api_error)?;
+                if r.operation!=Op::Test&&!operation.is_read_only(){return Err(Error::Forbidden.into())}
+                let input=match r.operation {Op::Options=>{let key=if field("searchParam").is_empty(){"search"}else{field("searchParam")};json!({key:field("q")})},Op::RunInputFields=>json!({"actorId":field("actorId")}),_=>{let raw=if field("input_raw").is_empty(){field("input")}else{field("input_raw")};if raw.is_empty(){guided_action_input_detailed(operation.input_schema.as_ref().unwrap_or(&json!({})),&r.form_values,field("runInputSchema"))?}else{serde_json::from_str(raw).map_err(dashboard_failure::invalid_json)?}}};
+                ensure_active()?;let result=self.core.execute(appcall_actions::ExecuteRequest{project_id:identity.project_id,connection_id:connection.into(),external_account_id:account.into(),admin_scope:account.is_empty(),action:action.into(),input,idempotency_key:String::new(),caller_credential:field("callerToken").into()}).await.map_err(dashboard_failure::map_api_error)?;
                 match r.operation{Op::Options=>{let values=result.output.get("options").and_then(Value::as_array).ok_or(Error::Unavailable)?;let value_field=if field("valueField").is_empty(){"value"}else{field("valueField")};let label_field=if field("labelField").is_empty(){"label"}else{field("labelField")};Ok(json!({"options":values.iter().map(|v|json!({"value":v[value_field],"label":v[label_field]})).collect::<Vec<_>>()}))},Op::RunInputFields=>{let schema=result.output.get("schema").filter(|v|v.is_object()).ok_or(Error::Unavailable)?;Ok(json!({"inputSchema":schema,"schema":schema,"actorId":field("actorId")}))},_=>Ok(json!({"requestId":result.request_id,"output":result.output}))}
             }
         }
@@ -764,6 +765,14 @@ impl ApiDashboard {
     }
 }
 impl DashboardData for ApiDashboard {
+    fn execute_detailed(
+        &self,
+        request: DashboardRequest,
+    ) -> Pin<Box<dyn Future<Output = std::result::Result<Value, DashboardFailure>> + Send + '_>>
+    {
+        Box::pin(self.run(request))
+    }
+
     fn database_health(&self) -> Option<bool> {
         self.database_health()
     }
@@ -772,7 +781,7 @@ impl DashboardData for ApiDashboard {
         request: DashboardRequest,
     ) -> Pin<Box<dyn Future<Output = std::result::Result<Value, appcall_web::Error>> + Send + '_>>
     {
-        Box::pin(self.run(request))
+        Box::pin(async move { self.run(request).await.map_err(|e| e.classification()) })
     }
 }
 fn api_error(error: ApiError) -> appcall_web::Error {
@@ -816,6 +825,19 @@ pub(crate) fn selected_action<'a>(
 /// Only the manifest shapes ordinary action input. The actor schema is limited
 /// to the provider's freeform runInput object, then ordinary action validation
 /// still runs inside the action service.
+pub(crate) fn guided_action_input_detailed(
+    schema: &Value,
+    fields: &BTreeMap<String, Vec<String>>,
+    run_schema: &str,
+) -> std::result::Result<Value, DashboardFailure> {
+    guided_action_input(schema, fields, run_schema).map_err(|classification| {
+        DashboardFailure::new(
+            classification,
+            appcall_web::FailureCause::InvalidActionInput,
+        )
+        .with_outcome(appcall_web::ExecutionOutcome::NotDispatched)
+    })
+}
 pub fn guided_action_input(
     schema: &Value,
     fields: &BTreeMap<String, Vec<String>>,

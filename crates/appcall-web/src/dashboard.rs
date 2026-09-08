@@ -46,6 +46,13 @@ pub trait DashboardData: Send + Sync {
         &self,
         request: DashboardRequest,
     ) -> Pin<Box<dyn Future<Output = Result<Value, Error>> + Send + '_>>;
+
+    fn execute_detailed(
+        &self,
+        request: DashboardRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<Value, DashboardFailure>> + Send + '_>> {
+        Box::pin(async move { self.execute(request).await.map_err(DashboardFailure::from) })
+    }
 }
 pub struct Dashboard<'a> {
     pub browser: &'a Browser<'a>,
@@ -141,6 +148,16 @@ impl DashboardRenderer<'_> {
             ));
         }
         let operation = operation.ok_or(Error::Invalid)?;
+        let has_filters = match operation {
+            DashboardOperation::Catalog => !r.field("category")?.is_empty(),
+            DashboardOperation::Logs => ["status", "connector", "action", "connectionId"]
+                .iter()
+                .map(|key| r.field(key))
+                .collect::<Result<Vec<_>, _>>()?
+                .iter()
+                .any(|value| !value.is_empty()),
+            _ => false,
+        };
         let mut fields = BTreeMap::new();
         if r.fields.len() > 64 {
             return Err(Error::Invalid);
@@ -186,7 +203,7 @@ impl DashboardRenderer<'_> {
             .cloned();
         let value = self
             .data
-            .execute(DashboardRequest {
+            .execute_detailed(DashboardRequest {
                 principal,
                 operation,
                 resource: resource.clone(),
@@ -198,15 +215,68 @@ impl DashboardRenderer<'_> {
         let mut value = match value {
             Ok(value) => value,
             Err(error)
+                if operation == DashboardOperation::RequestToolkit
+                    && matches!(
+                        error.classification(),
+                        Error::Invalid | Error::Unavailable | Error::Configuration
+                    ) =>
+            {
+                return Ok(crate::sse::response(&crate::pages::request_failure()));
+            }
+            Err(error)
                 if matches!(
                     operation,
                     DashboardOperation::Test | DashboardOperation::TestForm
                 ) =>
             {
-                return Ok(tool_failure(operation, error));
+                return Ok(tool_failure(operation, &error, resource.as_deref()));
             }
-            Err(error) => return Err(error),
+            Err(error)
+                if matches!(
+                    operation,
+                    DashboardOperation::Setup
+                        | DashboardOperation::TestConnection
+                        | DashboardOperation::ReplayTrace
+                ) && !matches!(
+                    error.classification(),
+                    Error::Unauthorized | Error::Forbidden
+                ) =>
+            {
+                let status = match error.classification() {
+                    Error::Invalid => 400,
+                    _ => 503,
+                };
+                let content =
+                    crate::dashboard_failure::recovery(operation, resource.as_deref(), &error);
+                return Ok(Response::new(
+                    status,
+                    crate::shell::layout(crate::pages::title(operation), session, &content, r.path),
+                ));
+            }
+            Err(error) => return Err(error.classification()),
         };
+        if matches!(
+            operation,
+            DashboardOperation::Catalog | DashboardOperation::Logs
+        ) {
+            let target = if value.get("data").is_some() {
+                value.get_mut("data").ok_or(Error::Unavailable)?
+            } else {
+                &mut value
+            };
+            if target.is_array() {
+                let key = if operation == DashboardOperation::Catalog {
+                    "connectors"
+                } else {
+                    "logs"
+                };
+                *target = serde_json::json!({key:target.clone()});
+            }
+            let map = target.as_object_mut().ok_or(Error::Unavailable)?;
+            // This presentation flag is derived only from the current request,
+            // overwriting any provider-supplied value without echoing query text.
+            map.insert("hasFilters".into(), Value::Bool(has_filters));
+        }
         if operation == DashboardOperation::Catalog {
             let target = if value.get("data").is_some() {
                 value.get_mut("data").ok_or(Error::Unavailable)?
@@ -214,9 +284,9 @@ impl DashboardRenderer<'_> {
                 &mut value
             };
             let map = target.as_object_mut().ok_or(Error::Unavailable)?;
-            let connectors = map
-                .get("connectors")
-                .and_then(Value::as_array)
+            let connectors = ["connectors", "items", "cards"]
+                .iter()
+                .find_map(|key| map.get(*key).and_then(Value::as_array))
                 .ok_or(Error::Unavailable)?;
             let categories = connectors
                 .iter()
@@ -343,15 +413,31 @@ impl DashboardRenderer<'_> {
         }
         let mut content = crate::pages::render(operation, &value, resource.as_deref())?;
         if operation == Branding && r.field("saved")? == "1" {
-            content = crate::admin_ui::banner("Branding saved.", true) + &content;
+            content = crate::admin_ui::banner("Review the current branding settings below.", true)
+                + &content;
         }
-        let banner=match (operation,r.field("success")?,r.field("error")?) {
-            (AuthConfigs,"test-passed",_)=>"Connection test passed successfully.",
-            (AuthConfigs,"test-unverified",_)=>"Connector is reachable, but the connection could not be verified — its credential is supplied per call, so there was nothing to check here.",
-            (AuthConfigs,"disconnected",_)=>"Account disconnected successfully.",
-            (AuthConfigs,_,"test-failed")=>"Connection test failed. Check credentials and try again.",
-            (AuthConfigs,_,"disconnect-failed")=>"Failed to disconnect the account. Please try again.",
-            _=>""
+        let connection_data = value.get("data").unwrap_or(&value);
+        let has_connections = ["connections", "rows", "items"]
+            .iter()
+            .find_map(|key| connection_data.get(key).and_then(Value::as_array))
+            .is_some_and(|rows| !rows.is_empty());
+        let (banner, recovery) = match (operation, r.field("success")?, r.field("error")?) {
+            (AuthConfigs, _, "test-failed") if has_connections => {
+                ("Review the connection setup and its recorded status.", true)
+            }
+            (AuthConfigs, _, "disconnect-failed") if has_connections => (
+                "Check the connection's current status before running another tool.",
+                true,
+            ),
+            (AuthConfigs, "test-passed" | "test-unverified", _) if has_connections => (
+                "Review the connection's recorded check result below.",
+                false,
+            ),
+            (AuthConfigs, "disconnected", _) if has_connections => (
+                "Check the connection's current status before running another tool.",
+                false,
+            ),
+            _ => ("", false),
         };
         if matches!(operation, Logs | Triggers) {
             let data = value.get("data").unwrap_or(&value);
@@ -369,11 +455,21 @@ impl DashboardRenderer<'_> {
                     }
                 }
                 url.query_pairs_mut().append_pair("cursor", cursor);
-                content.push_str(&format!("<div class=\"mt-4 flex justify-center\"><a class=\"rounded-lg border border-space-indigo-700 px-4 py-2 text-sm\" href=\"{}?{}\">Load more</a></div>",url.path(),escape(url.query().unwrap_or(""))));
+                let href = format!("{}?{}", url.path(), url.query().unwrap_or(""));
+                let next = crate::ui::Button {
+                    target: crate::ui::ButtonTarget::Link(
+                        crate::ui::LocalPath::new(&href).ok_or(Error::Invalid)?,
+                    ),
+                    ..crate::ui::Button::new("Next page")
+                }
+                .render();
+                content.push_str(&format!(
+                    "<div class=\"mt-4 flex justify-center\">{next}</div>"
+                ));
             }
         }
         if !banner.is_empty() {
-            content=format!("<div role=\"status\" class=\"mb-4 rounded-lg border border-space-indigo-800 p-4 text-sm\">{}</div>{content}",escape(banner));
+            content=format!("<div role=\"{}\" class=\"mb-4 rounded-lg border border-space-indigo-800 p-4 text-sm\">{}</div>{content}",if recovery {"alert"} else {"status"},escape(banner));
         }
         if matches!(
             operation,
@@ -390,17 +486,13 @@ impl DashboardRenderer<'_> {
 
 /// Only data-operation failures become inline SSE. Session refresh and CSRF
 /// rejection happen before this renderer and keep their existing HTTP behavior.
-fn tool_failure(operation: DashboardOperation, error: Error) -> Response {
+fn tool_failure(
+    operation: DashboardOperation,
+    error: &DashboardFailure,
+    resource: Option<&str>,
+) -> Response {
     let fields = operation == DashboardOperation::TestForm;
-    let message = match error {
-        Error::Invalid if fields => "Appcall could not load the fields for this tool. Select the tool again before running it.",
-        Error::Invalid => "Appcall could not run this tool with the submitted input. Review the required fields and any raw JSON before running it again.",
-        Error::Unauthorized => "Appcall could not authorize this request. Sign in again before running the tool.",
-        Error::Forbidden => "Appcall denied this request. Check project access and select an account available to this project.",
-        Error::Unavailable if fields => "Appcall could not load the tool fields because a required service is unavailable. Select the tool again when the service is available.",
-        Error::Unavailable => "Appcall could not complete this request because a required service is unavailable. The tool may have run; check provider activity before running it again.",
-        Error::Configuration => "Appcall could not complete this request because a required service is not configured. Ask the operator to check server configuration before running it again.",
-    };
+    let message = crate::dashboard_failure::recovery(operation, resource, error);
     let (tag, target, label, heading, marker) = if fields {
         (
             "div",
@@ -419,7 +511,7 @@ fn tool_failure(operation: DashboardOperation, error: Error) -> Response {
         )
     };
     crate::sse::response(&format!(
-        "<{tag} id=\"{target}\" {marker} aria-live=\"polite\" aria-busy=\"false\" aria-labelledby=\"{label}\"><h3 id=\"{label}\">{heading}</h3>{}<p role=\"alert\">{message}</p></{tag}>",
+        "<{tag} id=\"{target}\" {marker} aria-live=\"polite\" aria-busy=\"false\" aria-labelledby=\"{label}\"><h3 id=\"{label}\">{heading}</h3>{}{message}</{tag}>",
         crate::ui::state(crate::ui::Tone::Dead, if fields { "Fields unavailable" } else { "Request failed" })
     ))
 }
@@ -504,6 +596,10 @@ fn valid_local_setup_redirect(raw: &str, connector: &str) -> bool {
 #[cfg(test)]
 #[path = "dashboard/tests.rs"]
 mod renderer_contract_tests;
+
+#[cfg(test)]
+#[path = "dashboard/copy_tests.rs"]
+mod copy_tests;
 
 #[cfg(test)]
 mod redirect_tests {

@@ -484,10 +484,16 @@ fn settings(v: &Value, key: &str) -> Result<String, Error> {
             ));
             let routes = array(setup, "routes");
             if routes.is_empty() {
+                let name = text(v, "name");
+                let label = match (text(setup, "mode"), name.is_empty()) {
+                    ("api_key", false) => format!("Connect {name}"),
+                    ("oauth2", false) => format!("Continue to {name}"),
+                    _ => "Connect".to_owned(),
+                };
                 html.push_str(&format!(
                     "<form method=\"post\" action=\"/app/toolkits/{key}/setup\">{}{}</form>",
                     setup_controls(array(setup, "fields"), "base")?,
-                    submit("Connect", false)
+                    submit(&label, false)
                 ));
             } else {
                 for (index, route) in routes.iter().enumerate() {

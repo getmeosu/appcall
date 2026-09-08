@@ -1,6 +1,61 @@
 use super::*;
 
-fn dashboard_request(operation: DashboardOperation) -> DashboardRequest {
+#[tokio::test]
+async fn copy_preview_populated_collections_use_real_dtos() {
+    for (operation, key) in [
+        (DashboardOperation::AuthConfigs, "connections"),
+        (DashboardOperation::Logs, "logs"),
+        (DashboardOperation::Triggers, "events"),
+        (DashboardOperation::Qa, "certifications"),
+    ] {
+        let result = Data.execute(dashboard_request(operation)).await;
+        assert!(
+            result.is_ok(),
+            "missing synthetic collection: {operation:?}"
+        );
+        assert_eq!(result.unwrap()[key].as_array().unwrap().len(), 1);
+    }
+}
+
+#[tokio::test]
+async fn copy_preview_confirmations_are_available_at_valid_fixture_ids() {
+    for (operation, resource) in [
+        (DashboardOperation::Setup, "connector-0"),
+        (DashboardOperation::TestConnection, "preview_connection"),
+        (
+            DashboardOperation::DisconnectConnection,
+            "preview_connection",
+        ),
+        (DashboardOperation::ReplayTrace, "preview_original"),
+        (DashboardOperation::ReplayEvent, "preview_event"),
+        (DashboardOperation::RequestToolkit, ""),
+    ] {
+        let mut request = dashboard_request(operation);
+        request.resource = Some(resource.into());
+        let result = Data.execute(request).await;
+        assert!(
+            result.is_ok(),
+            "missing synthetic confirmation: {operation:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn copy_preview_detailed_invalid_json_has_actual_position() {
+    let mut request = dashboard_request(DashboardOperation::Test);
+    request
+        .fields
+        .insert("connectionId".into(), "preview_active_1".into());
+    request
+        .fields
+        .insert("input_raw".into(), "{\n \"query\": }".into());
+    let result = Data.execute_detailed(request).await.unwrap_err();
+    assert_eq!(result.cause(), FailureCause::InvalidJson);
+    let position = result.json_position().expect("parser position required");
+    assert_eq!((position.line(), position.column()), (2, 11));
+}
+
+pub(super) fn dashboard_request(operation: DashboardOperation) -> DashboardRequest {
     DashboardRequest {
         principal: appcall_auth::Principal::project("preview").unwrap(),
         operation,

@@ -1,4 +1,5 @@
 use super::*;
+mod credential_evidence;
 use appcall_connectors::{Connector, Registry};
 use appcall_oauth::{AppCredentials, TokenProvider, TokenSet};
 use appcall_store::{Status, TestStatus};
@@ -545,6 +546,95 @@ fn real_runner_static_health_is_unverified_and_provider_health_is_passed() {
 struct LocalTokenClient {
     client: appcall_oauth::TokenClient,
     endpoint: String,
+}
+#[test]
+fn failed_health_rpc_preserves_passed_evidence_and_saves_degraded_before_error() {
+    use std::{io::Read, net::TcpListener, time::Duration};
+    for timeout in [false, true] {
+        let (repo, setup) = fixture(BTreeMap::new(), Arc::new(Tokens(AtomicUsize::new(0))));
+        let c = setup
+            .submit_checked(
+                "proj_dev",
+                Some("a"),
+                "keyed",
+                "",
+                &BTreeMap::from([("apiKey".into(), "submitted-secret".into())]),
+                &|| true,
+            )
+            .unwrap();
+        let (mut c, revision) = repo.get_connection("proj_dev", Some("a"), &c.id).unwrap();
+        c.last_test_status = TestStatus::Passed;
+        repo.replace_connection("proj_dev", Some("a"), revision, c.clone(), None)
+            .unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let server = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_secs(3)))
+                .unwrap();
+            let mut bytes = [0; 4096];
+            assert!(socket.read(&mut bytes).unwrap() > 0);
+            if timeout {
+                std::thread::sleep(Duration::from_millis(300));
+            }
+        });
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let validator = appcall_setup::RunnerValidator::new(
+            Arc::new(
+                appcall_runner_client::RunnerClient::new(
+                    &url,
+                    "",
+                    appcall_runner_client::ClientOptions {
+                        timeout: Duration::from_millis(100),
+                        ..Default::default()
+                    },
+                )
+                .unwrap(),
+            ),
+            repo.registry().clone(),
+            runtime.handle().clone(),
+        );
+        let checked = MemorySetup::new(
+            repo.clone(),
+            Some(Arc::new(validator)),
+            setup.oauth().clone(),
+        );
+        let actions = memory_actions(
+            repo.clone(),
+            None,
+            Default::default(),
+            setup.oauth().clone(),
+        )
+        .unwrap();
+        let core = MemoryCore::new(
+            repo.clone(),
+            actions,
+            Arc::new(checked),
+            Arc::new(MemoryEvents::new(repo.clone(), None, None)),
+            0,
+        );
+        let api = runtime
+            .block_on(core.test_connection(
+                &crate::Identity {
+                    project_id: "proj_dev".into(),
+                    account_id: "a".into(),
+                    admin_scope: false,
+                },
+                &c.id,
+            ))
+            .unwrap_err();
+        server.join().unwrap();
+        let saved = repo.get_connection("proj_dev", Some("a"), &c.id).unwrap().0;
+        assert_eq!(saved.status, Status::Degraded);
+        assert_eq!(saved.last_test_status, TestStatus::Passed);
+        assert_eq!(api.code, "CONNECTOR_SETUP_VALIDATION_FAILED");
+        let evidence = format!("{:?}", api.evidence);
+        assert!(!evidence.contains("submitted-secret"));
+        assert!(
+            matches!(api.evidence.as_deref(), Some(crate::ApiFailureEvidence::ConnectionCheck(cause)) if *cause == if timeout { crate::ConnectionCheckFailure::Timeout } else { crate::ConnectionCheckFailure::Transport })
+        );
+    }
 }
 impl TokenProvider for LocalTokenClient {
     fn exchange(

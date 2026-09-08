@@ -49,6 +49,208 @@ fn guided_input_bounds_duplicates_and_depth() {
 }
 
 struct GuidedFixture(serde_json::Value);
+
+async fn action_page(path: &str, data: serde_json::Value) -> String {
+    let data = GuidedFixture(data);
+    DevelopmentDashboard {
+        public_origin: "http://127.0.0.1:5080",
+        data: &data,
+    }
+    .handle(&Request {
+        method: "GET",
+        path,
+        cookies: "",
+        origin: None,
+        referer: None,
+        fields: BTreeMap::new(),
+        now: 0,
+    })
+    .await
+    .unwrap()
+    .body
+}
+
+#[tokio::test]
+async fn copy_connection_and_replay_actions_keep_routes() {
+    let connections = action_page(
+        "/app/auth-configs",
+        json!({"connections":[{"id":"conn_1"}]}),
+    )
+    .await;
+    assert!(connections.contains(">Check connection</span>"));
+    assert!(connections.contains(">Disconnect</span>"));
+    let check = connections
+        .split("<form ")
+        .find(|form| form.starts_with("method=\"post\" action=\"/app/auth-configs/conn_1/test\""))
+        .expect("native connection check form")
+        .split("</form>")
+        .next()
+        .unwrap();
+    assert!(check.contains("ui-button-secondary"));
+    assert!(check.contains("type=\"submit\""));
+    assert!(connections.contains("action=\"/app/auth-configs/conn_1/test\""));
+    assert!(
+        !check.contains("data-on:submit"),
+        "connection checks must navigate to their redirect or error response"
+    );
+    assert!(connections.contains("action=\"/app/auth-configs/conn_1/disconnect\""));
+    let event = json!({"id":"evt_1"});
+    let initial = action_page("/app/triggers", json!({"events":[event.clone()]})).await;
+    let streamed = render_trigger_patch(&event).unwrap();
+    let trace = action_page("/app/logs/request_1", json!({"requestId":"request_1"})).await;
+    for (html, route) in [
+        (&initial, "/app/triggers/evt_1/replay"),
+        (&streamed, "/app/triggers/evt_1/replay"),
+        (&trace, "/app/logs/request_1/replay"),
+    ] {
+        assert!(html.contains(">Run this again</span>"));
+        assert!(html.contains(&format!("method=\"post\" action=\"{route}\"")));
+    }
+}
+
+fn assert_confirmation(html: &str, heading: &str, body: &str, route: &str) -> String {
+    assert!(html.contains(heading));
+    assert!(html.contains(body));
+    assert!(html.contains(">Cancel</span>"));
+    assert!(!html.contains("window.confirm"));
+    let id = html
+        .split("<dialog id=\"")
+        .nth(1)
+        .expect("confirmation dialog")
+        .split('"')
+        .next()
+        .unwrap();
+    assert!(html.contains(&format!("data-confirm-open=\"{id}\"")));
+    assert!(html.contains(&format!(
+        "form=\"{id}-form\" formaction=\"{route}\" formmethod=\"post\""
+    )));
+    assert!(html.contains(&format!(
+        "<form id=\"{id}-form\" method=\"post\" action=\"{route}\"></form>"
+    )));
+    let dialog = html
+        .split("<dialog ")
+        .nth(1)
+        .unwrap()
+        .split("</dialog>")
+        .next()
+        .unwrap();
+    assert!(!dialog.contains("<form"));
+    id.to_owned()
+}
+
+#[tokio::test]
+async fn copy_confirmations_name_targets_without_provider_promises() {
+    let connections = action_page(
+        "/app/auth-configs",
+        json!({"connections":[{"id":"conn_1"}]}),
+    )
+    .await;
+    assert_confirmation(
+        &connections,
+        "Disconnect this connection?",
+        "Disconnect connection conn_1? Tool runs require an active connection.",
+        "/app/auth-configs/conn_1/disconnect",
+    );
+    let trace = action_page("/app/logs/request_1", json!({"requestId":"request_1"})).await;
+    assert_confirmation(&trace, "Run this tool again?", "Run the tool for recorded request request_1 again using saved input? This creates another tool execution and may repeat changes at the provider.", "/app/logs/request_1/replay");
+    let event = json!({"id":"evt_1"});
+    let initial = action_page("/app/triggers", json!({"events":[event.clone()]})).await;
+    let first = render_trigger_patch(&event).unwrap();
+    let second = render_trigger_patch(&event).unwrap();
+    let ids: std::collections::BTreeSet<_> = [&initial, &first, &second]
+        .into_iter()
+        .map(|html| {
+            assert_confirmation(
+                html,
+                "Dispatch this event again?",
+                "Dispatch event evt_1 again? Consumers may process the event again.",
+                "/app/triggers/evt_1/replay",
+            )
+        })
+        .collect();
+    assert_eq!(
+        ids.len(),
+        3,
+        "independently rendered occurrences must not share dialog associations"
+    );
+}
+
+#[tokio::test]
+async fn copy_empty_events_first_and_second_patch_preserve_rows() {
+    let data = GuidedFixture(json!({"events":[]}));
+    let initial = DevelopmentDashboard {
+        public_origin: "http://127.0.0.1:5080",
+        data: &data,
+    }
+    .handle(&Request {
+        method: "GET",
+        path: "/app/triggers",
+        cookies: "",
+        origin: None,
+        referer: None,
+        fields: BTreeMap::new(),
+        now: 0,
+    })
+    .await
+    .unwrap()
+    .body;
+    assert_eq!(initial.matches("@get('/app/triggers/stream')").count(), 1);
+    let mut tbody = initial
+        .split("<tbody id=\"trigger-rows\"")
+        .nth(1)
+        .unwrap()
+        .split_once('>')
+        .unwrap()
+        .1
+        .split("</tbody>")
+        .next()
+        .unwrap()
+        .to_owned();
+    assert!(tbody.contains("id=\"trigger-empty-state\""));
+    assert!(tbody.contains("colspan=\"5\""));
+    assert!(tbody.contains("No webhook events to show."));
+    // Apply the actual frame modes to a bounded table-body string model. Browser
+    // qualification separately verifies these frames against bundled Datastar.
+    for id in ["first", "second"] {
+        let frames = render_trigger_patch(&json!({"id":id,"connector":id})).unwrap();
+        for frame in frames.split("\n\n").filter(|f| !f.is_empty()) {
+            let lines: Vec<_> = frame.lines().collect();
+            if lines.contains(&"data: mode prepend") {
+                assert!(lines.contains(&"data: selector #trigger-rows"));
+                let html = lines
+                    .iter()
+                    .filter_map(|line| line.strip_prefix("data: elements "))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                tbody.insert_str(0, &html);
+            } else if lines.contains(&"data: mode remove") {
+                assert!(lines.contains(&"data: selector #trigger-empty-state"));
+                if let Some(start) = tbody.find("<tr id=\"trigger-empty-state\"") {
+                    let end = start + tbody[start..].find("</tr>").unwrap() + 5;
+                    tbody.replace_range(start..end, "");
+                }
+            } else {
+                panic!("unexpected event frame: {frame}");
+            }
+        }
+        assert!(!tbody.contains("No webhook events to show."));
+        assert!(!tbody.contains("trigger-empty-state"));
+        assert!(tbody.contains("/app/triggers/first/replay"));
+    }
+    assert!(tbody.contains("/app/triggers/second/replay"));
+    assert!(
+        tbody.find("/app/triggers/second/replay").unwrap()
+            < tbody.find("/app/triggers/first/replay").unwrap()
+    );
+    assert_eq!(tbody.matches("<tr ").count(), 2);
+    for invalid in ["", "../bad", "a\nevent: injected"] {
+        assert_eq!(
+            render_trigger_patch(&json!({"id":invalid})),
+            Err(Error::Invalid)
+        );
+    }
+}
+
 impl DashboardData for GuidedFixture {
     fn execute(
         &self,

@@ -1,15 +1,20 @@
+mod evidence;
 mod fields;
 mod service;
+pub use evidence::{CredentialResolutionFailure, DeclaredFieldKey, ValidationFailure};
 pub use fields::*;
 pub use service::*;
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     InvalidInput,
     Cancelled,
     MissingField,
+    MissingDeclaredField(DeclaredFieldKey),
     UnknownRoute,
     Unsupported,
     ValidationFailed,
+    Validation(ValidationFailure),
+    CredentialResolutionFailed(CredentialResolutionFailure),
     NotFound,
     Conflict,
     Persistence,

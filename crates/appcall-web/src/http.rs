@@ -245,7 +245,8 @@ impl Browser<'_> {
                 Err(error) => Err(error),
             };
         }
-        self.identity
+        let result = self
+            .identity
             .broker
             .call(
                 reqwest::Method::POST,
@@ -253,7 +254,24 @@ impl Browser<'_> {
                 None,
                 Some(Value::Object(payload)),
             )
-            .await?;
+            .await;
+        match result {
+            Err(error @ (Error::Invalid | Error::Unauthorized))
+                if matches!(
+                    r.path,
+                    "/app/otp" | "/app/magic-link" | "/app/forgot-password"
+                ) =>
+            {
+                let status = if matches!(error, Error::Unauthorized) {
+                    401
+                } else {
+                    400
+                };
+                return Ok(Response::new(status, auth_failure(r)?));
+            }
+            Err(error) => return Err(error),
+            Ok(_) => {}
+        }
         if r.path == "/app/otp" {
             return Ok(Response::new(
                 200,
@@ -268,7 +286,7 @@ impl Browser<'_> {
         }
         Ok(Response::new(
             200,
-            "Request accepted. Check your email for the next step.".into(),
+            "Request received. Check your email for the next step.".into(),
         ))
     }
     fn complete(&self, result: AuthResult, r: &Request<'_>) -> Result<Response, Error> {
@@ -452,7 +470,22 @@ fn auth_failure(r: &Request<'_>) -> Result<String, Error> {
             &format!("name=\"{field}\" value=\"{}\"", escape(r.field(field)?)),
         );
     }
-    Ok(html.replacen("<form ", "<p role=\"alert\" class=\"mt-4 text-sm text-red-400\">Unable to sign in. Check your details and try again.</p><form ",1))
+    let message = match r.path {
+        "/app/login" => "Sign-in did not complete. Check your email and password.",
+        "/app/login/mfa" | "/app/otp/verify" => {
+            "Verification did not complete. Check the code you entered."
+        }
+        "/app/signup" => "Account creation did not complete. Review your registration details.",
+        "/app/otp" => "Appcall could not accept the sign-in code request. Check your email address and try again.",
+        "/app/magic-link" => "Appcall could not accept the sign-in link request. Check your email address and try again.",
+        "/app/forgot-password" => "Appcall could not accept the password reset request. Check your email address and try again.",
+        _ => "Appcall could not accept this request. Review the submitted details.",
+    };
+    Ok(html.replacen(
+        "<form ",
+        &format!("<p role=\"alert\" class=\"mt-4 text-sm text-red-400\">{message}</p><form "),
+        1,
+    ))
 }
 
 fn challenge_form(action: &str, title: &str, token_name: &str, token: &str, next: &str) -> String {
@@ -482,6 +515,228 @@ pub(crate) fn escape(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn copy_auth_failures_are_route_specific_and_private() {
+        for (path, message, retained) in [
+            (
+                "/app/login",
+                "Sign-in did not complete. Check your email and password.",
+                vec!["email"],
+            ),
+            (
+                "/app/login/mfa",
+                "Verification did not complete. Check the code you entered.",
+                vec!["mfaToken"],
+            ),
+            (
+                "/app/otp/verify",
+                "Verification did not complete. Check the code you entered.",
+                vec!["email"],
+            ),
+            (
+                "/app/signup",
+                "Account creation did not complete. Review your registration details.",
+                vec!["email", "displayName", "invitation"],
+            ),
+        ] {
+            let request = super::Request {
+                method: "POST",
+                path,
+                cookies: "",
+                origin: None,
+                referer: None,
+                now: 0,
+                fields: [
+                    ("email", "email\"><script>"),
+                    ("displayName", "name\"><script>"),
+                    ("invitation", "invitation\"><script>"),
+                    ("mfaToken", "challenge\"><script>"),
+                    ("next", "/app/logs?cursor=a&limit=2"),
+                    ("password", "synthetic-private-password"),
+                    ("newPassword", "synthetic-private-new-password"),
+                    ("code", "synthetic-private-code"),
+                ]
+                .into_iter()
+                .map(|(key, value)| (key.into(), vec![value.into()]))
+                .collect(),
+            };
+            let html = super::auth_failure(&request).unwrap();
+            assert!(
+                html.contains(&format!(">{message}</p>")),
+                "wrong copy for {path}"
+            );
+            assert_eq!(html.matches("role=\"alert\"").count(), 1);
+            assert!(html.contains(&format!("action=\"{path}\"")));
+            assert!(html.contains("name=\"next\" value=\"/app/logs?cursor=a&amp;limit=2\""));
+            for key in retained {
+                let value = super::escape(request.field(key).unwrap());
+                assert!(
+                    html.contains(&format!("name=\"{key}\" value=\"{value}\"")),
+                    "missing {key} for {path}"
+                );
+            }
+            for secret in [
+                "synthetic-private-password",
+                "synthetic-private-new-password",
+                "synthetic-private-code",
+            ] {
+                assert!(!html.contains(secret));
+            }
+            assert!(!html.contains("<script>"));
+        }
+    }
+
+    struct Deny;
+    impl appcall_auth::MembershipVerifier for Deny {
+        fn verify_membership(
+            &self,
+            _: &appcall_auth::AccessClaims,
+            _: &str,
+            _: &str,
+        ) -> Result<Option<appcall_auth::Membership>, appcall_auth::AuthError> {
+            Ok(None)
+        }
+    }
+
+    #[tokio::test]
+    async fn copy_auth_failures_email_acknowledgment_requires_accepted_request() {
+        tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            accepted_email_request_fixture(),
+        )
+        .await
+        .expect("email request fixture must complete within five seconds");
+    }
+
+    async fn accepted_email_request_fixture() {
+        use super::*;
+        use tokio::{
+            io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+            net::TcpListener,
+        };
+        for (path, endpoint) in [
+            ("/app/otp", "/api/auth/otp/request"),
+            ("/app/forgot-password", "/api/auth/forgot-password"),
+            ("/app/magic-link", "/api/auth/magic-link"),
+            ("/resend-verification", "/api/auth/resend-verification"),
+        ] {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let server = async move {
+                for status in [
+                    "200 OK",
+                    "400 Bad Request",
+                    "401 Unauthorized",
+                    "403 Forbidden",
+                    "503 Service Unavailable",
+                ] {
+                    let (stream, _) = listener.accept().await.unwrap();
+                    let mut reader = BufReader::new(stream);
+                    let mut request_line = String::new();
+                    reader.read_line(&mut request_line).await.unwrap();
+                    assert_eq!(request_line, format!("POST {endpoint} HTTP/1.1\r\n"));
+                    let mut content_length = 0;
+                    loop {
+                        let mut header = String::new();
+                        assert!(reader.read_line(&mut header).await.unwrap() > 0);
+                        if header == "\r\n" {
+                            break;
+                        }
+                        if let Some(length) =
+                            header.to_ascii_lowercase().strip_prefix("content-length:")
+                        {
+                            content_length = length.trim().parse::<usize>().unwrap();
+                        }
+                    }
+                    assert!(content_length <= 4096);
+                    let mut body = vec![0; content_length];
+                    reader.read_exact(&mut body).await.unwrap();
+                    let response_body = if status == "200 OK" {
+                        "{}"
+                    } else {
+                        "{\"error\":\"synthetic-private-provider-detail\"}"
+                    };
+                    reader.get_mut().write_all(format!("HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}", response_body.len()).as_bytes()).await.unwrap();
+                }
+            };
+            let codec = SessionCodec::new("synthetic", false).unwrap();
+            let jwt = appcall_auth::JwtVerifier::new("synthetic", Default::default()).unwrap();
+            let broker = Broker::new(&format!("http://{address}"), "appcall").unwrap();
+            let browser = Browser {
+                codec: &codec,
+                identity: Identity {
+                    jwt: &jwt,
+                    memberships: &Deny,
+                    broker: &broker,
+                },
+                public_origin: "https://app.example",
+            };
+            let request = Request {
+                method: "POST",
+                path,
+                cookies: "",
+                origin: Some("https://app.example"),
+                referer: None,
+                now: 0,
+                fields: [
+                    ("email", "synthetic\"><script>@example.invalid"),
+                    ("next", "/app/logs?cursor=a&limit=2"),
+                    ("password", "synthetic-private-password"),
+                ]
+                .into_iter()
+                .map(|(key, value)| (key.into(), vec![value.into()]))
+                .collect(),
+            };
+            let client = async {
+                let accepted = browser.handle(&request).await.unwrap();
+                let mut rejected = Vec::new();
+                for _ in 0..4 {
+                    rejected.push(browser.handle(&request).await.unwrap());
+                }
+                (accepted, rejected)
+            };
+            let ((), (accepted, rejected)) = tokio::join!(server, client);
+            assert_eq!(accepted.status, 200);
+            if path == "/app/otp" {
+                assert!(accepted.body.contains("action=\"/app/otp/verify\""));
+            } else {
+                assert_eq!(
+                    accepted.body,
+                    "Request received. Check your email for the next step."
+                );
+            }
+            for (rejected, status) in rejected.iter().zip([400, 401, 403, 503]) {
+                assert_eq!(rejected.status, status);
+                assert!(!rejected.body.contains("Request received"));
+                assert!(!rejected.body.contains("action=\"/app/otp/verify\""));
+                assert!(!rejected.body.contains("synthetic-private-provider-detail"));
+                assert!(!rejected.body.contains("synthetic-private-password"));
+                assert!(!rejected.headers.iter().any(|(key, _)| key == "Set-Cookie"));
+                if matches!(status, 400 | 401) && path != "/resend-verification" {
+                    let message = match path {
+                        "/app/otp" => "Appcall could not accept the sign-in code request. Check your email address and try again.",
+                        "/app/magic-link" => "Appcall could not accept the sign-in link request. Check your email address and try again.",
+                        _ => "Appcall could not accept the password reset request. Check your email address and try again.",
+                    };
+                    assert!(
+                        rejected.body.contains(message),
+                        "missing recovery copy for {path} ({status})"
+                    );
+                    assert!(rejected.body.contains(&format!("action=\"{path}\"")));
+                    assert!(rejected.body.contains("name=\"email\" value=\"synthetic&quot;&gt;&lt;script&gt;@example.invalid\""));
+                    assert!(rejected
+                        .body
+                        .contains("name=\"next\" value=\"/app/logs?cursor=a&amp;limit=2\""));
+                    assert_eq!(rejected.body.matches("role=\"alert\"").count(), 1);
+                    assert!(!rejected.body.contains("<script>"));
+                } else {
+                    assert!(!rejected.body.contains("<form"));
+                }
+            }
+            assert!(!accepted.headers.iter().any(|(key, _)| key == "Set-Cookie"));
+        }
+    }
+
     #[test]
     fn failed_login_preserves_email_but_never_password() {
         let request = super::Request {

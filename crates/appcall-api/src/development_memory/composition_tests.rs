@@ -2,6 +2,110 @@ use super::*;
 use appcall_mcp::ConnectionLister;
 use appcall_store::{AuthType, Connection, CredentialOwner, Status, TestStatus};
 use std::sync::Arc;
+#[path = "../../tests/browser_host/failure_cases.rs"]
+mod copy_failure_cases;
+
+#[tokio::test]
+async fn copy_dashboard_failures_have_backend_parity_memory() {
+    let transport = copy_failure_cases::TransportServer::new();
+    let (backend, dashboard) = composition_with_manifest_and_runner(
+        copy_failure_cases::manifest(),
+        Some(&transport.endpoint),
+    );
+    backend
+        .core
+        .repository
+        .create_connection(
+            Connection {
+                id: "copy-connection".into(),
+                project_id: "proj_dev".into(),
+                external_account_id: "brand".into(),
+                connector: "test".into(),
+                auth_type: AuthType::ApiKey,
+                status: Status::Active,
+                secret_ref_id: String::new(),
+                last_test_status: TestStatus::Unknown,
+                credential_owner: CredentialOwner::Brand,
+            },
+            None,
+        )
+        .unwrap();
+    backend
+        .core
+        .repository
+        .create_connection(
+            Connection {
+                id: "copy-check".into(),
+                project_id: "proj_dev".into(),
+                external_account_id: "brand".into(),
+                connector: "copy-check-toolkit".into(),
+                auth_type: AuthType::ApiKey,
+                status: Status::Active,
+                secret_ref_id: String::new(),
+                last_test_status: TestStatus::Unknown,
+                credential_owner: CredentialOwner::Brand,
+            },
+            Some(("api_key", br#"{"apiKey":"synthetic-copy-key"}"#)),
+        )
+        .unwrap();
+    backend.core.repository.lock().unwrap().replay_logs.insert(
+        "copy-replay".into(),
+        super::state::ReplayLog {
+            id: "copy-replay".into(),
+            attempt: appcall_actions::Attempt {
+                request_id: "original-copy-request".into(),
+                project_id: "proj_dev".into(),
+                connection_id: "copy-connection".into(),
+                connector: "test".into(),
+                external_account_id: "brand".into(),
+                action: "write".into(),
+                key: String::new(),
+                input_hash: String::new(),
+                lease_ms: 1000,
+            },
+            sanitized_input: serde_json::json!([]),
+            created_at: chrono::Utc::now(),
+        },
+    );
+    let principal = appcall_auth::Principal::project("proj_dev").unwrap();
+    copy_failure_cases::assert_failures(&dashboard, principal.clone()).await;
+    copy_failure_cases::assert_service_failures(
+        &dashboard,
+        principal,
+        appcall_web::Error::Unavailable,
+        true,
+        &transport.calls,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn copy_dashboard_failures_input_parser_memory() {
+    let (backend, dashboard) = composition_with_manifest(copy_failure_cases::manifest());
+    backend
+        .core
+        .repository
+        .create_connection(
+            Connection {
+                id: "copy-connection".into(),
+                project_id: "proj_dev".into(),
+                external_account_id: "brand".into(),
+                connector: "test".into(),
+                auth_type: AuthType::ApiKey,
+                status: Status::Active,
+                secret_ref_id: String::new(),
+                last_test_status: TestStatus::Unknown,
+                credential_owner: CredentialOwner::Brand,
+            },
+            None,
+        )
+        .unwrap();
+    copy_failure_cases::assert_input_failures(
+        &dashboard,
+        appcall_auth::Principal::project("proj_dev").unwrap(),
+    )
+    .await;
+}
 fn repository() -> MemoryRepository {
     let registry = appcall_connectors::Registry::from_connectors([]).unwrap();
     MemoryRepository::new(
@@ -74,12 +178,21 @@ fn composition() -> (MemoryBackend, MemoryDashboard) {
     composition_with_manifest(manifest)
 }
 fn composition_with_manifest(manifest: serde_json::Value) -> (MemoryBackend, MemoryDashboard) {
-    let registry =
-        appcall_connectors::Registry::from_connectors([appcall_connectors::Connector::from_bytes(
-            &serde_json::to_vec(&manifest).unwrap(),
-        )
-        .unwrap()])
-        .unwrap();
+    composition_with_manifest_and_runner(manifest, None)
+}
+fn composition_with_manifest_and_runner(
+    manifest: serde_json::Value,
+    runner_endpoint: Option<&str>,
+) -> (MemoryBackend, MemoryDashboard) {
+    let manifests = std::iter::once(manifest).chain(if runner_endpoint.is_some() {
+        copy_failure_cases::extra_manifests()
+    } else {
+        vec![]
+    });
+    let registry = appcall_connectors::Registry::from_connectors(manifests.map(|manifest| {
+        appcall_connectors::Connector::from_bytes(&serde_json::to_vec(&manifest).unwrap()).unwrap()
+    }))
+    .unwrap();
     let repo = MemoryRepository::new(
         DevelopmentPermit::validate(false, None).unwrap(),
         Arc::new(registry),
@@ -88,7 +201,16 @@ fn composition_with_manifest(manifest: serde_json::Value) -> (MemoryBackend, Mem
     .unwrap();
     let oauth =
         Arc::new(MemoryOAuth::new(repo.clone(), Default::default(), Arc::new(NoTokens)).unwrap());
-    let setup = Arc::new(MemorySetup::new(repo.clone(), None, oauth.clone()));
+    let validator = runner_endpoint.map(|endpoint| {
+        Arc::new(appcall_setup::RunnerValidator::new(
+            Arc::new(
+                appcall_runner_client::RunnerClient::new(endpoint, "", Default::default()).unwrap(),
+            ),
+            repo.registry().clone(),
+            tokio::runtime::Handle::current(),
+        ))
+    });
+    let setup = Arc::new(MemorySetup::new(repo.clone(), validator, oauth.clone()));
     let actions = memory_actions(repo.clone(), None, Default::default(), oauth).unwrap();
     let events = Arc::new(MemoryEvents::new(repo.clone(), None, None));
     let core = Arc::new(MemoryCore::new(repo, actions, setup, events, 0));
@@ -326,6 +448,48 @@ fn setup_errors_preserve_provider_route_status_and_payload() {
         assert_eq!(actual.status, status);
         let expected = crate::provider_routes::setup_error(error, false);
         assert_eq!(actual.body, expected.body);
+    }
+}
+#[test]
+fn setup_missing_declared_field_keeps_internal_evidence_and_public_contract() {
+    let (backend, _) = composition();
+    let error = backend
+        .core
+        .setup
+        .submit_checked(
+            "proj_dev",
+            Some("brand"),
+            "test",
+            "",
+            &Default::default(),
+            &|| true,
+        )
+        .unwrap_err();
+    let api = super::backend::setup_error(error);
+    assert_eq!(api.code, "MISSING_SETUP_FIELD");
+    assert!(api.detail.is_none());
+    assert!(
+        matches!(api.evidence.as_deref(), Some(crate::ApiFailureEvidence::Setup(crate::SetupFailureEvidence::MissingField(Some(key)))) if key.as_str() == "apiKey")
+    );
+    let actual = crate::error_response(api);
+    let expected = crate::provider_routes::setup_error(appcall_setup::Error::MissingField, false);
+    assert_eq!(actual.status, 400);
+    assert_eq!(actual.body, expected.body);
+}
+
+#[test]
+fn setup_failure_copy_does_not_claim_unproven_credential_or_oauth_rejection() {
+    for error in [
+        appcall_setup::Error::ValidationFailed,
+        appcall_setup::Error::OAuth(appcall_oauth::Error::OutcomeUnknown),
+    ] {
+        let response = crate::provider_routes::setup_error(error, false);
+        assert_eq!(response.status, 502);
+        assert!(
+            !response.body.to_string().contains("rejected"),
+            "unsupported rejection claim: {:?}",
+            response.body
+        );
     }
 }
 #[tokio::test]
