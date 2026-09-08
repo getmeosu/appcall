@@ -174,6 +174,29 @@ async fn fixture_counters_count_one_execution_without_retaining_fields() {
 }
 
 #[test]
+fn unavailable_auth_includes_mfa_setup_without_expanding_the_route_allowlist() {
+    let (status, body) = broker_fixture(Scenario::AuthUnavailable, "POST", "/api/auth/mfa/setup");
+    assert_eq!(status, 503);
+    assert!(body["error"].is_string());
+    assert!(body.get("secret").is_none());
+    assert!(body.get("url").is_none());
+
+    let (status, body) = broker_fixture(Scenario::Preview, "POST", "/api/auth/mfa/setup");
+    assert_eq!(status, 200);
+    assert_eq!(body["secret"], "JBSWY3DPEHPK3PXP");
+    assert_eq!(
+        body["url"],
+        "otpauth://totp/Appcall:preview?secret=JBSWY3DPEHPK3PXP&issuer=Appcall"
+    );
+
+    for scenario in [Scenario::Preview, Scenario::AuthUnavailable] {
+        for path in ["/unknown", "/api/auth/mfa/setup/extra", "/api/auth/unknown"] {
+            assert_eq!(broker_fixture(scenario, "POST", path).0, 404);
+        }
+    }
+}
+
+#[test]
 fn billing_and_auth_broker_contracts_are_independent() {
     assert_eq!(
         broker_fixture(Scenario::Preview, "GET", "/api/auth/providers"),

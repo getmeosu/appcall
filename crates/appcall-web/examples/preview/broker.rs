@@ -43,6 +43,9 @@ pub fn broker_fixture(scenario: Scenario, method: &str, path: &str) -> (u16, Val
 }
 fn auth_fixture(scenario: Scenario, path: &str) -> (u16, Value) {
     if path == "/api/auth/mfa/setup" {
+        if scenario == Scenario::AuthUnavailable {
+            return rejection(503);
+        }
         return (
             200,
             json!({"url":"otpauth://totp/Appcall:preview?secret=JBSWY3DPEHPK3PXP&issuer=Appcall","secret":"JBSWY3DPEHPK3PXP"}),
