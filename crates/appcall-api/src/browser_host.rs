@@ -231,7 +231,11 @@ impl BrowserHost {
         if !public_path(&request.method, request.uri.split('?').next().unwrap_or("")) {
             return Ok(None);
         }
-        let parsed = parse_request(request)?;
+        let validated = validate_request(request)?;
+        if let Some(response) = legacy_redirect(request) {
+            return Ok(Some(response));
+        }
+        let parsed = parse_request_validated(request, validated)?;
         self.invoke(move |inner, cancel| {
             let browser = appcall_web::Browser {
                 codec: &inner.codec,
@@ -345,7 +349,12 @@ pub struct ParsedRequest {
     pub referer: Option<String>,
     pub fields: BTreeMap<String, Vec<String>>,
 }
-pub fn parse_request(request: &Request) -> Result<ParsedRequest> {
+pub(crate) struct ValidatedRequest {
+    url: url::Url,
+    origin: Option<String>,
+    referer: Option<String>,
+}
+pub(crate) fn validate_request(request: &Request) -> Result<ValidatedRequest> {
     if request.uri.len() > 4096
         || request.body.len() > 65536
         || request.headers.len() > 64
@@ -390,6 +399,21 @@ pub fn parse_request(request: &Request) -> Result<ParsedRequest> {
     {
         return Err(ApiError::new("INVALID_REQUEST"));
     }
+    Ok(ValidatedRequest {
+        url,
+        origin,
+        referer,
+    })
+}
+pub(crate) fn parse_request_validated(
+    request: &Request,
+    validated: ValidatedRequest,
+) -> Result<ParsedRequest> {
+    let ValidatedRequest {
+        url,
+        origin,
+        referer,
+    } = validated;
     let mut fields: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for (key, value) in url
         .query_pairs()
@@ -411,7 +435,8 @@ pub fn parse_request(request: &Request) -> Result<ParsedRequest> {
     }
     Ok(ParsedRequest {
         method: request.method.clone(),
-        path: url.path().into(),
+        path: appcall_web::canonical_browser_path(&request.method, url.path())
+            .unwrap_or_else(|| url.path().into()),
         cookies: request
             .headers
             .iter()
@@ -423,6 +448,9 @@ pub fn parse_request(request: &Request) -> Result<ParsedRequest> {
         referer,
         fields,
     })
+}
+pub fn parse_request(request: &Request) -> Result<ParsedRequest> {
+    parse_request_validated(request, validate_request(request)?)
 }
 /// Preserves status and headers, preferring binary bytes over the UTF-8 text body.
 pub(crate) fn web_response(response: appcall_web::Response) -> RawResponse {
@@ -456,7 +484,21 @@ fn browser_response_adapter_preserves_binary_and_utf8_contracts() {
 
 /// Tests whether a method and query-free path belong to the browser routing surface.
 /// This does not authorize access; protected handlers still validate sessions.
+pub(crate) fn legacy_redirect(request: &Request) -> Option<RawResponse> {
+    let location = appcall_web::legacy_browser_location(&request.method, &request.uri)?;
+    Some(RawResponse {
+        status: 301,
+        headers: vec![
+            ("Location".into(), location),
+            ("Cache-Control".into(), "no-store".into()),
+        ],
+        body: vec![],
+    })
+}
+
 pub fn public_path(method: &str, path: &str) -> bool {
+    let canonical = appcall_web::canonical_browser_path(method, path);
+    let path = canonical.as_deref().unwrap_or(path);
     if !matches!(method, "GET" | "POST")
         || path.contains(['%', '\\'])
         || path
@@ -469,21 +511,21 @@ pub fn public_path(method: &str, path: &str) -> bool {
         && matches!(
             path,
             "/" | "/app"
-                | "/app/toolkits"
-                | "/app/auth-configs"
-                | "/app/triggers"
-                | "/app/triggers/stream"
+                | "/app/connectors"
+                | "/app/connections"
+                | "/app/events"
+                | "/app/events/stream"
                 | "/app/logs"
-                | "/app/qa"
+                | "/app/certification"
                 | "/app/docs"
                 | "/app/support"
-                | "/app/users"
+                | "/app/settings/team"
                 | "/app/sessions"
                 | "/app/settings"
                 | "/app/settings/account"
                 | "/app/settings/organization"
                 | "/app/settings/billing"
-                | "/app/settings/usage"
+                | "/app/usage"
                 | "/app/settings/white-labeling"
                 | "/app/login"
                 | "/app/login/password"
@@ -526,8 +568,8 @@ pub fn public_path(method: &str, path: &str) -> bool {
                 | "/app/magic-link"
                 | "/auth/callback"
                 | "/resend-verification"
-                | "/app/toolkits/request"
-                | "/app/users/invite"
+                | "/app/connectors/request"
+                | "/app/settings/team/invite"
                 | "/app/settings/organization"
                 | "/app/settings/white-labeling"
                 | "/app/settings/account/change-password"
@@ -551,15 +593,15 @@ pub fn public_path(method: &str, path: &str) -> bool {
         ("GET", ["", "app", "oauth", provider]) => {
             matches!(*provider, "google" | "github" | "microsoft")
         }
-        ("GET", ["", "app", "toolkits" | "logs", key]) => id(key),
-        ("GET", ["", "app", "toolkits", key, "test-form" | "options" | "runinput-fields"]) => {
+        ("GET", ["", "app", "connectors" | "logs", key]) => id(key),
+        ("GET", ["", "app", "connectors", key, "test-form" | "options" | "runinput-fields"]) => {
             id(key)
         }
-        ("POST", ["", "app", "toolkits", key, "setup" | "test"])
-        | ("POST", ["", "app", "auth-configs", key, "test" | "disconnect"])
-        | ("POST", ["", "app", "triggers" | "logs", key, "replay"])
-        | ("POST", ["", "app", "users", key, "remove" | "role"])
-        | ("POST", ["", "app", "sessions", key, "revoke"]) => id(key),
+        ("POST", ["", "app", "connectors", key, "setup" | "test"])
+        | ("POST", ["", "app", "connections", key, "test" | "disconnect"])
+        | ("POST", ["", "app", "events" | "logs", key, "replay"])
+        | ("POST", ["", "app", "settings", "team", key, "remove" | "role"])
+        | ("POST", ["", "app", "settings", "account", "sessions", key, "revoke"]) => id(key),
         _ => false,
     }
 }
@@ -698,15 +740,15 @@ impl ApiDashboard {
         ensure_active()?;
         match r.operation {
             Op::Catalog=>Ok(json!({"connectors":self.registry.public_list().map(|c|catalog_item(c.manifest())).collect::<Vec<_>>()})),
-            Op::Toolkit|Op::TestForm=>{let c=self.registry.public_connector(resource).map_err(|_|Error::Invalid)?;let mut item=catalog_item(c.manifest());item["setup"]=serde_json::to_value(&c.manifest().auth.setup).map_err(|_|Error::Unavailable)?;
+            Op::Connector|Op::TestForm=>{let c=self.registry.public_connector(resource).map_err(|_|Error::Invalid)?;let mut item=catalog_item(c.manifest());item["setup"]=serde_json::to_value(&c.manifest().auth.setup).map_err(|_|Error::Unavailable)?;
                 let selected=selected_action(c.manifest(),field("action"))?;
                 item["connections"]=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?.iter().filter(|c|c.connector==resource).map(connection_value).collect();
                 if let Some((action,op))=selected{item["action"]=action.clone().into();item["inputSchema"]=op.input_schema.clone().unwrap_or_else(||json!({"type":"object"}));item["sample"]=op.sample.clone().unwrap_or(Value::Null);item["connectionId"]=field("connectionId").into();}Ok(item)},
             Op::Overview=>{let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;let usage=self.usage(&identity)?;Ok(json!({"toolkitCount":self.registry.public_list().count(),"connectionCount":connections.len(),"toolCalls":usage["actionCalls"]}))},
-            Op::AuthConfigs=>Ok(json!({"connections":self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?.iter().map(|c|json!({"id":c.id,"connector":c.connector,"authType":c.auth_type,"status":c.status,"lastTest":c.last_test_status})).collect::<Vec<_>>()})),
+            Op::Connections=>Ok(json!({"connections":self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?.iter().map(|c|json!({"id":c.id,"connector":c.connector,"authType":c.auth_type,"status":c.status,"lastTest":c.last_test_status})).collect::<Vec<_>>()})),
             Op::TestConnection=>Ok(connection_value(&self.core.test_connection(&identity,resource).await.map_err(dashboard_failure::map_api_error)?)),
             Op::DisconnectConnection=>{self.core.disconnect(&identity,resource).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"disconnected":true}))},
-            Op::Logs|Op::Triggers|Op::Stream|Op::Trace=>{
+            Op::Logs|Op::Events|Op::Stream|Op::Trace=>{
                 let mut url=url::Url::parse(&format!("http://local.invalid{}",match r.operation{Op::Logs=>"/v1/action-logs".to_owned(),Op::Trace=>format!("/v1/requests/{resource}"),_=>"/v1/webhook-events".to_owned()})).map_err(|_|Error::Invalid)?;
                 for (k,v) in &r.fields {if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation"].contains(&k.as_str()) || r.operation == Op::Logs && ["createdFrom","createdBefore"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
                 self.db(|client| Ok(crate::data_routes::read(client,&identity,&url)))?.map_err(dashboard_failure::map_api_error)?.map(|r|r.body).ok_or_else(|| Error::Invalid.into())
@@ -714,10 +756,10 @@ impl ApiDashboard {
             Op::ReplayTrace=>{let command=self.db(|client| Ok(crate::data_routes::prepare_replay(client,&identity,resource,true)))?.map_err(dashboard_failure::map_api_error)?;let mut execute=command.execute;execute.admin_scope=account.is_empty();ensure_active()?;let result=self.core.execute(execute).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"requestId":command.request_id,"replayLogId":command.log_id,"output":result.output}))},
             Op::ReplayEvent=>self.db(|client|Ok(crate::data_routes::webhook_replay(client,&r.principal,resource,&mut appcall_worker::SyncDispatchSink)))?.map(|r|r.body).map_err(dashboard_failure::map_api_error),
             Op::Usage=>{let mut usage=self.usage_at(&identity,field("month"))?;usage["toolCalls"]=usage["actionCalls"].clone();Ok(usage)},
-            Op::Qa=>self.db(|client|{let rows=client.query("SELECT connector,overall,results::text,to_char(last_run_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),total,passed,failed,not_certified FROM qa_connector_status ORDER BY connector LIMIT 1000",&[]).map_err(|_|Error::Unavailable)?;Ok(json!({"certifications":rows.iter().map(|r|{let result:Value=serde_json::from_str(&r.get::<_,String>(2)).unwrap_or(Value::Null);json!({"connector":r.get::<_,String>(0),"status":r.get::<_,String>(1),"manifestFingerprint":result.get("manifestDigest").cloned().unwrap_or(Value::Null),"certifiedAt":r.get::<_,String>(3),"total":r.get::<_,i32>(4),"passed":r.get::<_,i32>(5),"failed":r.get::<_,i32>(6),"notCertified":r.get::<_,i32>(7),"drifted":self.registry.public_connector(&r.get::<_,String>(0)).ok().is_none_or(|c|result.get("manifestDigest").and_then(Value::as_str)!=Some(c.manifest_digest()))})}).collect::<Vec<_>>()}))}).map_err(DashboardFailure::from),
+            Op::Certification=>self.db(|client|{let rows=client.query("SELECT connector,overall,results::text,to_char(last_run_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),total,passed,failed,not_certified FROM qa_connector_status ORDER BY connector LIMIT 1000",&[]).map_err(|_|Error::Unavailable)?;Ok(json!({"certifications":rows.iter().map(|r|{let result:Value=serde_json::from_str(&r.get::<_,String>(2)).unwrap_or(Value::Null);json!({"connector":r.get::<_,String>(0),"status":r.get::<_,String>(1),"manifestFingerprint":result.get("manifestDigest").cloned().unwrap_or(Value::Null),"certifiedAt":r.get::<_,String>(3),"total":r.get::<_,i32>(4),"passed":r.get::<_,i32>(5),"failed":r.get::<_,i32>(6),"notCertified":r.get::<_,i32>(7),"drifted":self.registry.public_connector(&r.get::<_,String>(0)).ok().is_none_or(|c|result.get("manifestDigest").and_then(Value::as_str)!=Some(c.manifest_digest()))})}).collect::<Vec<_>>()}))}).map_err(DashboardFailure::from),
             Op::Branding=>Ok(self.state.branding.lock().map_err(|_|Error::Unavailable)?.get(&identity.project_id).cloned().unwrap_or_else(||json!({"appName":"appcall","logoURL":"","tagColor":"#5eead4"}))),
             Op::SaveBranding=>{let name=field("appName").trim();let logo=field("logoURL");let color=field("tagColor");if name.len()>128||logo.len()>2048||(!logo.is_empty()&&url::Url::parse(logo).ok().is_none_or(|u|u.scheme()!="https"||!u.username().is_empty()||u.password().is_some()))||!(color.len()==7&&color.starts_with('#')&&color[1..].bytes().all(|b|b.is_ascii_hexdigit())){return Err(Error::Invalid.into())}let value=json!({"appName":if name.is_empty(){"appcall"}else{name},"logoURL":logo,"tagColor":color});self.state.branding.lock().map_err(|_|Error::Unavailable)?.insert(identity.project_id,value.clone());Ok(value)},
-            Op::RequestToolkit=>{if field("name").trim().is_empty()||field("name").len()>256||field("email").len()>256||field("notes").len()>4000{return Err(Error::Invalid.into())}let mut requests=self.state.requests.lock().map_err(|_|Error::Unavailable)?;if requests.len()>=1000{return Err(Error::Unavailable.into())}let event=json!({"event":"toolkit_requested","projectId":identity.project_id,"name":field("name"),"email":field("email"),"notes":field("notes")});eprintln!("{event}");requests.push(event);Ok(json!({"accepted":true}))},
+            Op::RequestConnector=>{if field("name").trim().is_empty()||field("name").len()>256||field("email").len()>256||field("notes").len()>4000{return Err(Error::Invalid.into())}let mut requests=self.state.requests.lock().map_err(|_|Error::Unavailable)?;if requests.len()>=1000{return Err(Error::Unavailable.into())}let event=json!({"event":"toolkit_requested","projectId":identity.project_id,"name":field("name"),"email":field("email"),"notes":field("notes")});eprintln!("{event}");requests.push(event);Ok(json!({"accepted":true}))},
             Op::Setup=>{if identity.project_id=="proj_dev" { if let Some(local)=&self.dev_oauth { if let Some(result)=local.start_checked(&identity,resource,(!field("connectionId").is_empty()).then_some(field("connectionId")),&|| ensure_active().is_ok()).map_err(dashboard_failure::map_api_error)? { return Ok(json!({"redirectUrl":result.authorization_url,"connectionId":result.connection.id,"developmentOAuth":true})); } } }let scope=appcall_setup::SetupScope::new(&identity.project_id,(!account.is_empty()).then_some(account)).map_err(|_|Error::Invalid)?;let description=self.setup.describe(resource).map_err(|_|Error::Invalid)?;if description.setup.mode=="oauth2"{let result=self.setup.start_checked(&scope,resource,None,&|| ensure_active().is_ok()).map_err(|e|dashboard_failure::setup_failure(e,Error::Unavailable,&description.setup,field("route")))?;Ok(json!({"redirectUrl":result.authorization_url,"connectionId":result.connection.id}))}else{let fields=r.fields.iter().filter(|(key,_)|!["externalAccountId","route","projectId"].contains(&key.as_str())).map(|(k,v)|(k.clone(),v.clone())).collect();let connection=self.setup.submit_checked(&scope,resource,field("route"),&fields,&|| ensure_active().is_ok()).map_err(|e|dashboard_failure::setup_failure(e,Error::Invalid,&description.setup,field("route")))?;Ok(connection_value(&connection))}},
             Op::Test|Op::Options|Op::RunInputFields=>{
                 let connection=field("connectionId");let action=match r.operation{Op::Options=>field("source"),Op::RunInputFields=>if field("source").is_empty(){"actors.input_schema"}else{field("source")},_=>field("action")};

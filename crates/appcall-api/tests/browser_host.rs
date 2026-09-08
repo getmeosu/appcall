@@ -5,7 +5,7 @@ mod copy_failure_cases;
 #[test]
 fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     assert!(public_path("GET", "/app/login"));
-    assert!(public_path("POST", "/app/users/u/remove"));
+    assert!(public_path("POST", "/app/settings/team/u/remove"));
     assert!(public_path("GET", "/static/app.css"));
     assert!(public_path("GET", "/static/logs.js"));
     assert!(!public_path("POST", "/static/logs.js"));
@@ -13,8 +13,8 @@ fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     for path in [
         "/v1/actions",
         "/app/../v1/actions",
-        "/app/users/u/arbitrary",
-        "/app/toolkits/x%2Fy",
+        "/app/settings/team/u/arbitrary",
+        "/app/connectors/x%2Fy",
         "/static/../../secret",
         "/app/oauth/unknown",
     ] {
@@ -395,10 +395,10 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
     runtime.block_on(async {
         for path in [
             "/app?projectId=forged",
-            "/app/toolkits",
-            "/app/auth-configs",
-            "/app/settings/usage?month=2026-01",
-            "/app/qa",
+            "/app/connectors",
+            "/app/connections",
+            "/app/usage?month=2026-01",
+            "/app/certification",
         ] {
             let response = host
                 .handle(&Request {

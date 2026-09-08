@@ -201,7 +201,7 @@ async fn administration_requires_session_before_broker_dispatch() {
         public_origin: "https://app.example",
     };
     for path in [
-        "/app/users",
+        "/app/settings/team",
         "/app/sessions",
         "/app/settings/account",
         "/app/settings/organization",
@@ -293,7 +293,7 @@ async fn members_page_uses_verified_tenant_and_escapes_broker_data() {
     let cookies = format!("appcall_session={}", codec.seal_session(&session).unwrap());
     let request = Request {
         method: "GET",
-        path: "/app/users",
+        path: "/app/settings/team",
         cookies: &cookies,
         origin: None,
         referer: None,
@@ -308,6 +308,88 @@ async fn members_page_uses_verified_tenant_and_escapes_broker_data() {
     server.await.unwrap();
 }
 struct DashboardFixture;
+#[tokio::test]
+async fn signal_canonical_revoke_success_and_error_recover_to_account_once() {
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::TcpListener,
+    };
+    for (status, query) in [(200, "revoked=1"), (503, "error=revoke")] {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut raw = [0; 8192];
+            let count = stream.read(&mut raw).await.unwrap();
+            let request = String::from_utf8_lossy(&raw[..count]).to_lowercase();
+            assert!(
+                request.starts_with("delete /api/auth/sessions/session-one "),
+                "{request}"
+            );
+            assert!(request.contains("x-tenant-id: tenant-a"));
+            assert!(request.contains("authorization: bearer "));
+            let body = "{}";
+            stream.write_all(format!("HTTP/1.1 {status} Result\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+            assert!(
+                tokio::time::timeout(std::time::Duration::from_millis(100), listener.accept())
+                    .await
+                    .is_err(),
+                "revoke was dispatched twice"
+            );
+        });
+        let f: serde_json::Value =
+            serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        let codec = SessionCodec::new("test", false).unwrap();
+        let jwt =
+            appcall_auth::JwtVerifier::new(f["jwt_secret"].as_str().unwrap(), Default::default())
+                .unwrap();
+        let broker = Broker::new(&format!("http://{address}"), "appcall").unwrap();
+        let browser = Browser {
+            codec: &codec,
+            identity: Identity {
+                jwt: &jwt,
+                memberships: &Allow,
+                broker: &broker,
+            },
+            public_origin: "https://app.example",
+        };
+        let session = Session {
+            access_token: f["jwt"].as_str().unwrap().into(),
+            refresh_token: "refresh".into(),
+            user_id: "11111111-1111-1111-1111-111111111111".into(),
+            tenant_id: "tenant-a".into(),
+            tenant_name: "A".into(),
+            email: "safe@example.invalid".into(),
+        };
+        let cookies = format!("appcall_session={}", codec.seal_session(&session).unwrap());
+        let request = Request {
+            method: "POST",
+            path: "/app/settings/account/sessions/session-one/revoke",
+            cookies: &cookies,
+            origin: Some("https://app.example"),
+            referer: None,
+            fields: Default::default(),
+            now: 1800000000,
+        };
+        let response =
+            tokio::time::timeout(std::time::Duration::from_secs(3), browser.handle(&request))
+                .await
+                .unwrap()
+                .unwrap();
+        assert_eq!(response.status, 302);
+        let location = response
+            .headers
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case("location"))
+            .map(|(_, value)| value.as_str());
+        assert!(
+            location == Some(format!("/app/settings/account?{query}#account-sessions").as_str()),
+            "status={}, Location={location:?}",
+            response.status
+        );
+        server.await.unwrap();
+    }
+}
 impl DashboardData for DashboardFixture {
     fn execute(
         &self,
@@ -365,7 +447,7 @@ async fn dashboard_embeds_assets_and_never_trusts_form_project() {
     let cookies = format!("appcall_session={}", codec.seal_session(&session).unwrap());
     let mut request = Request {
         method: "GET",
-        path: "/app/toolkits",
+        path: "/app/connectors",
         cookies: &cookies,
         origin: None,
         referer: None,
@@ -379,8 +461,8 @@ async fn dashboard_embeds_assets_and_never_trusts_form_project() {
     assert_eq!(result.status, 200);
     assert!(result.body.contains("&lt;script&gt;bad"));
     assert!(result.body.contains("/static/app.css"));
-    assert!(result.body.contains("/app/toolkits/safe"));
-    request.path = "/app/toolkits/safe/test-form";
+    assert!(result.body.contains("/app/connectors/safe"));
+    request.path = "/app/connectors/safe/test-form";
     let fragment = dashboard.handle(&request).await.unwrap();
     assert_eq!(fragment.status, 200);
     assert!(fragment
@@ -581,7 +663,7 @@ async fn mfa_qr_uses_broker_url_and_admin_errors_redirect_without_secrets() {
     assert!(response
         .headers
         .contains(&("Cache-Control".into(), "no-store".into())));
-    request.path = "/app/users/invite";
+    request.path = "/app/settings/team/invite";
     request
         .fields
         .insert("email".into(), vec!["member@example.invalid".into()]);
@@ -589,10 +671,10 @@ async fn mfa_qr_uses_broker_url_and_admin_errors_redirect_without_secrets() {
     assert_eq!(response.status, 302);
     assert!(response
         .headers
-        .contains(&("Location".into(), "/app/users?error=invite".into())));
+        .contains(&("Location".into(), "/app/settings/team?error=invite".into())));
     assert!(!response.body.contains("private broker"));
     request.method = "GET";
-    request.path = "/app/users";
+    request.path = "/app/settings/team";
     request.fields.insert("error".into(), vec!["invite".into()]);
     let response = browser.handle(&request).await.unwrap();
     assert!(response

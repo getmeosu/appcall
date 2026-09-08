@@ -182,7 +182,7 @@ pub(crate) fn render(raw: &Value, filters: &Filters, filtered: bool) -> Result<S
                 title: "No tool runs to show.",
                 body: "Browse connectors to choose a tool to run.",
                 action_label: "Browse connectors",
-                action_href: ui::LocalPath::new("/app/toolkits").unwrap(),
+                action_href: ui::LocalPath::new("/app/connectors").unwrap(),
             }
         };
         body.push_str(&empty.render());

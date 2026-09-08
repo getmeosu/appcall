@@ -48,14 +48,14 @@ fn startup_scenarios_are_fixed_and_unknown_values_are_rejected() {
 #[test]
 fn posts_are_exact_native_routes_without_test_form_alias() {
     for path in [
-        "/app/toolkits/connector-0/setup",
-        "/app/toolkits/connector-0/test",
-        "/app/toolkits/connector-3/test",
-        "/app/auth-configs/preview_connection/test",
-        "/app/auth-configs/preview_connection/disconnect",
+        "/app/connectors/connector-0/setup",
+        "/app/connectors/connector-0/test",
+        "/app/connectors/connector-3/test",
+        "/app/connections/preview_connection/test",
+        "/app/connections/preview_connection/disconnect",
         "/app/logs/preview_original/replay",
-        "/app/triggers/preview_event/replay",
-        "/app/toolkits/request",
+        "/app/events/preview_event/replay",
+        "/app/connectors/request",
         "/app/login",
         "/app/login/mfa",
         "/app/signup",
@@ -66,19 +66,19 @@ fn posts_are_exact_native_routes_without_test_form_alias() {
         assert!(allowed("POST", path), "{path}");
     }
     for path in [
-        "/app/toolkits/other/test",
-        "/app/toolkits/connector-0/test-form",
-        "/app/auth-configs/other/disconnect",
+        "/app/connectors/other/test",
+        "/app/connectors/connector-0/test-form",
+        "/app/connections/other/disconnect",
         "/api/auth/login",
-        "/app/users/remove",
-        "/app/toolkits/connector-0/setup/extra",
+        "/app/settings/team/remove",
+        "/app/connectors/connector-0/setup/extra",
     ] {
         assert!(!allowed("POST", path), "{path}");
     }
-    assert!(allowed("GET", "/app/toolkits/connector-0/test-form"));
+    assert!(allowed("GET", "/app/connectors/connector-0/test-form"));
     assert!(!allowed(
         "DELETE",
-        "/app/auth-configs/preview_connection/disconnect"
+        "/app/connections/preview_connection/disconnect"
     ));
 }
 
@@ -86,10 +86,10 @@ fn posts_are_exact_native_routes_without_test_form_alias() {
 async fn empty_and_unavailable_collections_are_distinct() {
     for (op, key) in [
         (DashboardOperation::Catalog, "connectors"),
-        (DashboardOperation::AuthConfigs, "connections"),
+        (DashboardOperation::Connections, "connections"),
         (DashboardOperation::Logs, "logs"),
-        (DashboardOperation::Triggers, "events"),
-        (DashboardOperation::Qa, "certifications"),
+        (DashboardOperation::Events, "events"),
+        (DashboardOperation::Certification, "certifications"),
     ] {
         let result = ScenarioData::new(Scenario::Empty)
             .execute(dashboard_request(op))
@@ -114,7 +114,7 @@ async fn real_filters_produce_real_empty_copy() {
     };
     for (target, message) in [
         (
-            "/app/toolkits?category=unmatched",
+            "/app/connectors?category=unmatched",
             "No connectors match this category.",
         ),
         (
@@ -140,14 +140,14 @@ async fn real_filters_produce_real_empty_copy() {
 #[tokio::test]
 async fn fixture_counters_count_one_execution_without_retaining_fields() {
     let data = ScenarioData::new(Scenario::RequestSuccess);
-    let mut request = dashboard_request(DashboardOperation::RequestToolkit);
+    let mut request = dashboard_request(DashboardOperation::RequestConnector);
     request.fields.insert("name".into(), "PRIVATE-NAME".into());
     request
         .form_values
         .insert("notes".into(), vec!["PRIVATE-NOTES".into()]);
     data.execute(request).await.unwrap();
     assert_eq!(data.stats()["operations"]["request"], 1);
-    data.execute_detailed(dashboard_request(DashboardOperation::RequestToolkit))
+    data.execute_detailed(dashboard_request(DashboardOperation::RequestConnector))
         .await
         .unwrap();
     assert_eq!(data.stats()["operations"]["request"], 2);
@@ -158,7 +158,7 @@ async fn fixture_counters_count_one_execution_without_retaining_fields() {
     ] {
         let data = ScenarioData::new(scenario);
         assert_eq!(
-            data.execute(dashboard_request(DashboardOperation::RequestToolkit))
+            data.execute(dashboard_request(DashboardOperation::RequestConnector))
                 .await,
             Err(expected)
         );
@@ -380,7 +380,7 @@ async fn empty_events_stream_has_one_binding_and_two_independent_delayed_rows() 
     };
     let request = Request {
         method: "GET",
-        path: "/app/triggers",
+        path: "/app/events",
         cookies: "",
         origin: None,
         referer: None,
@@ -392,7 +392,7 @@ async fn empty_events_stream_has_one_binding_and_two_independent_delayed_rows() 
     assert_eq!(
         response
             .body
-            .matches("data-init=\"@get('/app/triggers/stream')\"")
+            .matches("data-init=\"@get('/app/events/stream')\"")
             .count(),
         1
     );
@@ -412,6 +412,6 @@ async fn empty_events_stream_has_one_binding_and_two_independent_delayed_rows() 
     for frame in frames {
         assert!(frame.contains("selector #trigger-rows\ndata: mode prepend"));
         assert!(frame.contains("selector #trigger-empty-state\ndata: mode remove"));
-        assert!(frame.contains("/app/triggers/preview_event/replay"));
+        assert!(frame.contains("/app/events/preview_event/replay"));
     }
 }

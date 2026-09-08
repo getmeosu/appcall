@@ -128,13 +128,13 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
     let origin = format!("http://{host}");
     for path in [
         "/app",
-        "/app/toolkits",
-        "/app/auth-configs",
-        "/app/triggers",
+        "/app/connectors",
+        "/app/connections",
+        "/app/events",
         "/app/logs",
-        "/app/qa",
+        "/app/certification",
         "/app/settings",
-        "/app/settings/usage",
+        "/app/usage",
         "/app/settings/white-labeling",
     ] {
         let response = f.request("GET", path, &host, &origin, "");
@@ -142,7 +142,7 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         assert!(response.contains("dev@appcall.local"));
     }
     for path in [
-        "/app/users",
+        "/app/settings/team",
         "/app/sessions",
         "/app/settings/account",
         "/app/settings/organization",
@@ -173,12 +173,12 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         )
         .starts_with("HTTP/1.1 403"));
     assert!(f
-        .request("GET", "/app/toolkits", "evil.example", &origin, "")
+        .request("GET", "/app/connectors", "evil.example", &origin, "")
         .starts_with("HTTP/1.1 403"));
     assert!(f
         .request(
             "POST",
-            "/app/users/invite",
+            "/app/settings/team/invite",
             &host,
             &origin,
             "email=ignored@example.invalid"
@@ -186,7 +186,7 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         .starts_with("HTTP/1.1 302"));
     let setup = f.request(
         "POST",
-        "/app/toolkits/google-workspace/setup",
+        "/app/connectors/google-workspace/setup",
         &host,
         &origin,
         "projectId=other&externalAccountId=development-brand",
@@ -213,7 +213,7 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         .unwrap();
     write!(
         stream,
-        "GET /app/triggers/stream HTTP/1.1\r\nHost: {host}\r\n\r\n"
+        "GET /app/events/stream HTTP/1.1\r\nHost: {host}\r\n\r\n"
     )
     .unwrap();
     let mut wire = String::new();

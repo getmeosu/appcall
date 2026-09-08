@@ -26,7 +26,7 @@ pub(crate) fn response(html: &str) -> Response {
 }
 /// Source-compatible Datastar prepend frame for the host's persistent event
 /// subscription. Recheck tenant/session authorization during long subscriptions.
-pub fn render_trigger_patch(event: &Value) -> Result<String, Error> {
+pub fn render_event_patch(event: &Value) -> Result<String, Error> {
     let id = event
         .get("id")
         .and_then(Value::as_str)

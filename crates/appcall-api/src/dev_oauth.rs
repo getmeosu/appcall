@@ -213,7 +213,7 @@ impl DevOAuth {
             headers: vec![
                 (
                     "location".into(),
-                    format!("/app/toolkits/{connector}?success=1"),
+                    format!("/app/connectors/{connector}?success=1"),
                 ),
                 ("cache-control".into(), "no-store".into()),
             ],

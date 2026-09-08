@@ -6,23 +6,23 @@ use std::{collections::BTreeMap, future::Future, pin::Pin};
 pub enum DashboardOperation {
     Overview,
     Catalog,
-    Toolkit,
+    Connector,
     TestForm,
     Options,
     RunInputFields,
     Setup,
     Test,
-    RequestToolkit,
-    AuthConfigs,
+    RequestConnector,
+    Connections,
     TestConnection,
     DisconnectConnection,
-    Triggers,
+    Events,
     ReplayEvent,
     Stream,
     Logs,
     Trace,
     ReplayTrace,
-    Qa,
+    Certification,
     Usage,
     Branding,
     SaveBranding,
@@ -196,7 +196,7 @@ impl DashboardRenderer<'_> {
                 DashboardOperation::Usage
                     | DashboardOperation::Branding
                     | DashboardOperation::SaveBranding
-                    | DashboardOperation::RequestToolkit
+                    | DashboardOperation::RequestConnector
                     | DashboardOperation::Stream
             ) {
             Some(segments[2].to_owned())
@@ -250,7 +250,7 @@ impl DashboardRenderer<'_> {
                 ));
             }
             Err(error)
-                if operation == DashboardOperation::RequestToolkit
+                if operation == DashboardOperation::RequestConnector
                     && matches!(
                         error.classification(),
                         Error::Invalid | Error::Unavailable | Error::Configuration
@@ -367,7 +367,7 @@ impl DashboardRenderer<'_> {
         }
         use DashboardOperation::*;
         let redirect = match operation {
-            DisconnectConnection => Some("/app/auth-configs?success=disconnected".to_owned()),
+            DisconnectConnection => Some("/app/connections?success=disconnected".to_owned()),
             TestConnection => {
                 let data = value.get("data").unwrap_or(&value);
                 let status = data
@@ -378,14 +378,14 @@ impl DashboardRenderer<'_> {
                     .unwrap_or("");
                 Some(
                     if status == "passed" {
-                        "/app/auth-configs?success=test-passed"
+                        "/app/connections?success=test-passed"
                     } else {
-                        "/app/auth-configs?success=test-unverified"
+                        "/app/connections?success=test-unverified"
                     }
                     .to_owned(),
                 )
             }
-            ReplayEvent => Some("/app/triggers?replayed=1".to_owned()),
+            ReplayEvent => Some("/app/events?replayed=1".to_owned()),
             ReplayTrace => Some(format!(
                 "/app/logs/{}?replayed=1",
                 resource.as_deref().unwrap_or("")
@@ -415,7 +415,7 @@ impl DashboardRenderer<'_> {
         }
         if operation == Setup {
             return Ok(Response::redirect(&format!(
-                "/app/toolkits/{}?success=1",
+                "/app/connectors/{}?success=1",
                 resource.as_deref().ok_or(Error::Invalid)?
             )));
         }
@@ -425,7 +425,7 @@ impl DashboardRenderer<'_> {
                 .and_then(Value::as_array)
                 .ok_or(Error::Unavailable)?
                 .iter()
-                .map(crate::render_trigger_patch)
+                .map(crate::render_event_patch)
                 .collect::<Result<Vec<_>, _>>()?
                 .join("");
             let mut response = Response::new(200, body);
@@ -435,8 +435,8 @@ impl DashboardRenderer<'_> {
                 .push(("Content-Type".into(), "text/event-stream".into()));
             return Ok(response);
         }
-        if operation == Toolkit {
-            let tab = crate::toolkit::selected_tab(r.field("tab")?);
+        if operation == Connector {
+            let tab = crate::connector::selected_tab(r.field("tab")?);
             let data = if value.get("data").is_some() {
                 value.get_mut("data").ok_or(Error::Unavailable)?
             } else {
@@ -467,24 +467,24 @@ impl DashboardRenderer<'_> {
             .find_map(|key| connection_data.get(key).and_then(Value::as_array))
             .is_some_and(|rows| !rows.is_empty());
         let (banner, recovery) = match (operation, r.field("success")?, r.field("error")?) {
-            (AuthConfigs, _, "test-failed") if has_connections => {
+            (Connections, _, "test-failed") if has_connections => {
                 ("Review the connection setup and its recorded status.", true)
             }
-            (AuthConfigs, _, "disconnect-failed") if has_connections => (
+            (Connections, _, "disconnect-failed") if has_connections => (
                 "Check the connection's current status before running another tool.",
                 true,
             ),
-            (AuthConfigs, "test-passed" | "test-unverified", _) if has_connections => (
+            (Connections, "test-passed" | "test-unverified", _) if has_connections => (
                 "Review the connection's recorded check result below.",
                 false,
             ),
-            (AuthConfigs, "disconnected", _) if has_connections => (
+            (Connections, "disconnected", _) if has_connections => (
                 "Check the connection's current status before running another tool.",
                 false,
             ),
             _ => ("", false),
         };
-        if matches!(operation, Logs | Triggers) {
+        if matches!(operation, Logs | Events) {
             let data = value.get("data").unwrap_or(&value);
             if let Some(cursor) = data
                 .pointer("/pagination/nextCursor")
@@ -523,7 +523,7 @@ impl DashboardRenderer<'_> {
         }
         if matches!(
             operation,
-            Test | Options | RunInputFields | TestForm | RequestToolkit
+            Test | Options | RunInputFields | TestForm | RequestConnector
         ) {
             return Ok(crate::sse::response(&content));
         }
@@ -569,14 +569,14 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
     use DashboardOperation::*;
     let direct = match (method, path) {
         ("GET", "/app") => Overview,
-        ("GET", "/app/toolkits") => Catalog,
-        ("POST", "/app/toolkits/request") => RequestToolkit,
-        ("GET", "/app/auth-configs") => AuthConfigs,
-        ("GET", "/app/triggers") => Triggers,
-        ("GET", "/app/triggers/stream") => Stream,
+        ("GET", "/app/connectors") => Catalog,
+        ("POST", "/app/connectors/request") => RequestConnector,
+        ("GET", "/app/connections") => Connections,
+        ("GET", "/app/events") => Events,
+        ("GET", "/app/events/stream") => Stream,
         ("GET", "/app/logs") => Logs,
-        ("GET", "/app/qa") => Qa,
-        ("GET", "/app/settings/usage") => Usage,
+        ("GET", "/app/certification") => Certification,
+        ("GET", "/app/usage") => Usage,
         ("GET", "/app/settings/white-labeling") => Branding,
         ("POST", "/app/settings/white-labeling") => SaveBranding,
         ("GET", "/app/docs" | "/app/support") => return Some(None),
@@ -591,15 +591,15 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
                 parts.len(),
                 parts.get(3).copied(),
             ) {
-                ("GET", Some("toolkits"), 3, _) => Toolkit,
-                ("GET", Some("toolkits"), 4, Some("test-form")) => TestForm,
-                ("GET", Some("toolkits"), 4, Some("options")) => Options,
-                ("GET", Some("toolkits"), 4, Some("runinput-fields")) => RunInputFields,
-                ("POST", Some("toolkits"), 4, Some("setup")) => Setup,
-                ("POST", Some("toolkits"), 4, Some("test")) => Test,
-                ("POST", Some("auth-configs"), 4, Some("test")) => TestConnection,
-                ("POST", Some("auth-configs"), 4, Some("disconnect")) => DisconnectConnection,
-                ("POST", Some("triggers"), 4, Some("replay")) => ReplayEvent,
+                ("GET", Some("connectors"), 3, _) => Connector,
+                ("GET", Some("connectors"), 4, Some("test-form")) => TestForm,
+                ("GET", Some("connectors"), 4, Some("options")) => Options,
+                ("GET", Some("connectors"), 4, Some("runinput-fields")) => RunInputFields,
+                ("POST", Some("connectors"), 4, Some("setup")) => Setup,
+                ("POST", Some("connectors"), 4, Some("test")) => Test,
+                ("POST", Some("connections"), 4, Some("test")) => TestConnection,
+                ("POST", Some("connections"), 4, Some("disconnect")) => DisconnectConnection,
+                ("POST", Some("events"), 4, Some("replay")) => ReplayEvent,
                 ("GET", Some("logs"), 3, _) => Trace,
                 ("POST", Some("logs"), 4, Some("replay")) => ReplayTrace,
                 _ => return None,

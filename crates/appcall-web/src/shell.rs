@@ -31,7 +31,7 @@ mod tests {
         for forbidden in [
             "h-screen",
             "href=\"/app/runs\"",
-            "href=\"/app/qa\"",
+            "href=\"/app/certification\"",
             "fonts.googleapis.com",
         ] {
             assert!(!html.contains(forbidden), "unexpected {forbidden}");
@@ -41,11 +41,11 @@ mod tests {
     fn active_routes_have_one_owner_and_segment_boundaries() {
         for (path, expected) in [
             ("/app", Some("/app")),
-            ("/app/toolkits/slack", Some("/app/toolkits")),
-            ("/app/toolkits-extra", None),
-            ("/app/settings/usage?month=9", Some("/app/settings/usage")),
+            ("/app/connectors/slack", Some("/app/connectors")),
+            ("/app/connectors-extra", None),
+            ("/app/usage?month=9", Some("/app/usage")),
             ("/app/settings/account", Some("/app/settings")),
-            ("/app/users/member", Some("/app/settings")),
+            ("/app/settings/team/member", Some("/app/settings")),
             ("/app/sessions", Some("/app/settings")),
             ("/app/support", Some("/app/settings")),
             ("/app/runs", None),
@@ -113,13 +113,13 @@ const NAV: &[Destination] = &[
         group: Group::Build,
     },
     Destination {
-        href: "/app/toolkits",
+        href: "/app/connectors",
         label: "Connectors",
         glyph: "◇",
         group: Group::Build,
     },
     Destination {
-        href: "/app/auth-configs",
+        href: "/app/connections",
         label: "Connections",
         glyph: "⇄",
         group: Group::Build,
@@ -131,13 +131,13 @@ const NAV: &[Destination] = &[
         group: Group::Observe,
     },
     Destination {
-        href: "/app/triggers",
+        href: "/app/events",
         label: "Events",
         glyph: "↯",
         group: Group::Observe,
     },
     Destination {
-        href: "/app/settings/usage",
+        href: "/app/usage",
         label: "Usage",
         glyph: "▥",
         group: Group::Observe,
@@ -157,7 +157,7 @@ const NAV: &[Destination] = &[
 ];
 fn active_destination(path: &str) -> Option<&'static str> {
     let path = path.split(['?', '#']).next().unwrap_or(path);
-    if ["/app/users", "/app/sessions", "/app/support"]
+    if ["/app/settings/team", "/app/sessions", "/app/support"]
         .iter()
         .any(|prefix| owns_path(prefix, path))
     {

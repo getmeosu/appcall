@@ -73,7 +73,7 @@ pub async fn assert_log_filters(data: &dyn DashboardData, principal: appcall_aut
             "invalid time must map to browser Invalid: {result:?}"
         );
     }
-    for operation in [Op::Triggers, Op::Stream] {
+    for operation in [Op::Events, Op::Stream] {
         let mut r = request(&[("createdFrom", "invalid"), ("createdBefore", "invalid")]);
         r.operation = operation;
         assert!(data.execute(r).await.is_ok(), "time filter is Logs-only");

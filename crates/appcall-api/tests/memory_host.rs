@@ -9,6 +9,49 @@ use std::{
 
 const KEY: &str = "synthetic-memory-platform-key";
 #[test]
+fn signal_memory_canonical_stream_is_persistent_and_legacy_redirects() {
+    let host = Host::start(&[]);
+    let mut socket = TcpStream::connect(host.address).unwrap();
+    socket
+        .set_read_timeout(Some(Duration::from_secs(3)))
+        .unwrap();
+    write!(
+        socket,
+        "GET /app/triggers/stream?cursor=a%2Fb HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+        host.address
+    )
+    .unwrap();
+    let mut legacy = String::new();
+    // Read a bounded first response chunk: a regression must not wait on an SSE body.
+    let mut buffer = [0; 4096];
+    let count = socket.read(&mut buffer).unwrap();
+    legacy.push_str(std::str::from_utf8(&buffer[..count]).unwrap());
+    assert!(legacy.starts_with("HTTP/1.1 301"), "{legacy}");
+    assert!(legacy
+        .to_lowercase()
+        .contains("location: /app/events/stream?cursor=a%2fb"));
+    let mut socket = TcpStream::connect(host.address).unwrap();
+    socket
+        .set_read_timeout(Some(Duration::from_secs(3)))
+        .unwrap();
+    write!(
+        socket,
+        "GET /app/events/stream HTTP/1.1\r\nHost: {}\r\n\r\n",
+        host.address
+    )
+    .unwrap();
+    let mut response = String::new();
+    while !response.contains(": connected") {
+        let count = socket.read(&mut buffer).unwrap();
+        assert!(count > 0, "stream ended: {response}");
+        response.push_str(std::str::from_utf8(&buffer[..count]).unwrap());
+        assert!(response.len() < 16384);
+    }
+    assert!(response.starts_with("HTTP/1.1 200"));
+    assert!(response.to_lowercase().contains("text/event-stream"));
+}
+
+#[test]
 fn signal_fonts_survive_real_http_without_text_conversion() {
     let host = Host::start(&[]);
     for name in [
@@ -178,16 +221,16 @@ fn memory_api_dashboard_actions_and_restart_share_ephemeral_state() {
         .is_some_and(|s| !s.is_empty()));
     for path in [
         "/app",
-        "/app/toolkits",
-        "/app/auth-configs",
+        "/app/connectors",
+        "/app/connections",
         "/app/logs",
-        "/app/triggers",
-        "/app/settings/usage",
+        "/app/events",
+        "/app/usage",
     ] {
         let (status, _) = host.request("GET", path, false, "");
         assert_eq!(status, 200, "{path}");
     }
-    let (status, qa) = host.request("GET", "/app/qa", false, "");
+    let (status, qa) = host.request("GET", "/app/certification", false, "");
     assert_eq!(status, 200);
     assert!(qa.contains("unavailable") || qa.contains("requires"));
     assert_eq!(host.request("GET", "/v1/unipile/accounts", true, "").0, 404);

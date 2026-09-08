@@ -94,7 +94,7 @@ fn local_start_activates_only_its_empty_secret_authorizing_connection() {
     assert_eq!(response.status, 302);
     assert!(response
         .headers
-        .contains(&("location".into(), "/app/toolkits/test?success=1".into())));
+        .contains(&("location".into(), "/app/connectors/test?success=1".into())));
     assert_eq!(
         store
             .lock()

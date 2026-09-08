@@ -14,7 +14,7 @@ pub(crate) fn banner(message: &str, success: bool) -> String {
 }
 pub(crate) fn failure_target(path: &str) -> Option<&'static str> {
     Some(match path {
-        "/app/users/invite" => "/app/users?error=invite",
+        "/app/settings/team/invite" => "/app/settings/team?error=invite",
         "/app/settings/organization" => "/app/settings/organization?error=org",
         "/app/settings/account/mfa/setup" => "/app/settings/account?error=setup",
         "/app/settings/account/mfa/verify" => "/app/settings/account?error=verify",
@@ -22,10 +22,14 @@ pub(crate) fn failure_target(path: &str) -> Option<&'static str> {
         "/app/settings/account/change-password" => "/app/settings/account?error=password",
         "/app/settings/billing/checkout" => "/app/settings/billing?error=checkout",
         "/app/settings/billing/portal" => "/app/settings/billing?error=portal",
-        p if p.starts_with("/app/users/") && p.ends_with("/remove") => "/app/users?error=remove",
-        p if p.starts_with("/app/users/") && p.ends_with("/role") => "/app/users?error=role",
-        p if p.starts_with("/app/sessions/") && p.ends_with("/revoke") => {
-            "/app/sessions?error=revoke"
+        p if p.starts_with("/app/settings/team/") && p.ends_with("/remove") => {
+            "/app/settings/team?error=remove"
+        }
+        p if p.starts_with("/app/settings/team/") && p.ends_with("/role") => {
+            "/app/settings/team?error=role"
+        }
+        p if p.starts_with("/app/settings/account/sessions/") && p.ends_with("/revoke") => {
+            "/app/settings/account?error=revoke#account-sessions"
         }
         _ => return None,
     })
@@ -50,10 +54,16 @@ pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
     };
     let err = r.field("error")?;
     let message = match (r.path, err) {
-        ("/app/users", "invite") => "Check the members list before sending another invitation.",
-        ("/app/users", "remove") => "Review the members list before repeating a removal.",
-        ("/app/users", "role") => "Review the member's current role before making another change.",
-        ("/app/sessions", "revoke") => "Review the sessions list before repeating a revocation.",
+        ("/app/settings/team", "invite") => {
+            "Check the members list before sending another invitation."
+        }
+        ("/app/settings/team", "remove") => "Review the members list before repeating a removal.",
+        ("/app/settings/team", "role") => {
+            "Review the member's current role before making another change."
+        }
+        ("/app/sessions" | "/app/settings/account", "revoke") => {
+            "Review the sessions list before repeating a revocation."
+        }
         ("/app/settings/organization", "org") => {
             "Check the current organisation name before making another change."
         }
@@ -70,16 +80,16 @@ pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
         return Ok(hint(message, false));
     }
     let success = match r.path {
-        "/app/users" if r.field("invited")? == "1" => {
+        "/app/settings/team" if r.field("invited")? == "1" => {
             "Check the members list before sending another invitation."
         }
-        "/app/users" if r.field("removed")? == "1" => {
+        "/app/settings/team" if r.field("removed")? == "1" => {
             "Review the members list before repeating a removal."
         }
-        "/app/users" if r.field("role")? == "updated" => {
+        "/app/settings/team" if r.field("role")? == "updated" => {
             "Review the member's current role before making another change."
         }
-        "/app/sessions" if r.field("revoked")? == "1" => {
+        "/app/sessions" | "/app/settings/account" if r.field("revoked")? == "1" => {
             "Review the sessions list before repeating a revocation."
         }
         "/app/settings/account" if r.field("password")? == "changed" => {
@@ -408,7 +418,11 @@ pub(crate) fn settings(project_id: &str, project_name: &str, organization: &str)
         body.push_str(&format!("<a href=\"/app/settings/{path}\" class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-neon-ice-500\"><h3 class=\"text-sm font-semibold\">{title} →</h3><p class=\"mt-2 text-sm text-dusk-blue-400\">{description}</p>{}</a>",if path=="organization" {format!("<p class=\"mt-3 text-xs text-dusk-blue-500\">{}</p>",escape(organization))} else {String::new()}));
     }
     for (href, label, description) in [
-        ("/app/users", "Team", "Manage team members and invitations."),
+        (
+            "/app/settings/team",
+            "Team",
+            "Manage team members and invitations.",
+        ),
         (
             "/app/sessions",
             "Sessions",

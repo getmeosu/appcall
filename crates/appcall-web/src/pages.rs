@@ -3,11 +3,11 @@ use serde_json::Value;
 pub(crate) fn title(op: Op) -> &'static str {
     match op {
         Op::Overview => "Getting Started",
-        Op::Catalog | Op::Toolkit | Op::Setup => "Toolkits",
-        Op::AuthConfigs => "Auth Configs",
-        Op::Triggers => "Triggers",
+        Op::Catalog | Op::Connector | Op::Setup => "Connectors",
+        Op::Connections => "Connections",
+        Op::Events => "Events",
         Op::Logs | Op::Trace => "Logs",
-        Op::Qa => "QA",
+        Op::Certification => "Certification",
         Op::Usage => "Usage",
         Op::Branding => "White Labeling",
         _ => "Result",
@@ -68,14 +68,14 @@ fn form_with_variant(
     label: &str,
     variant: crate::ui::ButtonVariant,
 ) -> String {
-    let datastar = if action == "/app/toolkits/request" {
-        " data-on:submit=\"@post('/app/toolkits/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\"".to_owned()
+    let datastar = if action == "/app/connectors/request" {
+        " data-on:submit=\"@post('/app/connectors/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\"".to_owned()
     } else {
         String::new()
     };
     let button = crate::ui::Button {
         variant,
-        working_label: (action == "/app/toolkits/request").then_some("Submitting…"),
+        working_label: (action == "/app/connectors/request").then_some("Submitting…"),
         target: crate::ui::ButtonTarget::Button {
             kind: crate::ui::ButtonType::Submit,
             form: None,
@@ -119,7 +119,7 @@ fn confirmation(action: &str, label: &str, heading: &str, body: &str) -> Result<
 }
 pub(crate) fn event_replay(id: &str) -> Result<String, Error> {
     confirmation(
-        &format!("/app/triggers/{id}/replay"),
+        &format!("/app/events/{id}/replay"),
         "Run this again",
         "Dispatch this event again?",
         &format!("Dispatch event {id} again? Consumers may process the event again."),
@@ -131,50 +131,50 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::Overview=>{
    let mut body=header("Getting Started","Connect a toolkit, run your first tool call, and wire up triggers.");body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");
    for (label,key) in [("Toolkits available","toolkitCount"),("Connected accounts","connectionCount"),("Tool calls this month","toolCalls")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?))}body.push_str("</div>");
-   body.push_str(&card("<h3 class=\"text-sm font-semibold text-dusk-blue-100\">Setup checklist</h3><ul class=\"mt-4 space-y-3\"><li><a href=\"/app/toolkits\">Browse the toolkit catalog</a></li><li><a href=\"/app/toolkits\">Connect an account</a></li><li><a href=\"/app/toolkits\">Run a tool call</a></li><li><a href=\"/app/triggers\">Add a trigger</a></li></ul>"));body
+   body.push_str(&card("<h3 class=\"text-sm font-semibold text-dusk-blue-100\">Setup checklist</h3><ul class=\"mt-4 space-y-3\"><li><a href=\"/app/connectors\">Browse the toolkit catalog</a></li><li><a href=\"/app/connectors\">Connect an account</a></li><li><a href=\"/app/connectors\">Run a tool call</a></li><li><a href=\"/app/events\">Add a trigger</a></li></ul>"));body
   },
   Op::Catalog=>{
    let items=rows(v,&["connectors","items","cards"])?;
-   let mut body=header("Toolkits","Connect your apps and explore their tools.");
-   body.push_str("<div class=\"mb-4 flex flex-wrap gap-2\"><a href=\"/app/toolkits\">All</a>");
-   if let Some(categories)=v.get("categories").and_then(Value::as_array){for category in categories.iter().filter_map(Value::as_str){let mut url=reqwest::Url::parse("https://local.invalid/app/toolkits").map_err(|_|Error::Invalid)?;url.query_pairs_mut().append_pair("category",category);body.push_str(&format!("<a class=\"rounded-full border border-space-indigo-700 px-3 py-1 text-xs\" href=\"/app/toolkits?{}\">{}</a>",escape(url.query().unwrap_or("")),escape(category)));}}
+   let mut body=header("Connectors","Connect your apps and explore their tools.");
+   body.push_str("<div class=\"mb-4 flex flex-wrap gap-2\"><a href=\"/app/connectors\">All</a>");
+   if let Some(categories)=v.get("categories").and_then(Value::as_array){for category in categories.iter().filter_map(Value::as_str){let mut url=reqwest::Url::parse("https://local.invalid/app/connectors").map_err(|_|Error::Invalid)?;url.query_pairs_mut().append_pair("category",category);body.push_str(&format!("<a class=\"rounded-full border border-space-indigo-700 px-3 py-1 text-xs\" href=\"/app/connectors?{}\">{}</a>",escape(url.query().unwrap_or("")),escape(category)));}}
    body.push_str("</div><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3\">");
-   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/toolkits/{key}\" class=\"group flex flex-col gap-3 rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-space-indigo-700\"><div class=\"flex items-center gap-3\"><span class=\"truncate text-sm font-semibold text-dusk-blue-50 group-hover:text-neon-ice-400\">{}</span></div><p class=\"text-xs text-dusk-blue-500\">{count} tools</p></a>",escape(name)));}
+   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/connectors/{key}\" class=\"group flex flex-col gap-3 rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-space-indigo-700\"><div class=\"flex items-center gap-3\"><span class=\"truncate text-sm font-semibold text-dusk-blue-50 group-hover:text-neon-ice-400\">{}</span></div><p class=\"text-xs text-dusk-blue-500\">{count} tools</p></a>",escape(name)));}
    body.push_str("</div>");
-   if items.is_empty(){body.push_str(&if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/toolkits")}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/toolkits#toolkit-request-form")});}
-   body.push_str("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\"></div>");body.push_str(&format!("<template id=\"toolkit-request-recovery\">{}</template>",request_recovery()));body.push_str(&card(&format!("<h3 class=\"text-base font-semibold text-dusk-blue-50\">Request a connector</h3><p class=\"mt-1 text-sm text-dusk-blue-400\">Tell us which connector you need.</p>{}",form_with_variant("/app/toolkits/request",&format!("{}{}{}",input("name","Connector name","","text"),input("email","Your email","","email"),input("notes","Notes (optional)","","text")),"Request this connector",if items.is_empty(){crate::ui::ButtonVariant::Secondary}else{crate::ui::ButtonVariant::Primary}).replacen("<form ","<form id=\"toolkit-request-form\" ",1))));body
+   if items.is_empty(){body.push_str(&if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/connectors")}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/connectors#toolkit-request-form")});}
+   body.push_str("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\"></div>");body.push_str(&format!("<template id=\"toolkit-request-recovery\">{}</template>",request_recovery()));body.push_str(&card(&format!("<h3 class=\"text-base font-semibold text-dusk-blue-50\">Request a connector</h3><p class=\"mt-1 text-sm text-dusk-blue-400\">Tell us which connector you need.</p>{}",form_with_variant("/app/connectors/request",&format!("{}{}{}",input("name","Connector name","","text"),input("email","Your email","","email"),input("notes","Notes (optional)","","text")),"Request this connector",if items.is_empty(){crate::ui::ButtonVariant::Secondary}else{crate::ui::ButtonVariant::Primary}).replacen("<form ","<form id=\"toolkit-request-form\" ",1))));body
   },
-  Op::Toolkit=>crate::toolkit::render(v,resource.ok_or(Error::Invalid)?)?,
-  Op::TestForm=>crate::toolkit::test_fields(v,resource.unwrap_or(""))?,
+  Op::Connector=>crate::connector::render(v,resource.ok_or(Error::Invalid)?)?,
+  Op::TestForm=>crate::connector::test_fields(v,resource.unwrap_or(""))?,
   Op::Options=>{
     let field=string(v,&["fieldName"]);if field.is_empty() || field.len()>256 || !field.bytes().all(|b|b.is_ascii_alphanumeric() || matches!(b,b'.'|b'_'|b'-')){return Err(Error::Invalid)}
     let mut body=format!("<div id=\"tk-opts-{}\" class=\"tk-opts\">",escape(field));
-    let click=escape("document.getElementById(el.dataset.field).value=el.dataset.value; if(el.dataset.detail){@get('/app/toolkits/' + encodeURIComponent(el.dataset.key) + '/runinput-fields?connectionId=' + encodeURIComponent(document.getElementById('tk-connection').value) + '&actorId=' + encodeURIComponent(el.dataset.value) + '&source=' + encodeURIComponent(el.dataset.detail))}");
+    let click=escape("document.getElementById(el.dataset.field).value=el.dataset.value; if(el.dataset.detail){@get('/app/connectors/' + encodeURIComponent(el.dataset.key) + '/runinput-fields?connectionId=' + encodeURIComponent(document.getElementById('tk-connection').value) + '&actorId=' + encodeURIComponent(el.dataset.value) + '&source=' + encodeURIComponent(el.dataset.detail))}");
     for item in rows(v,&["options","items"])?{body.push_str(&format!("<button type=\"button\" class=\"block w-full px-3 py-2 text-left text-sm hover:bg-space-indigo-900\" data-field=\"{}\" data-value=\"{}\" data-key=\"{}\" data-detail=\"{}\" data-on:click=\"{click}\">{}</button>",escape(field),escape(string(item,&["value","id"])),escape(string(v,&["key"])),escape(string(v,&["detailSource"])),escape(string(item,&["label","name"]))));}body.push_str("</div>");body
   },
   Op::RunInputFields=>{let schema=v.get("inputSchema").or_else(||v.get("schema")).unwrap_or(v);format!("<div id=\"tk-runinput\"><input type=\"hidden\" name=\"runInputSchema\" value=\"{}\">{}</div>",escape(&schema.to_string()),crate::forms::render_guided_fields(schema,&Value::Null,"f.runInput",resource)?)},
-  Op::AuthConfigs=>{
+  Op::Connections=>{
    let items=rows(v,&["connections","rows","items"])?;
-   header("Auth Configs","Connections authorize accounts for use with connectors.")+&if items.is_empty(){empty("No connections to show.","Browse connectors to configure a connection.","Browse connectors","/app/toolkits")}else{table(items,&[("Connector","connector"),("Auth Type","authType"),("Status","status"),("Last Test","lastTest")],Some(("/app/auth-configs","id",&["test","disconnect"])))?}
+   header("Connections","Connections authorize accounts for use with connectors.")+&if items.is_empty(){empty("No connections to show.","Browse connectors to configure a connection.","Browse connectors","/app/connectors")}else{table(items,&[("Connector","connector"),("Auth Type","authType"),("Status","status"),("Last Test","lastTest")],Some(("/app/connections","id",&["test","disconnect"])))?}
   },
   Op::Logs=>crate::logs::render(v, &crate::logs::Filters::default(), v.get("hasFilters").and_then(Value::as_bool)==Some(true))?,
-  Op::Triggers=>{
+  Op::Events=>{
    let items=rows(v,&["events","items","rows"])?;
-   let mut events=table(items,&[("Connector","connector"),("Operation","operation"),("Connection","connectionId"),("Received","createdAt")],Some(("/app/triggers","id",&["replay"])))?.replace("<tbody class=", "<tbody id=\"trigger-rows\" aria-live=\"polite\" class=").replace("<table class=", "<table data-init=\"@get('/app/triggers/stream')\" class=");
-   if items.is_empty(){events=events.replace("</tbody>",&format!("<tr id=\"trigger-empty-state\"><td colspan=\"5\">{}</td></tr></tbody>",empty("No webhook events to show.","Browse connectors to inspect their declared events.","Browse connectors","/app/toolkits")));}
-   header("Triggers","Receive and replay provider webhook events.")+&events
+   let mut events=table(items,&[("Connector","connector"),("Operation","operation"),("Connection","connectionId"),("Received","createdAt")],Some(("/app/events","id",&["replay"])))?.replace("<tbody class=", "<tbody id=\"trigger-rows\" aria-live=\"polite\" class=").replace("<table class=", "<table data-init=\"@get('/app/events/stream')\" class=");
+   if items.is_empty(){events=events.replace("</tbody>",&format!("<tr id=\"trigger-empty-state\"><td colspan=\"5\">{}</td></tr></tbody>",empty("No webhook events to show.","Browse connectors to inspect their declared events.","Browse connectors","/app/connectors")));}
+   header("Events","Receive and replay provider webhook events.")+&events
   },
   Op::Trace=>crate::trace::standalone(v, resource.ok_or(Error::Invalid)?)?,
-  Op::Qa if v.get("unavailable").and_then(Value::as_bool)==Some(true)=>header("QA","Connector certification and manifest fingerprint drift.")+&card("<p>QA status unavailable</p><p class=\"text-sm text-dusk-blue-400\">Configure PostgreSQL and run connector QA to view certification results.</p>"),
-  Op::Qa=>{
+  Op::Certification if v.get("unavailable").and_then(Value::as_bool)==Some(true)=>header("Certification","Connector certification and manifest fingerprint drift.")+&card("<p>QA status unavailable</p><p class=\"text-sm text-dusk-blue-400\">Configure PostgreSQL and run connector QA to view certification results.</p>"),
+  Op::Certification=>{
    let items=rows(v,&["certifications","rows","items"])?;
-   header("QA","Connector certification and manifest fingerprint drift.")+&if items.is_empty(){"<section class=\"ui-empty-state\" aria-labelledby=\"qa-empty-heading\"><h3 id=\"qa-empty-heading\">No connector QA results to show.</h3><p>Connector QA results are not available in this list.</p></section>".into()}else{table(items,&[("Connector","connector"),("Status","status"),("Total","total"),("Passed","passed"),("Failed","failed"),("Not certified","notCertified"),("Manifest drift","drifted"),("Manifest fingerprint","manifestFingerprint"),("Last run","certifiedAt")],None)?}
+   header("Certification","Connector certification and manifest fingerprint drift.")+&if items.is_empty(){"<section class=\"ui-empty-state\" aria-labelledby=\"qa-empty-heading\"><h3 id=\"qa-empty-heading\">No connector QA results to show.</h3><p>Connector QA results are not available in this list.</p></section>".into()}else{table(items,&[("Connector","connector"),("Status","status"),("Total","total"),("Passed","passed"),("Failed","failed"),("Not certified","notCertified"),("Manifest drift","drifted"),("Manifest fingerprint","manifestFingerprint"),("Last run","certifiedAt")],None)?}
   },
   Op::Usage=>{let mut body=header("Usage",string(v,&["month"]));body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");for (label,key) in [("Tool calls","toolCalls"),("Synced records","syncedRecords"),("Webhook events","webhookEvents")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?));}body.push_str("</div>");body},
   Op::Branding=>crate::branding::render(v),
-  Op::Test=>crate::toolkit::result(Some(v)),
+  Op::Test=>crate::connector::result(Some(v)),
   Op::Setup=>json(v),
-  Op::RequestToolkit=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-busy=\"false\" data-request-state=\"success\" class=\"rounded-lg border border-space-indigo-800 p-4\">Connector request received.</div>".into(),
+  Op::RequestConnector=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-busy=\"false\" data-request-state=\"success\" class=\"rounded-lg border border-space-indigo-800 p-4\">Connector request received.</div>".into(),
   _=>return Err(Error::Invalid)
  };
     Ok(body)
@@ -255,17 +255,17 @@ pub(crate) fn static_page(path: &str) -> String {
         (
             "Quickstart",
             "Connect your first toolkit and test an action from its detail page.",
-            "/app/toolkits",
+            "/app/connectors",
         ),
         (
             "Toolkits & connectors",
             "Browse the connector catalog, configure auth, and test actions live.",
-            "/app/toolkits",
+            "/app/connectors",
         ),
         (
-            "Triggers & webhooks",
+            "Events & webhooks",
             "Receive and replay provider webhook events.",
-            "/app/triggers",
+            "/app/events",
         ),
         (
             "Logs",
@@ -306,9 +306,9 @@ mod rendering_contract_tests {
                 .unwrap();
             assert!(request_form.contains("ui-button-secondary"));
             assert!(request_form.contains("Request this connector"));
-            assert!(request_form.contains("method=\"post\" action=\"/app/toolkits/request\""));
+            assert!(request_form.contains("method=\"post\" action=\"/app/connectors/request\""));
             assert!(request_form.contains(
-                "data-on:submit=\"@post('/app/toolkits/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\""
+                "data-on:submit=\"@post('/app/connectors/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\""
             ));
         }
         let populated = render(
@@ -332,7 +332,7 @@ mod rendering_contract_tests {
                 "Request this connector",
             ),
             (
-                Op::AuthConfigs,
+                Op::Connections,
                 vec!["connections", "rows", "items"],
                 "No connections to show.",
                 "Browse connectors to configure a connection.",
@@ -346,14 +346,14 @@ mod rendering_contract_tests {
                 "Browse connectors",
             ),
             (
-                Op::Triggers,
+                Op::Events,
                 vec!["events", "items", "rows"],
                 "No webhook events to show.",
                 "Browse connectors to inspect their declared events.",
                 "Browse connectors",
             ),
             (
-                Op::Qa,
+                Op::Certification,
                 vec!["certifications", "rows", "items"],
                 "No connector QA results to show.",
                 "Connector QA results are not available in this list.",
@@ -388,7 +388,7 @@ mod rendering_contract_tests {
             }
         }
         let unavailable = render(
-            Op::Qa,
+            Op::Certification,
             &json!({"unavailable":true,"certifications":[]}),
             None,
         )
@@ -404,9 +404,9 @@ mod rendering_contract_tests {
             "Request a connector",
             "Tell us which connector you need.",
             "Request this connector",
-            "href=\"/app/toolkits#toolkit-request-form\"",
-            "method=\"post\" action=\"/app/toolkits/request\"",
-            "data-on:submit=\"@post('/app/toolkits/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\"",
+            "href=\"/app/connectors#toolkit-request-form\"",
+            "method=\"post\" action=\"/app/connectors/request\"",
+            "data-on:submit=\"@post('/app/connectors/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\"",
             "name=\"name\"",
             "name=\"email\"",
             "name=\"notes\"",
@@ -423,7 +423,7 @@ mod rendering_contract_tests {
         assert!(render(Op::Logs, &json!([]), None)
             .unwrap()
             .contains("Inspect recorded tool executions."));
-        assert!(render(Op::AuthConfigs, &json!([]), None)
+        assert!(render(Op::Connections, &json!([]), None)
             .unwrap()
             .contains("Connections authorize accounts for use with connectors."));
     }
@@ -445,7 +445,7 @@ mod rendering_contract_tests {
         .unwrap();
         for (key, count) in [("mixed", 1), ("empty", 0), ("fallback", 7)] {
             let card = html
-                .split(&format!("href=\"/app/toolkits/{key}\""))
+                .split(&format!("href=\"/app/connectors/{key}\""))
                 .nth(1)
                 .unwrap()
                 .split("</a>")
@@ -478,7 +478,7 @@ mod rendering_contract_tests {
             "2 tools",
             "3 tools",
             "0 tools",
-            "/app/toolkits/one",
+            "/app/connectors/one",
             "name=\"email\"",
         ] {
             assert!(html.contains(expected), "{expected}");
@@ -487,7 +487,7 @@ mod rendering_contract_tests {
 
     #[test]
     fn toolkit_preserves_setup_routes_secrets_selection_and_action_only_picker() {
-        let html = render(Op::Toolkit, &json!({
+        let html = render(Op::Connector, &json!({
             "name":"<Provider>","description":"Use <token>",
             "setup":{"mode":"api_key","help":"Keep <secret>","fields":[{"key":"api_key","label":"API <key>","secret":true,"required":true}],
                 "routes":[{"id":"oauth","label":"Use OAuth","fields":[{"name":"region","label":"Region"}]}]},
@@ -504,8 +504,8 @@ mod rendering_contract_tests {
             "value=\"conn_1\" selected",
             ">conn_1</option>",
             "value=\"send\" selected",
-            "/app/toolkits/provider/setup",
-            "/app/toolkits/provider/test",
+            "/app/connectors/provider/setup",
+            "/app/connectors/provider/test",
             "name=\"input_raw\"",
             "name=\"callerToken\"",
         ] {
@@ -519,25 +519,25 @@ mod rendering_contract_tests {
             .split("</form>")
             .next()
             .unwrap();
-        assert!(run_form.contains("method=\"post\" action=\"/app/toolkits/provider/test\""));
+        assert!(run_form.contains("method=\"post\" action=\"/app/connectors/provider/test\""));
         assert!(run_form.contains("data-on:submit="));
-        assert!(run_form.contains("@post(&#39;/app/toolkits/provider/test&#39;"));
+        assert!(run_form.contains("@post(&#39;/app/connectors/provider/test&#39;"));
         let fallback = render(
-            Op::Toolkit,
+            Op::Connector,
             &json!({"operations":[],"setup":{"mode":"api_key","fields":[]},"connectionId":"manual"}),
             Some("provider"),
         )
         .unwrap();
         assert!(fallback.contains("id=\"tk-connection\" name=\"connectionId\""));
         assert!(!fallback.contains("value=\"manual\""));
-        assert!(fallback.contains("/app/toolkits/provider/setup"));
+        assert!(fallback.contains("/app/connectors/provider/setup"));
         let no_auth = render(
-            Op::Toolkit,
+            Op::Connector,
             &json!({"operations":[],"setup":{"mode":"none"}}),
             Some("provider"),
         )
         .unwrap();
-        assert!(!no_auth.contains("/app/toolkits/provider/setup"));
+        assert!(!no_auth.contains("/app/connectors/provider/setup"));
     }
 
     #[test]
@@ -565,9 +565,9 @@ mod rendering_contract_tests {
     fn tables_link_only_valid_ids_and_render_non_string_cells_without_html() {
         for (op, data, expected) in [
             (
-                Op::AuthConfigs,
+                Op::Connections,
                 json!({"connections":[{"id":"conn_1","connector":"<evil>","lastTest":null}]}),
-                "/app/auth-configs/conn_1/disconnect",
+                "/app/connections/conn_1/disconnect",
             ),
             (
                 Op::Logs,
@@ -575,12 +575,12 @@ mod rendering_contract_tests {
                 "/app/logs/req_1\"",
             ),
             (
-                Op::Triggers,
+                Op::Events,
                 json!({"events":[{"id":"evt_1","connector":"<evil>"}]}),
-                "/app/triggers/evt_1/replay",
+                "/app/events/evt_1/replay",
             ),
             (
-                Op::Qa,
+                Op::Certification,
                 json!({"certifications":[{"connector":"<evil>","passed":4,"drifted":false}]}),
                 "false",
             ),
@@ -601,7 +601,7 @@ mod rendering_contract_tests {
             Err(Error::Unavailable)
         );
         assert_eq!(
-            render(Op::Toolkit, &json!({"operations":[]}), None),
+            render(Op::Connector, &json!({"operations":[]}), None),
             Err(Error::Invalid)
         );
     }
@@ -626,7 +626,11 @@ mod rendering_contract_tests {
                 "id=\"tk-test-result\"",
             ),
             (Op::Setup, json!({"result":"<script>"}), "&lt;script&gt;"),
-            (Op::RequestToolkit, json!({}), "Connector request received."),
+            (
+                Op::RequestConnector,
+                json!({}),
+                "Connector request received.",
+            ),
             (
                 Op::RunInputFields,
                 json!({"schema":{"type":"object","properties":{"x":{"type":"string"}}}}),
@@ -642,7 +646,7 @@ mod rendering_contract_tests {
         }
         assert_eq!(render(Op::Stream, &json!({}), None), Err(Error::Invalid));
         let docs = static_page("/app/docs");
-        for target in ["/app/toolkits", "/app/triggers", "/app/logs"] {
+        for target in ["/app/connectors", "/app/events", "/app/logs"] {
             assert!(docs.contains(&format!("href=\"{target}\"")));
         }
         assert!(static_page("/app/support").contains("mailto:info@manavritti.com"));
@@ -654,20 +658,20 @@ mod memory_qa_tests {
     #[test]
     fn form_uses_shared_submit_without_losing_native_or_datastar_action() {
         let html = super::form(
-            "/app/toolkits/request",
+            "/app/connectors/request",
             "<input name=\"name\">",
             "Request toolkit",
         );
         assert!(html.contains("ui-button-primary"));
         assert!(html.contains("type=\"submit\""));
-        assert!(html.contains("method=\"post\" action=\"/app/toolkits/request\""));
+        assert!(html.contains("method=\"post\" action=\"/app/connectors/request\""));
         assert!(html
-            .contains("data-on:submit=\"@post('/app/toolkits/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\""));
+            .contains("data-on:submit=\"@post('/app/connectors/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\""));
     }
     #[test]
     fn missing_qa_storage_is_unavailable_not_empty_certification() {
         let html = super::render(
-            super::Op::Qa,
+            super::Op::Certification,
             &serde_json::json!({"unavailable":true,"certifications":[]}),
             None,
         )
@@ -675,7 +679,7 @@ mod memory_qa_tests {
         assert!(html.contains("QA status unavailable"));
         assert!(!html.contains("<table"));
         let persisted = super::render(
-            super::Op::Qa,
+            super::Op::Certification,
             &serde_json::json!({"certifications":[]}),
             None,
         )

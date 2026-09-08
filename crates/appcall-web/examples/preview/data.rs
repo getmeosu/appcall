@@ -29,7 +29,7 @@ impl ScenarioData {
     }
     pub fn record_post(&self, path: &str, accepted: bool) {
         self.increment(8);
-        if path == "/app/toolkits/request" {
+        if path == "/app/connectors/request" {
             self.increment(9);
         }
         if !accepted {
@@ -65,7 +65,7 @@ impl ScenarioData {
             Op::DisconnectConnection => Some(3),
             Op::ReplayTrace => Some(4),
             Op::ReplayEvent => Some(5),
-            Op::RequestToolkit => Some(6),
+            Op::RequestConnector => Some(6),
             Op::Stream => Some(7),
             _ => None,
         };
@@ -84,7 +84,7 @@ impl ScenarioData {
             return value.map_err(Into::into);
         }
         Ok(match r.operation {
-            Op::Toolkit | Op::TestForm => {
+            Op::Connector | Op::TestForm => {
                 let mut value = connector_fixture(&r)?;
                 if self.scenario != Scenario::Preview
                     && r.resource.as_deref() == Some("connector-0")
@@ -118,7 +118,7 @@ impl ScenarioData {
                 json!({"synthetic":true})
             }
             Op::Stream => json!({"events":[]}),
-            Op::RequestToolkit => {
+            Op::RequestConnector => {
                 tokio::time::sleep(self.scenario.delay()).await;
                 match self.scenario {
                     Scenario::RequestInvalid => return Err(Error::Invalid.into()),
@@ -167,28 +167,28 @@ fn collection(scenario: Scenario, r: &DashboardRequest) -> Option<Result<Value, 
     use DashboardOperation as Op;
     let key = match r.operation {
         Op::Catalog => "connectors",
-        Op::AuthConfigs => "connections",
+        Op::Connections => "connections",
         Op::Logs => "logs",
-        Op::Triggers => "events",
-        Op::Qa => "certifications",
+        Op::Events => "events",
+        Op::Certification => "certifications",
         _ => return None,
     };
     if scenario == Scenario::Unavailable {
         return Some(Err(Error::Unavailable));
     }
     if scenario == Scenario::Empty
-        || scenario == Scenario::EventsStream && r.operation == Op::Triggers
+        || scenario == Scenario::EventsStream && r.operation == Op::Events
     {
         return Some(Ok(json!({key:[]})));
     }
     let long_name = "Synthetic Workspace & \"regional operations\" — long integration name for layout inspection";
     let rows = match r.operation {
         Op::Catalog => (0..24).map(|i| json!({"key":format!("connector-{i}"),"name":if i==0 {long_name.to_owned()} else {format!("Integration {}",i+1)},"categories":["Synthetic"],"operations":[{"name":"list","kind":"action"},{"name":"create","kind":"action"}]})).collect(),
-        Op::AuthConfigs => vec![json!({"id":"preview_connection","connector":long_name,"authType":"api_key","status":"active","lastTest":"passed"})],
+        Op::Connections => vec![json!({"id":"preview_connection","connector":long_name,"authType":"api_key","status":"active","lastTest":"passed"})],
         Op::Logs if r.fields.get("status").is_some_and(|s| !s.is_empty() && s != "succeeded") => vec![],
         Op::Logs => vec![json!({"requestId":"preview_original","connector":long_name,"action":"messages.list","status":"succeeded","createdAt":"2026-09-08T10:00:00Z","errorCode":""})],
-        Op::Triggers => vec![event_fixture("First synthetic event")],
-        Op::Qa => vec![json!({"connector":long_name,"status":"synthetic","total":3,"passed":2,"failed":1,"notCertified":1,"drifted":false,"manifestFingerprint":"synthetic_fixture_only","certifiedAt":"2026-09-08T10:00:00Z"})],
+        Op::Events => vec![event_fixture("First synthetic event")],
+        Op::Certification => vec![json!({"connector":long_name,"status":"synthetic","total":3,"passed":2,"failed":1,"notCertified":1,"drifted":false,"manifestFingerprint":"synthetic_fixture_only","certifiedAt":"2026-09-08T10:00:00Z"})],
         _ => unreachable!("collection operation checked above"),
     };
     Some(Ok(json!({key:rows})))
@@ -199,6 +199,6 @@ fn event_fixture(operation: &str) -> Value {
 pub fn event_frames() -> Result<Vec<String>, Error> {
     ["First synthetic event", "Second synthetic event"]
         .iter()
-        .map(|operation| render_trigger_patch(&event_fixture(operation)))
+        .map(|operation| render_event_patch(&event_fixture(operation)))
         .collect()
 }

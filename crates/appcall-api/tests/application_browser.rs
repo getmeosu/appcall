@@ -262,7 +262,9 @@ fn request(address: SocketAddr, method: &str, path: &str, cookie: &str, body: &s
         .unwrap();
     write!(socket,"{method} {path} HTTP/1.1\r\nHost: {address}\r\nOrigin: http://{address}\r\nCookie: {cookie}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
     let mut wire = String::new();
-    socket.read_to_string(&mut wire).unwrap();
+    socket.read_to_string(&mut wire).unwrap_or_else(|error| {
+        panic!("{method} {path} response read failed: {error}; received: {wire}")
+    });
     wire
 }
 fn cookie(wire: &str) -> String {
@@ -318,7 +320,7 @@ fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
         .query_one("SELECT bool_and(success) FROM _sqlx_migrations", &[])
         .unwrap()
         .get::<_, bool>(0));
-    let unauthenticated = request(address, "GET", "/app/auth-configs", "", "");
+    let unauthenticated = request(address, "GET", "/app/connections", "", "");
     assert!(unauthenticated.starts_with("HTTP/1.1 302"));
     trace_cases::assert_assets(address);
     trace_cases::assert_session_required(address, "");
@@ -334,10 +336,10 @@ fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
     assert!(!original_cookie.contains("synthetic-rotated-refresh"));
     assert!(!original_cookie.contains(fixture["jwt"].as_str().unwrap()));
     assert!(login.to_lowercase().contains("httponly"));
-    let catalog = request(address, "GET", "/app/toolkits", &original_cookie, "");
+    let catalog = request(address, "GET", "/app/connectors", &original_cookie, "");
     assert!(catalog.starts_with("HTTP/1.1 200"), "{catalog}");
     assert!(catalog.contains("Slack"));
-    let configs = request(address, "GET", "/app/auth-configs", &original_cookie, "");
+    let configs = request(address, "GET", "/app/connections", &original_cookie, "");
     assert!(configs.starts_with("HTTP/1.1 200"), "{configs}");
     assert!(configs.contains("application-browser-connection"));
     assert!(!configs.contains("other-project-secret-connection"));
@@ -359,6 +361,23 @@ fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
     let refreshed = request(address, "GET", "/app", &aged_cookie, "");
     assert!(refreshed.starts_with("HTTP/1.1 200"), "{refreshed}");
     let refreshed_cookie = cookie(&refreshed);
+    let legacy = request(
+        address,
+        "GET",
+        "/app/triggers/stream?cursor=a%2Fb",
+        &refreshed_cookie,
+        "",
+    );
+    assert!(legacy.starts_with("HTTP/1.1 301"), "{legacy}");
+    assert!(legacy
+        .to_lowercase()
+        .contains("location: /app/events/stream?cursor=a%2fb"));
+    let canonical_anonymous = request(address, "GET", "/app/connections", "", "");
+    assert!(
+        canonical_anonymous.starts_with("HTTP/1.1 302"),
+        "{canonical_anonymous}"
+    );
+
     assert!(broker
         .calls
         .lock()
@@ -369,7 +388,11 @@ fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
     stream
         .set_read_timeout(Some(Duration::from_millis(250)))
         .unwrap();
-    write!(stream,"GET /app/triggers/stream HTTP/1.1\r\nHost: {address}\r\nCookie: {refreshed_cookie}\r\n\r\n").unwrap();
+    write!(
+        stream,
+        "GET /app/events/stream HTTP/1.1\r\nHost: {address}\r\nCookie: {refreshed_cookie}\r\n\r\n"
+    )
+    .unwrap();
     let mut wire = String::new();
     wait_for(&mut stream, &mut wire, ": connected");
     assert!(wire.starts_with("HTTP/1.1 200"), "{wire}");
@@ -401,7 +424,7 @@ fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
         }
     }
     assert!(
-        request(address, "GET", "/app/auth-configs", &refreshed_cookie, "")
+        request(address, "GET", "/app/connections", &refreshed_cookie, "")
             .starts_with("HTTP/1.1 302")
     );
     trace_cases::assert_session_required(address, &refreshed_cookie);

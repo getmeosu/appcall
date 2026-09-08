@@ -71,7 +71,7 @@ fn pretty(v: &Value) -> String {
     escape(&serde_json::to_string_pretty(v).unwrap_or_default())
 }
 fn destination(key: &str, pairs: &[(&str, &str)]) -> String {
-    let mut url = reqwest::Url::parse(&format!("https://local.invalid/app/toolkits/{key}"))
+    let mut url = reqwest::Url::parse(&format!("https://local.invalid/app/connectors/{key}"))
         .expect("validated connector key");
     for (name, value) in pairs.iter().filter(|(_, value)| !value.is_empty()) {
         url.query_pairs_mut().append_pair(name, value);
@@ -140,7 +140,7 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
             ]
         )
     );
-    let mut html=format!("<div id=\"tk-detail\" data-toolkit-key=\"{}\">{}<header class=\"tk-header\"><div><h1>{}</h1><p>{}</p></div>",escape(key),ui::back_link("Toolkits",ui::LocalPath::new("/app/toolkits").unwrap()),escape(text(v,"name")),escape(text(v,"description")));
+    let mut html=format!("<div id=\"tk-detail\" data-toolkit-key=\"{}\">{}<header class=\"tk-header\"><div><h1>{}</h1><p>{}</p></div>",escape(key),ui::back_link("Connectors",ui::LocalPath::new("/app/connectors").unwrap()),escape(text(v,"name")),escape(text(v,"description")));
     if active.is_empty() && v.get("setup").is_some_and(supported_setup) {
         html.push_str(&styled_link(
             "Connect",
@@ -265,7 +265,7 @@ fn tools(
         ..ui::Field::new("tk-action", "action", "Tool", ui::Control::Select(&options))
     }
     .render();
-    html.push_str(&format!("<form id=\"tk-tool-selector\" method=\"get\" action=\"/app/toolkits/{key}\" class=\"tk-mobile-selector\">{selector}{}{}</form>",hidden("tk-selection-connection","connectionId",connection),styled_submit("Select tool",actions.is_empty(),ui::ButtonVariant::Quiet)));
+    html.push_str(&format!("<form id=\"tk-tool-selector\" method=\"get\" action=\"/app/connectors/{key}\" class=\"tk-mobile-selector\">{selector}{}{}</form>",hidden("tk-selection-connection","connectionId",connection),styled_submit("Select tool",actions.is_empty(),ui::ButtonVariant::Quiet)));
     if let Some(op) = action {
         html.push_str(&format!("<header class=\"tk-selected-tool\"><h2>{}</h2><code>{}</code><p>{}</p></header><details class=\"tk-schema\"><summary>Schema</summary><h3>Input schema</h3><pre aria-live=\"off\">{}</pre><h3>Output schema</h3><pre aria-live=\"off\">{}</pre></details>",escape(text(op,"title")),escape(action_name),escape(text(op,"description")),pretty(op.get("inputSchema").unwrap_or(&Value::Null)),pretty(op.get("outputSchema").unwrap_or(&Value::Null))));
     } else {
@@ -274,7 +274,7 @@ fn tools(
                 title: "No tool selected",
                 body: "Select an available tool to inspect its inputs.",
                 action_label: "Browse toolkits",
-                action_href: ui::LocalPath::new("/app/toolkits").unwrap(),
+                action_href: ui::LocalPath::new("/app/connectors").unwrap(),
             }
             .render(),
         );
@@ -299,7 +299,7 @@ fn tools(
         )
     }
     .render();
-    let post=format!("@post('/app/toolkits/{key}/test', {{contentType:'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()}})");
+    let post=format!("@post('/app/connectors/{key}/test', {{contentType:'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()}})");
     let run = if !active.is_empty()
         && action.is_some_and(|op| op.get("destructive").and_then(Value::as_bool) == Some(true))
     {
@@ -309,13 +309,13 @@ fn tools(
             heading: "Confirm destructive operation",
             body: &format!("Run {action_name} as {connection}? This operation is marked destructive and may permanently change data."),
             confirm: "Confirm and run",
-            action: ui::LocalPath::new(&format!("/app/toolkits/{key}/test")).unwrap(),
+            action: ui::LocalPath::new(&format!("/app/connectors/{key}/test")).unwrap(),
             form: Some("tk-run-form"),
         }.render()
     } else {
         submit("Run tool", active.is_empty() || action.is_none())
     };
-    html.push_str(&format!("<div class=\"tk-run-layout\"><form id=\"tk-run-form\" class=\"tk-input-pane\" method=\"post\" action=\"/app/toolkits/{key}/test\" data-on:submit=\"{}\">{account}{}{}<div id=\"tk-run-control\">{run}</div></form>{}</div></div></div>",escape(&post),hidden("tk-selected-action","action",action_name),test_fields(v,key)?,result(None)));
+    html.push_str(&format!("<div class=\"tk-run-layout\"><form id=\"tk-run-form\" class=\"tk-input-pane\" method=\"post\" action=\"/app/connectors/{key}/test\" data-on:submit=\"{}\">{account}{}{}<div id=\"tk-run-control\">{run}</div></form>{}</div></div></div>",escape(&post),hidden("tk-selected-action","action",action_name),test_fields(v,key)?,result(None)));
     Ok(html)
 }
 
@@ -380,7 +380,7 @@ fn accounts_panel(accounts: &[&Value]) -> String {
                 title: "No accounts connected",
                 body: "Use Settings to configure a supported connection.",
                 action_label: "Manage accounts",
-                action_href: ui::LocalPath::new("/app/auth-configs").unwrap(),
+                action_href: ui::LocalPath::new("/app/connections").unwrap(),
             }
             .render(),
         );
@@ -411,7 +411,7 @@ fn accounts_panel(accounts: &[&Value]) -> String {
         }
         html.push_str("</tbody></table></div>");
     }
-    html.push_str(&link("Manage accounts", "/app/auth-configs"));
+    html.push_str(&link("Manage accounts", "/app/connections"));
     html
 }
 fn events(key: &str, operations: &[Value]) -> String {
@@ -434,7 +434,7 @@ fn events(key: &str, operations: &[Value]) -> String {
     }
     html.push_str(&link(
         "View received events",
-        &format!("/app/triggers?connector={key}"),
+        &format!("/app/events?connector={key}"),
     ));
     html
 }
@@ -491,7 +491,7 @@ fn settings(v: &Value, key: &str) -> Result<String, Error> {
                     _ => "Connect".to_owned(),
                 };
                 html.push_str(&format!(
-                    "<form method=\"post\" action=\"/app/toolkits/{key}/setup\">{}{}</form>",
+                    "<form method=\"post\" action=\"/app/connectors/{key}/setup\">{}{}</form>",
                     setup_controls(array(setup, "fields"), "base")?,
                     submit(&label, false)
                 ));
@@ -501,7 +501,7 @@ fn settings(v: &Value, key: &str) -> Result<String, Error> {
                     if !valid_id(route_id) {
                         return Err(Error::Unavailable);
                     }
-                    html.push_str(&format!("<form method=\"post\" action=\"/app/toolkits/{key}/setup\"><h3>{}</h3><p>{}</p>{}{}{}{}</form>",escape(text(route,"label")),escape(text(route,"help")),setup_controls(array(setup,"fields"),&format!("{index}-base"))?,hidden(&format!("tk-setup-route-{index}"),"route",route_id),setup_controls(array(route,"fields"),&format!("{index}-route"))?,submit(text(route,"label"),false)));
+                    html.push_str(&format!("<form method=\"post\" action=\"/app/connectors/{key}/setup\"><h3>{}</h3><p>{}</p>{}{}{}{}</form>",escape(text(route,"label")),escape(text(route,"help")),setup_controls(array(setup,"fields"),&format!("{index}-base"))?,hidden(&format!("tk-setup-route-{index}"),"route",route_id),setup_controls(array(route,"fields"),&format!("{index}-route"))?,submit(text(route,"label"),false)));
                 }
             }
         } else if text(setup, "mode") == "none" {
@@ -512,7 +512,7 @@ fn settings(v: &Value, key: &str) -> Result<String, Error> {
     } else {
         html.push_str("<p>No additional configuration is declared for this connector.</p>");
     }
-    html.push_str(&link("Manage accounts", "/app/auth-configs"));
+    html.push_str(&link("Manage accounts", "/app/connections"));
     html.push_str("</div>");
     Ok(html)
 }

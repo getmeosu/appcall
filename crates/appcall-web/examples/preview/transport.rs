@@ -52,7 +52,8 @@ pub async fn dispatch_preview(
     data: &ScenarioData,
 ) -> Result<Response, Error> {
     let parsed = preview_target(target)?;
-    let path = parsed.path();
+    let canonical = canonical_browser_path(method, parsed.path());
+    let path = canonical.as_deref().unwrap_or(parsed.path());
     let accepted = allowed(method, path) || method == "POST" && path == "/preview/delete";
     if method == "POST" {
         data.record_post(path, accepted);
@@ -69,6 +70,11 @@ pub async fn dispatch_preview(
         return Ok(plain_response(404, "Not found".into()));
     }
     let fields = preview_fields(target, if method == "POST" { body } else { &[] })?;
+    if let Some(location) = legacy_browser_location(method, target) {
+        let mut response = plain_response(301, String::new());
+        response.headers.push(("Location".into(), location));
+        return Ok(response);
+    }
     let fixture: Value =
         serde_json::from_str(include_str!("../../../appcall-auth/tests/go_golden.json"))
             .map_err(|_| Error::Configuration)?;
@@ -169,7 +175,7 @@ pub fn request_result(
     mut response: Response,
 ) -> Option<Response> {
     if method == "POST"
-        && path == "/app/toolkits/request"
+        && path == "/app/connectors/request"
         && response.status == 200
         && response.body.contains("data-request-state=\"success\"")
     {
@@ -254,7 +260,7 @@ pub async fn serve_ui(
     let path = target.split('?').next().unwrap_or("");
     if data.scenario == Scenario::EventsStream
         && method == "GET"
-        && path == "/app/triggers/stream"
+        && path == "/app/events/stream"
         && response.status == 200
     {
         return tokio::time::timeout(Duration::from_secs(5), write_event_stream(stream))

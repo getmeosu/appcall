@@ -321,7 +321,7 @@ fn memory_with_independent_anusa_enforces_membership_and_shares_state() {
         .next()
         .unwrap();
     let cookie_header = format!("Cookie: {cookie}\r\n");
-    let page = host.request("GET", "/app/auth-configs", &cookie_header, "", false);
+    let page = host.request("GET", "/app/connections", &cookie_header, "", false);
     assert_eq!(status(&page), 200, "{page}");
     assert!(body(&page).contains(id));
     assert!(!body(&page).contains("synthetic-memory-token"));
@@ -382,7 +382,7 @@ fn memory_with_independent_anusa_enforces_membership_and_shares_state() {
         );
         std::thread::sleep(Duration::from_millis(40));
     }
-    let recovered_page = host.request("GET", "/app/auth-configs", &cookie_header, "", false);
+    let recovered_page = host.request("GET", "/app/connections", &cookie_header, "", false);
     assert_eq!(status(&recovered_page), 200, "{recovered_page}");
     assert!(body(&recovered_page).contains(id));
     db.admin
@@ -393,7 +393,7 @@ fn memory_with_independent_anusa_enforces_membership_and_shares_state() {
         403
     );
     assert_ne!(
-        status(&host.request("GET", "/app/auth-configs", &cookie_header, "", false)),
+        status(&host.request("GET", "/app/connections", &cookie_header, "", false)),
         200
     );
     db.admin.batch_execute("INSERT INTO tenant_memberships VALUES('11111111-1111-1111-1111-111111111111','tenant-memory')").unwrap();

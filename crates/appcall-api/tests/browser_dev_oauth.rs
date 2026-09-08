@@ -324,7 +324,7 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
     let cookie = host.login();
     let start = host.request(
         "POST",
-        "/app/toolkits/google-workspace/setup",
+        "/app/connectors/google-workspace/setup",
         &cookie,
         "externalAccountId=brand-browser",
     );
@@ -352,7 +352,7 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
     assert!(callback.starts_with("HTTP/1.1 302"), "{callback}");
     assert_eq!(
         header(&callback, "location"),
-        Some("/app/toolkits/google-workspace?success=1")
+        Some("/app/connectors/google-workspace?success=1")
     );
     assert_eq!(
         database.status(&id),
@@ -371,7 +371,7 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
     assert!(!replay.starts_with("HTTP/1.1 302"));
     let reconnect = host.request(
         "POST",
-        "/app/toolkits/google-workspace/setup",
+        "/app/connectors/google-workspace/setup",
         &cookie,
         &format!("externalAccountId=brand-browser&connectionId={id}"),
     );
@@ -393,7 +393,12 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
     for (production, managed) in [(false, true), (true, false)] {
         let host = Host::start(&database, &broker, &fixture, production, managed);
         let cookie = host.login();
-        let response = host.request("POST", "/app/toolkits/google-workspace/setup", &cookie, "");
+        let response = host.request(
+            "POST",
+            "/app/connectors/google-workspace/setup",
+            &cookie,
+            "",
+        );
         assert!(
             !header(&response, "location").is_some_and(|u| u.starts_with("/oauth/local/authorize")),
             "fallback forbidden for production={production}, managed={managed}: {response}"

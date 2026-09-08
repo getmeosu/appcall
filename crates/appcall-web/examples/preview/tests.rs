@@ -3,10 +3,10 @@ use super::*;
 #[tokio::test]
 async fn copy_preview_populated_collections_use_real_dtos() {
     for (operation, key) in [
-        (DashboardOperation::AuthConfigs, "connections"),
+        (DashboardOperation::Connections, "connections"),
         (DashboardOperation::Logs, "logs"),
-        (DashboardOperation::Triggers, "events"),
-        (DashboardOperation::Qa, "certifications"),
+        (DashboardOperation::Events, "events"),
+        (DashboardOperation::Certification, "certifications"),
     ] {
         let result = Data.execute(dashboard_request(operation)).await;
         assert!(
@@ -28,7 +28,7 @@ async fn copy_preview_confirmations_are_available_at_valid_fixture_ids() {
         ),
         (DashboardOperation::ReplayTrace, "preview_original"),
         (DashboardOperation::ReplayEvent, "preview_event"),
-        (DashboardOperation::RequestToolkit, ""),
+        (DashboardOperation::RequestConnector, ""),
     ] {
         let mut request = dashboard_request(operation);
         request.resource = Some(resource.into());
@@ -81,7 +81,7 @@ fn dynamic_request(operation: DashboardOperation) -> DashboardRequest {
 
 #[tokio::test]
 async fn dynamic_preview_declares_its_dedicated_action_without_changing_baseline() {
-    let mut request = dashboard_request(DashboardOperation::Toolkit);
+    let mut request = dashboard_request(DashboardOperation::Connector);
     request.resource = Some("connector-3".into());
     let item = Data.execute(request).await.unwrap();
     assert_eq!(item["action"], "actors.run");
@@ -94,7 +94,7 @@ async fn dynamic_preview_declares_its_dedicated_action_without_changing_baseline
         "actors.input_schema"
     );
     let baseline = Data
-        .execute(dashboard_request(DashboardOperation::Toolkit))
+        .execute(dashboard_request(DashboardOperation::Connector))
         .await
         .unwrap();
     assert_eq!(baseline["action"], "messages.list");
@@ -143,7 +143,7 @@ async fn dynamic_preview_renders_existing_option_and_runinput_targets() {
         .collect();
     let mut request = Request {
         method: "GET",
-        path: "/app/toolkits/connector-3/options",
+        path: "/app/connectors/connector-3/options",
         cookies: "",
         origin: None,
         referer: None,
@@ -155,7 +155,7 @@ async fn dynamic_preview_renders_existing_option_and_runinput_targets() {
     assert!(options.body.starts_with("event: datastar-patch-elements\n"));
     assert!(options.body.contains("id=\"tk-opts-f.actorId\""));
     assert!(options.body.contains("data-field=\"f.actorId\" data-value=\"preview_actor_alpha\" data-key=\"connector-3\" data-detail=\"actors.input_schema\""));
-    request.path = "/app/toolkits/connector-3/runinput-fields";
+    request.path = "/app/connectors/connector-3/runinput-fields";
     request
         .fields
         .insert("source".into(), vec!["actors.input_schema".into()]);
@@ -196,7 +196,7 @@ async fn dynamic_preview_rejects_malformed_or_unavailable_fixture_selection() {
 
 #[test]
 fn connector_preview_form_transport_preserves_body_and_duplicates() {
-    let fields = preview_fields("/app/toolkits/connector-0/test?tab=tools",
+    let fields = preview_fields("/app/connectors/connector-0/test?tab=tools",
         b"connectionId=preview_active_1&action=messages.list&f.query=hash%23+%26+space&f.metadata.key=one&f.metadata.key=two&f.metadata.val=1&f.metadata.val=2")
         .unwrap();
     assert_eq!(
@@ -216,7 +216,7 @@ async fn connector_preview_waits_for_the_complete_form_body() {
     let (mut client, mut server) = tokio::io::duplex(1024);
     let body = "f.query=long%20input".repeat(200);
     let expected = format!(
-        "POST /app/toolkits/connector-0/test HTTP/1.1\r\nContent-Length: {}\r\n\r\n{body}",
+        "POST /app/connectors/connector-0/test HTTP/1.1\r\nContent-Length: {}\r\n\r\n{body}",
         body.len()
     );
     let sent = expected.clone();
@@ -249,7 +249,7 @@ async fn connector_preview_rejects_incomplete_or_ambiguous_http_bodies() {
 #[tokio::test]
 async fn connector_preview_has_realistic_but_explicitly_synthetic_data() {
     let item = Data
-        .execute(dashboard_request(DashboardOperation::Toolkit))
+        .execute(dashboard_request(DashboardOperation::Connector))
         .await
         .expect("connector detail must be available in the local preview");
     assert_eq!(item["action"], "messages.list");
@@ -272,7 +272,7 @@ async fn connector_preview_has_realistic_but_explicitly_synthetic_data() {
 
 #[tokio::test]
 async fn connector_preview_can_exercise_destructive_confirmation_without_deleting_data() {
-    let mut request = dashboard_request(DashboardOperation::Toolkit);
+    let mut request = dashboard_request(DashboardOperation::Connector);
     request
         .fields
         .insert("action".into(), "messages.delete".into());
@@ -324,7 +324,7 @@ async fn connector_preview_assembles_fields_without_reflecting_credentials() {
 #[tokio::test]
 async fn connector_preview_supports_empty_and_inactive_account_states() {
     for (key, expected_count) in [("connector-1", 0), ("connector-2", 1)] {
-        let mut request = dashboard_request(DashboardOperation::Toolkit);
+        let mut request = dashboard_request(DashboardOperation::Connector);
         request.resource = Some(key.into());
         let item = Data.execute(request).await.unwrap();
         let connections = item["connections"].as_array().unwrap();
