@@ -124,6 +124,39 @@ impl Dashboard<'_> {
 pub(crate) struct DashboardRenderer<'a> {
     pub data: &'a dyn DashboardData,
 }
+
+fn catalog_matches(connector: &Value, query: &str) -> bool {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return true;
+    }
+    let text_matches = |value: Option<&str>| {
+        value
+            .map(str::to_lowercase)
+            .is_some_and(|value| value.contains(&query))
+    };
+    text_matches(connector.get("name").and_then(Value::as_str))
+        || text_matches(connector.get("key").and_then(Value::as_str))
+        || connector
+            .get("categories")
+            .and_then(Value::as_array)
+            .is_some_and(|categories| {
+                categories
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .any(|category| text_matches(Some(category)))
+            })
+        || connector
+            .get("operations")
+            .and_then(Value::as_array)
+            .is_some_and(|operations| {
+                operations.iter().any(|operation| {
+                    text_matches(operation.get("title").and_then(Value::as_str))
+                        || text_matches(operation.get("name").and_then(Value::as_str))
+                })
+            })
+}
+
 impl DashboardRenderer<'_> {
     pub(crate) async fn render(
         &self,
@@ -149,7 +182,9 @@ impl DashboardRenderer<'_> {
         }
         let operation = operation.ok_or(Error::Invalid)?;
         let has_filters = match operation {
-            DashboardOperation::Catalog => !r.field("category")?.is_empty(),
+            DashboardOperation::Catalog => {
+                !r.field("category")?.trim().is_empty() || !r.field("search")?.trim().is_empty()
+            }
             DashboardOperation::Logs => ["status", "connector", "action", "connectionId"]
                 .iter()
                 .map(|key| r.field(key))
@@ -300,20 +335,27 @@ impl DashboardRenderer<'_> {
                 .map(str::to_owned)
                 .collect::<std::collections::BTreeSet<_>>();
             let selected = r.field("category")?;
+            let search = r.field("search")?;
             let filtered = connectors
                 .iter()
                 .filter(|c| {
-                    selected.is_empty()
+                    (selected.trim().is_empty()
                         || c.get("categories")
                             .and_then(Value::as_array)
                             .is_some_and(|values| {
-                                values.iter().any(|v| v.as_str() == Some(selected))
-                            })
+                                values
+                                    .iter()
+                                    .filter_map(Value::as_str)
+                                    .any(|value| value.trim().eq_ignore_ascii_case(selected.trim()))
+                            }))
+                        && catalog_matches(c, search)
                 })
                 .cloned()
                 .collect::<Vec<_>>();
             map.insert("connectors".into(), Value::Array(filtered));
             map.insert("categories".into(), serde_json::json!(categories));
+            map.insert("category".into(), Value::String(selected.into()));
+            map.insert("search".into(), Value::String(search.into()));
         }
         if operation == DashboardOperation::Options {
             let target = if value.get("data").is_some() {

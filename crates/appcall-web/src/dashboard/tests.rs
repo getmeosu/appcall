@@ -700,6 +700,37 @@ async fn catalog_filter_keeps_category_navigation_and_forwards_account_identity(
 }
 
 #[tokio::test]
+async fn catalog_search_matches_connector_categories_and_tool_titles() {
+    let data = fixture(json!({"data":{"connectors":[
+        {"key":"mail","name":"Mail","categories":["Messaging"],"operations":[{"name":"send","title":"Send message","kind":"action"}]},
+        {"key":"drive","name":"Drive","categories":["Files"],"operations":[{"name":"upload","title":"Upload document","kind":"action"}]},
+        {"key":"calendar","name":"Calendar","categories":["Productivity"],"operations":[]}
+    ]}}));
+    for (query, expected, absent) in [
+        ("mail", "Mail", "Drive"),
+        ("FILES", "Drive", "Mail"),
+        ("upload document", "Drive", "Mail"),
+    ] {
+        let mut r = request("/app/toolkits");
+        r.fields.insert("search".into(), vec![query.into()]);
+        let response = render(&data, &r, Some(DashboardOperation::Catalog))
+            .await
+            .unwrap();
+        assert!(
+            response.body.contains(expected),
+            "{query}: missing {expected}"
+        );
+        assert!(
+            !response.body.contains(absent),
+            "{query}: found unexpected {absent}"
+        );
+        assert!(response.body.contains("name=\"search\""));
+        assert!(response.body.contains("value=\""));
+        assert!(response.body.contains("aria-live=\"polite\""));
+    }
+}
+
+#[tokio::test]
 async fn invalid_fields_and_resource_ids_fail_before_data_execution() {
     let data = fixture(json!({}));
     for fields in [
