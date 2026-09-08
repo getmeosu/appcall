@@ -524,7 +524,7 @@ mod rendering_contract_tests {
         assert!(run_form.contains("@post(&#39;/app/toolkits/provider/test&#39;"));
         let fallback = render(
             Op::Toolkit,
-            &json!({"operations":[],"setup":{"mode":"api_key","fields":[]},"connectionId":"manual"}),
+            &json!({"operations":[],"setup":{"mode":"api_key","fields":[]},"connectionId":""}),
             Some("provider"),
         )
         .unwrap();

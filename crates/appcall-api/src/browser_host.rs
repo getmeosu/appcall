@@ -735,7 +735,7 @@ impl ApiDashboard {
                 } else {
                     let fields=r.fields.iter().filter(|(key,_)|!["externalAccountId","route","projectId","connectionId"].contains(&key.as_str())).map(|(k,v)|(k.clone(),v.clone())).collect();
                     let connection=if existing.is_empty() {
-                        self.setup.submit_checked(&scope,resource,field("route"),&fields,&|| ensure_active().is_ok())
+                        self.setup.submit_new_checked(&scope,resource,field("route"),&fields,&|| ensure_active().is_ok())
                     } else {
                         self.setup.update_checked(&scope,existing,resource,field("route"),&fields,&|| ensure_active().is_ok())
                     }.map_err(|e|dashboard_failure::setup_failure(e,Error::Invalid,&description.setup,field("route")))?;
@@ -783,16 +783,32 @@ impl ApiDashboard {
         let ages = self.db(|client| {
             client
                 .query(
-                    "SELECT id, GREATEST(0, EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - created_at)))::bigint \
-                     FROM connections \
-                     WHERE project_id=$1 \
-                       AND ($2='' OR external_account_id=$2 OR credential_owner='platform')",
+                    "SELECT c.id, \
+                            GREATEST(0, EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - c.created_at)))::bigint, \
+                            CASE WHEN c.status='authorizing' \
+                                 AND i.operation='authorization' AND i.state='authorizing' \
+                                 THEN GREATEST(0, EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - i.created_at)))::bigint \
+                            END \
+                     FROM connections AS c \
+                     LEFT JOIN oauth_refresh_intents AS i \
+                       ON i.project_id=c.project_id AND i.connection_id=c.id \
+                      AND i.operation='authorization' AND i.state='authorizing' \
+                     WHERE c.project_id=$1 \
+                       AND ($2='' OR c.external_account_id=$2 OR c.credential_owner='platform')",
                     &[&project, &account],
                 )
                 .map_err(|_| appcall_web::Error::Unavailable)
                 .map(|rows| {
                     rows.into_iter()
-                        .map(|row| (row.get::<_, String>(0), row.get::<_, i64>(1)))
+                        .map(|row| {
+                            (
+                                row.get::<_, String>(0),
+                                (
+                                    row.get::<_, i64>(1),
+                                    row.get::<_, Option<i64>>(2),
+                                ),
+                            )
+                        })
                         .collect::<std::collections::BTreeMap<_, _>>()
                 })
         })?;
@@ -800,8 +816,11 @@ impl ApiDashboard {
             .iter()
             .map(|connection| {
                 let mut value = connection_value(connection);
-                if let Some(age) = ages.get(&connection.id) {
-                    value["createdAgeSeconds"] = json!(age);
+                if let Some((created_age, authorization_age)) = ages.get(&connection.id) {
+                    value["createdAgeSeconds"] = json!(created_age);
+                    if let Some(age) = authorization_age {
+                        value["authorizationAgeSeconds"] = json!(age);
+                    }
                 }
                 value
             })

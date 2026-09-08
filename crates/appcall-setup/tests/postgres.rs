@@ -5,7 +5,7 @@ use appcall_store::{
 };
 use postgres::{Client, NoTls};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, Mutex,
@@ -243,6 +243,39 @@ fn atomic_replacement_ownership_and_validation() {
         updated.secret_ref_id
     );
 }
+
+#[test]
+#[ignore = "explicit PostgreSQL isolated schema"]
+fn new_setup_does_not_replace_existing_without_an_explicit_connection_id() {
+    let db = Database::new();
+    let service = setup(&db);
+    let platform = appcall_setup::SetupScope::new("p", None).unwrap();
+    let fields = |value: &str| BTreeMap::from([("apiKey".into(), value.into())]);
+    let existing = service
+        .submit(&platform, "brevo", "", &fields("old"))
+        .unwrap();
+    let created = service
+        .submit_new_checked(&platform, "brevo", "", &fields("new"), &|| true)
+        .unwrap();
+    assert_ne!(created.id, existing.id);
+    let listed = service.list(&platform).unwrap();
+    let brevo_ids = listed
+        .iter()
+        .filter(|connection| connection.connector == "brevo")
+        .map(|connection| connection.id.clone())
+        .collect::<BTreeSet<_>>();
+    assert_eq!(
+        brevo_ids,
+        BTreeSet::from([existing.id.clone(), created.id.clone()])
+    );
+    assert!(listed.iter().any(|connection| connection.id == "c"));
+    assert_ne!(created.secret_ref_id, existing.secret_ref_id);
+    assert_eq!(
+        service.get(&platform, &existing.id).unwrap().secret_ref_id,
+        existing.secret_ref_id
+    );
+}
+
 #[test]
 #[ignore = "explicit PostgreSQL isolated schema"]
 fn setup_composes_oauth_callback_and_brand_reconnect() {

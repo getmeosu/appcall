@@ -1,5 +1,6 @@
 use appcall_store::*;
 use postgres::{Client, NoTls};
+use std::{thread, time::Duration};
 #[test]
 #[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
 fn existing_schema_scopes_and_credential_transactions_are_atomic() {
@@ -159,6 +160,97 @@ fn existing_schema_scopes_and_credential_transactions_are_atomic() {
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
 }
+
+#[test]
+#[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
+fn stale_authorization_cleanup_rechecks_intent_after_waiting_for_connection_lock() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "store_expiry_race_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+    ] {
+        admin.batch_execute(sql).unwrap();
+    }
+    admin
+        .batch_execute("INSERT INTO projects(id,name) VALUES('p','race'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,created_at,updated_at) VALUES('conn','p','slack','oauth2','authorizing','brand','brand',now()-interval '1 day',now()-interval '1 day'); INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,created_at,updated_at) VALUES('p','conn','old-attempt','old-secret','authorization','authorizing',now()-interval '31 minutes',now()-interval '31 minutes')")
+        .unwrap();
+    let scoped = format!(
+        "{url}{}options=-csearch_path%3D{schema}",
+        if url.contains('?') { '&' } else { '?' }
+    );
+    let mut authorizer = Client::connect(&scoped, NoTls).unwrap();
+    authorizer.batch_execute("BEGIN").unwrap();
+    authorizer
+        .query_one("SELECT id FROM connections WHERE id='conn' FOR UPDATE", &[])
+        .unwrap();
+    let mut cleanup_client = Client::connect(&scoped, NoTls).unwrap();
+    let cleanup_pid: i32 = cleanup_client
+        .query_one("SELECT pg_backend_pid()", &[])
+        .unwrap()
+        .get(0);
+    let cleanup = thread::spawn(move || {
+        let mut store = Store::new(cleanup_client, LocalProvider::new(&[7; 32]).unwrap());
+        store.expire_stale_authorizing(
+            "p",
+            std::time::SystemTime::now() - std::time::Duration::from_secs(30 * 60),
+        )
+    });
+    let mut waiting = false;
+    for _ in 0..400 {
+        let state = authorizer
+            .query_opt(
+                "SELECT wait_event_type FROM pg_stat_activity WHERE pid=$1",
+                &[&cleanup_pid],
+            )
+            .unwrap()
+            .and_then(|row| row.get::<_, Option<String>>(0));
+        if state.as_deref() == Some("Lock") {
+            waiting = true;
+            break;
+        }
+        thread::sleep(Duration::from_millis(5));
+    }
+    if !waiting {
+        authorizer.batch_execute("ROLLBACK").unwrap();
+        let _ = cleanup.join();
+        panic!("cleanup did not reach the connection row lock");
+    }
+    authorizer
+        .execute(
+            "UPDATE oauth_refresh_intents SET attempt_id='new-attempt',created_at=now(),updated_at=now() WHERE project_id='p' AND connection_id='conn'",
+            &[],
+        )
+        .unwrap();
+    authorizer.batch_execute("COMMIT").unwrap();
+    assert_eq!(cleanup.join().unwrap().unwrap(), 0);
+    assert_eq!(
+        authorizer
+            .query_one("SELECT status FROM connections WHERE id='conn'", &[])
+            .unwrap()
+            .get::<_, String>(0),
+        "authorizing"
+    );
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
 #[test]
 fn connection_wire_format_matches_go() {
     let json = r#"{"ID":"c","ProjectID":"p","Connector":"mock","AuthType":"api_key","Status":"active","SecretRefID":"","LastTestStatus":"unknown","ExternalAccountID":"a","CredentialOwner":"brand"}"#;

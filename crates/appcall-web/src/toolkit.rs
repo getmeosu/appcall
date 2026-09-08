@@ -95,13 +95,20 @@ fn eligible<'a>(accounts: &[&'a Value]) -> Vec<&'a Value> {
         .filter(|c| text(c, "status") == "active" && valid_id(text(c, "id")))
         .collect()
 }
-fn selected_account<'a>(v: &Value, accounts: &[&'a Value]) -> &'a str {
+fn requested_account<'a>(v: &Value, accounts: &[&'a Value]) -> Result<Option<&'a Value>, Error> {
+    let requested = text(v, "connectionId");
+    if requested.is_empty() {
+        return Ok(None);
+    }
+    if !valid_id(requested) {
+        return Err(Error::Unavailable);
+    }
     accounts
         .iter()
-        .find(|c| text(c, "id") == text(v, "connectionId"))
-        .or_else(|| accounts.first())
-        .map(|c| text(c, "id"))
-        .unwrap_or("")
+        .copied()
+        .find(|c| text(c, "id") == requested)
+        .map(Some)
+        .ok_or(Error::Unavailable)
 }
 fn supported_setup(v: &Value) -> bool {
     matches!(text(v, "mode"), "api_key" | "oauth2" | "external_bearer")
@@ -121,7 +128,19 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
         .collect();
     let accounts = account_rows(v, key);
     let active = eligible(&accounts);
-    let connection = selected_account(v, &active);
+    let requested = requested_account(v, &accounts)?;
+    // Explicit reconnects stay attached to their requested row for settings
+    // and navigation, even when that row is degraded/disconnected. Execution
+    // still falls back to an active account because non-active rows cannot run.
+    let setup_connection = requested.map(|c| text(c, "id")).unwrap_or("");
+    let connection = requested
+        .filter(|c| text(c, "status") == "active" && valid_id(text(c, "id")))
+        .map(|c| text(c, "id"))
+        .or_else(|| active.first().map(|c| text(c, "id")))
+        .unwrap_or("");
+    // Preserve an omitted id across navigation too; adding the first active
+    // row to a settings link would turn a new setup into an implicit update.
+    let navigation_connection = setup_connection;
     let action = operations.iter().find(|o| {
         !text(v, "action").is_empty()
             && text(o, "kind") == "action"
@@ -136,7 +155,7 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
             &[
                 ("tab", "settings"),
                 ("action", action_name),
-                ("connectionId", connection)
+                ("connectionId", navigation_connection)
             ]
         )
     );
@@ -155,7 +174,7 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
             &[
                 ("tab", id),
                 ("action", action_name),
-                ("connectionId", connection),
+                ("connectionId", navigation_connection),
             ],
         );
         html.push_str(&format!(
@@ -170,7 +189,7 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
         accounts_panel(&accounts),
         events(key, &operations),
         code(v, connection, action_name),
-        settings(v, key, connection)?,
+        settings(v, key, setup_connection)?,
     ];
     for ((id, label), content) in TABS.into_iter().zip(panels) {
         html.push_str(&format!("<section id=\"tk-panel-{id}\" class=\"tk-panel\" aria-label=\"{label}\"{}>{content}</section>",if id==tab{""}else{" hidden"}));

@@ -58,6 +58,12 @@ pub struct Service {
     oauth: Arc<Lifecycle>,
     validator: Arc<dyn Validator>,
 }
+#[derive(Clone, Copy)]
+enum SaveTarget<'a> {
+    Existing(&'a str),
+    ReuseExisting,
+    New,
+}
 fn id(prefix: &str) -> Result<String> {
     let mut bytes = [0; 24];
     getrandom::fill(&mut bytes).map_err(|_| Error::Persistence)?;
@@ -160,7 +166,36 @@ impl Service {
         fields: &BTreeMap<String, String>,
         active: &dyn Fn() -> bool,
     ) -> Result<Connection> {
-        self.save(scope, None, connector, route, fields, active)
+        self.save(
+            scope,
+            SaveTarget::ReuseExisting,
+            connector,
+            route,
+            fields,
+            active,
+        )
+    }
+    pub fn submit_new(
+        &self,
+        scope: &SetupScope,
+        connector: &str,
+        route: &str,
+        fields: &BTreeMap<String, String>,
+    ) -> Result<Connection> {
+        self.submit_new_checked(scope, connector, route, fields, &|| true)
+    }
+    /// Create a new connection even when the same connector/account already
+    /// exists. Browser setup uses this when no connection id was selected;
+    /// replacement requires an explicit id via `update_checked`.
+    pub fn submit_new_checked(
+        &self,
+        scope: &SetupScope,
+        connector: &str,
+        route: &str,
+        fields: &BTreeMap<String, String>,
+        active: &dyn Fn() -> bool,
+    ) -> Result<Connection> {
+        self.save(scope, SaveTarget::New, connector, route, fields, active)
     }
     pub fn update(
         &self,
@@ -181,12 +216,19 @@ impl Service {
         fields: &BTreeMap<String, String>,
         active: &dyn Fn() -> bool,
     ) -> Result<Connection> {
-        self.save(scope, Some(id), connector, route, fields, active)
+        self.save(
+            scope,
+            SaveTarget::Existing(id),
+            connector,
+            route,
+            fields,
+            active,
+        )
     }
     fn save(
         &self,
         scope: &SetupScope,
-        existing: Option<&str>,
+        target: SaveTarget<'_>,
         connector: &str,
         route: &str,
         fields: &BTreeMap<String, String>,
@@ -211,7 +253,7 @@ impl Service {
             Credentials(BTreeMap::new())
         };
         // Scope validation precedes external validation; persistence repeats under lock.
-        if let Some(existing) = existing {
+        if let SaveTarget::Existing(existing) = target {
             self.store
                 .lock()
                 .map_err(|_| Error::Persistence)?
@@ -245,7 +287,7 @@ impl Service {
    let identity=serde_json::to_string(&(&scope.project,connector,&scope.account)).map_err(|_|appcall_store::Error::Invalid)?;
    tx.client().query_one("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",&[&identity])?;
    check_store_active(active)?;
-   let target=match existing{Some(id)=>Some(id.to_owned()),None=>tx.client().query_opt("SELECT id FROM connections WHERE project_id=$1 AND connector=$2 AND COALESCE(external_account_id,'')=$3 ORDER BY created_at DESC,id LIMIT 1 FOR UPDATE",&[&scope.project,&connector,&scope.account])?.map(|r|r.get::<_,String>(0))};
+   let target=match target{SaveTarget::Existing(id)=>Some(id.to_owned()),SaveTarget::ReuseExisting=>tx.client().query_opt("SELECT id FROM connections WHERE project_id=$1 AND connector=$2 AND COALESCE(external_account_id,'')=$3 ORDER BY created_at DESC,id LIMIT 1 FOR UPDATE",&[&scope.project,&connector,&scope.account])?.map(|r|r.get::<_,String>(0)),SaveTarget::New=>None};
    if let Some(target)=&target{let current=tx.lock_connection(&scope.scope,target)?;if current.connector!=connector{return Err(appcall_store::Error::NotFound)}}
    check_store_active(active)?;
    if !secret.is_empty(){tx.store_secret(&scope.project,&secret,"connector_setup_bundle",&encoded)?;}

@@ -7,7 +7,7 @@ fn text<'a>(value: &'a Value, key: &str) -> &'a str {
     value.get(key).and_then(Value::as_str).unwrap_or("")
 }
 
-fn rows<'a>(value: &'a Value) -> Result<&'a [Value], Error> {
+fn rows(value: &Value) -> Result<&[Value], Error> {
     value
         .as_array()
         .map(Vec::as_slice)
@@ -113,6 +113,30 @@ fn creation_age(value: &Value) -> String {
     }
 }
 
+fn authorization_age(value: &Value) -> Option<String> {
+    (text(value, "status") == "authorizing")
+        .then(|| value.get("authorizationAgeSeconds").and_then(Value::as_i64))
+        .flatten()
+        .map(|seconds| {
+            let seconds = seconds.max(0) as u64;
+            if seconds < 60 {
+                "less than a minute".into()
+            } else if seconds < 60 * 60 {
+                format!(
+                    "{} minute{}",
+                    seconds / 60,
+                    if seconds / 60 == 1 { "" } else { "s" }
+                )
+            } else {
+                format!(
+                    "{} hour{}",
+                    seconds / (60 * 60),
+                    if seconds / (60 * 60) == 1 { "" } else { "s" }
+                )
+            }
+        })
+}
+
 fn reconnect_href(connector: &str, id: &str) -> Option<String> {
     (valid_id(connector) && valid_id(id))
         .then(|| format!("/app/toolkits/{connector}?tab=settings&connectionId={id}#tk-setup"))
@@ -178,7 +202,7 @@ fn actions(status: &str, connector: &str, id: &str) -> Result<String, Error> {
     Ok(html)
 }
 
-fn connection_card(value: &Value) -> Result<String, Error> {
+fn connection_row(value: &Value) -> Result<String, Error> {
     let id = text(value, "id");
     if !valid_id(id) {
         return Err(Error::Unavailable);
@@ -191,16 +215,22 @@ fn connection_card(value: &Value) -> Result<String, Error> {
         connector
     };
     let identity = "Provider identity not recorded";
+    let authorization_elapsed = authorization_age(value)
+        .map(|age| {
+            format!("<p class=\"connection-elapsed\"><span>Authorization elapsed</span> {age}</p>")
+        })
+        .unwrap_or_default();
     Ok(format!(
-        "<article class=\"connection-card\" data-connection-id=\"{}\" data-connection-status=\"{}\"><header class=\"connection-card-header\"><div><h3>{}</h3><code>{}</code></div>{}</header><p class=\"connection-note\">{}</p><p class=\"connection-identity\">{}</p><dl class=\"connection-facts\"><div><dt>Auth type</dt><dd>{}</dd></div><div><dt>Last provider check</dt><dd>{}</dd></div><div><dt>Cause</dt><dd>Not recorded</dd></div><div><dt>Created age</dt><dd>{}</dd></div></dl>{}</article>",
+        "<tr class=\"connection-row\" data-connection-id=\"{}\" data-connection-status=\"{}\"><th scope=\"row\" data-label=\"Account\"><div class=\"connection-account\"><strong>{}</strong><code>{}</code><span class=\"connection-identity\">{}</span></div></th><td data-label=\"Auth\">{}</td><td data-label=\"Status\"><div class=\"connection-status\">{}</div><p class=\"connection-note\">{}</p>{}</td><td data-label=\"Last provider check\"><div class=\"connection-check\">{}</div><p class=\"connection-cause\"><span>Cause</span> Not recorded</p><p class=\"connection-age\"><span>Created</span> {}</p></td><td data-label=\"Actions\">{}</td></tr>",
         escape(id),
         escape(status),
         escape(connector_name),
         escape(id),
-        status_state(status),
-        escape(status_note(status)),
         escape(identity),
         escape(auth_label(text(value, "authType"))),
+        status_state(status),
+        escape(status_note(status)),
+        authorization_elapsed,
         test_state(value),
         escape(&creation_age(value)),
         actions(status, connector, id)?
@@ -210,6 +240,11 @@ fn connection_card(value: &Value) -> Result<String, Error> {
 pub(crate) fn render(value: &Value) -> Result<String, Error> {
     let items = rows(value)?;
     let browse = ui::Button {
+        variant: if items.is_empty() {
+            ui::ButtonVariant::Secondary
+        } else {
+            ui::ButtonVariant::Primary
+        },
         target: ui::ButtonTarget::Link(
             ui::LocalPath::new("/app/toolkits").expect("static local route"),
         ),
@@ -231,11 +266,11 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
             .render(),
         );
     } else {
-        html.push_str("<section class=\"connections-list\" aria-labelledby=\"connections-list-heading\"><h3 id=\"connections-list-heading\" class=\"sr-only\">Saved connections</h3>");
+        html.push_str("<section class=\"connections-table-shell\" aria-labelledby=\"connections-list-heading\"><h3 id=\"connections-list-heading\" class=\"sr-only\">Saved connections</h3><table class=\"connections-table\"><caption class=\"sr-only\">Saved connections</caption><thead><tr><th scope=\"col\">Account</th><th scope=\"col\">Auth</th><th scope=\"col\">Status</th><th scope=\"col\">Last provider check</th><th scope=\"col\">Actions</th></tr></thead><tbody>");
         for item in items {
-            html.push_str(&connection_card(item)?);
+            html.push_str(&connection_row(item)?);
         }
-        html.push_str("</section>");
+        html.push_str("</tbody></table></section>");
     }
     html.push_str("</section>");
     Ok(html)
@@ -263,10 +298,27 @@ mod tests {
         assert!(html.contains("ui-state-rule"));
         assert!(html.contains("Degraded"));
         assert!(html.contains("Provider identity not recorded"));
-        assert!(html.contains("Cause</dt><dd>Not recorded"));
+        assert!(html.contains("<span>Cause</span> Not recorded"));
         assert!(html.contains("1 hour"));
         assert!(html.contains("/app/toolkits/slack?tab=settings&amp;connectionId=conn_1#tk-setup"));
         assert!(!html.contains("external_account_id"));
+    }
+
+    #[test]
+    fn authorizing_elapsed_uses_only_the_current_authorization_projection() {
+        let html = render(&json!({
+            "connections": [{
+                "id": "conn_1",
+                "connector": "slack",
+                "authType": "oauth2",
+                "status": "authorizing",
+                "createdAgeSeconds": 86400,
+                "authorizationAgeSeconds": 42
+            }]
+        }))
+        .unwrap();
+        assert!(html.contains("Authorization elapsed</span> less than a minute"));
+        assert!(html.contains("<span>Created</span> 1 day"));
     }
 
     #[test]
@@ -281,7 +333,8 @@ mod tests {
         .unwrap();
         assert!(html.contains("Reconnect"));
         assert!(!html.contains("Check connection"));
-        assert!(!html.contains("Disconnect"));
+        assert!(!html.contains("data-confirm-open"));
+        assert!(!html.contains("/disconnect"));
     }
 
     #[test]
@@ -290,5 +343,11 @@ mod tests {
             render(&json!({"connections": [{"id": "bad/id"}]})),
             Err(Error::Unavailable)
         );
+    }
+
+    #[test]
+    fn empty_connections_offer_one_primary_next_step() {
+        let html = render(&json!({"connections": []})).unwrap();
+        assert_eq!(html.matches("ui-button-primary").count(), 1);
     }
 }

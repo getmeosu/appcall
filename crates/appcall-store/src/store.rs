@@ -45,6 +45,16 @@ impl Store {
         cutoff: std::time::SystemTime,
     ) -> Result<u64, Error> {
         self.transaction(|tx| {
+            // Take the connection row locks before evaluating the intent. Under
+            // READ COMMITTED, an UPDATE can wait on a concurrent reauthorization
+            // after its statement snapshot was taken. Locking in a statement of
+            // its own makes the following statement re-read the committed,
+            // current intent instead of applying a stale cleanup decision.
+            tx.client().query(
+                "SELECT id FROM connections \
+                 WHERE project_id=$1 AND status='authorizing' FOR UPDATE",
+                &[&project],
+            )?;
             Ok(tx.client().execute(
                 "UPDATE connections AS c SET status='disconnected',updated_at=now() \
                  WHERE c.project_id=$1 AND c.status='authorizing' \

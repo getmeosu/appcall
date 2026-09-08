@@ -74,14 +74,19 @@ async fn action_page(path: &str, data: serde_json::Value) -> String {
 async fn copy_connection_and_replay_actions_keep_routes() {
     let connections = action_page(
         "/app/auth-configs",
-        json!({"connections":[{"id":"conn_1"}]}),
+        json!({"connections":[{"id":"conn_1","connector":"provider","status":"active"}]}),
     )
     .await;
     assert!(connections.contains(">Check connection</span>"));
     assert!(connections.contains(">Disconnect</span>"));
     let check = connections
         .split("<form ")
-        .find(|form| form.starts_with("method=\"post\" action=\"/app/auth-configs/conn_1/test\""))
+        .find(|form| {
+            form.split('>').next().is_some_and(|opening| {
+                opening.contains("method=\"post\"")
+                    && opening.contains("action=\"/app/auth-configs/conn_1/test\"")
+            })
+        })
         .expect("native connection check form")
         .split("</form>")
         .next()
@@ -142,13 +147,13 @@ fn assert_confirmation(html: &str, heading: &str, body: &str, route: &str) -> St
 async fn copy_confirmations_name_targets_without_provider_promises() {
     let connections = action_page(
         "/app/auth-configs",
-        json!({"connections":[{"id":"conn_1"}]}),
+        json!({"connections":[{"id":"conn_1","connector":"provider","status":"active"}]}),
     )
     .await;
     assert_confirmation(
         &connections,
         "Disconnect this connection?",
-        "Disconnect connection conn_1? Tool runs require an active connection.",
+        "Tool runs will stop using this connection until you reconnect it.",
         "/app/auth-configs/conn_1/disconnect",
     );
     let trace = action_page("/app/logs/request_1", json!({"requestId":"request_1"})).await;

@@ -161,9 +161,7 @@ impl MemoryRepository {
         if !d.projects.contains_key(&c.project_id) {
             return Err(MemoryError::NotFound);
         }
-        if d.connections.contains_key(&c.id)
-            || d.connections.values().any(|old| same_owner(old, &c))
-        {
+        if d.connections.contains_key(&c.id) {
             return Err(MemoryError::Conflict);
         }
         if d.connections.len() >= self.state.limits.connections {
