@@ -187,6 +187,13 @@ pub trait Backend: Send + Sync {
         Ok(None)
     }
 
+    /// Run controls are privileged mutations. The trusted operator principal
+    /// has not yet been defined by the product auth contract, so every
+    /// backend defaults to deny until it explicitly implements this hook.
+    async fn authorize_sync_control(&self, _identity: &Identity, _request: &Request) -> Result<()> {
+        Err(ApiError::new("FORBIDDEN"))
+    }
+
     async fn authorize(&self, headers: &[(String, String)]) -> Result<Identity>;
     async fn ready(&self) -> Result<()>;
     async fn connections(&self, identity: &Identity) -> Result<Vec<Connection>>;
@@ -366,11 +373,22 @@ impl<B: Backend> Api<B> {
                     },
                 )?)
             }
-            _ => self
-                .backend
-                .auxiliary_route(&identity, &request)
-                .await?
-                .ok_or_else(|| ApiError::new("ROUTE_NOT_FOUND")),
+            _ => {
+                if request.method == "POST"
+                    && matches!(
+                        segments.as_slice(),
+                        ["v1", "sync-runs", _, "run-now" | "reset" | "cancel"]
+                    )
+                {
+                    self.backend
+                        .authorize_sync_control(&identity, &request)
+                        .await?;
+                }
+                self.backend
+                    .auxiliary_route(&identity, &request)
+                    .await?
+                    .ok_or_else(|| ApiError::new("ROUTE_NOT_FOUND"))
+            }
         }
     }
 }
@@ -405,6 +423,8 @@ fn error_response(error: ApiError) -> Response {
         ),
         "INVALID_LIMIT" => (400, "Limit must be a non-negative integer."),
         "INVALID_STATUS" => (400, "Status must be succeeded or failed."),
+        "INVALID_RUN_STATUS" => (400, "Run status is invalid."),
+        "INVALID_RUN_FILTER" => (400, "Run filter is invalid."),
         "INVALID_ERROR_CODE" => (400, "Error code must be a stable action error code."),
         "INVALID_CURSOR" => (400, "Cursor is invalid."),
         "INVALID_MONTH" => (400, "Month must use YYYY-MM format."),
@@ -420,6 +440,9 @@ fn error_response(error: ApiError) -> Response {
         "REPLAY_LOGS_FAILED" => (500, "Replay logs could not be loaded."),
         "REQUEST_TRACE_FAILED" => (500, "Request trace could not be loaded."),
         "WEBHOOK_EVENTS_FAILED" => (500, "Webhook events could not be loaded."),
+        "RUNS_FAILED" => (500, "Durable runs could not be loaded."),
+        "RUN_NOT_FOUND" => (404, "Durable run was not found."),
+        "RUN_STATE_CONFLICT" => (409, "Durable run state changed; refresh before retrying."),
         "WEBHOOK_REPLAY_FAILED" => (500, "Webhook event could not be replayed."),
         "WEBHOOK_SIGNATURE_INVALID" => (401, "Webhook signature is invalid."),
         "INVALID_WEBHOOK_PAYLOAD" => (400, "Webhook payload could not be read."),
@@ -703,6 +726,19 @@ mod action_error_tests {
         )));
         assert_eq!(response.body["error"]["code"], "ACTION_FAILED");
         assert!(!response.body.to_string().contains("secret-provider-body"));
+    }
+    #[test]
+    fn sync_run_errors_preserve_not_found_conflict_and_storage_statuses() {
+        for (code, status) in [
+            ("RUN_NOT_FOUND", 404),
+            ("RUN_STATE_CONFLICT", 409),
+            ("RUNS_FAILED", 500),
+            ("INVALID_RUN_STATUS", 400),
+        ] {
+            let response = error_response(ApiError::new(code));
+            assert_eq!(response.status, status, "{code}");
+            assert_eq!(response.body["error"]["code"], code);
+        }
     }
     #[test]
     fn action_evidence_conversion_preserves_internal_context_and_public_contract() {

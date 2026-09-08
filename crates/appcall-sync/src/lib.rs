@@ -31,6 +31,14 @@ impl From<postgres::Error> for Error {
     }
 }
 pub type Result<T> = std::result::Result<T, Error>;
+pub const DEFAULT_MAX_ATTEMPTS: u32 = 10;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OperatorAction {
+    RunNow,
+    ResetAttempts,
+    Cancel,
+}
 #[derive(Clone, Debug)]
 pub struct ScheduleRequest {
     pub id: String,
@@ -151,7 +159,7 @@ impl Default for Config {
             lease_duration: Duration::from_secs(60),
             retry_base: Duration::from_secs(1),
             max_retry_delay: Duration::from_secs(3600),
-            max_attempts: 10,
+            max_attempts: DEFAULT_MAX_ATTEMPTS,
         }
     }
 }

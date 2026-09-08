@@ -270,6 +270,8 @@ pub(crate) fn recovery(
     let message: String = match failure.classification() {
         Error::Unauthorized => "Appcall could not authorize this request. Sign in again before running the tool.".into(),
         Error::Forbidden => "Appcall denied this request. Check project access and select an account available to this project.".into(),
+        Error::NotFound => "This run is not available in the current project or account scope.".into(),
+        Error::Conflict => "This run changed state before the operator control completed. Refresh the Runs page before trying again.".into(),
         Error::Configuration => "Appcall could not complete this request because a required service is not configured. Ask the operator to check server configuration.".into(),
         _ if fields => "Appcall could not load the fields for this tool. Select the tool again before running it.".into(),
         _ => match failure.cause() {

@@ -5,6 +5,8 @@ mod copy_failure_cases;
 #[test]
 fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     assert!(public_path("GET", "/app/login"));
+    assert!(public_path("GET", "/app/runs"));
+    assert!(public_path("POST", "/app/runs/run_1/cancel"));
     assert!(public_path("POST", "/app/users/u/remove"));
     assert!(public_path("GET", "/static/app.css"));
     for path in [
@@ -14,6 +16,7 @@ fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
         "/app/toolkits/x%2Fy",
         "/static/../../secret",
         "/app/oauth/unknown",
+        "/app/runs/run_1/force",
     ] {
         assert!(!public_path("GET", path), "{path}")
     }

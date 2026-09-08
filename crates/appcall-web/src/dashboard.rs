@@ -20,6 +20,10 @@ pub enum DashboardOperation {
     ReplayEvent,
     Stream,
     Logs,
+    Runs,
+    RunNow,
+    ResetRun,
+    CancelRun,
     Trace,
     ReplayTrace,
     Qa,
@@ -114,6 +118,8 @@ impl Dashboard<'_> {
                     Error::Invalid => 400,
                     Error::Unauthorized => 401,
                     Error::Forbidden => 403,
+                    Error::NotFound => 404,
+                    Error::Conflict => 409,
                     _ => 503,
                 },
                 escape(&e.to_string()),
@@ -151,6 +157,12 @@ impl DashboardRenderer<'_> {
         let has_filters = match operation {
             DashboardOperation::Catalog => !r.field("category")?.is_empty(),
             DashboardOperation::Logs => ["status", "connector", "action", "connectionId"]
+                .iter()
+                .map(|key| r.field(key))
+                .collect::<Result<Vec<_>, _>>()?
+                .iter()
+                .any(|value| !value.is_empty()),
+            DashboardOperation::Runs => ["status", "connector", "tool", "accountId"]
                 .iter()
                 .map(|key| r.field(key))
                 .collect::<Result<Vec<_>, _>>()?
@@ -253,11 +265,39 @@ impl DashboardRenderer<'_> {
                     crate::shell::layout(crate::pages::title(operation), session, &content, r.path),
                 ));
             }
+            Err(error)
+                if matches!(
+                    operation,
+                    DashboardOperation::RunNow
+                        | DashboardOperation::ResetRun
+                        | DashboardOperation::CancelRun
+                ) =>
+            {
+                let status = match error.classification() {
+                    Error::Invalid => 400,
+                    Error::Unauthorized => 401,
+                    Error::Forbidden => 403,
+                    Error::NotFound => 404,
+                    Error::Conflict => 409,
+                    _ => 503,
+                };
+                let content =
+                    crate::dashboard_failure::recovery(operation, resource.as_deref(), &error);
+                return Ok(Response::new(
+                    status,
+                    crate::shell::layout(
+                        crate::pages::title(operation),
+                        session,
+                        &content,
+                        "/app/runs",
+                    ),
+                ));
+            }
             Err(error) => return Err(error.classification()),
         };
         if matches!(
             operation,
-            DashboardOperation::Catalog | DashboardOperation::Logs
+            DashboardOperation::Catalog | DashboardOperation::Logs | DashboardOperation::Runs
         ) {
             let target = if value.get("data").is_some() {
                 value.get_mut("data").ok_or(Error::Unavailable)?
@@ -265,10 +305,11 @@ impl DashboardRenderer<'_> {
                 &mut value
             };
             if target.is_array() {
-                let key = if operation == DashboardOperation::Catalog {
-                    "connectors"
-                } else {
-                    "logs"
+                let key = match operation {
+                    DashboardOperation::Catalog => "connectors",
+                    DashboardOperation::Logs => "logs",
+                    DashboardOperation::Runs => "runs",
+                    _ => unreachable!(),
                 };
                 *target = serde_json::json!({key:target.clone()});
             }
@@ -276,6 +317,22 @@ impl DashboardRenderer<'_> {
             // This presentation flag is derived only from the current request,
             // overwriting any provider-supplied value without echoing query text.
             map.insert("hasFilters".into(), Value::Bool(has_filters));
+        }
+        if operation == DashboardOperation::Runs {
+            let target = if value.get("data").is_some() {
+                value.get_mut("data").ok_or(Error::Unavailable)?
+            } else {
+                &mut value
+            };
+            let map = target.as_object_mut().ok_or(Error::Unavailable)?;
+            for (query_key, data_key) in [
+                ("status", "selectedStatus"),
+                ("connector", "selectedConnector"),
+                ("tool", "selectedTool"),
+                ("accountId", "selectedAccountId"),
+            ] {
+                map.insert(data_key.into(), r.field(query_key)?.into());
+            }
         }
         if operation == DashboardOperation::Catalog {
             let target = if value.get("data").is_some() {
@@ -355,6 +412,9 @@ impl DashboardRenderer<'_> {
                 "/app/logs/{}?replayed=1",
                 resource.as_deref().unwrap_or("")
             )),
+            RunNow => Some("/app/runs?success=run-now".to_owned()),
+            ResetRun => Some("/app/runs?success=reset".to_owned()),
+            CancelRun => Some("/app/runs?success=cancelled".to_owned()),
             SaveBranding => Some("/app/settings/white-labeling?saved=1".to_owned()),
             _ => None,
         };
@@ -437,9 +497,18 @@ impl DashboardRenderer<'_> {
                 "Check the connection's current status before running another tool.",
                 false,
             ),
+            (Runs, "run-now", _) => ("Run queued now. Refreshing the current queue state.", false),
+            (Runs, "reset", _) => (
+                "Attempts reset and the run was queued from its saved checkpoint.",
+                false,
+            ),
+            (Runs, "cancelled", _) => (
+                "Run cancelled. Any older worker lease is fenced from committing.",
+                false,
+            ),
             _ => ("", false),
         };
-        if matches!(operation, Logs | Triggers) {
+        if matches!(operation, Logs | Triggers | Runs) {
             let data = value.get("data").unwrap_or(&value);
             if let Some(cursor) = data
                 .pointer("/pagination/nextCursor")
@@ -448,7 +517,12 @@ impl DashboardRenderer<'_> {
             {
                 let mut url = reqwest::Url::parse(&format!("https://local.invalid{}", r.path))
                     .map_err(|_| Error::Invalid)?;
-                for key in ["status", "connector", "action", "connectionId"] {
+                let filter_keys: &[&str] = if operation == Runs {
+                    &["status", "connector", "tool", "accountId"]
+                } else {
+                    &["status", "connector", "action", "connectionId"]
+                };
+                for key in filter_keys {
                     let value = r.field(key)?;
                     if !value.is_empty() {
                         url.query_pairs_mut().append_pair(key, value);
@@ -525,6 +599,7 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
         ("GET", "/app/triggers") => Triggers,
         ("GET", "/app/triggers/stream") => Stream,
         ("GET", "/app/logs") => Logs,
+        ("GET", "/app/runs") => Runs,
         ("GET", "/app/qa") => Qa,
         ("GET", "/app/settings/usage") => Usage,
         ("GET", "/app/settings/white-labeling") => Branding,
@@ -550,6 +625,9 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
                 ("POST", Some("auth-configs"), 4, Some("test")) => TestConnection,
                 ("POST", Some("auth-configs"), 4, Some("disconnect")) => DisconnectConnection,
                 ("POST", Some("triggers"), 4, Some("replay")) => ReplayEvent,
+                ("POST", Some("runs"), 4, Some("run-now")) => RunNow,
+                ("POST", Some("runs"), 4, Some("reset")) => ResetRun,
+                ("POST", Some("runs"), 4, Some("cancel")) => CancelRun,
                 ("GET", Some("logs"), 3, _) => Trace,
                 ("POST", Some("logs"), 4, Some("replay")) => ReplayTrace,
                 _ => return None,

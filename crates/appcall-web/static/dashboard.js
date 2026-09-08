@@ -144,6 +144,63 @@ if (brandingName && brandingLogo && brandingColor) {
   });
 })();
 
+// Run controls are ordinary same-origin POST forms after native confirmation.
+// Lock the page for the pending navigation so a double click cannot enqueue a
+// second operator mutation; the server remains the authority for row state.
+(() => {
+  const page = document.querySelector?.('[data-runs-page]');
+  if (!page) return;
+  const status = document.getElementById('runs-live-status');
+  const recovery = document.getElementById('runs-recovery');
+  let pending = false;
+  const mutationButtons = () => Array.from(page.querySelectorAll('[data-runs-control] button'));
+  const showRecovery = () => {
+    if (!recovery) return;
+    recovery.hidden = false;
+    recovery.removeAttribute('aria-hidden');
+  };
+  const markRunsUncertain = () => {
+    if (!pending && page.getAttribute('aria-busy') !== 'true') return;
+    pending = true;
+    page.setAttribute('aria-busy', 'false');
+    if (status) {
+      status.textContent = 'Run control outcome is unknown. Reload Runs status before trying again.';
+      status.setAttribute('aria-busy', 'false');
+    }
+    showRecovery();
+  };
+  // A native navigation can be cancelled after submit (for example by a
+  // later validation listener), and BFCache restores the old DOM without a
+  // fresh page load. Keep mutations fenced and offer a native reload so an
+  // uncertain provider outcome is reconciled before another write.
+  window.addEventListener('pageshow', markRunsUncertain);
+  window.addEventListener('pagehide', event => {
+    if (event.persisted || pending) markRunsUncertain();
+  });
+  document.addEventListener('submit', event => {
+    const form = event.target.closest?.('form');
+    if (!form || !form.action.includes('/app/runs/')) return;
+    if (pending) {
+      event.preventDefault();
+      return;
+    }
+    pending = true;
+    page.setAttribute('aria-busy', 'true');
+    if (status) {
+      status.textContent = 'Applying run control…';
+      status.setAttribute('aria-busy', 'true');
+    }
+    showRecovery();
+    for (const button of mutationButtons()) {
+      button.disabled = true;
+      button.setAttribute('aria-disabled', 'true');
+    }
+    // A subsequent listener may cancel this native navigation. Wait until the
+    // submit dispatch completes before marking the outcome uncertain.
+    queueMicrotask(() => { if (pending && event.defaultPrevented) markRunsUncertain(); });
+  }, true);
+})();
+
 // Connector navigation enhances native GET links. Executions remain owned by
 // the form's Datastar POST; this module never fetches or retries an operation.
 (() => {

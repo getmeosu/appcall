@@ -1,6 +1,170 @@
 use super::*;
 use crate::tests::dashboard_request;
 
+#[tokio::test]
+async fn runs_preview_fixed_scenarios_are_truthful_and_dto_shaped() {
+    let data = ScenarioData::new(Scenario::parse("runs").unwrap());
+    let value = data
+        .execute(dashboard_request(DashboardOperation::Runs))
+        .await
+        .unwrap();
+    assert_eq!(value["synthetic"], true);
+    assert_eq!(value["operatorControlsUnavailable"], true);
+    assert_eq!(value["records24h"], 340);
+    assert_eq!(value["pendingRuns"], 1);
+    assert_eq!(value["runningRuns"], 1);
+    assert_eq!(value["backingoffRuns"], 1);
+    assert_eq!(value["deadRuns"], 1);
+    assert_eq!(value["workerHeartbeatUnavailable"], true);
+    assert_eq!(value["pagination"]["hasMore"], false);
+    assert!(value["pagination"].get("nextCursor").is_none());
+    let rows = value["runs"].as_array().unwrap();
+    assert_eq!(
+        rows.iter()
+            .map(|r| r["health"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        ["pending", "running", "backingoff", "dead", "succeeded"]
+    );
+    for row in rows {
+        let spent = row["attemptsSpent"].as_u64().unwrap();
+        let max = row["maxAttempts"].as_u64().unwrap();
+        assert_eq!(
+            row["attemptsRemaining"].as_u64().unwrap(),
+            max.saturating_sub(spent)
+        );
+        assert!(max > 0);
+        for key in ["runNowAllowed", "resetAllowed", "cancelAllowed"] {
+            assert_eq!(row[key], false);
+        }
+        assert!(row.get("heartbeat").is_none());
+        assert!(row.get("attemptHistory").is_none());
+    }
+    assert!(rows.iter().any(|r| r["id"].as_str().unwrap().len() > 100));
+    assert!(rows
+        .iter()
+        .any(|r| r["currentCursor"].as_str().unwrap().len() > 100));
+    let unavailable_message = Error::Unavailable.to_string();
+    for (name, expected_status, marker) in [
+        ("runs", 200, "Operator controls unavailable"),
+        ("runs-empty", 200, "No durable runs to show."),
+        ("runs-unavailable", 200, "Runs status unavailable"),
+        ("runs-malformed", 503, unavailable_message.as_str()),
+    ] {
+        let data = ScenarioData::new(Scenario::parse(name).unwrap());
+        let dashboard = DevelopmentDashboard {
+            public_origin: "http://127.0.0.1:55589",
+            data: &data,
+        };
+        let request = Request {
+            method: "GET",
+            path: "/app/runs",
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields: Default::default(),
+            now: 0,
+        };
+        let response = dashboard.handle(&request).await.unwrap();
+        assert_eq!(response.status, expected_status, "{name}");
+        assert!(
+            response
+                .body
+                .to_lowercase()
+                .contains(&marker.to_lowercase()),
+            "{name}"
+        );
+        assert!(
+            !response.body.contains("action=\"/app/runs/"),
+            "no synthetic operator authority"
+        );
+        if name == "runs" {
+            assert!(response
+                .body
+                .contains("aria-label=\"Durable sync runs\" tabindex=\"0\""));
+        }
+    }
+}
+
+#[tokio::test]
+async fn runs_preview_summary_counts_are_filtered_beyond_page_rows() {
+    let data = ScenarioData::new(Scenario::parse("runs").unwrap());
+
+    let mut request = dashboard_request(DashboardOperation::Runs);
+    request.fields.insert("limit".into(), "1".into());
+    let paged = data.execute(request).await.unwrap();
+    assert_eq!(paged["runs"].as_array().unwrap().len(), 1);
+    for key in ["pendingRuns", "runningRuns", "backingoffRuns", "deadRuns"] {
+        assert_eq!(paged[key], 1, "summary must ignore pagination for {key}");
+    }
+    assert_eq!(paged["records24h"], 340);
+
+    let mut request = dashboard_request(DashboardOperation::Runs);
+    request.fields.insert("status".into(), "dead".into());
+    let dead = data.execute(request).await.unwrap();
+    assert_eq!(dead["pendingRuns"], 0);
+    assert_eq!(dead["runningRuns"], 0);
+    assert_eq!(dead["backingoffRuns"], 0);
+    assert_eq!(dead["deadRuns"], 1);
+    assert_eq!(dead["records24h"], 340, "records are not status counts");
+
+    for (key, filter) in [
+        ("connector", "other-connector"),
+        ("tool", "other.tool"),
+        ("accountId", "other-account"),
+        ("externalAccountId", "other-account"),
+    ] {
+        let mut request = dashboard_request(DashboardOperation::Runs);
+        request.fields.insert(key.into(), filter.into());
+        let filtered = data.execute(request).await.unwrap();
+        assert!(filtered["runs"].as_array().unwrap().is_empty());
+        for summary_key in ["pendingRuns", "runningRuns", "backingoffRuns", "deadRuns"] {
+            assert_eq!(
+                filtered[summary_key], 0,
+                "filtered summary must be empty for {key}"
+            );
+        }
+        assert_eq!(filtered["records24h"], 0);
+    }
+
+    let empty = ScenarioData::new(Scenario::RunsEmpty)
+        .execute(dashboard_request(DashboardOperation::Runs))
+        .await
+        .unwrap();
+    for key in ["pendingRuns", "runningRuns", "backingoffRuns", "deadRuns"] {
+        assert_eq!(empty[key], 0);
+    }
+    assert_eq!(empty["records24h"], 0);
+    assert_eq!(empty["workerHeartbeatUnavailable"], true);
+}
+
+#[tokio::test]
+async fn runs_preview_filters_and_cursor_pages_use_only_fixed_rows() {
+    let data = ScenarioData::new(Scenario::parse("runs").unwrap());
+    let mut request = dashboard_request(DashboardOperation::Runs);
+    request.fields.insert("limit".into(), "2".into());
+    let first = data.execute(request).await.unwrap();
+    assert_eq!(first["runs"].as_array().unwrap().len(), 2);
+    assert_eq!(first["pagination"]["hasMore"], true);
+    let mut request = dashboard_request(DashboardOperation::Runs);
+    request.fields.insert("limit".into(), "2".into());
+    request.fields.insert(
+        "cursor".into(),
+        first["pagination"]["nextCursor"].as_str().unwrap().into(),
+    );
+    let second = data.execute(request).await.unwrap();
+    assert_eq!(second["runs"][0]["health"], "backingoff");
+    let mut request = dashboard_request(DashboardOperation::Runs);
+    request.fields.insert("status".into(), "dead".into());
+    let dead = data.execute(request).await.unwrap();
+    assert_eq!(dead["runs"].as_array().unwrap().len(), 1);
+    assert_eq!(dead["runs"][0]["health"], "dead");
+    for (key, value) in [("limit", "0"), ("limit", "101"), ("cursor", "invented")] {
+        let mut request = dashboard_request(DashboardOperation::Runs);
+        request.fields.insert(key.into(), value.into());
+        assert!(data.execute(request).await.is_err());
+    }
+}
+
 #[test]
 fn startup_scenarios_are_fixed_and_unknown_values_are_rejected() {
     for (name, expected) in [
