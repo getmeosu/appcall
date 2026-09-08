@@ -33,6 +33,19 @@ and the bundled SQLx migrator for startup migrations. The worker requires Postgr
 dashboard accounts additionally require an independently provisioned Anusa
 service and its identity database; Anusa server software is not included here.
 
+Runs controls are browser-only and deny-all by default. A deployment may opt in
+specific authenticated users with `APPCALL_RUN_OPERATOR_GRANTS`, a JSON array
+of exact pairs such as
+`[{"projectId":"proj_tenant-a","userId":"11111111-1111-1111-1111-111111111111"}]`.
+Add or revoke grants only through a controlled application restart. The policy
+is captured once when application shared state starts, accepts at
+most 128 pairs and 16 KiB, and rejects duplicate, wildcard, blank, whitespace,
+control-character, or unknown fields. Every browser request still requires a
+fresh active Anusa membership, the matching tenant/project, and the existing
+brand/account grants. The setting does not authorize `/v1` API mutations and
+does not turn the development/platform API key or an Anusa membership role
+into a Runs operator grant.
+
 Browser URLs use Connectors, Connections, Events, Usage, Certification, and
 Settings Team. For one compatibility release, exact legacy GET routes return
 301 with the original query preserved. Legacy POST routes are dispatched

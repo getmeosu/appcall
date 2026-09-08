@@ -13,7 +13,23 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 pub fn selected(env: &BTreeMap<String, String>) -> bool {
     env.get("APPCALL_DATABASE_URL").is_none_or(String::is_empty)
 }
+
+fn validate_run_operator_grants(env: &BTreeMap<String, String>) -> Result<()> {
+    let grants = appcall_api::run_operator::RunOperatorGrants::from_map(env)
+        .map_err(|_| "invalid Runs operator grants configuration")?;
+    if !grants.is_empty() {
+        return Err(
+            "Runs operator grants require durable authenticated browser configuration".into(),
+        );
+    }
+    Ok(())
+}
+
 pub fn run(env: BTreeMap<String, String>) -> Result<()> {
+    // Memory mode has no durable browser generation to authorize Runs
+    // mutations. Parse the policy anyway so malformed or non-empty grants
+    // cannot be silently ignored on this startup path.
+    validate_run_operator_grants(&env)?;
     let production = matches!(
         env.get("APPCALL_ENV")
             .map(|v| v.trim().to_ascii_lowercase())
@@ -269,5 +285,44 @@ mod tests {
             env.insert("APPCALL_DATABASE_URL".into(), invalid.into());
             assert!(!super::selected(&env));
         }
+    }
+
+    #[test]
+    fn memory_mode_missing_or_empty_run_operator_grants_are_deny_all() {
+        let missing = std::collections::BTreeMap::new();
+        assert!(super::validate_run_operator_grants(&missing).is_ok());
+
+        let empty = std::collections::BTreeMap::from([(
+            appcall_api::run_operator::ENV_KEY.to_owned(),
+            "[]".to_owned(),
+        )]);
+        assert!(super::validate_run_operator_grants(&empty).is_ok());
+    }
+
+    #[test]
+    fn memory_mode_rejects_malformed_or_nonempty_run_operator_grants() {
+        let malformed = std::collections::BTreeMap::from([(
+            appcall_api::run_operator::ENV_KEY.to_owned(),
+            "not-json".to_owned(),
+        )]);
+        let error = super::validate_run_operator_grants(&malformed)
+            .expect_err("malformed grants must fail closed")
+            .to_string();
+        assert_eq!(error, "invalid Runs operator grants configuration");
+        assert!(!error.contains("not-json"));
+
+        let configured = std::collections::BTreeMap::from([(
+            appcall_api::run_operator::ENV_KEY.to_owned(),
+            r#"[{"projectId":"proj_tenant-a","userId":"user-a"}]"#.to_owned(),
+        )]);
+        let error = super::validate_run_operator_grants(&configured)
+            .expect_err("memory mode cannot authorize durable Runs operators")
+            .to_string();
+        assert_eq!(
+            error,
+            "Runs operator grants require durable authenticated browser configuration"
+        );
+        assert!(!error.contains("proj_tenant-a"));
+        assert!(!error.contains("user-a"));
     }
 }

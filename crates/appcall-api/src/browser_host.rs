@@ -1,5 +1,6 @@
 //! Browser host boundary: exact routing, bounded parsing and off-reactor identity SQL.
 pub mod dashboard_failure;
+use crate::run_operator::RunOperatorGrants;
 use crate::{ApiError, Backend, RawResponse, Request, Result};
 use appcall_auth::{JwtPolicy, JwtVerifier, PostgresApiKeys, PostgresMemberships};
 use appcall_web::{DashboardData, DashboardFailure, DashboardOperation as Op, DashboardRequest};
@@ -643,6 +644,7 @@ pub struct ApiDashboard {
     setup: Arc<appcall_setup::Service>,
     defaults: crate::data_routes::UsageDefaults,
     state: Arc<DashboardSharedState>,
+    run_operator_grants: Arc<RunOperatorGrants>,
 }
 impl ApiDashboard {
     pub fn new(
@@ -678,7 +680,12 @@ impl ApiDashboard {
             setup,
             defaults,
             state,
+            run_operator_grants: Arc::new(RunOperatorGrants::default()),
         }
+    }
+    pub fn with_run_operator_grants(mut self, grants: Arc<RunOperatorGrants>) -> Self {
+        self.run_operator_grants = grants;
+        self
     }
     pub fn with_dev_oauth(mut self, dev_oauth: crate::dev_oauth::DevOAuth) -> Self {
         self.dev_oauth = Some(dev_oauth);
@@ -700,6 +707,24 @@ impl ApiDashboard {
     }
     pub fn shared_state(&self) -> Arc<DashboardSharedState> {
         self.state.clone()
+    }
+    fn operator_authorized(&self, principal: &appcall_auth::Principal) -> bool {
+        let Some(tenant_id) = principal.tenant_id.as_deref() else {
+            return false;
+        };
+        let Some(user_id) = principal.user_id.as_deref() else {
+            return false;
+        };
+        if tenant_id.is_empty() || user_id.is_empty() {
+            return false;
+        }
+        // Authenticator derives browser projects from the verified tenant;
+        // retain this relation so a configured pair cannot authorize a forged
+        // or development principal.
+        principal.project_id == format!("proj_{tenant_id}")
+            && self
+                .run_operator_grants
+                .permits(&principal.project_id, Some(user_id))
     }
     async fn run(&self, r: DashboardRequest) -> std::result::Result<Value, DashboardFailure> {
         use appcall_web::Error;
@@ -726,10 +751,9 @@ impl ApiDashboard {
         {
             return Err(Error::Forbidden.into());
         }
-        if matches!(r.operation, Op::RunNow | Op::ResetRun | Op::CancelRun) {
-            // No trusted operator principal is defined by the current auth
-            // contract. Reads stay scoped and available; mutations default to
-            // deny until that capability is explicitly specified.
+        let operator_authorized = self.operator_authorized(&r.principal);
+        if matches!(r.operation, Op::RunNow | Op::ResetRun | Op::CancelRun) && !operator_authorized
+        {
             return Err(Error::Forbidden.into());
         }
         let identity = crate::Identity {
@@ -770,9 +794,10 @@ impl ApiDashboard {
             Op::Runs=>{
                 let mut url=url::Url::parse("http://local.invalid/v1/sync-runs").map_err(|_|Error::Invalid)?;
                 for (k,v) in &r.fields {if ["limit","cursor","connector","tool","status","accountId","externalAccountId"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
-                self.db(|client| crate::data_routes::read(client,&identity,&url).map_err(api_error))?
+                let value = self.db(|client| crate::data_routes::read(client,&identity,&url).map_err(api_error))?
                     .map(|r|r.body)
-                    .ok_or_else(|| Error::Invalid.into())
+                    .ok_or(Error::Invalid)?;
+                Ok(enrich_runs_operator(value, operator_authorized))
             },
             Op::RunNow|Op::ResetRun|Op::CancelRun=>{
                 let action=match r.operation {Op::RunNow=>appcall_sync::OperatorAction::RunNow,Op::ResetRun=>appcall_sync::OperatorAction::ResetAttempts,Op::CancelRun=>appcall_sync::OperatorAction::Cancel,_=>unreachable!()};
@@ -933,6 +958,39 @@ impl DashboardData for ApiDashboard {
     {
         Box::pin(async move { self.run(request).await.map_err(|e| e.classification()) })
     }
+}
+fn enrich_runs_operator(mut value: Value, authorized: bool) -> Value {
+    value["operatorAuthorized"] = authorized.into();
+    value["operatorControlsUnavailable"] = (!authorized).into();
+    if let Some(rows) = value.get_mut("runs").and_then(Value::as_array_mut) {
+        for row in rows {
+            let Some(row) = row.as_object_mut() else {
+                continue;
+            };
+            let run_now_eligible = row
+                .get("runNowEligible")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let reset_eligible = row
+                .get("resetEligible")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let cancel_eligible = row
+                .get("cancelEligible")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            row.insert(
+                "runNowAllowed".into(),
+                (authorized && run_now_eligible).into(),
+            );
+            row.insert("resetAllowed".into(), (authorized && reset_eligible).into());
+            row.insert(
+                "cancelAllowed".into(),
+                (authorized && cancel_eligible).into(),
+            );
+        }
+    }
+    value
 }
 fn api_error(error: ApiError) -> appcall_web::Error {
     match error.code {
