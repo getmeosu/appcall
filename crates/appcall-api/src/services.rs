@@ -151,12 +151,13 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
         self.database(move |s| {
             // Match Go's project-wide, best-effort abandoned OAuth cleanup.
             // A failed cleanup rolls back independently and cannot break reads.
-            let _ = s.transaction(|tx| {
-                tx.client().execute("UPDATE connections SET status='disconnected',updated_at=now() WHERE project_id=$1 AND status='authorizing' AND created_at < now()-interval '30 minutes'", &[&project])?;
-                Ok(())
-            });
+            let _ = s.expire_stale_authorizing(
+                &project,
+                std::time::SystemTime::now() - std::time::Duration::from_secs(30 * 60),
+            );
             s.list(&scope)
-        }).await
+        })
+        .await
     }
     async fn platform_connectors(&self, i: &Identity) -> Result<Vec<String>> {
         let scope = Scope::new(&i.project_id, None).map_err(store_error)?;

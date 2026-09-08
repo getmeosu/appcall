@@ -44,3 +44,7 @@ mod copy_tests;
 #[cfg(test)]
 #[path = "logs_tests.rs"]
 mod logs_tests;
+
+#[cfg(test)]
+#[path = "connections_tests.rs"]
+mod connections_tests;

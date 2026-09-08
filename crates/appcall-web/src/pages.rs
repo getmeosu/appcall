@@ -4,7 +4,7 @@ pub(crate) fn title(op: Op) -> &'static str {
     match op {
         Op::Overview => "Getting Started",
         Op::Catalog | Op::Toolkit | Op::Setup => "Toolkits",
-        Op::AuthConfigs => "Auth Configs",
+        Op::AuthConfigs => "Connections",
         Op::Triggers => "Events",
         Op::Logs | Op::Trace => "Logs",
         Op::Qa => "QA",
@@ -79,9 +79,6 @@ fn input(name: &str, label: &str, value: &str, kind: &str) -> String {
         ..crate::ui::Field::new(name, name, label, crate::ui::Control::Input(control))
     }
     .render()
-}
-fn form(action: &str, content: &str, label: &str) -> String {
-    form_with_variant(action, content, label, crate::ui::ButtonVariant::Primary)
 }
 fn form_with_variant(
     action: &str,
@@ -256,10 +253,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
     body
   },
   Op::RunInputFields=>{let schema=v.get("inputSchema").or_else(||v.get("schema")).unwrap_or(v);format!("<div id=\"tk-runinput\"><input type=\"hidden\" name=\"runInputSchema\" value=\"{}\">{}</div>",escape(&schema.to_string()),crate::forms::render_guided_fields(schema,&Value::Null,"f.runInput",resource)?)},
-  Op::AuthConfigs=>{
-   let items=rows(v,&["connections","rows","items"])?;
-   header("Auth Configs","Connections authorize accounts for use with connectors.")+&if items.is_empty(){empty("No connections to show.","Browse connectors to configure a connection.","Browse connectors","/app/toolkits")}else{table(items,&[("Connector","connector"),("Auth Type","authType"),("Status","status"),("Last Test","lastTest")],Some(("/app/auth-configs","id",&["test","disconnect"])))?}
-  },
+  Op::AuthConfigs=>crate::connections::render(v)?,
   Op::Logs=>crate::logs::render(v, &crate::logs::Filters::default(), v.get("hasFilters").and_then(Value::as_bool)==Some(true))?,
   Op::Triggers=>crate::remaining_pages::events(v)?,
   Op::Trace=>crate::trace::standalone(v, resource.ok_or(Error::Invalid)?)?,
@@ -271,70 +265,6 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::RequestToolkit=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" data-request-state=\"success\" class=\"catalog-request-result\">Connector request received.</div>".into(),
   _=>return Err(Error::Invalid)
  };
-    Ok(body)
-}
-fn table(
-    items: &[Value],
-    columns: &[(&str, &str)],
-    actions: Option<(&str, &str, &[&str])>,
-) -> Result<String, Error> {
-    let mut body=String::from("<div class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950\"><div class=\"overflow-x-auto\"><table class=\"w-full\"><thead><tr class=\"border-b border-space-indigo-800\">");
-    for (label, _) in columns {
-        body.push_str(&format!("<th class=\"px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-dusk-blue-500\">{label}</th>"));
-    }
-    if actions.is_some() {
-        body.push_str("<th>Actions</th>")
-    }
-    body.push_str("</tr></thead><tbody class=\"divide-y divide-space-indigo-800\">");
-    for item in items {
-        body.push_str("<tr>");
-        for (_, key) in columns {
-            body.push_str(&format!(
-                "<td class=\"px-4 py-3 text-sm text-dusk-blue-300\">{}</td>",
-                escape(
-                    &item
-                        .get(*key)
-                        .filter(|v| !v.is_null())
-                        .map(|v| v
-                            .as_str()
-                            .map(str::to_owned)
-                            .unwrap_or_else(|| v.to_string()))
-                        .unwrap_or_default()
-                )
-            ));
-        }
-        if let Some((prefix, key, actions)) = actions {
-            let id = id(item, &[key])?;
-            body.push_str("<td>");
-            if actions.is_empty() {
-                body.push_str(&format!("<a href=\"{prefix}/{id}\">Inspect</a>"))
-            }
-            for action in actions {
-                let route = format!("{prefix}/{id}/{action}");
-                body.push_str(&match *action {
-                    "test" => form_with_variant(
-                        &route,
-                        "",
-                        "Check connection",
-                        crate::ui::ButtonVariant::Secondary,
-                    ),
-                    "disconnect" => confirmation(
-                        &route,
-                        "Disconnect",
-                        "Disconnect this connection?",
-                        &format!(
-                            "Disconnect connection {id}? Tool runs require an active connection."
-                        ),
-                    )?,
-                    "replay" => event_replay(&id)?,
-                    _ => form(&route, "", action),
-                });
-            }
-            body.push_str("</td>");
-        }
-        body.push_str("</tr>");
-    }
-    body.push_str("</tbody></table></div></div>");
     Ok(body)
 }
 pub(crate) fn static_page(path: &str) -> String {
@@ -655,7 +585,7 @@ mod rendering_contract_tests {
         assert!(run_form.contains("@post(&#39;/app/toolkits/provider/test&#39;"));
         let fallback = render(
             Op::Toolkit,
-            &json!({"operations":[],"setup":{"mode":"api_key","fields":[]},"connectionId":"manual"}),
+            &json!({"operations":[],"setup":{"mode":"api_key","fields":[]},"connectionId":""}),
             Some("provider"),
         )
         .unwrap();
@@ -779,10 +709,11 @@ mod rendering_contract_tests {
 mod memory_qa_tests {
     #[test]
     fn form_uses_shared_submit_without_losing_native_or_datastar_action() {
-        let html = super::form(
+        let html = super::form_with_variant(
             "/app/toolkits/request",
             "<input name=\"name\">",
             "Request toolkit",
+            crate::ui::ButtonVariant::Primary,
         );
         assert!(html.contains("ui-button-primary"));
         assert!(html.contains("type=\"submit\""));
