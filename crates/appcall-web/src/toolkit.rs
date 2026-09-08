@@ -394,7 +394,7 @@ pub(crate) fn test_fields(v: &Value, key: &str) -> Result<String, Error> {
         )
     }
     .render();
-    Ok(format!("<div id=\"tk-test-fields\" aria-live=\"polite\" aria-busy=\"false\" aria-labelledby=\"tk-fields-label\" data-fields-valid=\"true\"><h3 id=\"tk-fields-label\">Tool input</h3>{guided}{credential}<details class=\"tk-raw-input\"><summary>Edit as JSON</summary>{raw}</details><div id=\"tk-runinput\"></div></div>"))
+    Ok(format!("<div id=\"tk-test-fields\" aria-live=\"polite\" aria-busy=\"false\" aria-labelledby=\"tk-fields-label\" data-fields-valid=\"true\"><h3 id=\"tk-fields-label\">Tool input</h3>{guided}{credential}<details class=\"tk-raw-input\"><summary>Edit as JSON</summary>{raw}</details><div id=\"tk-runinput\" aria-live=\"polite\"></div></div>"))
 }
 
 pub(crate) fn result(v: Option<&Value>) -> String {

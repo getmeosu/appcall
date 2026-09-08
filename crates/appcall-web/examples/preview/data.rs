@@ -103,6 +103,7 @@ impl ScenarioData {
             Op::Options | Op::RunInputFields => fixture_dynamic(&r)?,
             Op::Branding => json!({"appName":"Sample App","tagColor":"#67e8f9"}),
             Op::Overview => json!({"toolkitCount":24,"connectionCount":3,"toolCalls":1205}),
+            Op::Runs => runs_fixture(self.scenario, &r)?,
             Op::Usage => match self.scenario {
                 Scenario::Unavailable => return Err(Error::Unavailable.into()),
                 Scenario::Empty => {

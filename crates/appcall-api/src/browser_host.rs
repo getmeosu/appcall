@@ -551,12 +551,14 @@ pub fn public_path(method: &str, path: &str) -> bool {
             matches!(*provider, "google" | "github" | "microsoft")
         }
         ("GET", ["", "app", "toolkits" | "logs", key]) => id(key),
+        ("GET", ["", "app", "runs"]) => true,
         ("GET", ["", "app", "toolkits", key, "test-form" | "options" | "runinput-fields"]) => {
             id(key)
         }
         ("POST", ["", "app", "toolkits", key, "setup" | "test"])
         | ("POST", ["", "app", "auth-configs", key, "test" | "disconnect"])
         | ("POST", ["", "app", "triggers" | "logs", key, "replay"])
+        | ("POST", ["", "app", "runs", key, "run-now" | "reset" | "cancel"])
         | ("POST", ["", "app", "users", key, "remove" | "role"])
         | ("POST", ["", "app", "sessions", key, "revoke"]) => id(key),
         _ => false,
@@ -567,6 +569,8 @@ fn web_error(error: appcall_web::Error) -> ApiError {
         appcall_web::Error::Invalid => "INVALID_REQUEST",
         appcall_web::Error::Unauthorized => "UNAUTHORIZED",
         appcall_web::Error::Forbidden => "FORBIDDEN",
+        appcall_web::Error::NotFound => "RUN_NOT_FOUND",
+        appcall_web::Error::Conflict => "RUN_STATE_CONFLICT",
         _ => "STORAGE_UNAVAILABLE",
     })
 }
@@ -680,6 +684,12 @@ impl ApiDashboard {
         {
             return Err(Error::Forbidden.into());
         }
+        if matches!(r.operation, Op::RunNow | Op::ResetRun | Op::CancelRun) {
+            // No trusted operator principal is defined by the current auth
+            // contract. Reads stay scoped and available; mutations default to
+            // deny until that capability is explicitly specified.
+            return Err(Error::Forbidden.into());
+        }
         let identity = crate::Identity {
             project_id: r.principal.project_id.clone(),
             account_id: account.into(),
@@ -714,6 +724,23 @@ impl ApiDashboard {
                 let mut url=url::Url::parse(&format!("http://local.invalid{}",match r.operation{Op::Logs=>"/v1/action-logs".to_owned(),Op::Trace=>format!("/v1/requests/{resource}"),_=>"/v1/webhook-events".to_owned()})).map_err(|_|Error::Invalid)?;
                 for (k,v) in &r.fields {if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation"].contains(&k.as_str()) || r.operation == Op::Logs && ["createdFrom","createdBefore"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
                 self.db(|client| Ok(crate::data_routes::read(client,&identity,&url)))?.map_err(dashboard_failure::map_api_error)?.map(|r|r.body).ok_or_else(|| Error::Invalid.into())
+            },
+            Op::Runs=>{
+                let mut url=url::Url::parse("http://local.invalid/v1/sync-runs").map_err(|_|Error::Invalid)?;
+                for (k,v) in &r.fields {if ["limit","cursor","connector","tool","status","accountId","externalAccountId"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
+                self.db(|client| crate::data_routes::read(client,&identity,&url).map_err(api_error))?
+                    .map(|r|r.body)
+                    .ok_or_else(|| Error::Invalid.into())
+            },
+            Op::RunNow|Op::ResetRun|Op::CancelRun=>{
+                let action=match r.operation {Op::RunNow=>appcall_sync::OperatorAction::RunNow,Op::ResetRun=>appcall_sync::OperatorAction::ResetAttempts,Op::CancelRun=>appcall_sync::OperatorAction::Cancel,_=>unreachable!()};
+                let run_id=resource.to_owned();
+                self.db(|client|{
+                    let mut tx=client.transaction().map_err(|_|Error::Unavailable)?;
+                    appcall_sync::control_in_transaction(&mut tx,&identity.project_id,&identity.account_id,&run_id,action).map_err(sync_error)?;
+                    tx.commit().map_err(|_|Error::Unavailable)?;
+                    Ok(json!({"runId":run_id,"action":match action {appcall_sync::OperatorAction::RunNow=>"run-now",appcall_sync::OperatorAction::ResetAttempts=>"reset",appcall_sync::OperatorAction::Cancel=>"cancel"}}))
+                }).map_err(DashboardFailure::from)
             },
             Op::ReplayTrace=>{let command=self.db(|client| Ok(crate::data_routes::prepare_replay(client,&identity,resource,true)))?.map_err(dashboard_failure::map_api_error)?;let mut execute=command.execute;execute.admin_scope=account.is_empty();ensure_active()?;let result=self.core.execute(execute).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"requestId":command.request_id,"replayLogId":command.log_id,"output":result.output}))},
             Op::ReplayEvent=>self.db(|client|Ok(crate::data_routes::webhook_replay(client,&r.principal,resource,&mut appcall_worker::SyncDispatchSink)))?.map(|r|r.body).map_err(dashboard_failure::map_api_error),
@@ -871,10 +898,19 @@ fn api_error(error: ApiError) -> appcall_web::Error {
         "FORBIDDEN" | "CONNECTION_NOT_FOUND" | "ACTION_NOT_PERMITTED" => {
             appcall_web::Error::Forbidden
         }
+        "RUN_NOT_FOUND" => appcall_web::Error::NotFound,
+        "RUN_STATE_CONFLICT" => appcall_web::Error::Conflict,
         "INVALID_REQUEST" | "INVALID_JSON" | "INVALID_LIMIT" | "INVALID_CURSOR"
-        | "INVALID_TIME_RANGE" | "INVALID_STATUS" | "INVALID_ERROR_CODE" | "UNKNOWN_ACTION" => {
-            appcall_web::Error::Invalid
-        }
+        | "INVALID_RUN_STATUS" | "INVALID_RUN_FILTER" | "INVALID_TIME_RANGE" | "INVALID_STATUS"
+        | "INVALID_ERROR_CODE" | "UNKNOWN_ACTION" => appcall_web::Error::Invalid,
+        _ => appcall_web::Error::Unavailable,
+    }
+}
+fn sync_error(error: appcall_sync::Error) -> appcall_web::Error {
+    match error {
+        appcall_sync::Error::NotFound => appcall_web::Error::NotFound,
+        appcall_sync::Error::Conflict => appcall_web::Error::Conflict,
+        appcall_sync::Error::InvalidInput => appcall_web::Error::Invalid,
         _ => appcall_web::Error::Unavailable,
     }
 }

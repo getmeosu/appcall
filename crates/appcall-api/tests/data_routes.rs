@@ -1,4 +1,5 @@
-use appcall_api::data_routes::{sanitize, LogQuery};
+use appcall_api::data_routes::{sanitize, LogQuery, RunQuery};
+use base64::Engine;
 use serde_json::json;
 #[test]
 fn action_created_bounds_validate_and_normalize_first_scalars() {
@@ -83,6 +84,248 @@ fn filters_limits_and_redaction_are_contractual() {
         ),
         json!({"nested":[{"access_token":"[REDACTED]", "text":"prefix [REDACTED] suffix"}],"ok":3})
     );
+}
+
+#[test]
+fn runs_query_parses_operator_filters_and_signed_cursor() {
+    let cursor = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .encode("2026-09-08T10:00:00.000000Z|run_1");
+    let query = RunQuery::parse(&url::Url::parse(&format!(
+        "http://x/?limit=7&status=running&connector=slack&tool=messages.list&accountId=brand-a&cursor={cursor}"
+    )).unwrap()).unwrap();
+    assert_eq!(query.limit, 7);
+    assert_eq!(query.get("status"), "running");
+    assert_eq!(query.get("connector"), "slack");
+    assert_eq!(query.get("tool"), "messages.list");
+    assert_eq!(query.get("accountId"), "brand-a");
+    assert_eq!(
+        query.cursor_boundary(),
+        ("2026-09-08T10:00:00.000000Z", "run_1")
+    );
+    assert_eq!(
+        RunQuery::parse(&url::Url::parse("http://x/?limit=0").unwrap())
+            .unwrap()
+            .limit,
+        50
+    );
+    for raw in ["status=unknown", "limit=-1", "cursor=broken", "tool=%01"] {
+        assert!(
+            RunQuery::parse(&url::Url::parse(&format!("http://x/?{raw}")).unwrap()).is_err(),
+            "{raw}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn sync_runs_projection_is_scoped_and_uses_persisted_queue_evidence() {
+    use appcall_api::data_routes::{dead_runs_projection, runs_list as list_runs, RunQuery};
+    use appcall_api::Identity;
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut client = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+    let schema = format!("runs_projection_test_{}", uuid::Uuid::new_v4().simple());
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290003_usage_brand_dim.sql"),
+        include_str!("../../../migrations/202609070001_event_outbox.sql"),
+        include_str!("../../../migrations/202609070002_sync_recovery.sql"),
+        include_str!("../../../migrations/202609040001_sync_job_terminal_failure.sql"),
+    ] {
+        client.batch_execute(sql).unwrap();
+    }
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','p'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('c','p','slack','api_key','active','brand-a','brand'),('other-c','p','mail','api_key','active','brand-b','brand'); INSERT INTO sync_jobs(id,project_id,connection_id,operation,status,run_after,leased_until,attempts,last_error,dedup_key,input) VALUES ('pending-run','p','c','messages.list','pending',now(),NULL,1,'','pending-run','{}'),('backoff-run','p','c','messages.list','pending',now()+interval '1 hour',NULL,2,'','backoff-run','{}'),('running-run','p','c','messages.list','running',now(),now()+interval '1 hour',3,'','running-run','{}'),('expired-run','p','c','messages.list','running',now(),now()-interval '1 second',4,'','expired-run','{}'),('failed-run','p','c','messages.list','failed',now(),NULL,10,'provider timeout','failed-run','{}'),('cancelled-run','p','c','messages.list','cancelled',now(),NULL,2,'cancelled by operator','cancelled-run','{}'),('success-run','p','c','messages.list','succeeded',now(),NULL,1,'','success-run','{}'),('other-run','p','other-c','messages.list','failed',now(),NULL,1,'secret','other-run','{}'); INSERT INTO sync_job_checkpoints(job_id,cursor) VALUES('pending-run','cursor-1'); INSERT INTO usage_events(id,project_id,connection_id,connector,action,kind,occurred_at,external_account_id,quantity) VALUES('u1','p','c','slack','messages.list','synced_record',now()-interval '1 hour','brand-a',5),('u2','p','other-c','mail','messages.list','synced_record',now()-interval '1 hour','brand-b',99)",
+        )
+        .unwrap();
+    // Capture one database timestamp so the fixture has deterministic rows on
+    // either side of the exact 24-hour window and its future upper bound.
+    let captured_at: std::time::SystemTime = client
+        .query_one("SELECT clock_timestamp()", &[])
+        .unwrap()
+        .get(0);
+    let past = captured_at - std::time::Duration::from_secs(25 * 60 * 60);
+    let in_window = captured_at - std::time::Duration::from_secs(60 * 60);
+    let future = captured_at + std::time::Duration::from_secs(60 * 60);
+    for (id, occurred_at, quantity) in [
+        ("u-past", past, 11_i64),
+        ("u-window", in_window, 7_i64),
+        ("u-future", future, 13_i64),
+    ] {
+        client
+            .execute(
+                "INSERT INTO usage_events(id,project_id,connection_id,connector,action,kind,occurred_at,external_account_id,quantity) VALUES($1,'p','c','slack','messages.list','synced_record',$2,'brand-a',$3)",
+                &[&id, &occurred_at, &quantity],
+            )
+            .unwrap();
+    }
+    let identity = Identity {
+        project_id: "p".into(),
+        account_id: "brand-a".into(),
+        admin_scope: false,
+    };
+    let value = list_runs(
+        &mut client,
+        &identity,
+        &RunQuery::parse(&url::Url::parse("http://x/?limit=20").unwrap()).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(value["runs"].as_array().unwrap().len(), 7);
+    assert_eq!(value["deadRuns"], 2);
+    assert_eq!(value["records24h"], 12);
+    // Health counts are an aggregate over the scoped queue, not a count of
+    // rows returned on this page.  Expired leases use the same captured
+    // status boundary as the row projection: two pending, one actively
+    // leased running, one scheduled backoff, and two terminal dead runs.
+    assert_eq!(value["pendingRuns"], 2);
+    assert_eq!(value["runningRuns"], 1);
+    assert_eq!(value["backingoffRuns"], 1);
+    assert_eq!(value["workerHeartbeatUnavailable"], true);
+    assert_eq!(value["operatorControlsUnavailable"], true);
+    let rows = value["runs"].as_array().unwrap();
+    let find = |id: &str| rows.iter().find(|row| row["id"] == id).unwrap();
+    assert!(rows.iter().all(|row| {
+        !row["runNowAllowed"].as_bool().unwrap_or(true)
+            && !row["resetAllowed"].as_bool().unwrap_or(true)
+            && !row["cancelAllowed"].as_bool().unwrap_or(true)
+    }));
+    assert_eq!(find("running-run")["health"], "running");
+    assert_eq!(find("running-run")["cancelEligible"], true);
+    assert_eq!(find("backoff-run")["health"], "backingoff");
+    assert_eq!(find("backoff-run")["runNowEligible"], true);
+    assert_eq!(find("expired-run")["health"], "pending");
+    assert_eq!(find("expired-run")["resetEligible"], true);
+    assert_eq!(find("failed-run")["health"], "dead");
+    assert_eq!(find("failed-run")["resetEligible"], true);
+    assert_eq!(find("failed-run")["lastError"], "provider timeout");
+    assert_eq!(find("pending-run")["currentCursor"], "cursor-1");
+    assert_eq!(find("pending-run")["attemptsRemaining"], 9);
+    assert!(find("pending-run").get("input").is_none());
+    assert!(find("pending-run").get("workerId").is_none());
+    assert!(rows.iter().all(|row| row["id"] != "other-run"));
+    let dead_runs = dead_runs_projection(&mut client, &identity).unwrap();
+    assert_eq!(dead_runs.len(), 2);
+    assert!(dead_runs.iter().all(|row| {
+        row["kind"] == "dead_run"
+            && row["state"] == "dead"
+            && row["href"] == "/app/runs?status=dead"
+            && row.get("runId").is_some()
+    }));
+    assert!(dead_runs
+        .iter()
+        .any(|row| row["body"].as_str().unwrap().contains("provider timeout")));
+
+    // Pagination must not change the aggregate health strip.
+    let paged = list_runs(
+        &mut client,
+        &identity,
+        &RunQuery::parse(&url::Url::parse("http://x/?limit=1").unwrap()).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(paged["runs"].as_array().unwrap().len(), 1);
+    assert_eq!(paged["pagination"]["hasMore"], true);
+    for (field, expected) in [
+        ("pendingRuns", 2),
+        ("runningRuns", 1),
+        ("backingoffRuns", 1),
+        ("deadRuns", 2),
+    ] {
+        assert_eq!(paged[field], expected, "pagination changed {field}");
+    }
+
+    // Connector, tool, and account filters all constrain the same aggregate
+    // scope as the row list.  The account-less identity permits exercising a
+    // project-level account filter without widening the production boundary.
+    let project_identity = Identity {
+        account_id: String::new(),
+        ..identity.clone()
+    };
+    let scoped = list_runs(
+        &mut client,
+        &project_identity,
+        &RunQuery::parse(
+            &url::Url::parse(
+                "http://x/?limit=1&connector=slack&tool=messages.list&accountId=brand-a",
+            )
+            .unwrap(),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(scoped["runs"].as_array().unwrap().len(), 1);
+    assert_eq!(scoped["pendingRuns"], 2);
+    assert_eq!(scoped["runningRuns"], 1);
+    assert_eq!(scoped["backingoffRuns"], 1);
+    assert_eq!(scoped["deadRuns"], 2);
+
+    let connector_scoped = list_runs(
+        &mut client,
+        &project_identity,
+        &RunQuery::parse(&url::Url::parse("http://x/?connector=mail").unwrap()).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(connector_scoped["runs"].as_array().unwrap().len(), 1);
+    assert_eq!(connector_scoped["deadRuns"], 1);
+    assert_eq!(connector_scoped["records24h"], 99);
+    assert_eq!(connector_scoped["pendingRuns"], 0);
+    assert_eq!(connector_scoped["runningRuns"], 0);
+    assert_eq!(connector_scoped["backingoffRuns"], 0);
+
+    let account_scoped = list_runs(
+        &mut client,
+        &project_identity,
+        &RunQuery::parse(&url::Url::parse("http://x/?accountId=brand-b").unwrap()).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(account_scoped["runs"].as_array().unwrap().len(), 1);
+    assert_eq!(account_scoped["deadRuns"], 1);
+    assert_eq!(account_scoped["records24h"], 99);
+
+    let tool_scoped = list_runs(
+        &mut client,
+        &project_identity,
+        &RunQuery::parse(&url::Url::parse("http://x/?tool=missing").unwrap()).unwrap(),
+    )
+    .unwrap();
+    assert!(tool_scoped["runs"].as_array().unwrap().is_empty());
+    assert_eq!(tool_scoped["pendingRuns"], 0);
+    assert_eq!(tool_scoped["runningRuns"], 0);
+    assert_eq!(tool_scoped["backingoffRuns"], 0);
+    assert_eq!(tool_scoped["deadRuns"], 0);
+    assert_eq!(tool_scoped["records24h"], 0);
+
+    // The status filter is applied to the derived health value (so an
+    // expired running lease is pending, not running), while records/24h
+    // remains the scoped storage total rather than a queue-row count.
+    let running_scoped = list_runs(
+        &mut client,
+        &identity,
+        &RunQuery::parse(&url::Url::parse("http://x/?status=running").unwrap()).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(running_scoped["runs"].as_array().unwrap().len(), 1);
+    assert_eq!(running_scoped["pendingRuns"], 0);
+    assert_eq!(running_scoped["runningRuns"], 1);
+    assert_eq!(running_scoped["backingoffRuns"], 0);
+    assert_eq!(running_scoped["deadRuns"], 0);
+    assert_eq!(running_scoped["records24h"], 12);
+    let other_account =
+        RunQuery::parse(&url::Url::parse("http://x/?accountId=brand-b").unwrap()).unwrap();
+    assert_eq!(
+        list_runs(&mut client, &identity, &other_account)
+            .unwrap_err()
+            .code,
+        "FORBIDDEN"
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
 }
 
 #[test]

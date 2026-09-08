@@ -1,6 +1,52 @@
 use crate::{pages::render, DashboardOperation as Op, Error};
 use serde_json::{json, Value};
 
+#[test]
+fn signal_setup_json_keeps_escaping_without_removed_ramps() {
+    let html = render(
+        Op::Setup,
+        &json!({"result":"<script>private & value</script>"}),
+        Some("provider"),
+    )
+    .unwrap();
+    assert!(html.contains("&lt;script&gt;private &amp; value&lt;/script&gt;"));
+    assert!(!html.contains("<script>"));
+    assert!(html.contains("<pre"));
+    for ramp in [
+        "prussian-blue",
+        "space-indigo",
+        "dusk-blue",
+        "neon-ice",
+        "fresh-sky",
+    ] {
+        assert!(!html.contains(ramp), "removed ramp {ramp}");
+    }
+}
+
+#[test]
+fn signal_dynamic_runinput_initial_and_patch_declare_live_regions() {
+    let initial = crate::toolkit::test_fields(&fixture(), "provider").unwrap();
+    let patch = render(
+        Op::RunInputFields,
+        &json!({"schema":{"type":"object","properties":{"query":{"type":"string"}}}}),
+        Some("provider"),
+    )
+    .unwrap();
+    for (kind, html) in [("initial", initial), ("replacement", patch)] {
+        let opening = html
+            .split("id=\"tk-runinput\"")
+            .nth(1)
+            .unwrap()
+            .split('>')
+            .next()
+            .unwrap();
+        assert!(
+            opening.contains("aria-live=\"polite\""),
+            "{kind} target needs its own live region"
+        );
+    }
+}
+
 fn fixture() -> Value {
     json!({"name":"<Provider>","description":"Use <tools>","action":"mail.read",
         "inputSchema":{"type":"object","properties":{"query":{"type":"string"}}},

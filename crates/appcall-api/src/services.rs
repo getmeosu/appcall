@@ -136,6 +136,12 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
         })
         .await
     }
+    async fn authorize_sync_control(&self, _identity: &Identity, _request: &Request) -> Result<()> {
+        // API keys currently carry no trusted operator capability. Keep this
+        // explicit at the service boundary so direct adapter calls cannot
+        // bypass the HTTP route's default-deny policy.
+        Err(ApiError::new("FORBIDDEN"))
+    }
     async fn ready(&self) -> Result<()> {
         self.database(|s| {
             s.transaction(|tx| {
@@ -309,6 +315,7 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
                 "/v1/usage/monthly",
                 "/v1/usage/action-calls/decision",
                 "/v1/entitlements",
+                "/v1/sync-runs",
             ]
             .iter()
             .any(|prefix| {
@@ -341,6 +348,40 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
             ("POST", ["v1", "requests", id, "replay"]) => Some(((*id).to_owned(), true)),
             _ => None,
         };
+        let run_control = match (request.method.as_str(), parts.as_slice()) {
+            ("POST", ["v1", "sync-runs", id, "run-now"]) => Some((
+                (*id).to_owned(),
+                appcall_sync::OperatorAction::RunNow,
+                "run-now",
+            )),
+            ("POST", ["v1", "sync-runs", id, "reset"]) => Some((
+                (*id).to_owned(),
+                appcall_sync::OperatorAction::ResetAttempts,
+                "reset",
+            )),
+            ("POST", ["v1", "sync-runs", id, "cancel"]) => Some((
+                (*id).to_owned(),
+                appcall_sync::OperatorAction::Cancel,
+                "cancel",
+            )),
+            _ => None,
+        };
+        if let Some((id, action, action_name)) = run_control {
+            // Keep the service boundary fail-closed even when a caller invokes
+            // auxiliary_route directly instead of going through Api::route.
+            // A trusted operator capability is intentionally not guessed here.
+            crate::Backend::authorize_sync_control(self, identity, request).await?;
+            let id = percent_encoding::percent_decode_str(&id)
+                .decode_utf8()
+                .map_err(|_| ApiError::new("INVALID_REQUEST"))?
+                .into_owned();
+            self.sync_control(identity, &id, action).await?;
+            return Ok(Some(Response {
+                status: 200,
+                headers: vec![],
+                body: serde_json::json!({"runId":id,"action":action_name}),
+            }));
+        }
         let Some((id, by_request)) = target else {
             return Ok(None);
         };
@@ -392,6 +433,55 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
         self.executor.execute_action(request).await
     }
 }
+impl<K, E, C> Services<K, E, C> {
+    async fn sync_control(
+        &self,
+        identity: &Identity,
+        job_id: &str,
+        action: appcall_sync::OperatorAction,
+    ) -> Result<()> {
+        let project_id = identity.project_id.clone();
+        let account_id = identity.account_id.clone();
+        let job_id = job_id.to_owned();
+        let store_handle = self.store.clone();
+        let admission = self.admission.clone();
+        bounded(&admission, move |cancelled| {
+            let mut store = store_handle
+                .lock()
+                .map_err(|_| ApiError::new("STORAGE_UNAVAILABLE"))?;
+            if cancelled.load(std::sync::atomic::Ordering::Acquire) {
+                return Err(ApiError::new("SERVICE_BUSY"));
+            }
+            store
+                .transaction(|tx| {
+                    tx.client()
+                        .batch_execute("SET statement_timeout='1s'; SET lock_timeout='250ms'")?;
+                    Ok(())
+                })
+                .map_err(store_error)?;
+            if cancelled.load(std::sync::atomic::Ordering::Acquire) {
+                return Err(ApiError::new("SERVICE_BUSY"));
+            }
+            let result = store.transaction(|tx| {
+                appcall_sync::control_in_transaction(
+                    tx.client(),
+                    &project_id,
+                    &account_id,
+                    &job_id,
+                    action,
+                )
+                .map_err(sync_store_error)
+            });
+            result.map_err(|error| match error {
+                appcall_store::Error::NotFound => ApiError::new("RUN_NOT_FOUND"),
+                appcall_store::Error::Conflict => ApiError::new("RUN_STATE_CONFLICT"),
+                appcall_store::Error::Invalid => ApiError::new("INVALID_REQUEST"),
+                _ => ApiError::new("RUNS_FAILED"),
+            })
+        })
+        .await
+    }
+}
 fn scope(i: &Identity) -> Result<Scope> {
     Scope::new(&i.project_id, Some(&i.account_id)).map_err(store_error)
 }
@@ -402,6 +492,14 @@ fn store_error(e: appcall_store::Error) -> ApiError {
         appcall_store::Error::Invalid => "INVALID_REQUEST",
         _ => "STORAGE_UNAVAILABLE",
     })
+}
+fn sync_store_error(e: appcall_sync::Error) -> appcall_store::Error {
+    match e {
+        appcall_sync::Error::NotFound => appcall_store::Error::NotFound,
+        appcall_sync::Error::Conflict => appcall_store::Error::Conflict,
+        appcall_sync::Error::InvalidInput => appcall_store::Error::Invalid,
+        _ => appcall_store::Error::Storage,
+    }
 }
 
 // Timed-out/cancelled requests retain physical admission until their worker exits.

@@ -20,6 +20,7 @@ mod tests {
             ">Connectors<",
             ">Connections<",
             ">Events<",
+            ">Runs<",
             "id=\"main-content\"",
             "href=\"#main-content\"",
             "aria-label=\"Search pages\"",
@@ -32,12 +33,7 @@ mod tests {
         ] {
             assert!(html.contains(expected), "missing {expected}");
         }
-        for forbidden in [
-            "h-screen",
-            "href=\"/app/runs\"",
-            "href=\"/app/qa\"",
-            "fonts.googleapis.com",
-        ] {
+        for forbidden in ["h-screen", "href=\"/app/qa\"", "fonts.googleapis.com"] {
             assert!(!html.contains(forbidden), "unexpected {forbidden}");
         }
     }
@@ -52,7 +48,7 @@ mod tests {
             ("/app/users/member", Some("/app/settings")),
             ("/app/sessions", Some("/app/settings")),
             ("/app/support", Some("/app/settings")),
-            ("/app/runs", None),
+            ("/app/runs", Some("/app/runs")),
         ] {
             assert_eq!(active_destination(path), expected, "{path}");
             let s = Session {
@@ -144,6 +140,12 @@ const NAV: &[Destination] = &[
         href: "/app/settings/usage",
         label: "Usage",
         glyph: "▥",
+        group: Group::Observe,
+    },
+    Destination {
+        href: "/app/runs",
+        label: "Runs",
+        glyph: "↻",
         group: Group::Observe,
     },
     Destination {

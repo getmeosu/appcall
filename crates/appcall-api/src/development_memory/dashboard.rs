@@ -52,6 +52,12 @@ impl MemoryDashboard {
         {
             return Err(Error::Forbidden.into());
         }
+        if matches!(r.operation, Op::RunNow | Op::ResetRun | Op::CancelRun) {
+            // The product has not defined a trusted operator principal yet;
+            // keep browser mutations fail-closed while scoped reads remain
+            // available to ordinary dashboard principals.
+            return Err(Error::Forbidden.into());
+        }
         self.core
             .repository
             .ensure_project(&r.principal.project_id)
@@ -129,6 +135,8 @@ impl MemoryDashboard {
                 Ok(value)
             }
             Op::Qa => Ok(json!({"unavailable":true,"certifications":[]})),
+            Op::Runs => Ok(json!({"unavailable":true})),
+            Op::RunNow | Op::ResetRun | Op::CancelRun => Err(Error::Forbidden.into()),
             Op::Logs | Op::Trace | Op::Triggers | Op::Stream => {
                 let path = match r.operation {
                     Op::Logs => "/v1/action-logs".to_owned(),
@@ -460,6 +468,8 @@ fn web_error(error: ApiError) -> DashboardFailure {
         | "INVALID_JSON"
         | "INVALID_LIMIT"
         | "INVALID_CURSOR"
+        | "INVALID_RUN_STATUS"
+        | "INVALID_RUN_FILTER"
         | "INVALID_TIME_RANGE"
         | "INVALID_STATUS"
         | "INVALID_ERROR_CODE"

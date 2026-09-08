@@ -92,7 +92,7 @@ async fn logs_dashboard_invalid_filter_classifications_memory() {
     .await;
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn copy_dashboard_failures_have_backend_parity_memory() {
     let transport = copy_failure_cases::TransportServer::new();
     let (backend, dashboard) = composition_with_manifest_and_runner(
@@ -164,6 +164,10 @@ async fn copy_dashboard_failures_have_backend_parity_memory() {
         &transport.calls,
     )
     .await;
+    assert!(
+        transport.calls.load(std::sync::atomic::Ordering::SeqCst) > 0,
+        "transport fixture must observe a runner request"
+    );
 }
 
 #[tokio::test]
@@ -463,6 +467,38 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
             .status,
         404
     );
+}
+
+#[tokio::test]
+async fn ordinary_dashboard_can_read_runs_but_cannot_control_them() {
+    use appcall_web::{DashboardData, DashboardOperation, DashboardRequest, Error};
+
+    let (_, dashboard) = composition();
+    let principal = appcall_auth::Principal::project("proj_dev").unwrap();
+    let request = |operation| DashboardRequest {
+        principal: principal.clone(),
+        operation,
+        resource: None,
+        account_id: None,
+        fields: Default::default(),
+        form_values: Default::default(),
+    };
+
+    assert!(dashboard
+        .execute(request(DashboardOperation::Runs))
+        .await
+        .is_ok());
+    for operation in [
+        DashboardOperation::RunNow,
+        DashboardOperation::ResetRun,
+        DashboardOperation::CancelRun,
+    ] {
+        assert_eq!(
+            dashboard.execute(request(operation)).await.unwrap_err(),
+            Error::Forbidden,
+            "ordinary browser principals must not perform {operation:?}"
+        );
+    }
 }
 #[test]
 fn setup_provider_failures_have_safe_public_error_codes() {
