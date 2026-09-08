@@ -10,20 +10,121 @@ struct Fixture {
     schema: String,
     url: String,
 }
+
+fn scoped_fixture_url(base: &str, schema: &str) -> Result<String, &'static str> {
+    const INVALID: &str = "invalid isolated PostgreSQL fixture URL";
+    if !(base.starts_with("postgres://") || base.starts_with("postgresql://"))
+        || base.contains('#')
+        || !schema.starts_with("cli_")
+        || schema.len() > 63
+        || !schema
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
+    {
+        return Err(INVALID);
+    }
+    let config: postgres::Config = base.parse().map_err(|_| INVALID)?;
+    if config.get_options().is_some() {
+        return Err(INVALID);
+    }
+    let scoped = format!(
+        "{base}{}options=-csearch_path%3D{schema}",
+        if base.contains('?') { "&" } else { "?" }
+    );
+    let config: postgres::Config = scoped.parse().map_err(|_| INVALID)?;
+    if config.get_options() != Some(format!("-csearch_path={schema}").as_str()) {
+        return Err(INVALID);
+    }
+    Ok(scoped)
+}
+
+#[test]
+fn fixture_url_rejects_literal_fragments_before_database_work() {
+    for base in [
+        "postgres://user:private_fixture_password@localhost/db#fragment",
+        "postgresql://localhost/db?application_name=probe#fragment",
+        "postgres://localhost/db#",
+    ] {
+        assert_eq!(
+            scoped_fixture_url(base, "cli_probe"),
+            Err("invalid isolated PostgreSQL fixture URL")
+        );
+    }
+}
+
+#[test]
+fn fixture_url_preserves_encoded_hashes_and_query_parameters() {
+    for base in [
+        "postgres://user:encoded%23password@localhost/db",
+        "postgresql://localhost/db?application_name=probe%23encoded",
+    ] {
+        let scoped = scoped_fixture_url(base, "cli_probe").unwrap();
+        assert!(scoped.starts_with(base));
+        assert_eq!(scoped.matches("options=").count(), 1);
+        let parsed: postgres::Config = scoped.parse().unwrap();
+        assert_eq!(parsed.get_options(), Some("-csearch_path=cli_probe"));
+        assert!(scoped.contains("%23"));
+    }
+}
+
+#[test]
+fn fixture_url_rejects_unsupported_configuration_with_redacted_errors() {
+    for base in [
+        "",
+        "host=localhost dbname=db password=private_fixture_password",
+        "https://user:private_fixture_password@localhost/db",
+        "postgres://localhost:invalid/db",
+        "postgres://localhost/db?unknown=private_fixture_password",
+        "postgres://localhost/db?options=-csearch_path%3Dpublic",
+        "postgres://localhost/db?%6fptions=-csearch_path%3Dpublic",
+    ] {
+        assert_eq!(
+            scoped_fixture_url(base, "cli_probe"),
+            Err("invalid isolated PostgreSQL fixture URL")
+        );
+    }
+}
+
+#[test]
+fn fixture_url_only_accepts_bounded_private_schema_names() {
+    let oversized = format!("cli_{}", "a".repeat(60));
+    for schema in [
+        "",
+        "public",
+        "cli_bad;DROP SCHEMA public",
+        "cli_bad/path",
+        &oversized,
+    ] {
+        assert_eq!(
+            scoped_fixture_url("postgres://localhost/db", schema),
+            Err("invalid isolated PostgreSQL fixture URL")
+        );
+    }
+    for prefix in ["cli_", "cli_migration_"] {
+        let first = format!("{prefix}{}", uuid::Uuid::new_v4().simple());
+        let second = format!("{prefix}{}", uuid::Uuid::new_v4().simple());
+        let first_url = scoped_fixture_url("postgres://localhost/db", &first).unwrap();
+        let second_url = scoped_fixture_url("postgres://localhost/db", &second).unwrap();
+        assert_ne!(first_url, second_url);
+        let parsed: postgres::Config = first_url.parse().unwrap();
+        assert_eq!(
+            parsed.get_options(),
+            Some(format!("-csearch_path={first}").as_str())
+        );
+    }
+}
+
 impl Fixture {
     fn new() -> Self {
         let base = std::env::var("APPCALL_ENGINE_POSTGRES_URL")
             .expect("explicit isolated PostgreSQL URL required");
-        let mut db = Client::connect(&base, NoTls).unwrap();
         let schema = format!("cli_{}", uuid::Uuid::new_v4().simple());
+        let url = scoped_fixture_url(&base, &schema).expect("fixture URL preflight failed");
+        let mut db = Client::connect(&base, NoTls).unwrap();
         db.batch_execute(&format!(
             "CREATE SCHEMA {schema};SET search_path TO {schema}"
         ))
         .unwrap();
-        let url = format!(
-            "{base}{}options=-csearch_path%3D{schema}",
-            if base.contains('?') { "&" } else { "?" }
-        );
         appcall_runtime::SqlxMigration::new(
             concat!(env!("CARGO_MANIFEST_DIR"), "/../../migrations"),
             &url,
@@ -39,8 +140,9 @@ impl Fixture {
     fn migration_only() -> Self {
         let base = std::env::var("APPCALL_ENGINE_POSTGRES_URL")
             .expect("explicit isolated PostgreSQL URL required");
-        let mut db = Client::connect(&base, NoTls).unwrap();
         let schema = format!("cli_migration_{}", uuid::Uuid::new_v4().simple());
+        let url = scoped_fixture_url(&base, &schema).expect("fixture URL preflight failed");
+        let mut db = Client::connect(&base, NoTls).unwrap();
         db.batch_execute(&format!(
             "CREATE SCHEMA {schema};\
              SET search_path TO {schema};\
@@ -54,10 +156,6 @@ impl Fixture {
              )"
         ))
         .unwrap();
-        let url = format!(
-            "{base}{}options=-csearch_path%3D{schema}",
-            if base.contains('?') { "&" } else { "?" }
-        );
         Self { db, schema, url }
     }
     fn plan(&self, args: &[&str]) -> std::process::Output {
