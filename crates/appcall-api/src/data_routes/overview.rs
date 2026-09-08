@@ -13,6 +13,8 @@ use std::collections::BTreeMap;
 
 pub(crate) const WINDOW_HOURS: i64 = 24;
 
+const MAX_RUN_ID_BYTES: usize = 256;
+
 const OVERVIEW_SQL: &str = r#"
 WITH snapshot AS (
     SELECT CURRENT_TIMESTAMP AS captured_at
@@ -83,8 +85,7 @@ failure_attention AS (
 dead_run_attention AS (
     SELECT COALESCE(jsonb_agg(jsonb_build_object(
         'runId', r.id, 'kind', 'dead_run', 'state', 'dead',
-        'title', 'Sync run stopped', 'body', 'Review this terminal run.',
-        'href', '/app/runs?status=dead'
+        'title', 'Sync run stopped', 'body', 'Review this terminal run.'
     ) ORDER BY r.updated_at DESC, r.id DESC), '[]'::jsonb) AS value
     FROM (
         SELECT j.id, j.updated_at
@@ -202,7 +203,7 @@ pub(crate) fn read(
     let failures = parse_failure_rows(row.get(7))?;
     let connection_rows = parse_connection_rows(row.get(8))?;
 
-    let dead_runs: Value = serde_json::from_str(&row.get::<_, String>(9))
+    let mut dead_runs: Value = serde_json::from_str(&row.get::<_, String>(9))
         .map_err(|_| ApiError::new("STORAGE_UNAVAILABLE"))?;
     if !dead_runs.as_array().is_some_and(|rows| {
         rows.len() <= 5
@@ -216,6 +217,7 @@ pub(crate) fn read(
     }) {
         return Err(ApiError::new("STORAGE_UNAVAILABLE"));
     }
+    project_dead_run_links(&mut dead_runs)?;
     let mut value = from_database_parts(
         toolkit_count,
         connection_count,
@@ -445,6 +447,47 @@ fn failure_href(row: &FailureRow) -> String {
     query.finish()
 }
 
+fn dead_run_href(run_id: &str) -> Option<String> {
+    if run_id.is_empty()
+        || run_id.len() > MAX_RUN_ID_BYTES
+        || !run_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    {
+        return None;
+    }
+    let mut url = url::Url::parse("https://local.invalid/app/runs").ok()?;
+    {
+        let mut segments = url.path_segments_mut().ok()?;
+        segments.push(run_id);
+    }
+    Some(url.path().to_owned())
+}
+
+fn project_dead_run_links(dead_runs: &mut Value) -> Result<()> {
+    let rows = dead_runs
+        .as_array_mut()
+        .ok_or_else(|| ApiError::new("STORAGE_UNAVAILABLE"))?;
+    rows.retain_mut(|row| {
+        let Some(object) = row.as_object_mut() else {
+            return false;
+        };
+        let Some(run_id) = object
+            .get("runId")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+        else {
+            return false;
+        };
+        let Some(href) = dead_run_href(&run_id) else {
+            return false;
+        };
+        object.insert("href".to_owned(), Value::String(href));
+        true
+    });
+    Ok(())
+}
+
 fn parse_activity_rows(raw: String) -> Result<Vec<ActivityRow>> {
     let rows = serde_json::from_str::<Vec<Value>>(&raw)
         .map_err(|_| ApiError::new("STORAGE_UNAVAILABLE"))?;
@@ -627,6 +670,42 @@ mod tests {
     }
 
     #[test]
+    fn dead_run_href_uses_bounded_detail_route_and_rejects_unsafe_ids() {
+        assert_eq!(dead_run_href("run_42"), Some("/app/runs/run_42".to_owned()));
+        for run_id in ["", "run/42", "run?cursor=1", "<script>", "run\\42"] {
+            assert_eq!(
+                dead_run_href(run_id),
+                None,
+                "unsafe run ID must not become a browser href: {run_id:?}"
+            );
+        }
+        assert!(dead_run_href(&"r".repeat(257)).is_none());
+    }
+
+    #[test]
+    fn dead_run_link_projection_replaces_supplied_href_and_skips_unsafe_ids() {
+        let mut rows = serde_json::json!([
+            {
+                "runId": "run_42",
+                "kind": "dead_run",
+                "state": "dead",
+                "href": "https://untrusted.example/runs"
+            },
+            {
+                "runId": "run/43",
+                "kind": "dead_run",
+                "state": "dead",
+                "href": "/app/runs?status=dead"
+            }
+        ]);
+
+        project_dead_run_links(&mut rows).unwrap();
+
+        assert_eq!(rows.as_array().unwrap().len(), 1);
+        assert_eq!(rows[0]["href"], "/app/runs/run_42");
+    }
+
+    #[test]
     fn aggregation_includes_exact_24_hour_boundary_but_not_old_or_future_rows() {
         let now = Utc.with_ymd_and_hms(2026, 9, 8, 12, 0, 0).unwrap();
         let actions = vec![
@@ -760,7 +839,7 @@ mod tests {
         );
         assert_eq!(runs["deadRuns"][0]["kind"], "dead_run");
         assert_eq!(runs["deadRuns"][0]["state"], "dead");
-        assert_eq!(runs["deadRuns"][0]["href"], "/app/runs?status=dead");
+        assert_eq!(runs["deadRuns"][0]["href"], "/app/runs/dead-b");
         let project = read(
             &mut client,
             &Identity {

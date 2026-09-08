@@ -2,7 +2,7 @@ use crate::*;
 use appcall_connectors::{OperationKind, Registry};
 use appcall_runner_client::{RequestContext, RunnerClient, SyncListRequest};
 use appcall_store::{AuthType, Connection, Scope, Status, Store};
-use serde_json::Map;
+use serde_json::{json, Map};
 use std::{
     future::Future,
     sync::{Arc, Mutex},
@@ -35,6 +35,17 @@ pub struct Service<C> {
     credentials: C,
     config: Config,
 }
+
+fn claim_policy(config: &Config) -> Value {
+    json!({
+        "source": "service_config",
+        "maxAttempts": config.max_attempts,
+        "leaseDurationMs": config.lease_duration.as_millis() as u64,
+        "retryBaseMs": config.retry_base.as_millis().to_string(),
+        "maxRetryDelayMs": config.max_retry_delay.as_millis() as u64,
+    })
+}
+
 impl<C: CredentialResolver> Service<C> {
     /// Detached blocking adapters must finish before an owning generation drops.
     pub fn is_idle(&self) -> bool {
@@ -103,7 +114,9 @@ impl<C: CredentialResolver> Service<C> {
     pub async fn claim(&self, worker: &str) -> Result<Option<Job>> {
         let worker = worker.to_owned();
         let lease = self.config.lease_duration;
-        self.db(move |r| r.claim(&worker, lease)).await
+        let policy = claim_policy(&self.config);
+        self.db(move |r| r.claim_with_policy(&worker, lease, Some(&policy)))
+            .await
     }
     /// One durable page per claim. Progress does not spend a failure attempt.
     pub async fn process(&self, job: Job) -> Result<()> {
@@ -134,7 +147,9 @@ impl<C: CredentialResolver> Service<C> {
                     Error::CursorCycle | Error::UnsupportedModel | Error::InvalidInput
                 );
             let delay = self.config.retry_delay(job.attempts, hint);
-            self.db(move |r| r.fail(&job, delay, terminal)).await?;
+            let failure = cause.clone();
+            self.db(move |r| r.fail_with_error(&job, delay, terminal, Some(&failure)))
+                .await?;
             return Err(cause);
         }
         Ok(())

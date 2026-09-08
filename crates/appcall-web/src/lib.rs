@@ -21,6 +21,7 @@ mod connector_tests;
 mod logs;
 mod overview;
 mod pages;
+mod run_detail;
 mod shell;
 mod trace;
 pub use dashboard::*;

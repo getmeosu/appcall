@@ -9,6 +9,9 @@ pub use data::*;
 #[path = "runs.rs"]
 mod runs;
 pub use runs::runs_fixture;
+#[path = "history.rs"]
+mod history;
+pub use history::run_history_fixture;
 #[path = "broker.rs"]
 mod broker;
 pub use broker::*;

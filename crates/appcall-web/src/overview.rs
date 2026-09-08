@@ -7,6 +7,8 @@
 use crate::{http::escape, ui, Error};
 use serde_json::Value;
 
+const MAX_RUN_ID_BYTES: usize = 256;
+
 pub(crate) fn render(value: &Value) -> Result<String, Error> {
     let toolkit_count = required_count(value, &["toolkitCount", "toolkits"])?;
     let connection_count = required_count(value, &["connectionCount", "connectionsCount"])
@@ -261,17 +263,32 @@ fn attention_item(item: &Value) -> Result<Option<String>, Error> {
     )))
 }
 
+fn run_detail_href(run_id: &str) -> Option<String> {
+    if run_id.is_empty()
+        || run_id.len() > MAX_RUN_ID_BYTES
+        || !run_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    {
+        return None;
+    }
+    let mut url = reqwest::Url::parse("https://local.invalid/app/runs").ok()?;
+    url.path_segments_mut().ok()?.push(run_id);
+    Some(url.path().to_owned())
+}
+
 fn dead_run_item(item: &Value) -> Result<Option<String>, Error> {
-    let Some(href) = text(item, &["href", "link"]) else {
-        return Err(Error::Unavailable);
-    };
     let Some(kind) = text(item, &["kind"]) else {
         return Err(Error::Unavailable);
     };
     let Some(state) = text(item, &["state"]) else {
         return Err(Error::Unavailable);
     };
-    let Some(run_id) = text(item, &["runId", "run_id"]) else {
+    let Some(run_id) = item
+        .get("runId")
+        .or_else(|| item.get("run_id"))
+        .and_then(Value::as_str)
+    else {
         return Err(Error::Unavailable);
     };
     let Some(title) = text(item, &["title", "name"]) else {
@@ -280,14 +297,17 @@ fn dead_run_item(item: &Value) -> Result<Option<String>, Error> {
     let Some(body) = text(item, &["body", "detail", "message"]) else {
         return Err(Error::Unavailable);
     };
-    if kind != "dead_run" || state != "dead" || ui::LocalPath::new(href).is_none() {
+    if kind != "dead_run" || state != "dead" {
         return Err(Error::Unavailable);
     }
+    let Some(href) = run_detail_href(run_id) else {
+        return Ok(None);
+    };
     Ok(Some(format!(
         "<li class=\"overview-attention-item\" data-run-id=\"{}\">{}<div class=\"overview-attention-copy\"><a href=\"{}\">{}</a><p>{}</p></div></li>",
         escape(run_id),
         ui::state(ui::Tone::Dead, "Dead"),
-        escape(href),
+        escape(&href),
         escape(title),
         escape(body)
     )))
@@ -478,11 +498,7 @@ mod tests {
         assert!(super::render(&empty)
             .unwrap()
             .contains("Nothing needs attention"));
-        for malformed in [
-            serde_json::json!([{}]),
-            serde_json::json!([{"runId":"x","kind":"dead_run","state":"dead","title":"Run","body":"Review","href":"https://evil.invalid"}]),
-            serde_json::json!("unavailable"),
-        ] {
+        for malformed in [serde_json::json!([{}]), serde_json::json!("unavailable")] {
             let mut value = base.clone();
             value["deadRuns"] = malformed;
             assert!(super::render(&value).is_err());
@@ -567,9 +583,51 @@ mod tests {
         assert!(html.contains("Needs attention"));
         assert!(html.contains("/app/logs?status=failed&amp;connector=slack"));
         assert!(html.contains("/app/connections/conn_notion"));
-        assert!(html.contains("/app/runs?status=dead"));
+        assert!(html.contains("/app/runs/run_sync_stopped"));
+        assert!(!html.contains("/app/runs?status=dead"));
         assert!(!html.to_ascii_lowercase().contains("latency"));
         assert!(!html.to_ascii_lowercase().contains("p95"));
+    }
+
+    #[test]
+    fn dead_run_detail_link_rejects_unsafe_ids_instead_of_trusting_supplied_href() {
+        let payload = || {
+            json!({
+                "toolkitCount": 1,
+                "connectionCount": 1,
+                "activeConnectionCount": 1,
+                "actionCalls": 1,
+                "successfulCalls": 1,
+                "failedCalls": 0,
+                "activity": [{"label":"10:00","calls":1}],
+                "failureActivity": [{"label":"10:00","failures":0}],
+                "attention": [],
+                "deadRuns": [{
+                    "runId": "run_1",
+                    "kind": "dead_run",
+                    "state": "dead",
+                    "title": "Sync run stopped",
+                    "body": "Review the terminal run.",
+                    "href": "https://untrusted.example/runs"
+                }]
+            })
+        };
+
+        let html = render(&payload()).expect("safe run ID should render");
+        assert!(html.contains("href=\"/app/runs/run_1\""));
+        assert!(!html.contains("untrusted.example"));
+
+        for run_id in ["run/1", "run?cursor=1", "<script>", ""] {
+            let mut value = payload();
+            value["deadRuns"][0]["runId"] = json!(run_id);
+            let html = render(&value)
+                .expect("an unsupported run ID should not take down the Overview page");
+            assert!(!html.contains("untrusted.example"));
+            assert!(!html.contains("href=\"/app/runs/"));
+            if !run_id.is_empty() {
+                assert!(!html.contains(run_id));
+            }
+        }
     }
 
     #[test]

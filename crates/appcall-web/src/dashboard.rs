@@ -21,6 +21,7 @@ pub enum DashboardOperation {
     Stream,
     Logs,
     Runs,
+    RunDetail,
     RunNow,
     ResetRun,
     CancelRun,
@@ -210,7 +211,10 @@ impl DashboardRenderer<'_> {
         };
         // Match the Runs API alias precedence without changing forwarded fields
         // or the principal's account scope. Navigation emits the canonical key.
-        let run_account_filter = if operation == DashboardOperation::Runs {
+        let run_account_filter = if matches!(
+            operation,
+            DashboardOperation::Runs | DashboardOperation::RunDetail
+        ) {
             let account = r.field("accountId")?;
             if account.is_empty() {
                 r.field("externalAccountId")?
@@ -278,10 +282,17 @@ impl DashboardRenderer<'_> {
         }) {
             return Err(Error::Invalid);
         }
-        let account_id = fields
-            .get("externalAccountId")
-            .filter(|id| !id.is_empty())
-            .cloned();
+        let account_id = if matches!(
+            operation,
+            DashboardOperation::Runs | DashboardOperation::RunDetail
+        ) {
+            (!run_account_filter.is_empty()).then(|| run_account_filter.to_owned())
+        } else {
+            fields
+                .get("externalAccountId")
+                .filter(|id| !id.is_empty())
+                .cloned()
+        };
         let form_values = r
             .fields
             .iter()
@@ -757,6 +768,7 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
                 parts.get(3).copied(),
             ) {
                 ("GET", Some("connectors"), 3, _) => Connector,
+                ("GET", Some("runs"), 3, _) => RunDetail,
                 ("GET", Some("connectors"), 4, Some("test-form")) => TestForm,
                 ("GET", Some("connectors"), 4, Some("options")) => Options,
                 ("GET", Some("connectors"), 4, Some("runinput-fields")) => RunInputFields,
@@ -775,6 +787,121 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
         }
     };
     Some(Some(direct))
+}
+
+#[cfg(test)]
+mod run_detail_route_tests {
+    use super::*;
+    use serde_json::json;
+    use std::{collections::BTreeMap, future::Future, pin::Pin, sync::Mutex};
+
+    #[test]
+    fn get_run_detail_resolves_only_the_bounded_run_resource_route() {
+        assert_eq!(
+            resolve("GET", "/app/runs/run-42"),
+            Some(Some(DashboardOperation::RunDetail))
+        );
+        assert_eq!(resolve("POST", "/app/runs/run-42"), None);
+        assert_eq!(resolve("GET", "/app/runs/run-42/extra"), None);
+        assert_eq!(
+            resolve("GET", "/app/runs"),
+            Some(Some(DashboardOperation::Runs))
+        );
+    }
+
+    struct Capture {
+        value: Value,
+        requests: Mutex<Vec<DashboardRequest>>,
+    }
+
+    impl DashboardData for Capture {
+        fn execute(
+            &self,
+            request: DashboardRequest,
+        ) -> Pin<Box<dyn Future<Output = Result<Value, Error>> + Send + '_>> {
+            self.requests.lock().unwrap().push(request);
+            let value = self.value.clone();
+            Box::pin(async move { Ok(value) })
+        }
+    }
+
+    #[tokio::test]
+    async fn run_detail_forwards_resource_effective_account_and_history_query() {
+        let data = Capture {
+            value: json!({
+                "run": {
+                    "id": "run-42",
+                    "connector": "github",
+                    "tool": "issues.list",
+                    "accountId": "acct-primary",
+                    "health": "succeeded",
+                    "attemptsSpent": 1,
+                    "attemptsRemaining": 2,
+                    "currentCursor": "cursor-42"
+                },
+                "history": {"complete": true, "events": []},
+                "recordsObserved": 0,
+                "recordsPartial": false,
+                "pagination": {"hasMore": false}
+            }),
+            requests: Mutex::new(Vec::new()),
+        };
+        let mut fields = BTreeMap::new();
+        fields.insert("accountId".into(), vec!["acct-primary".into()]);
+        fields.insert("externalAccountId".into(), vec!["acct-alias".into()]);
+        fields.insert("limit".into(), vec!["7".into()]);
+        fields.insert("cursor".into(), vec!["Mw".into()]);
+        let request = Request {
+            method: "GET",
+            path: "/app/runs/run-42",
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields,
+            now: 100,
+        };
+        let session = Session {
+            access_token: String::new(),
+            refresh_token: String::new(),
+            user_id: "user".into(),
+            email: "user@example.test".into(),
+            tenant_id: "tenant".into(),
+            tenant_name: "Tenant".into(),
+        };
+
+        let _ = DashboardRenderer { data: &data }
+            .render(
+                &request,
+                Some(DashboardOperation::RunDetail),
+                &session,
+                Principal::project("project").unwrap(),
+            )
+            .await
+            .unwrap();
+
+        let requests = data.requests.lock().unwrap();
+        assert_eq!(requests.len(), 1);
+        let forwarded = &requests[0];
+        assert_eq!(forwarded.operation, DashboardOperation::RunDetail);
+        assert_eq!(forwarded.resource.as_deref(), Some("run-42"));
+        assert_eq!(forwarded.account_id.as_deref(), Some("acct-primary"));
+        assert_eq!(forwarded.fields.get("limit").map(String::as_str), Some("7"));
+        assert_eq!(
+            forwarded.fields.get("cursor").map(String::as_str),
+            Some("Mw")
+        );
+        assert_eq!(
+            forwarded.fields.get("accountId").map(String::as_str),
+            Some("acct-primary")
+        );
+        assert_eq!(
+            forwarded
+                .fields
+                .get("externalAccountId")
+                .map(String::as_str),
+            Some("acct-alias")
+        );
+    }
 }
 
 // The trusted service must explicitly identify a configured development flow.

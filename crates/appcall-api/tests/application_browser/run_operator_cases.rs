@@ -63,6 +63,18 @@ fn status(wire: &str) -> u16 {
         .unwrap_or_else(|| panic!("response has no HTTP status: {wire}"))
 }
 
+fn rendered_hidden_value<'a>(html: &'a str, name: &str) -> &'a str {
+    let marker = format!("name=\"{name}\" type=\"hidden\" value=\"");
+    let start = html
+        .find(&marker)
+        .unwrap_or_else(|| panic!("rendered form omitted hidden field {name}: {html}"))
+        + marker.len();
+    let end = html[start..]
+        .find('"')
+        .unwrap_or_else(|| panic!("rendered hidden field {name} has no closing quote: {html}"));
+    &html[start..start + end]
+}
+
 fn assert_denied(wire: &str, label: &str) {
     let response_status = status(wire);
     assert!(
@@ -199,6 +211,16 @@ fn operator_grant_authenticates_runs_controls_and_preserves_cursors() {
             )),
             "granted Runs page omitted {action}: {page}"
         );
+        let detail = request(address, "GET", &format!("/app/runs/{id}"), &session, "");
+        assert_eq!(status(&detail), 200, "{detail}");
+        assert!(
+            detail.contains(&format!(
+                "formaction=\"/app/runs/{id}/{action}\" formmethod=\"post\""
+            )),
+            "detail omitted trusted {action}"
+        );
+        assert!(detail.contains("id=\"runs-live-status\""));
+        assert!(detail.contains("History partial"));
     }
 
     let run_now_before = job_state(&mut schemas, "operator-run-now");
@@ -296,6 +318,73 @@ fn operator_grant_authenticates_runs_controls_and_preserves_cursors() {
     );
     assert!(cancel_after.leased_until.is_none());
     assert!(cancel_after.run_after > cancel_before.run_after);
+
+    drop(process);
+    drop(broker);
+}
+
+#[test]
+#[ignore = "requires local PostgreSQL, local broker and spawned application process"]
+fn detail_operator_form_uses_rendered_scope_and_rejects_mismatch() {
+    let database = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut schemas = Schemas::new(&database);
+    seed_runs(&mut schemas);
+    let (process, broker, address) = launch(&schemas, &database, Some(OPERATOR_GRANTS));
+    let session = login(address);
+
+    let detail = request(
+        address,
+        "GET",
+        "/app/runs/operator-reset?accountId=brand-a",
+        &session,
+        "",
+    );
+    assert_eq!(status(&detail), 200, "{detail}");
+    assert!(detail.contains("formaction=\"/app/runs/operator-reset/reset\" formmethod=\"post\""));
+    let rendered_scope = rendered_hidden_value(&detail, "externalAccountId");
+    assert_eq!(rendered_scope, "brand-a");
+
+    let before = job_state(&mut schemas, "operator-reset");
+    assert_job_state(
+        &before,
+        "failed",
+        7,
+        "",
+        "terminal provider error",
+        "cursor-reset",
+    );
+    let encoded_body = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("externalAccountId", rendered_scope)
+        .finish();
+    let reset = request(
+        address,
+        "POST",
+        "/app/runs/operator-reset/reset",
+        &session,
+        &encoded_body,
+    );
+    assert_eq!(status(&reset), 302, "{reset}");
+    assert!(reset
+        .to_ascii_lowercase()
+        .contains("location: /app/runs?success=reset"));
+    let after = job_state(&mut schemas, "operator-reset");
+    assert_job_state(&after, "pending", 0, "", "", "cursor-reset");
+    assert!(after.leased_until.is_none());
+    assert!(after.run_after < before.run_after);
+
+    let mismatch_before = after.clone();
+    let mismatched_body = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("externalAccountId", "brand-b")
+        .finish();
+    let mismatch = request(
+        address,
+        "POST",
+        "/app/runs/operator-reset/reset",
+        &session,
+        &mismatched_body,
+    );
+    assert_denied(&mismatch, "mismatched external account reset");
+    assert_eq!(job_state(&mut schemas, "operator-reset"), mismatch_before);
 
     drop(process);
     drop(broker);
