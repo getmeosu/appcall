@@ -145,7 +145,6 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
     assert!(!certification.contains("manifestFingerprint"));
     for path in [
         "/app/settings/team",
-        "/app/sessions",
         "/app/settings/account",
         "/app/settings/organization",
         "/app/settings/billing",
@@ -154,6 +153,17 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
             .request("GET", path, &host, &origin, "")
             .contains("Configure anusa auth"));
     }
+    let legacy_sessions = f.request("GET", "/app/sessions", &host, &origin, "");
+    assert!(
+        legacy_sessions.starts_with("HTTP/1.1 301"),
+        "{legacy_sessions}"
+    );
+    let location = legacy_sessions.lines().find_map(|line| {
+        line.split_once(':')
+            .filter(|(key, _)| key.eq_ignore_ascii_case("Location"))
+            .map(|(_, value)| value.trim())
+    });
+    assert_eq!(location, Some("/app/settings/account#account-sessions"));
     let save = f.request(
         "POST",
         "/app/settings/white-labeling",
