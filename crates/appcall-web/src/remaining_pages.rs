@@ -22,7 +22,7 @@ pub(crate) fn event_row(event: &Value) -> Result<String, Error> {
         .ok_or(Error::Invalid)?;
     let text = |key| escape(event.get(key).and_then(Value::as_str).unwrap_or(""));
     Ok(format!(
-        "<tr><td>{}</td><td>{}</td><td><code>{}</code></td><td>{}</td><td>{}</td></tr>",
+        "<tr><td>{}</td><td>{}</td><td><code>{}</code></td><td>{}</td><td class=\"remaining-table-actions\">{}</td></tr>",
         text("connector"),
         text("operation"),
         text("connectionId"),
@@ -41,7 +41,7 @@ pub(crate) fn events(value: &Value) -> Result<String, Error> {
         })
         .ok_or(Error::Unavailable)?;
     let mut body = heading("Events", "Receive and replay provider webhook events.");
-    body.push_str("<div class=\"remaining-table-scroll\" role=\"region\" aria-label=\"Webhook events\" tabindex=\"0\"><table class=\"remaining-table\" data-init=\"@get('/app/triggers/stream')\"><caption class=\"sr-only\">Webhook events</caption><thead><tr><th scope=\"col\">Connector</th><th scope=\"col\">Operation</th><th scope=\"col\">Connection</th><th scope=\"col\">Received</th><th scope=\"col\">Actions</th></tr></thead><tbody id=\"trigger-rows\" aria-live=\"polite\">");
+    body.push_str("<div class=\"remaining-table-scroll\" role=\"region\" aria-label=\"Webhook events\" tabindex=\"0\"><table class=\"remaining-table remaining-events-table\" data-init=\"@get('/app/triggers/stream')\"><caption class=\"sr-only\">Webhook events</caption><thead><tr><th scope=\"col\">Connector</th><th scope=\"col\">Operation</th><th scope=\"col\">Connection</th><th scope=\"col\">Received</th><th scope=\"col\">Actions</th></tr></thead><tbody id=\"trigger-rows\" aria-live=\"polite\">");
     for row in rows {
         body.push_str(&event_row(row)?);
     }

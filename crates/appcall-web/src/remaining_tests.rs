@@ -21,14 +21,26 @@ fn remaining_events_usage_help_and_branding_use_signal() {
     assert!(events.contains("id=\"trigger-rows\""));
     assert!(events.contains("aria-live=\"polite\""));
     assert_eq!(events.matches("data-init=").count(), 1);
+    assert!(events.contains(
+        "<div class=\"remaining-table-scroll\" role=\"region\" aria-label=\"Webhook events\" tabindex=\"0\">"
+    ));
+    assert!(events.contains("<table class=\"remaining-table remaining-events-table\""));
+    assert!(events.contains("<td class=\"remaining-table-actions\">"));
     assert!(events.contains("<caption class=\"sr-only\">Webhook events</caption>"));
     assert!(events.contains("&lt;connector&gt;"));
+    let css = include_str!("../styles/app.css");
+    assert!(css.contains(
+        ".remaining-table .remaining-table-actions { min-width: 120px; white-space: nowrap; overflow-wrap: normal; }"
+    ));
+    assert!(css.contains(
+        ".remaining-table .remaining-table-actions .ui-button-labels > span { white-space: nowrap; overflow-wrap: normal; }"
+    ));
     let streamed = sse::render_trigger_patch(&json!({"id":"event_2","connector":"<connector>","operation":"created","connectionId":"connection_1","createdAt":"2026-09-08T10:00:00Z"})).unwrap();
     signal(&streamed);
     assert!(streamed.contains("#trigger-rows"));
     assert!(!streamed.contains("<table"));
     assert!(!streamed.contains("<caption"));
-    assert_eq!(streamed.matches("<td>").count(), 5);
+    assert_eq!(streamed.matches("<td").count(), 5);
     signal(
         &pages::render(
             DashboardOperation::Usage,
