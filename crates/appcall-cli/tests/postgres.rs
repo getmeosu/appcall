@@ -36,6 +36,30 @@ impl Fixture {
             .unwrap();
         Self { db, schema, url }
     }
+    fn migration_only() -> Self {
+        let base = std::env::var("APPCALL_ENGINE_POSTGRES_URL")
+            .expect("explicit isolated PostgreSQL URL required");
+        let mut db = Client::connect(&base, NoTls).unwrap();
+        let schema = format!("cli_migration_{}", uuid::Uuid::new_v4().simple());
+        db.batch_execute(&format!(
+            "CREATE SCHEMA {schema};\
+             SET search_path TO {schema};\
+             CREATE TABLE _sqlx_migrations (\
+                 version BIGINT PRIMARY KEY,\
+                 description TEXT NOT NULL,\
+                 installed_on TIMESTAMPTZ NOT NULL DEFAULT now(),\
+                 success BOOLEAN NOT NULL,\
+                 checksum BYTEA NOT NULL,\
+                 execution_time BIGINT NOT NULL\
+             )"
+        ))
+        .unwrap();
+        let url = format!(
+            "{base}{}options=-csearch_path%3D{schema}",
+            if base.contains('?') { "&" } else { "?" }
+        );
+        Self { db, schema, url }
+    }
     fn plan(&self, args: &[&str]) -> std::process::Output {
         Command::new(env!("CARGO_BIN_EXE_planctl"))
             .env_clear()
@@ -113,6 +137,78 @@ fn copy_migrations(root: &std::path::Path) {
         if entry.file_type().unwrap().is_file() {
             std::fs::copy(entry.path(), target.join(entry.file_name())).unwrap();
         }
+    }
+}
+fn write_probe_migration(root: &std::path::Path) {
+    let target = root.join("migrations");
+    std::fs::create_dir(&target).unwrap();
+    std::fs::write(target.join("1_probe.sql"), "SELECT 1;\n").unwrap();
+}
+struct ChildGuard(Option<std::process::Child>);
+impl ChildGuard {
+    fn new(child: std::process::Child) -> Self {
+        Self(Some(child))
+    }
+    fn as_mut(&mut self) -> &mut std::process::Child {
+        self.0.as_mut().expect("child already reaped")
+    }
+    fn finish(&mut self) -> std::process::Output {
+        self.0
+            .take()
+            .expect("child already reaped")
+            .wait_with_output()
+            .unwrap()
+    }
+}
+impl Drop for ChildGuard {
+    fn drop(&mut self) {
+        let Some(mut child) = self.0.take() else {
+            return;
+        };
+        let _ = child.kill();
+        let _ = child.wait_with_output();
+    }
+}
+fn wait_for_migration_lock(
+    observer: &mut Client,
+    ledger_oid: u32,
+    child: &mut ChildGuard,
+    started: std::time::Instant,
+) -> i32 {
+    observer
+        .batch_execute("SET statement_timeout='250ms'")
+        .unwrap();
+    let ready_by = started + Duration::from_secs(5);
+    loop {
+        if let Some(status) = child.as_mut().try_wait().unwrap() {
+            let _output = child.finish();
+            panic!(
+                "QA exited before migration lock readiness (status={status}; child diagnostics redacted)"
+            );
+        }
+        let blocked = match observer.query_opt(
+            "SELECT a.pid \
+             FROM pg_stat_activity a \
+             JOIN pg_locks l ON l.pid=a.pid \
+             WHERE a.application_name='appcall-migrations' \
+               AND a.wait_event_type='Lock' \
+               AND NOT l.granted \
+               AND l.relation=$1::oid \
+             LIMIT 1",
+            &[&ledger_oid],
+        ) {
+            Ok(row) => row,
+            Err(error) if error.code().is_some_and(|code| code.code() == "57014") => None,
+            Err(_) => panic!("migration lock observer query failed"),
+        };
+        if let Some(row) = blocked {
+            return row.get(0);
+        }
+        assert!(
+            std::time::Instant::now() < ready_by,
+            "migration lock was not observed within the bounded readiness window"
+        );
+        std::thread::sleep(Duration::from_millis(5));
     }
 }
 fn manifest() -> Value {
@@ -348,9 +444,9 @@ fn sigterm_during_report_persistence_is_not_swallowed() {
 #[ignore = "requires isolated local PostgreSQL and process signals"]
 fn qa_total_deadline_and_sigterm_cancel_blocked_sqlx_migration() {
     for signal in [false, true] {
-        let mut f = Fixture::new();
+        let mut f = Fixture::migration_only();
         let root = tempfile::tempdir().unwrap();
-        copy_migrations(root.path());
+        write_probe_migration(root.path());
         let manifests = root.path().join("runner/connectors/test");
         std::fs::create_dir_all(&manifests).unwrap();
         std::fs::write(
@@ -360,60 +456,53 @@ fn qa_total_deadline_and_sigterm_cancel_blocked_sqlx_migration() {
         .unwrap();
         let app = format!("migration_cancel_{}", uuid::Uuid::new_v4().simple());
         let url = format!("{}&application_name={app}", f.url);
+        let ledger_oid: u32 =
+            f.db.query_one("SELECT '_sqlx_migrations'::regclass::oid", &[])
+                .unwrap()
+                .get(0);
         let mut lockdb = Client::connect(&f.url, NoTls).unwrap();
         let mut tx = lockdb.transaction().unwrap();
         tx.batch_execute("LOCK TABLE _sqlx_migrations IN ACCESS EXCLUSIVE MODE")
             .unwrap();
+        let mut observer = Client::connect(&f.url, NoTls).unwrap();
         let started = std::time::Instant::now();
-        let mut child = Command::new(env!("CARGO_BIN_EXE_qa"))
-            .current_dir(root.path())
-            .env_clear()
-            .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|v| ("LLVM_PROFILE_FILE", v)))
-            .env("APPCALL_DATABASE_URL", &url)
-            .env("APPCALL_SECRET_KEY", "07".repeat(32))
-            .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
-            .args([
-                "run",
-                "--project=p",
-                "--timeout",
-                if signal { "10s" } else { "3s" },
-            ])
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .unwrap();
-        let migration_pid: i32 = loop {
-            let blocked = f.db.query_opt(
-                "SELECT a.pid FROM pg_stat_activity a JOIN pg_locks l ON l.pid=a.pid JOIN pg_class c ON c.oid=l.relation JOIN pg_namespace n ON n.oid=c.relnamespace WHERE a.application_name='appcall-migrations' AND NOT l.granted AND n.nspname=$1 AND c.relname='_sqlx_migrations'",
-                &[&f.schema],
-            ).unwrap();
-            if let Some(row) = blocked {
-                break row.get(0);
-            }
-            assert!(started.elapsed() < Duration::from_secs(5));
-            assert!(
-                child.try_wait().unwrap().is_none(),
-                "QA exited before migration waited on ledger"
-            );
-            std::thread::sleep(Duration::from_millis(5));
-        };
+        let mut child = ChildGuard::new(
+            Command::new(env!("CARGO_BIN_EXE_qa"))
+                .current_dir(root.path())
+                .env_clear()
+                .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|v| ("LLVM_PROFILE_FILE", v)))
+                .env("APPCALL_DATABASE_URL", &url)
+                .env("APPCALL_SECRET_KEY", "07".repeat(32))
+                .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
+                .args([
+                    "run",
+                    "--project=p",
+                    "--timeout",
+                    if signal { "10s" } else { "3s" },
+                ])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
+                .unwrap(),
+        );
+        let migration_pid = wait_for_migration_lock(&mut observer, ledger_oid, &mut child, started);
         let migration_started = std::time::Instant::now();
         if signal {
             assert!(Command::new("kill")
-                .args(["-TERM", &child.id().to_string()])
+                .args(["-TERM", &child.as_mut().id().to_string()])
                 .status()
                 .unwrap()
                 .success());
         }
-        while child.try_wait().unwrap().is_none() {
+        while child.as_mut().try_wait().unwrap().is_none() {
             if migration_started.elapsed() > Duration::from_secs(6) {
-                child.kill().unwrap();
-                let _ = child.wait();
+                let _ = child.as_mut().kill();
+                let _ = child.as_mut().wait();
                 panic!("blocked migration did not stop within its bounded drain");
             }
             std::thread::sleep(Duration::from_millis(5));
         }
-        let output = child.wait_with_output().unwrap();
+        let output = child.finish();
         assert!(!output.status.success());
         assert!(
             migration_started.elapsed() < Duration::from_secs(if signal { 2 } else { 4 }),
