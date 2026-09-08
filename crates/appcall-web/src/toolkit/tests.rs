@@ -1,4 +1,4 @@
-use crate::{pages::render, DashboardOperation as Op};
+use crate::{pages::render, DashboardOperation as Op, Error};
 use serde_json::{json, Value};
 
 #[test]
@@ -123,6 +123,63 @@ fn copy_setup_labels_follow_direct_modes_and_preserve_route_choices() {
 }
 
 #[test]
+fn reconnect_setup_preserves_the_selected_connection_in_every_setup_form() {
+    let mut v = fixture();
+    v["setup"]["routes"] = json!([]);
+    let html = page(&v);
+    assert!(html.contains("name=\"connectionId\" type=\"hidden\" value=\"active_1\""));
+
+    v["setup"]["routes"] = json!([
+        {"id":"one","label":"First","fields":[]},
+        {"id":"two","label":"Second","fields":[]}
+    ]);
+    let html = page(&v);
+    let settings = html.split("id=\"tk-setup\"").nth(1).unwrap();
+    assert_eq!(
+        settings
+            .matches("name=\"connectionId\" type=\"hidden\" value=\"active_1\"")
+            .count(),
+        2
+    );
+    assert!(html.contains("tk-setup-connection-0"));
+    assert!(html.contains("tk-setup-connection-1"));
+}
+
+#[test]
+fn reconnect_setup_preserves_an_explicit_non_active_connection() {
+    let mut v = fixture();
+    v["connectionId"] = json!("inactive_2");
+    v["setup"]["routes"] = json!([]);
+    let html = page(&v);
+    let settings = html.split("id=\"tk-setup\"").nth(1).unwrap();
+    assert!(settings.contains("name=\"connectionId\" type=\"hidden\" value=\"inactive_2\""));
+    assert!(!settings.contains("value=\"active_1\""));
+}
+
+#[test]
+fn invalid_requested_connection_fails_closed_without_selecting_a_sibling() {
+    for id in ["invalid/id", "missing"] {
+        let mut v = fixture();
+        v["connectionId"] = json!(id);
+        assert_eq!(
+            render(Op::Toolkit, &v, Some("provider")),
+            Err(Error::Unavailable),
+            "{id}"
+        );
+    }
+}
+
+#[test]
+fn absent_connection_id_leaves_setup_as_a_new_connection_by_default() {
+    let mut v = fixture();
+    v["connectionId"] = json!("");
+    v["setup"]["routes"] = json!([]);
+    let html = page(&v);
+    let settings = html.split("id=\"tk-setup\"").nth(1).unwrap();
+    assert!(!settings.contains("name=\"connectionId\""));
+}
+
+#[test]
 fn signal_mobile_tool_selection_does_not_compete_with_primary_execution() {
     let html = page(&fixture());
     let selector = html
@@ -158,6 +215,7 @@ fn signal_destructive_confirmation_is_explicit_and_uses_existing_form() {
     assert_eq!(html.matches("id=\"tk-run-form\"").count(), 1);
     assert!(!page(&fixture()).contains("id=\"tk-run-confirm\""));
     v["connections"] = json!([]);
+    v["connectionId"] = json!("");
     assert!(!page(&v).contains("id=\"tk-run-confirm\""));
 }
 
@@ -284,6 +342,7 @@ fn signal_run_disabled_without_eligible_account_or_action() {
     ] {
         let mut v = fixture();
         v["connections"] = accounts;
+        v["connectionId"] = json!("");
         let html = page(&v);
         let run = html
             .split("id=\"tk-run-control\"")
@@ -324,6 +383,7 @@ fn signal_setup_events_and_none_are_truthful() {
     let mut v = fixture();
     v["setup"] = json!({"mode":"none"});
     v["connections"] = json!([]);
+    v["connectionId"] = json!("");
     let html = page(&v);
     assert!(!html.contains("/app/toolkits/provider/setup"));
     assert!(html.contains("No additional configuration"));
@@ -368,6 +428,7 @@ fn signal_code_is_a_quoted_sample_with_external_scope_placeholder() {
     assert!(html.contains("&quot;input&quot;"));
     let mut v = fixture();
     v["connections"] = json!([]);
+    v["connectionId"] = json!("");
     assert!(page(&v).contains("/v1/connections/YOUR_CONNECTION_ID/actions/mail.read"));
 }
 
@@ -384,6 +445,7 @@ fn signal_unknown_setup_mode_does_not_offer_an_unsupported_flow() {
     let mut v = fixture();
     v["setup"] = json!({"mode":"invented","help":"<unsupported>"});
     v["connections"] = json!([]);
+    v["connectionId"] = json!("");
     let html = page(&v);
     assert!(!html.contains("/app/toolkits/provider/setup"));
     assert!(html.contains("&lt;unsupported&gt;"));

@@ -311,10 +311,11 @@ fn connection_list_reaps_old_authorizing_rows_and_tolerates_cleanup_failure() {
         include_str!("../../../migrations/202605140001_init.sql"),
         include_str!("../../../migrations/202605290001_connections_ownership.sql"),
         include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
     ] {
         client.batch_execute(sql).unwrap();
     }
-    client.batch_execute("INSERT INTO projects(id,name) VALUES('p','fixture'),('q','other'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,created_at) VALUES('old','p','slack','oauth2','authorizing','brand','brand',now()-interval '31 minutes'),('fresh','p','slack','oauth2','authorizing','brand','brand',now()-interval '29 minutes'),('degraded','p','slack','oauth2','degraded','brand','brand',now()-interval '1 day'),('other','q','slack','oauth2','authorizing','brand','brand',now()-interval '1 day')").unwrap();
+    client.batch_execute("INSERT INTO projects(id,name) VALUES('p','fixture'),('q','other'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,created_at,updated_at) VALUES('old','p','slack','oauth2','authorizing','brand','brand',now()-interval '31 minutes',now()-interval '31 minutes'),('fresh','p','slack','oauth2','authorizing','brand','brand',now()-interval '29 minutes',now()-interval '29 minutes'),('reauth','p','slack','oauth2','authorizing','brand','brand',now()-interval '1 day',now()),('legacy','p','slack','oauth2','authorizing','brand','brand',now()-interval '31 minutes',now()-interval '31 minutes'),('dev-reauth','p','slack','oauth2','authorizing','brand','brand',now()-interval '1 day',now()),('degraded','p','slack','oauth2','degraded','brand','brand',now()-interval '1 day',now()-interval '1 day'),('other','q','slack','oauth2','authorizing','brand','brand',now()-interval '1 day',now()-interval '1 day'); INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,created_at,updated_at) VALUES('p','old','attempt-old','secret-old','authorization','authorizing',now()-interval '31 minutes',now()-interval '31 minutes'),('p','fresh','attempt-fresh','secret-fresh','authorization','authorizing',now()-interval '29 minutes',now()-interval '29 minutes'),('p','reauth','attempt-reauth','secret-reauth','authorization','authorizing',now(),now())").unwrap();
     let key = StaticApiKey::from_hash(
         &appcall_auth::hash_api_key("fixture"),
         Principal::project("p").unwrap(),
@@ -340,6 +341,18 @@ fn connection_list_reaps_old_authorizing_rows_and_tolerates_cleanup_failure() {
     );
     assert_eq!(
         listed.iter().find(|c| c.id == "fresh").unwrap().status,
+        Status::Authorizing
+    );
+    assert_eq!(
+        listed.iter().find(|c| c.id == "reauth").unwrap().status,
+        Status::Authorizing
+    );
+    assert_eq!(
+        listed.iter().find(|c| c.id == "legacy").unwrap().status,
+        Status::Disconnected
+    );
+    assert_eq!(
+        listed.iter().find(|c| c.id == "dev-reauth").unwrap().status,
         Status::Authorizing
     );
     assert_eq!(
