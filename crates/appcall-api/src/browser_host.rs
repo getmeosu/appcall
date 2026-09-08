@@ -507,8 +507,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
                 | "/static/oauth-callback.js"
                 | "/static/favicon.svg"
                 | "/static/fonts/archivo-latin-variable.woff2"
-                | "/static/fonts/ibm-plex-mono-regular.woff2"
-                | "/static/fonts/ibm-plex-mono-medium.woff2"
+                | "/static/fonts/ibm-plex-mono-variable.woff2"
         )
     {
         return true;
