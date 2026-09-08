@@ -309,7 +309,7 @@ fn absent_wrong_project_user_grants_and_forged_fields_cannot_control_runs() {
         ("absent grant", None, ""),
         (
             "wrong project grant",
-            Some(r#"[{"projectId":"other","userId":"11111111-1111-1111-1111-111111111111"}]"#),
+            Some(r#"[{"projectId":"proj_other","userId":"11111111-1111-1111-1111-111111111111"}]"#),
             "",
         ),
         (

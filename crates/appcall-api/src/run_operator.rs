@@ -91,7 +91,13 @@ impl RunOperatorGrants {
         }
         let mut pairs = BTreeSet::new();
         for entry in entries {
-            if !valid_exact_id(&entry.project_id) || !valid_exact_id(&entry.user_id) {
+            if !valid_exact_id(&entry.project_id)
+                || entry
+                    .project_id
+                    .strip_prefix("proj_")
+                    .is_none_or(|tenant| tenant.is_empty())
+                || !valid_exact_id(&entry.user_id)
+            {
                 return Err(RunOperatorError::InvalidEntry);
             }
             if !pairs.insert((entry.project_id, entry.user_id)) {
@@ -127,6 +133,21 @@ mod tests {
 
     const ENV: &str = "APPCALL_RUN_OPERATOR_GRANTS";
 
+    #[test]
+    fn grants_reject_projects_that_cannot_match_browser_tenants() {
+        for project in ["project-a", "proj-a", "proj_", "tenant-a"] {
+            let raw = serde_json::json!([{"projectId": project, "userId": "user-a"}]).to_string();
+            assert_eq!(
+                RunOperatorGrants::from_json(&raw),
+                Err(super::RunOperatorError::InvalidEntry)
+            );
+        }
+        let grants =
+            RunOperatorGrants::from_json(r#"[{"projectId":"proj_tenant-a","userId":"user-a"}]"#)
+                .unwrap();
+        assert!(grants.permits("proj_tenant-a", Some("user-a")));
+    }
+
     fn configured(raw: &str) -> Result<RunOperatorGrants, impl std::fmt::Debug> {
         RunOperatorGrants::from_map(&BTreeMap::from([(ENV.to_owned(), raw.to_owned())]))
     }
@@ -144,33 +165,33 @@ mod tests {
     #[test]
     fn only_the_exact_project_and_authenticated_user_pair_matches() {
         let grants = configured(
-            r#"[{"projectId":"proj-a","userId":"user-a"},{"projectId":"proj-b","userId":"user-b"}]"#,
+            r#"[{"projectId":"proj_a","userId":"user-a"},{"projectId":"proj_b","userId":"user-b"}]"#,
         )
         .unwrap();
 
-        assert!(grants.permits("proj-a", Some("user-a")));
-        assert!(grants.permits("proj-b", Some("user-b")));
-        assert!(!grants.permits("proj-a", Some("user-b")));
-        assert!(!grants.permits("proj-b", Some("user-a")));
-        assert!(!grants.permits("proj-a", None));
-        assert!(!grants.permits("proj-other", Some("user-a")));
+        assert!(grants.permits("proj_a", Some("user-a")));
+        assert!(grants.permits("proj_b", Some("user-b")));
+        assert!(!grants.permits("proj_a", Some("user-b")));
+        assert!(!grants.permits("proj_b", Some("user-a")));
+        assert!(!grants.permits("proj_a", None));
+        assert!(!grants.permits("proj_other", Some("user-a")));
     }
 
     #[test]
     fn invalid_shape_ids_and_duplicate_pairs_fail_closed() {
         let invalid = [
             "not-json",
-            r#"{"projectId":"proj-a"}"#,
+            r#"{"projectId":"proj_a"}"#,
             r#"{"userId":"user-a"}"#,
             r#"[{"projectId":"","userId":"user-a"}]"#,
-            r#"[{"projectId":"proj a","userId":"user-a"}]"#,
-            r#"[{"projectId":"proj-a","userId":" user-a"}]"#,
+            r#"[{"projectId":"proj_a b","userId":"user-a"}]"#,
+            r#"[{"projectId":"proj_a","userId":" user-a"}]"#,
             r#"[{"projectId":"*","userId":"user-a"}]"#,
-            r#"[{"projectId":"proj-*","userId":"user-a"}]"#,
-            r#"[{"projectId":"proj-a","userId":"*"}]"#,
-            r#"[{"projectId":"proj-a","userId":"user-*"}]"#,
-            r#"[{"projectId":"proj-a","userId":"user-a","role":"operator"}]"#,
-            r#"[{"projectId":"proj-a","userId":"user-a"},{"projectId":"proj-a","userId":"user-a"}]"#,
+            r#"[{"projectId":"proj_*","userId":"user-a"}]"#,
+            r#"[{"projectId":"proj_a","userId":"*"}]"#,
+            r#"[{"projectId":"proj_a","userId":"user-*"}]"#,
+            r#"[{"projectId":"proj_a","userId":"user-a","role":"operator"}]"#,
+            r#"[{"projectId":"proj_a","userId":"user-a"},{"projectId":"proj_a","userId":"user-a"}]"#,
         ];
 
         for raw in invalid {
@@ -178,7 +199,7 @@ mod tests {
         }
 
         let control = serde_json::json!([{
-            "projectId": "proj-a",
+            "projectId": "proj_a",
             "userId": "user\u{0000}a"
         }])
         .to_string();
@@ -190,18 +211,18 @@ mod tests {
         let entries = (0..128)
             .map(|n| {
                 serde_json::json!({
-                    "projectId": format!("proj-{n}"),
+                    "projectId": format!("proj_{n}"),
                     "userId": format!("user-{n}")
                 })
             })
             .collect::<Vec<_>>();
         let accepted = serde_json::to_string(&entries).unwrap();
         let grants = configured(&accepted).unwrap();
-        assert!(grants.permits("proj-127", Some("user-127")));
+        assert!(grants.permits("proj_127", Some("user-127")));
 
         let mut too_many_entries = entries;
         too_many_entries.push(serde_json::json!({
-            "projectId": "proj-over",
+            "projectId": "proj_over",
             "userId": "user-over"
         }));
         let too_many = serde_json::to_string(&too_many_entries).unwrap();
@@ -213,7 +234,8 @@ mod tests {
 
     #[test]
     fn configuration_errors_do_not_echo_allowlist_contents() {
-        let raw = r#"[{"projectId":"secret-project","userId":"secret-user","role":"operator"}]"#;
+        let raw =
+            r#"[{"projectId":"proj_secret-project","userId":"secret-user","role":"operator"}]"#;
         let error = configured(raw).unwrap_err();
         let debug = format!("{error:?}");
         assert!(!debug.contains("secret-project"));
@@ -223,14 +245,14 @@ mod tests {
 
     #[test]
     fn duplicate_json_object_fields_fail_closed() {
-        let raw = r#"[{"projectId":"proj-a","projectId":"proj-b","userId":"user-a"}]"#;
+        let raw = r#"[{"projectId":"proj_a","projectId":"proj_b","userId":"user-a"}]"#;
         assert!(configured(raw).is_err());
     }
 
     #[test]
     fn grant_debug_reports_only_entry_count() {
         let grants =
-            configured(r#"[{"projectId":"secret-project","userId":"secret-user"}]"#).unwrap();
+            configured(r#"[{"projectId":"proj_secret-project","userId":"secret-user"}]"#).unwrap();
         let debug = format!("{grants:?}");
         assert!(debug.contains("entry_count"));
         assert!(debug.contains('1'));

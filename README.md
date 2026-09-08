@@ -37,6 +37,8 @@ Runs controls are browser-only and deny-all by default. A deployment may opt in
 specific authenticated users with `APPCALL_RUN_OPERATOR_GRANTS`, a JSON array
 of exact pairs such as
 `[{"projectId":"proj_tenant-a","userId":"11111111-1111-1111-1111-111111111111"}]`.
+The project must use the browser identity format `proj_{tenant_id}` with a
+nonempty tenant suffix; other project formats fail startup validation.
 Add or revoke grants only through a controlled application restart. The policy
 is captured once when application shared state starts, accepts at
 most 128 pairs and 16 KiB, and rejects duplicate, wildcard, blank, whitespace,
