@@ -305,7 +305,7 @@ impl DashboardData for Data {
                     fixture_dynamic(&r)
                 }
                 DashboardOperation::Catalog => Ok(
-                    json!({"connectors":(0..24).map(|i|json!({"key":format!("connector-{i}"),"name":if i==0{"Google Workspace — long integration name for realistic layout inspection".to_owned()}else{format!("Integration {}",i+1)},"operations":[{"name":"list"},{"name":"create"}]})).collect::<Vec<_>>()}),
+                    json!({"connectors":(0..24).map(|i|json!({"key":format!("connector-{i}"),"name":if i==0{"Google Workspace — long integration name for realistic layout inspection".to_owned()}else{format!("Integration {}",i+1)},"operations":[{"name":"list","kind":"action"},{"name":"create","kind":"action"}]})).collect::<Vec<_>>()}),
                 ),
                 DashboardOperation::Branding => {
                     Ok(json!({"appName":"Sample App","tagColor":"#67e8f9"}))

@@ -86,7 +86,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
    body.push_str("<div class=\"mb-4 flex flex-wrap gap-2\"><a href=\"/app/toolkits\">All</a>");
    if let Some(categories)=v.get("categories").and_then(Value::as_array){for category in categories.iter().filter_map(Value::as_str){let mut url=reqwest::Url::parse("https://local.invalid/app/toolkits").map_err(|_|Error::Invalid)?;url.query_pairs_mut().append_pair("category",category);body.push_str(&format!("<a class=\"rounded-full border border-space-indigo-700 px-3 py-1 text-xs\" href=\"/app/toolkits?{}\">{}</a>",escape(url.query().unwrap_or("")),escape(category)));}}
    body.push_str("</div><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3\">");
-   for item in rows(v,&["connectors","items","cards"])?{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(Vec::len).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/toolkits/{key}\" class=\"group flex flex-col gap-3 rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-space-indigo-700\"><div class=\"flex items-center gap-3\"><span class=\"truncate text-sm font-semibold text-dusk-blue-50 group-hover:text-neon-ice-400\">{}</span></div><p class=\"text-xs text-dusk-blue-500\">{count} tools</p></a>",escape(name)));}
+   for item in rows(v,&["connectors","items","cards"])?{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/toolkits/{key}\" class=\"group flex flex-col gap-3 rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-space-indigo-700\"><div class=\"flex items-center gap-3\"><span class=\"truncate text-sm font-semibold text-dusk-blue-50 group-hover:text-neon-ice-400\">{}</span></div><p class=\"text-xs text-dusk-blue-500\">{count} tools</p></a>",escape(name)));}
    body.push_str("</div><div id=\"toolkit-request-result\"></div>");body.push_str(&card(&format!("<h3 class=\"text-base font-semibold text-dusk-blue-50\">Request a toolkit</h3><p class=\"mt-1 text-sm text-dusk-blue-400\">Tell us which integration you need and we'll prioritise it.</p>{}",form("/app/toolkits/request",&format!("{}{}{}",input("name","Toolkit name","","text"),input("email","Your email","","email"),input("notes","Notes (optional)","","text")),"Request toolkit"))));body
   },
   Op::Toolkit=>crate::toolkit::render(v,resource.ok_or(Error::Invalid)?)?,
@@ -199,11 +199,42 @@ mod rendering_contract_tests {
     use serde_json::json;
 
     #[test]
+    fn catalog_counts_only_explicit_actions_and_preserves_count_fallback() {
+        let html = render(
+            Op::Catalog,
+            &json!({"connectors":[
+                {"key":"mixed","name":"Mixed","actionCount":99,"operations":[
+                    {"name":"run","kind":"action"},{"name":"pull","kind":"sync"},
+                    {"name":"received","kind":"webhook"},{"name":"unknown"}
+                ]},
+                {"key":"empty","name":"Empty","actionCount":99,"operations":[]},
+                {"key":"fallback","name":"Fallback","actionCount":7}
+            ]}),
+            None,
+        )
+        .unwrap();
+        for (key, count) in [("mixed", 1), ("empty", 0), ("fallback", 7)] {
+            let card = html
+                .split(&format!("href=\"/app/toolkits/{key}\""))
+                .nth(1)
+                .unwrap()
+                .split("</a>")
+                .next()
+                .unwrap();
+            assert!(
+                card.contains(&format!(">{count} tools</p>")),
+                "{key}: {card}"
+            );
+        }
+        assert!(!html.contains("99 tools"));
+    }
+
+    #[test]
     fn catalog_escapes_provider_names_and_encodes_category_links() {
         let html = render(
             Op::Catalog,
             &json!({"data": {"categories": ["a&b <script>"], "connectors": [
-                {"key":"one","name":"<script>alert(1)</script>","operations":[{},{}]},
+                {"key":"one","name":"<script>alert(1)</script>","operations":[{"name":"list","kind":"action"},{"name":"create","kind":"action"}]},
                 {"key":"two","name":"Second","actionCount":3},
                 {"key":"three","name":"Third"}
             ]}}),
