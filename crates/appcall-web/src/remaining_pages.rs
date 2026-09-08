@@ -18,8 +18,15 @@ pub(crate) fn event_row(event: &Value) -> Result<String, Error> {
     let id = event
         .get("id")
         .and_then(Value::as_str)
-        .filter(|id| crate::admin::identifier(id))
         .ok_or(Error::Invalid)?;
+    if id.is_empty() || id.len() > 1024 || id.chars().any(char::is_control) {
+        return Err(Error::Invalid);
+    }
+    let replay = if crate::admin::identifier(id) {
+        crate::pages::event_replay(id)?
+    } else {
+        ui::state(ui::Tone::Idle, "Replay unavailable")
+    };
     let text = |key| escape(event.get(key).and_then(Value::as_str).unwrap_or(""));
     Ok(format!(
         "<tr><td>{}</td><td>{}</td><td><code>{}</code></td><td>{}</td><td class=\"remaining-table-actions\">{}</td></tr>",
@@ -27,7 +34,7 @@ pub(crate) fn event_row(event: &Value) -> Result<String, Error> {
         text("operation"),
         text("connectionId"),
         text("createdAt"),
-        crate::pages::event_replay(id)?
+        replay
     ))
 }
 
