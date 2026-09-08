@@ -16,8 +16,18 @@ pub(crate) fn title(op: Op) -> &'static str {
 fn header(title: &str, subtitle: &str) -> String {
     format!("<div class=\"mb-6\"><h2 class=\"text-xl font-semibold tracking-tight text-dusk-blue-50\">{}</h2><p class=\"mt-1 text-sm text-dusk-blue-400\">{}</p></div>",escape(title),escape(subtitle))
 }
+fn catalog_header(title: &str, subtitle: &str) -> String {
+    format!(
+        "<header class=\"catalog-header\"><h2>{}</h2><p>{}</p></header>",
+        escape(title),
+        escape(subtitle)
+    )
+}
 fn card(body: &str) -> String {
     format!("<div class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\">{body}</div>")
+}
+fn catalog_card(body: &str) -> String {
+    format!("<section class=\"catalog-request-panel\">{body}</section>")
 }
 fn empty(title: &str, body: &str, action: &str, href: &str) -> String {
     crate::ui::EmptyState {
@@ -57,7 +67,18 @@ fn id(v: &Value, keys: &[&str]) -> Result<String, Error> {
     Ok(value.into())
 }
 fn input(name: &str, label: &str, value: &str, kind: &str) -> String {
-    format!("<div><label class=\"mb-1.5 block text-xs font-medium text-dusk-blue-300\">{}<input name=\"{}\" type=\"{}\" value=\"{}\" class=\"w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 text-sm text-dusk-blue-100 focus:border-neon-ice-500 focus:outline-none focus:ring-1 focus:ring-neon-ice-500\"></label></div>",escape(label),escape(name),escape(kind),escape(value))
+    let control = match kind {
+        "email" => crate::ui::InputType::Email,
+        "password" => crate::ui::InputType::Password,
+        "number" => crate::ui::InputType::Number,
+        "search" => crate::ui::InputType::Search,
+        _ => crate::ui::InputType::Text,
+    };
+    crate::ui::Field {
+        value,
+        ..crate::ui::Field::new(name, name, label, crate::ui::Control::Input(control))
+    }
+    .render()
 }
 fn form(action: &str, content: &str, label: &str) -> String {
     form_with_variant(action, content, label, crate::ui::ButtonVariant::Primary)
@@ -100,7 +121,7 @@ fn request_recovery() -> String {
     format!("<p role=\"alert\">Appcall could not confirm receipt of this connector request. Open Support to check whether it was received before submitting another request.</p>{support}")
 }
 pub(crate) fn request_failure() -> String {
-    format!("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-busy=\"false\" data-request-state=\"error\" class=\"rounded-lg border border-space-indigo-800 p-4\">{}</div>", request_recovery())
+    format!("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-busy=\"false\" data-request-state=\"error\" class=\"catalog-request-result\">{}</div>", request_recovery())
 }
 fn json(v: &Value) -> String {
     format!("<pre class=\"overflow-x-auto rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 text-xs\">{}</pre>",escape(&serde_json::to_string_pretty(v).unwrap_or_default()))
@@ -116,6 +137,38 @@ fn confirmation(action: &str, label: &str, heading: &str, body: &str) -> Result<
         form: None,
     }
     .render())
+}
+fn catalog_query_url(category: &str, search: &str) -> String {
+    let mut url =
+        reqwest::Url::parse("https://local.invalid/app/toolkits").expect("static catalog route");
+    if !category.is_empty() {
+        url.query_pairs_mut().append_pair("category", category);
+    }
+    if !search.trim().is_empty() {
+        url.query_pairs_mut().append_pair("search", search);
+    }
+    format!(
+        "{}{}",
+        url.path(),
+        url.query()
+            .map(|query| format!("?{query}"))
+            .unwrap_or_default()
+    )
+}
+fn catalog_filter_link(label: &str, href: &str, current: bool) -> Result<String, Error> {
+    let path = crate::ui::LocalPath::new(href).ok_or(Error::Invalid)?;
+    let link = crate::ui::Button {
+        size: crate::ui::ButtonSize::Sm,
+        variant: crate::ui::ButtonVariant::Secondary,
+        target: crate::ui::ButtonTarget::Link(path),
+        ..crate::ui::Button::new(label)
+    }
+    .render();
+    Ok(if current {
+        link.replacen(" href=", " aria-current=\"page\" href=", 1)
+    } else {
+        link
+    })
 }
 pub(crate) fn event_replay(id: &str) -> Result<String, Error> {
     confirmation(
@@ -135,22 +188,72 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   },
   Op::Catalog=>{
    let items=rows(v,&["connectors","items","cards"])?;
-   let mut body=header("Toolkits","Connect your apps and explore their tools.");
-   body.push_str("<div class=\"mb-4 flex flex-wrap gap-2\"><a href=\"/app/toolkits\">All</a>");
-   if let Some(categories)=v.get("categories").and_then(Value::as_array){for category in categories.iter().filter_map(Value::as_str){let mut url=reqwest::Url::parse("https://local.invalid/app/toolkits").map_err(|_|Error::Invalid)?;url.query_pairs_mut().append_pair("category",category);body.push_str(&format!("<a class=\"rounded-full border border-space-indigo-700 px-3 py-1 text-xs\" href=\"/app/toolkits?{}\">{}</a>",escape(url.query().unwrap_or("")),escape(category)));}}
-   body.push_str("</div><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3\">");
-   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/toolkits/{key}\" class=\"group flex flex-col gap-3 rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-space-indigo-700\"><div class=\"flex items-center gap-3\"><span class=\"truncate text-sm font-semibold text-dusk-blue-50 group-hover:text-neon-ice-400\">{}</span></div><p class=\"text-xs text-dusk-blue-500\">{count} tools</p></a>",escape(name)));}
+   let search=string(v,&["search"]);
+   let category=string(v,&["category"]);
+   let mut body=catalog_header("Toolkits","Connect your apps and explore their tools.");
+   body.push_str(&format!("<form id=\"toolkit-catalog-search\" method=\"get\" action=\"/app/toolkits\" role=\"search\" aria-label=\"Search connector catalog\" class=\"mb-5 flex flex-wrap items-end gap-2\">{}{}{} </form>",
+       crate::ui::Field{value:search,placeholder:"Search connectors, categories, and tools…",..crate::ui::Field::new("toolkit-search","search","Search connectors",crate::ui::Control::Input(crate::ui::InputType::Search))}.render(),
+       if category.is_empty(){String::new()}else{format!("<input type=\"hidden\" name=\"category\" value=\"{}\">",escape(category))},
+       crate::ui::Button{size:crate::ui::ButtonSize::Sm,variant:crate::ui::ButtonVariant::Secondary,target:crate::ui::ButtonTarget::Button{kind:crate::ui::ButtonType::Submit,form:None,action:None},..crate::ui::Button::new("Search")}.render()));
+   body.push_str("<nav id=\"toolkit-catalog-filters\" class=\"mb-4 flex flex-wrap gap-2\" aria-label=\"Filter connectors by category\">");
+   body.push_str(&catalog_filter_link("All", &catalog_query_url("", search), category.is_empty())?);
+   if let Some(categories)=v.get("categories").and_then(Value::as_array){for value in categories.iter().filter_map(Value::as_str){body.push_str(&catalog_filter_link(value, &catalog_query_url(value, search), value.eq_ignore_ascii_case(category))?);}}
+   body.push_str("</nav>");
+   let result_label=if items.len()==1{"1 connector shown.".to_owned()}else{format!("{} connectors shown.",items.len())};
+   let clear_search_url=catalog_query_url(category, "");
+   body.push_str(&format!("<div id=\"toolkit-catalog-results\" aria-live=\"polite\" aria-atomic=\"true\" aria-labelledby=\"toolkit-catalog-results-heading\"><h3 id=\"toolkit-catalog-results-heading\" class=\"sr-only\">Connector results</h3><p id=\"toolkit-catalog-status\" role=\"status\" aria-live=\"polite\">{result_label}</p><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3\">"));
+   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/toolkits/{key}\" aria-label=\"Open {} toolkit\" class=\"toolkit-catalog-card flex min-w-0 flex-col gap-3 p-5 transition\"><div class=\"flex min-w-0 items-center gap-3\"><span class=\"text-sm font-semibold\">{}</span></div><p class=\"text-xs\">{count} tools</p></a>",escape(name),escape(name)));}
    body.push_str("</div>");
-   if items.is_empty(){body.push_str(&if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/toolkits")}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/toolkits#toolkit-request-form")});}
-   body.push_str("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\"></div>");body.push_str(&format!("<template id=\"toolkit-request-recovery\">{}</template>",request_recovery()));body.push_str(&card(&format!("<h3 class=\"text-base font-semibold text-dusk-blue-50\">Request a connector</h3><p class=\"mt-1 text-sm text-dusk-blue-400\">Tell us which connector you need.</p>{}",form_with_variant("/app/toolkits/request",&format!("{}{}{}",input("name","Connector name","","text"),input("email","Your email","","email"),input("notes","Notes (optional)","","text")),"Request this connector",if items.is_empty(){crate::ui::ButtonVariant::Secondary}else{crate::ui::ButtonVariant::Primary}).replacen("<form ","<form id=\"toolkit-request-form\" ",1))));body
+   if items.is_empty(){body.push_str(&if !search.trim().is_empty(){empty("No connectors match this search.","Try a different connector, category, or tool title.","Clear search",&clear_search_url)}else if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/toolkits")}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/toolkits#toolkit-request-form")});}
+   body.push_str("</div>");
+   body.push_str("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" class=\"catalog-request-result\"></div>");body.push_str(&format!("<template id=\"toolkit-request-recovery\">{}</template>",request_recovery()));body.push_str(&catalog_card(&format!("<h3>Request a connector</h3><p>Tell us which connector you need.</p>{}",form_with_variant("/app/toolkits/request",&format!("{}{}{}",input("name","Connector name","","text"),input("email","Your email","","email"),input("notes","Notes (optional)","","text")),"Request this connector",if items.is_empty(){crate::ui::ButtonVariant::Secondary}else{crate::ui::ButtonVariant::Primary}).replacen("<form ","<form id=\"toolkit-request-form\" ",1))));body
   },
   Op::Toolkit=>crate::toolkit::render(v,resource.ok_or(Error::Invalid)?)?,
   Op::TestForm=>crate::toolkit::test_fields(v,resource.unwrap_or(""))?,
   Op::Options=>{
     let field=string(v,&["fieldName"]);if field.is_empty() || field.len()>256 || !field.bytes().all(|b|b.is_ascii_alphanumeric() || matches!(b,b'.'|b'_'|b'-')){return Err(Error::Invalid)}
-    let mut body=format!("<div id=\"tk-opts-{}\" class=\"tk-opts\">",escape(field));
+    let list_id=format!("tk-opts-{field}");
+    let search_id=crate::forms::presentation_id("search",field);
+    let status_id=format!("{list_id}-status");
+    let mut body=format!("<div id=\"{}\" class=\"tk-opts\" role=\"listbox\" aria-label=\"Options for {}\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" data-input-id=\"{}\" data-value-id=\"{}\" data-status-id=\"{}\">",escape(&list_id),escape(field),escape(&search_id),escape(field),escape(&status_id));
     let click=escape("document.getElementById(el.dataset.field).value=el.dataset.value; if(el.dataset.detail){@get('/app/toolkits/' + encodeURIComponent(el.dataset.key) + '/runinput-fields?connectionId=' + encodeURIComponent(document.getElementById('tk-connection').value) + '&actorId=' + encodeURIComponent(el.dataset.value) + '&source=' + encodeURIComponent(el.dataset.detail))}");
-    for item in rows(v,&["options","items"])?{body.push_str(&format!("<button type=\"button\" class=\"block w-full px-3 py-2 text-left text-sm hover:bg-space-indigo-900\" data-field=\"{}\" data-value=\"{}\" data-key=\"{}\" data-detail=\"{}\" data-on:click=\"{click}\">{}</button>",escape(field),escape(string(item,&["value","id"])),escape(string(v,&["key"])),escape(string(v,&["detailSource"])),escape(string(item,&["label","name"]))));}body.push_str("</div>");body
+    for (index, item) in rows(v, &["options", "items"])?.iter().enumerate() {
+        let value = string(item, &["value", "id"]);
+        let label = string(item, &["label", "name"]);
+        let option = crate::ui::Button {
+            size: crate::ui::ButtonSize::Md,
+            variant: crate::ui::ButtonVariant::Quiet,
+            target: crate::ui::ButtonTarget::Button {
+                kind: crate::ui::ButtonType::Button,
+                form: None,
+                action: None,
+            },
+            ..crate::ui::Button::new(label)
+        }
+        .render()
+        .replacen(
+            "<button ",
+            &format!(
+                "<button id=\"{}-{}\" role=\"option\" aria-selected=\"false\" tabindex=\"-1\" data-label=\"{}\" data-field=\"{}\" data-value=\"{}\" data-key=\"{}\" data-detail=\"{}\" data-on:click=\"{click}\" ",
+                escape(&list_id),
+                index,
+                escape(label),
+                escape(field),
+                escape(value),
+                escape(string(v, &["key"])),
+                escape(string(v, &["detailSource"])),
+            ),
+            1,
+        )
+        .replacen(
+            "class=\"ui-button ui-button-quiet ui-button-md\"",
+            "class=\"ui-button ui-button-quiet ui-button-md tk-option\"",
+            1,
+        );
+        body.push_str(&option);
+    }
+    body.push_str("</div>");
+    body
   },
   Op::RunInputFields=>{let schema=v.get("inputSchema").or_else(||v.get("schema")).unwrap_or(v);format!("<div id=\"tk-runinput\"><input type=\"hidden\" name=\"runInputSchema\" value=\"{}\">{}</div>",escape(&schema.to_string()),crate::forms::render_guided_fields(schema,&Value::Null,"f.runInput",resource)?)},
   Op::AuthConfigs=>{
@@ -174,7 +277,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::Branding=>crate::branding::render(v),
   Op::Test=>crate::toolkit::result(Some(v)),
   Op::Setup=>json(v),
-  Op::RequestToolkit=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-busy=\"false\" data-request-state=\"success\" class=\"rounded-lg border border-space-indigo-800 p-4\">Connector request received.</div>".into(),
+  Op::RequestToolkit=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" data-request-state=\"success\" class=\"catalog-request-result\">Connector request received.</div>".into(),
   _=>return Err(Error::Invalid)
  };
     Ok(body)
@@ -317,8 +420,24 @@ mod rendering_contract_tests {
             None,
         )
         .unwrap();
-        assert_eq!(populated.matches("ui-button-primary").count(), 1);
-        assert!(!populated.contains("ui-button-secondary"));
+        let populated_search = populated
+            .split("<form id=\"toolkit-catalog-search\"")
+            .nth(1)
+            .unwrap()
+            .split("</form>")
+            .next()
+            .unwrap();
+        let populated_request = populated
+            .split("<form id=\"toolkit-request-form\"")
+            .nth(1)
+            .unwrap()
+            .split("</form>")
+            .next()
+            .unwrap();
+        assert_eq!(populated_search.matches("ui-button-secondary").count(), 1);
+        assert_eq!(populated_search.matches("ui-button-primary").count(), 0);
+        assert_eq!(populated_request.matches("ui-button-primary").count(), 1);
+        assert!(!populated_request.contains("ui-button-secondary"));
     }
 
     #[test]
@@ -483,6 +602,42 @@ mod rendering_contract_tests {
         ] {
             assert!(html.contains(expected), "{expected}");
         }
+    }
+
+    #[test]
+    fn catalog_search_has_a_named_get_control_and_live_results() {
+        let html = render(
+            Op::Catalog,
+            &json!({
+                "search": "Mail",
+                "category": "Messaging",
+                "categories": ["Messaging", "Files"],
+                "connectors": [{
+                    "key": "mail",
+                    "name": "Mail",
+                    "categories": ["Messaging"],
+                    "operations": [{"name": "send", "title": "Send message", "kind": "action"}]
+                }]
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(html.contains("<form id=\"toolkit-catalog-search\""));
+        assert!(html.contains("method=\"get\" action=\"/app/toolkits\" role=\"search\""));
+        assert!(html.contains("id=\"toolkit-search\""));
+        assert!(html.contains("name=\"search\""));
+        assert!(html.contains("value=\"Mail\""));
+        assert!(html.contains("name=\"category\""));
+        assert!(html.contains("id=\"toolkit-catalog-results\""));
+        assert!(html.contains("aria-live=\"polite\" aria-atomic=\"true\""));
+        assert!(html.contains("aria-label=\"Open Mail toolkit\""));
+        assert!(html.contains("class=\"catalog-header\""));
+        assert!(html.contains("class=\"catalog-request-panel\""));
+        assert!(!html.contains("dusk-blue"));
+        assert!(!html.contains("space-indigo"));
+        assert!(!html.contains("rounded-full"));
+        assert!(!html.contains("rounded-xl"));
+        assert!(html.contains("aria-current=\"page\""));
     }
 
     #[test]

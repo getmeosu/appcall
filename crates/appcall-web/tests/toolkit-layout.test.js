@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const css = fs.readFileSync(new URL('../static/dashboard.css', import.meta.url), 'utf8');
+const appCss = fs.readFileSync(new URL('../static/app.css', import.meta.url), 'utf8');
 const rule = selector => {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return css.match(new RegExp(`${escaped}\\s*\\{([^}]+)\\}`))?.[1] ?? '';
@@ -14,6 +15,10 @@ test('connector panes shrink inside the page and use Signal surfaces', () => {
   assert.match(rule('.tk-tool-workspace'), /min-width:\s*0/);
   assert.match(rule('.tk-tool-workspace'), /var\(--color-panel\)/);
   assert.match(rule('#tk-detail pre'), /overflow:\s*auto/);
+});
+
+test('catalog search ships the alignment utility used by its form', () => {
+  assert.match(appCss, /\.items-end\{align-items:flex-end\}/);
 });
 
 test('tablet stacks results and mobile uses the native selector with touch targets', () => {
