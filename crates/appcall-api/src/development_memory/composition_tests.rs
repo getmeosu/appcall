@@ -323,6 +323,79 @@ fn api_request(method: &str, uri: &str, body: serde_json::Value) -> crate::Reque
         body: serde_json::to_vec(&body).unwrap(),
     }
 }
+
+#[tokio::test]
+async fn overview_memory_shared_platform_does_not_leak_foreign_account_logs() {
+    use appcall_web::{DashboardData, DashboardOperation, DashboardRequest};
+
+    let (backend, dashboard) = composition();
+    backend
+        .core
+        .repository
+        .create_connection(
+            Connection {
+                id: "shared-platform".into(),
+                project_id: "proj_dev".into(),
+                external_account_id: String::new(),
+                connector: "slack".into(),
+                auth_type: AuthType::ApiKey,
+                status: Status::Active,
+                secret_ref_id: String::new(),
+                last_test_status: TestStatus::Unknown,
+                credential_owner: CredentialOwner::Platform,
+            },
+            None,
+        )
+        .unwrap();
+    {
+        let mut repository = backend.core.repository.lock().unwrap();
+        let mut insert_log = |request_id: &str, account_id: &str, error_code: &str| {
+            repository.action_logs.insert(
+                format!("alog_{request_id}"),
+                super::state::ActionLog {
+                    attempt: appcall_actions::Attempt {
+                        request_id: request_id.into(),
+                        project_id: "proj_dev".into(),
+                        connection_id: "shared-platform".into(),
+                        connector: "slack".into(),
+                        external_account_id: account_id.into(),
+                        action: "messages.send".into(),
+                        key: String::new(),
+                        input_hash: String::new(),
+                        lease_ms: 1000,
+                    },
+                    status: "failed".into(),
+                    error_code: error_code.into(),
+                    created_at: chrono::Utc::now(),
+                },
+            );
+        };
+        insert_log("request-a", "account-a", "ACCOUNT_A_FAILURE");
+        insert_log("request-b", "account-b", "ACCOUNT_B_FAILURE");
+    }
+
+    let model = dashboard
+        .execute(DashboardRequest {
+            principal: appcall_auth::Principal::project("proj_dev").unwrap(),
+            operation: DashboardOperation::Overview,
+            resource: None,
+            account_id: Some("account-a".into()),
+            fields: Default::default(),
+            form_values: Default::default(),
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(model["connectionCount"], 1);
+    assert_eq!(model["actionCalls"], 1);
+    assert_eq!(model["failedCalls"], 1);
+    let attention = model["attention"].to_string();
+    assert!(attention.contains("request-a"));
+    assert!(attention.contains("ACCOUNT_A_FAILURE"));
+    assert!(!attention.contains("request-b"));
+    assert!(!attention.contains("ACCOUNT_B_FAILURE"));
+}
+
 #[tokio::test]
 async fn toolkit_selection_memory_routes_validate_explicit_actions() {
     use appcall_web::{DashboardData, DashboardOperation, DashboardRequest, Error};

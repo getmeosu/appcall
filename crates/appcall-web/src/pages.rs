@@ -2,7 +2,7 @@ use crate::{http::escape, DashboardOperation as Op, Error};
 use serde_json::Value;
 pub(crate) fn title(op: Op) -> &'static str {
     match op {
-        Op::Overview => "Getting Started",
+        Op::Overview => "Overview",
         Op::Catalog | Op::Toolkit | Op::Setup => "Toolkits",
         Op::AuthConfigs => "Connections",
         Op::Triggers => "Events",
@@ -14,18 +14,12 @@ pub(crate) fn title(op: Op) -> &'static str {
         _ => "Result",
     }
 }
-fn header(title: &str, subtitle: &str) -> String {
-    format!("<div class=\"mb-6\"><h2 class=\"text-xl font-semibold tracking-tight text-dusk-blue-50\">{}</h2><p class=\"mt-1 text-sm text-dusk-blue-400\">{}</p></div>",escape(title),escape(subtitle))
-}
 fn catalog_header(title: &str, subtitle: &str) -> String {
     format!(
         "<header class=\"catalog-header\"><h2>{}</h2><p>{}</p></header>",
         escape(title),
         escape(subtitle)
     )
-}
-fn card(body: &str) -> String {
-    format!("<div class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\">{body}</div>")
 }
 fn catalog_card(body: &str) -> String {
     format!("<section class=\"catalog-request-panel\">{body}</section>")
@@ -38,9 +32,6 @@ fn empty(title: &str, body: &str, action: &str, href: &str) -> String {
         action_href: crate::ui::LocalPath::new(href).expect("static local empty-state link"),
     }
     .render()
-}
-fn stat(label: &str, value: &Value) -> String {
-    card(&format!("<p class=\"text-xs font-medium uppercase tracking-wider text-dusk-blue-500\">{}</p><p class=\"mt-2 text-2xl font-semibold text-dusk-blue-50\">{}</p>",escape(label),escape(&value.to_string())))
 }
 fn string<'a>(v: &'a Value, keys: &[&str]) -> &'a str {
     keys.iter()
@@ -541,11 +532,7 @@ fn runs(v: &Value) -> Result<String, Error> {
 pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<String, Error> {
     let v = raw.get("data").unwrap_or(raw);
     let body=match op{
-  Op::Overview=>{
-   let mut body=header("Getting Started","Connect a toolkit, run your first tool call, and wire up triggers.");body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");
-   for (label,key) in [("Toolkits available","toolkitCount"),("Connected accounts","connectionCount"),("Tool calls this month","toolCalls")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?))}body.push_str("</div>");
-   body.push_str(&card("<h3 class=\"text-sm font-semibold text-dusk-blue-100\">Setup checklist</h3><ul class=\"mt-4 space-y-3\"><li><a href=\"/app/toolkits\">Browse the toolkit catalog</a></li><li><a href=\"/app/toolkits\">Connect an account</a></li><li><a href=\"/app/toolkits\">Run a tool call</a></li><li><a href=\"/app/triggers\">Add a trigger</a></li></ul>"));body
-  },
+  Op::Overview=>crate::overview::render(v)?,
   Op::Catalog=>{
    let items=rows(v,&["connectors","items","cards"])?;
    let search=string(v,&["search"]);
@@ -1516,7 +1503,18 @@ mod rendering_contract_tests {
         for (op, data, expected) in [
             (
                 Op::Overview,
-                json!({"toolkitCount":2,"connectionCount":3,"toolCalls":4}),
+                json!({
+                    "toolkitCount":2,
+                    "connectionCount":3,
+                    "activeConnectionCount":2,
+                    "toolCalls":4,
+                    "successfulCalls":3,
+                    "failedCalls":1,
+                    "activity":[{"label":"Sep 08","calls":4}],
+                    "failureActivity":[{"label":"Sep 08","failures":1}],
+                    "attention":[],
+                    "deadRuns":[]
+                }),
                 ">4</p>",
             ),
             (

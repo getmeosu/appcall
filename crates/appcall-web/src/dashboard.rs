@@ -302,6 +302,20 @@ impl DashboardRenderer<'_> {
         let mut value = match value {
             Ok(value) => value,
             Err(error)
+                if operation == DashboardOperation::Overview
+                    && error.classification() == Error::Unavailable =>
+            {
+                return Ok(Response::new(
+                    503,
+                    crate::shell::layout(
+                        crate::pages::title(operation),
+                        session,
+                        &crate::overview::unavailable(),
+                        r.path,
+                    ),
+                ));
+            }
+            Err(error)
                 if operation == DashboardOperation::Logs
                     && error.classification() == Error::Invalid =>
             {
@@ -576,7 +590,21 @@ impl DashboardRenderer<'_> {
         let mut content = if operation == Logs {
             crate::logs::render(&value, &log_filters, has_filters)?
         } else {
-            crate::pages::render(operation, &value, resource.as_deref())?
+            match crate::pages::render(operation, &value, resource.as_deref()) {
+                Ok(content) => content,
+                Err(Error::Unavailable) if operation == Overview => {
+                    return Ok(Response::new(
+                        503,
+                        crate::shell::layout(
+                            crate::pages::title(operation),
+                            session,
+                            &crate::overview::unavailable(),
+                            r.path,
+                        ),
+                    ));
+                }
+                Err(error) => return Err(error),
+            }
         };
         if operation == Branding && r.field("saved")? == "1" {
             content = crate::admin_ui::banner("Review the current branding settings below.", true)
