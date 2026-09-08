@@ -46,6 +46,18 @@ impl ScenarioData {
     }
     async fn run(&self, r: DashboardRequest) -> Result<Value, DashboardFailure> {
         use DashboardOperation as Op;
+        if is_logs_scenario(self.scenario) {
+            if r.operation == Op::Logs {
+                return logs_collection(&r).map_err(Into::into);
+            }
+            if r.operation == Op::Trace && logs_trace_id(r.resource.as_deref().unwrap_or("")) {
+                let id = r.resource.as_deref().ok_or(Error::Invalid)?;
+                if id == "preview_original" {
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                }
+                return Ok(logs_trace(id));
+            }
+        }
         let counter = match r.operation {
             Op::Setup => Some(0),
             Op::Test => Some(1),
