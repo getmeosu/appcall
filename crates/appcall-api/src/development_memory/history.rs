@@ -125,6 +125,7 @@ impl MemoryHistory {
     }
     fn list(&self, identity: &Identity, replay: bool, q: &LogQuery) -> Result<Value> {
         let mut rows = self.rows(identity, replay, None)?;
+        let (created_from, created_before) = q.created_bounds();
         let (time, id) = q.cursor_boundary();
         let cursor = if time.is_empty() {
             None
@@ -145,6 +146,11 @@ impl MemoryHistory {
                         .into_iter()
                         .all(|key| q.get(key).is_empty() || r[key].as_str() == Some(q.get(key))))
                 && cursor.as_ref().is_none_or(|c| sort_key(r) < *c)
+                && (replay || {
+                    let created_at = sort_key(r).0;
+                    created_from.is_none_or(|from| created_at >= from)
+                        && created_before.is_none_or(|before| created_at < before)
+                })
         });
         let more = rows.len() > q.limit as usize;
         rows.truncate(q.limit as usize);
