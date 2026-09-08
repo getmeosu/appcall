@@ -25,6 +25,11 @@ fn existing_schema_scopes_and_credential_transactions_are_atomic() {
         ))
         .unwrap();
     client
+        .batch_execute(include_str!(
+            "../../../migrations/202609070004_oauth_refresh_intents.sql"
+        ))
+        .unwrap();
+    client
         .batch_execute("INSERT INTO projects(id,name) VALUES ('p','test'),('q','other')")
         .unwrap();
     let mut store = Store::new(client, LocalProvider::new(&[7; 32]).unwrap());

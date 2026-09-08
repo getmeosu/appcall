@@ -77,6 +77,27 @@ fn copy_setup_labels_follow_direct_modes_and_preserve_route_choices() {
 }
 
 #[test]
+fn reconnect_setup_preserves_the_selected_connection_in_every_setup_form() {
+    let mut v = fixture();
+    v["setup"]["routes"] = json!([]);
+    let html = page(&v);
+    assert!(html.contains("name=\"connectionId\" type=\"hidden\" value=\"active_1\""));
+
+    v["setup"]["routes"] = json!([
+        {"id":"one","label":"First","fields":[]},
+        {"id":"two","label":"Second","fields":[]}
+    ]);
+    let html = page(&v);
+    assert_eq!(
+        html.matches("name=\"connectionId\" type=\"hidden\" value=\"active_1\"")
+            .count(),
+        2
+    );
+    assert!(html.contains("tk-setup-connection-0"));
+    assert!(html.contains("tk-setup-connection-1"));
+}
+
+#[test]
 fn signal_mobile_tool_selection_does_not_compete_with_primary_execution() {
     let html = page(&fixture());
     let selector = html

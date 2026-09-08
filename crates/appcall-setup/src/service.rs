@@ -170,7 +170,18 @@ impl Service {
         route: &str,
         fields: &BTreeMap<String, String>,
     ) -> Result<Connection> {
-        self.save(scope, Some(id), connector, route, fields, &|| true)
+        self.update_checked(scope, id, connector, route, fields, &|| true)
+    }
+    pub fn update_checked(
+        &self,
+        scope: &SetupScope,
+        id: &str,
+        connector: &str,
+        route: &str,
+        fields: &BTreeMap<String, String>,
+        active: &dyn Fn() -> bool,
+    ) -> Result<Connection> {
+        self.save(scope, Some(id), connector, route, fields, active)
     }
     fn save(
         &self,

@@ -315,8 +315,11 @@ impl MemoryDashboard {
                         setup.start_checked(&identity.project_id, account(&identity), &resource, (!existing.is_empty()).then_some(existing.as_str()), &active)
                             .map(|start| { let local = start.authorization_url.starts_with("/oauth/local/authorize?"); json!({"redirectUrl":start.authorization_url,"connectionId":start.connection.id,"developmentOAuth":local}) })
                             .map_err(map)
-                    } else {
+                    } else if existing.is_empty() {
                         setup.submit_checked(&identity.project_id, account(&identity), &resource, &route, &fields, &active)
+                            .map(|c| crate::browser_host::connection_value(&c)).map_err(map)
+                    } else {
+                        setup.update_checked(&identity.project_id, account(&identity), &existing, &resource, &route, &fields, &active)
                             .map(|c| crate::browser_host::connection_value(&c)).map_err(map)
                     };
                     Ok(result)

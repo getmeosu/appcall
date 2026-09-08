@@ -4,7 +4,7 @@ pub(crate) fn title(op: Op) -> &'static str {
     match op {
         Op::Overview => "Getting Started",
         Op::Catalog | Op::Toolkit | Op::Setup => "Toolkits",
-        Op::AuthConfigs => "Auth Configs",
+        Op::AuthConfigs => "Connections",
         Op::Triggers => "Triggers",
         Op::Logs | Op::Trace => "Logs",
         Op::Qa => "QA",
@@ -153,10 +153,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
     for item in rows(v,&["options","items"])?{body.push_str(&format!("<button type=\"button\" class=\"block w-full px-3 py-2 text-left text-sm hover:bg-space-indigo-900\" data-field=\"{}\" data-value=\"{}\" data-key=\"{}\" data-detail=\"{}\" data-on:click=\"{click}\">{}</button>",escape(field),escape(string(item,&["value","id"])),escape(string(v,&["key"])),escape(string(v,&["detailSource"])),escape(string(item,&["label","name"]))));}body.push_str("</div>");body
   },
   Op::RunInputFields=>{let schema=v.get("inputSchema").or_else(||v.get("schema")).unwrap_or(v);format!("<div id=\"tk-runinput\"><input type=\"hidden\" name=\"runInputSchema\" value=\"{}\">{}</div>",escape(&schema.to_string()),crate::forms::render_guided_fields(schema,&Value::Null,"f.runInput",resource)?)},
-  Op::AuthConfigs=>{
-   let items=rows(v,&["connections","rows","items"])?;
-   header("Auth Configs","Connections authorize accounts for use with connectors.")+&if items.is_empty(){empty("No connections to show.","Browse connectors to configure a connection.","Browse connectors","/app/toolkits")}else{table(items,&[("Connector","connector"),("Auth Type","authType"),("Status","status"),("Last Test","lastTest")],Some(("/app/auth-configs","id",&["test","disconnect"])))?}
-  },
+  Op::AuthConfigs=>crate::connections::render(v)?,
   Op::Logs=>{
    let items=rows(v,&["logs","items","rows"])?;
    header("Logs","Inspect recorded tool executions.")+"<div class=\"flex items-center gap-2\"><a href=\"/app/logs\">All</a><a href=\"/app/logs?status=succeeded\">Succeeded</a><a href=\"/app/logs?status=failed\">Failed</a></div>"+&if items.is_empty(){if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No tool runs match these filters.","Clear the filters to view recorded runs.","Clear filters","/app/logs")}else{empty("No tool runs to show.","Browse connectors to choose a tool to run.","Browse connectors","/app/toolkits")}}else{table(items,&[("Time","createdAt"),("Connector","connector"),("Action","action"),("Status","status"),("Error Code","errorCode"),("Request ID","requestId")],Some(("/app/logs","requestId",&[])))?}

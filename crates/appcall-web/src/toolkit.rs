@@ -170,7 +170,7 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
         accounts_panel(&accounts),
         events(key, &operations),
         code(v, connection, action_name),
-        settings(v, key)?,
+        settings(v, key, connection)?,
     ];
     for ((id, label), content) in TABS.into_iter().zip(panels) {
         html.push_str(&format!("<section id=\"tk-panel-{id}\" class=\"tk-panel\" aria-label=\"{label}\"{}>{content}</section>",if id==tab{""}else{" hidden"}));
@@ -473,7 +473,7 @@ fn setup_controls(fields: &[Value], prefix: &str) -> Result<String, Error> {
     }
     Ok(html)
 }
-fn settings(v: &Value, key: &str) -> Result<String, Error> {
+fn settings(v: &Value, key: &str, connection: &str) -> Result<String, Error> {
     let mut html = String::from("<div id=\"tk-setup\" tabindex=\"-1\"><h2>Settings</h2>");
     if let Some(setup) = v.get("setup") {
         html.push_str(&format!("<p>{}</p>", escape(text(setup, "help"))));
@@ -491,7 +491,12 @@ fn settings(v: &Value, key: &str) -> Result<String, Error> {
                     _ => "Connect".to_owned(),
                 };
                 html.push_str(&format!(
-                    "<form method=\"post\" action=\"/app/toolkits/{key}/setup\">{}{}</form>",
+                    "<form method=\"post\" action=\"/app/toolkits/{key}/setup\">{}{}{}</form>",
+                    if connection.is_empty() {
+                        String::new()
+                    } else {
+                        hidden("tk-setup-connection", "connectionId", connection)
+                    },
                     setup_controls(array(setup, "fields"), "base")?,
                     submit(&label, false)
                 ));
@@ -501,7 +506,7 @@ fn settings(v: &Value, key: &str) -> Result<String, Error> {
                     if !valid_id(route_id) {
                         return Err(Error::Unavailable);
                     }
-                    html.push_str(&format!("<form method=\"post\" action=\"/app/toolkits/{key}/setup\"><h3>{}</h3><p>{}</p>{}{}{}{}</form>",escape(text(route,"label")),escape(text(route,"help")),setup_controls(array(setup,"fields"),&format!("{index}-base"))?,hidden(&format!("tk-setup-route-{index}"),"route",route_id),setup_controls(array(route,"fields"),&format!("{index}-route"))?,submit(text(route,"label"),false)));
+                    html.push_str(&format!("<form method=\"post\" action=\"/app/toolkits/{key}/setup\"><h3>{}</h3><p>{}</p>{}{}{}{}{}</form>",escape(text(route,"label")),escape(text(route,"help")),if connection.is_empty(){String::new()}else{hidden(&format!("tk-setup-connection-{index}"),"connectionId",connection)},setup_controls(array(setup,"fields"),&format!("{index}-base"))?,hidden(&format!("tk-setup-route-{index}"),"route",route_id),setup_controls(array(route,"fields"),&format!("{index}-route"))?,submit(text(route,"label"),false)));
                 }
             }
         } else if text(setup, "mode") == "none" {
