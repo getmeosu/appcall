@@ -25,7 +25,7 @@ fn signal_setup_json_keeps_escaping_without_removed_ramps() {
 
 #[test]
 fn signal_dynamic_runinput_initial_and_patch_declare_live_regions() {
-    let initial = crate::toolkit::test_fields(&fixture(), "provider").unwrap();
+    let initial = crate::connector::test_fields(&fixture(), "provider").unwrap();
     let patch = render(
         Op::RunInputFields,
         &json!({"schema":{"type":"object","properties":{"query":{"type":"string"}}}}),
@@ -85,7 +85,7 @@ fn signal_unnamed_operations_never_select_or_enable_execution() {
     }
 }
 fn page(v: &Value) -> String {
-    render(Op::Toolkit, v, Some("provider")).unwrap()
+    render(Op::Connector, v, Some("provider")).unwrap()
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn copy_setup_labels_follow_direct_modes_and_preserve_route_choices() {
         let html = page(&v);
         let settings = html.split("id=\"tk-setup\"").nth(1).unwrap();
         assert!(settings.contains(&format!(">{label}</span>")), "{mode}");
-        assert!(settings.contains("action=\"/app/toolkits/provider/setup\""));
+        assert!(settings.contains("action=\"/app/connectors/provider/setup\""));
         assert!(settings.contains("name=\"token\""));
     }
     v["name"] = json!("");
@@ -162,7 +162,7 @@ fn invalid_requested_connection_fails_closed_without_selecting_a_sibling() {
         let mut v = fixture();
         v["connectionId"] = json!(id);
         assert_eq!(
-            render(Op::Toolkit, &v, Some("provider")),
+            render(Op::Connector, &v, Some("provider")),
             Err(Error::Unavailable),
             "{id}"
         );
@@ -315,7 +315,7 @@ fn signal_tools_select_only_active_accounts_and_use_get_selection() {
     assert!(html.contains("2026-01-01"));
     assert!(html.contains("General"));
     assert_eq!(html.matches("class=\"ui-tag\">Read only").count(), 1);
-    assert!(html.contains("/app/toolkits/provider?action=mail.read"));
+    assert!(html.contains("/app/connectors/provider?action=mail.read"));
     assert!(!html.contains("/test-form?action="));
     assert!(html.contains("id=\"tk-tool-selector\" method=\"get\""));
     for name in [
@@ -327,7 +327,7 @@ fn signal_tools_select_only_active_accounts_and_use_get_selection() {
     ] {
         assert!(html.contains(&format!("name=\"{name}\"")), "{name}");
     }
-    assert!(html.contains("action=\"/app/toolkits/provider/test\""));
+    assert!(html.contains("action=\"/app/connectors/provider/test\""));
     assert!(html.contains("retry:&#39;never&#39;, retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()"));
     assert!(html.contains("Schema"));
     assert!(html.contains("Output schema"));
@@ -378,14 +378,14 @@ fn signal_setup_events_and_none_are_truthful() {
     assert!(html.contains("name=\"route\" type=\"hidden\" value=\"key\""));
     assert!(html.contains("Received &lt;mail&gt;"));
     assert!(html.contains("Declared &lt;event&gt;"));
-    assert!(html.contains("/app/triggers?connector=provider"));
+    assert!(html.contains("/app/events?connector=provider"));
     assert!(!html.contains("legacy"));
     let mut v = fixture();
     v["setup"] = json!({"mode":"none"});
     v["connections"] = json!([]);
     v["connectionId"] = json!("");
     let html = page(&v);
-    assert!(!html.contains("/app/toolkits/provider/setup"));
+    assert!(!html.contains("/app/connectors/provider/setup"));
     assert!(html.contains("No additional configuration"));
 }
 
@@ -447,7 +447,7 @@ fn signal_unknown_setup_mode_does_not_offer_an_unsupported_flow() {
     v["connections"] = json!([]);
     v["connectionId"] = json!("");
     let html = page(&v);
-    assert!(!html.contains("/app/toolkits/provider/setup"));
+    assert!(!html.contains("/app/connectors/provider/setup"));
     assert!(html.contains("&lt;unsupported&gt;"));
 }
 
@@ -483,7 +483,7 @@ fn signal_legacy_fragment_and_multiple_setup_routes_keep_ids_unique() {
     let unique: std::collections::BTreeSet<_> = ids.iter().collect();
     assert_eq!(ids.len(), unique.len());
     assert_eq!(
-        html.matches("action=\"/app/toolkits/provider/setup\"")
+        html.matches("action=\"/app/connectors/provider/setup\"")
             .count(),
         2
     );

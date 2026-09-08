@@ -139,7 +139,7 @@ fn authorization_age(value: &Value) -> Option<String> {
 
 fn reconnect_href(connector: &str, id: &str) -> Option<String> {
     (valid_id(connector) && valid_id(id))
-        .then(|| format!("/app/toolkits/{connector}?tab=settings&connectionId={id}#tk-setup"))
+        .then(|| format!("/app/connectors/{connector}?tab=settings&connectionId={id}#tk-setup"))
 }
 
 fn check_form(id: &str) -> String {
@@ -156,7 +156,7 @@ fn check_form(id: &str) -> String {
     }
     .render();
     format!(
-        "<form class=\"connection-action\" method=\"post\" action=\"/app/auth-configs/{id}/test\">{button}</form>"
+        "<form class=\"connection-action\" method=\"post\" action=\"/app/connections/{id}/test\">{button}</form>"
     )
 }
 
@@ -175,7 +175,7 @@ fn reconnect_link(connector: &str, id: &str) -> String {
 
 fn disconnect_button(connector: &str, id: &str) -> Result<String, Error> {
     let document_id = ui::document_id()?;
-    let action = format!("/app/auth-configs/{id}/disconnect");
+    let action = format!("/app/connections/{id}/disconnect");
     let connector_name = if connector.is_empty() {
         "Connector not recorded"
     } else {
@@ -254,7 +254,7 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
             ui::ButtonVariant::Primary
         },
         target: ui::ButtonTarget::Link(
-            ui::LocalPath::new("/app/toolkits").expect("static local route"),
+            ui::LocalPath::new("/app/connectors").expect("static local route"),
         ),
         ..ui::Button::new("Browse connectors")
     }
@@ -268,7 +268,7 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
                 title: "No connections to show.",
                 body: "Browse connectors to configure a connection.",
                 action_label: "Browse connectors",
-                action_href: ui::LocalPath::new("/app/toolkits")
+                action_href: ui::LocalPath::new("/app/connectors")
                     .expect("static local empty-state link"),
             }
             .render(),
@@ -308,7 +308,9 @@ mod tests {
         assert!(html.contains("Provider identity not recorded"));
         assert!(html.contains("<span>Cause</span> Not recorded"));
         assert!(html.contains("1 hour"));
-        assert!(html.contains("/app/toolkits/slack?tab=settings&amp;connectionId=conn_1#tk-setup"));
+        assert!(
+            html.contains("/app/connectors/slack?tab=settings&amp;connectionId=conn_1#tk-setup")
+        );
         assert!(!html.contains("external_account_id"));
     }
 

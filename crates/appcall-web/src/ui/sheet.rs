@@ -133,7 +133,7 @@ pub fn component_sheet() -> String {
     html.push_str("</div></section><section><h2>Navigation and consequences</h2>");
     html.push_str(&back_link(
         "Back to connectors",
-        LocalPath::new("/app/toolkits").unwrap(),
+        LocalPath::new("/app/connectors").unwrap(),
     ));
     html.push_str(
         &ConfirmButton {
@@ -153,7 +153,7 @@ pub fn component_sheet() -> String {
             title: "No connections yet",
             body: "Connect an account to run your first tool.",
             action_label: "Browse connectors",
-            action_href: LocalPath::new("/app/toolkits").unwrap(),
+            action_href: LocalPath::new("/app/connectors").unwrap(),
         }
         .render(),
     );
@@ -182,7 +182,7 @@ pub fn component_sheet() -> String {
             title: long,
             body: long,
             action_label: long,
-            action_href: LocalPath::new("/app/toolkits").unwrap(),
+            action_href: LocalPath::new("/app/connectors").unwrap(),
         }
         .render(),
     );

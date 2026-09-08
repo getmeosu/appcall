@@ -74,10 +74,10 @@ fn dashboard_page_preserves_unsupported_ids_without_replay_targets() {
         .iter()
         .map(|(_, frame)| String::from_utf8_lossy(frame))
         .collect::<Vec<_>>();
-    assert!(frames[0].contains("/app/triggers/event-1/replay"));
+    assert!(frames[0].contains("/app/events/event-1/replay"));
     assert!(frames[1].contains("Replay unavailable"));
-    assert!(!frames[1].contains("/app/triggers/bad/id/replay"));
-    assert!(frames[2].contains("/app/triggers/event-3/replay"));
+    assert!(!frames[1].contains("/app/events/bad/id/replay"));
+    assert!(frames[2].contains("/app/events/event-3/replay"));
 }
 
 #[test]
@@ -93,8 +93,8 @@ fn dashboard_page_advances_cursor_across_all_unsupported_ids() {
     for (_, frame) in page.frames {
         let frame = String::from_utf8_lossy(&frame);
         assert!(frame.contains("Replay unavailable"));
-        assert!(!frame.contains("/app/triggers/bad/id/replay"));
-        assert!(!frame.contains("/app/triggers/still unsupported/replay"));
+        assert!(!frame.contains("/app/events/bad/id/replay"));
+        assert!(!frame.contains("/app/events/still unsupported/replay"));
     }
 }
 

@@ -16,7 +16,7 @@ fn signal(html: &str) {
 
 #[test]
 fn remaining_events_usage_help_and_branding_use_signal() {
-    let events = pages::render(DashboardOperation::Triggers, &json!({"events":[{"id":"event_1","connector":"<connector>","operation":"created","connectionId":"connection_1","createdAt":"2026-09-08T10:00:00Z"}]}), None).unwrap();
+    let events = pages::render(DashboardOperation::Events, &json!({"events":[{"id":"event_1","connector":"<connector>","operation":"created","connectionId":"connection_1","createdAt":"2026-09-08T10:00:00Z"}]}), None).unwrap();
     signal(&events);
     assert!(events.contains("id=\"trigger-rows\""));
     assert!(events.contains("aria-live=\"polite\""));
@@ -35,7 +35,7 @@ fn remaining_events_usage_help_and_branding_use_signal() {
     assert!(css.contains(
         ".remaining-table .remaining-table-actions .ui-button-labels > span { white-space: nowrap; overflow-wrap: normal; }"
     ));
-    let streamed = sse::render_trigger_patch(&json!({"id":"event_2","connector":"<connector>","operation":"created","connectionId":"connection_1","createdAt":"2026-09-08T10:00:00Z"})).unwrap();
+    let streamed = sse::render_event_patch(&json!({"id":"event_2","connector":"<connector>","operation":"created","connectionId":"connection_1","createdAt":"2026-09-08T10:00:00Z"})).unwrap();
     signal(&streamed);
     assert!(streamed.contains("#trigger-rows"));
     assert!(!streamed.contains("<table"));
@@ -61,7 +61,7 @@ fn remaining_events_usage_help_and_branding_use_signal() {
 #[test]
 fn remaining_admin_forms_and_settings_use_shared_controls() {
     let form = admin::form(
-        "/app/users/invite",
+        "/app/settings/team/invite",
         &[
             ("email", "Email", "email", "<value>"),
             ("role", "Role", "text", "admin"),
@@ -74,7 +74,7 @@ fn remaining_admin_forms_and_settings_use_shared_controls() {
     assert!(form.contains("&lt;value&gt;"));
     let settings = admin_ui::settings("proj_1", "Project", "Organization");
     signal(&settings);
-    assert!(settings.contains("/app/users"));
+    assert!(settings.contains("/app/settings/team"));
     assert!(settings.contains("/app/settings/account"));
     assert!(!settings.contains("href=\"/app/sessions\""));
     signal(&admin_ui::billing(
@@ -83,7 +83,7 @@ fn remaining_admin_forms_and_settings_use_shared_controls() {
     ));
     signal(&admin_ui::banner("<failure>", false));
     assert_eq!(
-        admin_ui::failure_target("/app/sessions/other/revoke"),
+        admin_ui::failure_target("/app/settings/account/sessions/other/revoke"),
         Some("/app/settings/account?error=revoke#account-sessions")
     );
 }
@@ -105,7 +105,7 @@ fn remaining_sessions_current_and_malformed_data_remain_distinct() {
         assert!(!html.contains("No sessions to show"));
     }
     assert!(remaining_pages::sessions(Ok(json!({"sessions":[]}))).contains("No sessions to show"));
-    let form = admin::form("/app/sessions/other/revoke", &[]);
+    let form = admin::form("/app/settings/account/sessions/other/revoke", &[]);
     assert_eq!(form.matches("<form ").count(), 1);
     assert!(form.contains("data-confirm-open"));
     assert!(form.contains("formmethod=\"post\""));
@@ -212,7 +212,7 @@ async fn remaining_connection_flash_uses_a_live_shared_notice() {
     fields.insert("success".into(), vec!["test-passed".into()]);
     let request = Request {
         method: "GET",
-        path: "/app/auth-configs",
+        path: "/app/connections",
         cookies: "",
         origin: None,
         referer: None,
@@ -222,7 +222,7 @@ async fn remaining_connection_flash_uses_a_live_shared_notice() {
     let response = DashboardRenderer { data: &data }
         .render(
             &request,
-            Some(DashboardOperation::AuthConfigs),
+            Some(DashboardOperation::Connections),
             &session,
             Principal::project("project").unwrap(),
         )
@@ -269,7 +269,7 @@ async fn remaining_certification_is_denied_before_data_even_for_all_grants() {
     for cookie in ["", cookies.as_str()] {
         let request = Request {
             method: "GET",
-            path: "/app/qa",
+            path: "/app/certification",
             cookies: cookie,
             origin: None,
             referer: None,
@@ -290,7 +290,7 @@ async fn remaining_certification_is_denied_before_data_even_for_all_grants() {
     }
     let request = Request {
         method: "GET",
-        path: "/app/qa",
+        path: "/app/certification",
         cookies: "",
         origin: None,
         referer: None,
@@ -423,7 +423,9 @@ async fn remaining_account_absorbs_sessions_and_preserves_security_on_session_fa
         if failed {
             assert!(response.body.contains("Could not load sessions"));
         } else {
-            assert!(response.body.contains("/app/sessions/other/revoke"));
+            assert!(response
+                .body
+                .contains("/app/settings/account/sessions/other/revoke"));
             assert!(response.body.contains("&lt;device&gt;"));
         }
         server.await.unwrap();

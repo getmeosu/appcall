@@ -74,7 +74,7 @@ impl DevelopmentDashboard<'_> {
 fn admin_target(path: &str) -> Option<(&'static str, &'static str)> {
     for (title, target) in [
         ("Settings", "/app/settings"),
-        ("Users", "/app/users"),
+        ("Team", "/app/settings/team"),
         ("Sessions", "/app/sessions"),
         ("Account", "/app/settings/account"),
         ("Organization", "/app/settings/organization"),

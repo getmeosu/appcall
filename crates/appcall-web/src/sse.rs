@@ -26,7 +26,7 @@ pub(crate) fn response(html: &str) -> Response {
 }
 /// Source-compatible Datastar prepend frame for the host's persistent event
 /// subscription. Recheck tenant/session authorization during long subscriptions.
-pub fn render_trigger_patch(event: &Value) -> Result<String, Error> {
+pub fn render_event_patch(event: &Value) -> Result<String, Error> {
     let row = crate::remaining_pages::event_row(event)?;
     let mut frames = patch(&row, Some("#trigger-rows"), true);
     frames.push_str("event: datastar-patch-elements\ndata: selector #trigger-empty-state\ndata: mode remove\n\n");

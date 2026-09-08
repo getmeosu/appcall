@@ -364,7 +364,7 @@ async fn main() -> std::io::Result<()> {
     let broker = TcpListener::bind("127.0.0.1:55590").await?;
     let listener = TcpListener::bind("127.0.0.1:55589").await?;
     let data = std::sync::Arc::new(ScenarioData::new(scenario));
-    println!("Synthetic dashboard preview ({scenario:?}): http://127.0.0.1:55589/app/toolkits");
+    println!("Synthetic dashboard preview ({scenario:?}): http://127.0.0.1:55589/app/connectors");
     println!("Synthetic counts only: http://127.0.0.1:55589/preview/stats — no provider calls or retained inputs.");
     tokio::spawn(async move {
         while let Ok((mut socket, _)) = broker.accept().await {

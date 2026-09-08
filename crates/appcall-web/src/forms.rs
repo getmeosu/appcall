@@ -433,7 +433,7 @@ fn dynamic_control(
 ) -> Result<String, Error> {
     use crate::{http::escape, ui};
     let mut url = reqwest::Url::parse(&format!(
-        "https://local.invalid/app/toolkits/{connector}/options"
+        "https://local.invalid/app/connectors/{connector}/options"
     ))
     .map_err(|_| Error::Invalid)?;
     url.query_pairs_mut()

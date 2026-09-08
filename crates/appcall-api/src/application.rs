@@ -475,7 +475,7 @@ impl Backend for Application {
         r: &Request,
     ) -> Result<Option<appcall_api::streaming::StreamResponse>> {
         let url = request_url(r)?;
-        if r.method == "GET" && url.path() == "/app/triggers/stream" {
+        if r.method == "GET" && url.path() == "/app/events/stream" {
             let browser = self
                 .browser
                 .as_ref()
@@ -483,7 +483,7 @@ impl Backend for Application {
             let (principal, cookie) = browser.authorize_session(r).await?;
             let verify_request = Arc::new(Request {
                 method: "GET".into(),
-                uri: "/app/triggers/stream".into(),
+                uri: "/app/events/stream".into(),
                 headers: if cookie.is_empty() {
                     r.headers.clone()
                 } else {

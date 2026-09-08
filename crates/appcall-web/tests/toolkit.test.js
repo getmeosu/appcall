@@ -21,10 +21,10 @@ function fixture(destructive = false) {
   let elementSequence=0;document.createElement=()=>node('created-'+elementSequence++);
   const tabs=['tools','accounts','events','code','settings'].map((name,i)=>{
     const wrap=node('tk-tab-'+name,{dataset:{tab:name,selected:String(!i)}});
-    const a=node('tab-'+name,{parentElement:wrap,attrs:{href:'/app/toolkits/provider?tab='+name+'&action=mail.read&callerToken=SECRET',...(i===0?{'aria-current':'page'}:{})},matches:s=>s==='#tk-tabs a'});
+    const a=node('tab-'+name,{parentElement:wrap,attrs:{href:'/app/connectors/provider?tab='+name+'&action=mail.read&callerToken=SECRET',...(i===0?{'aria-current':'page'}:{})},matches:s=>s==='#tk-tabs a'});
     wrap.querySelector=()=>a; node('tk-panel-'+name,{hidden:!!i}); return a;
   });
-  const rail=['mail.read','mail.write'].map(action=>node(action,{attrs:{href:'/app/toolkits/provider?action='+action},matches:s=>s==='.tk-tool-item a'}));
+  const rail=['mail.read','mail.write'].map(action=>node(action,{attrs:{href:'/app/connectors/provider?action='+action},matches:s=>s==='.tk-tool-item a'}));
   node('tk-tabs',{querySelectorAll:()=>tabs});
   const account=node('tk-connection',{value:'active_1',options:[{value:'active_1',disabled:false},{value:'active_2',disabled:false}]});
   const selection=node('tk-selection-connection');node('tk-selected-action',{value:'mail.read'});
@@ -44,7 +44,7 @@ function fixture(destructive = false) {
   }
   root.querySelectorAll=s=>s==='.tk-tool-item a'?rail:s==='#tk-tabs a'?tabs:s==='a'? [...tabs,...rail]:[account,...inputs,run,...(confirm?[confirm]:[])];
   const clipboard={writeText:async text=>{ clipboard.copied=text; }};
-  vm.runInNewContext(fs.readFileSync(new URL('../static/dashboard.js',import.meta.url),'utf8'),{document,window:{location:{href:'https://local.invalid/app/toolkits/provider'},history:{replaceState(){}}},navigator:{clipboard},URL,URLSearchParams,WeakMap,Map,setTimeout,queueMicrotask:fn=>microtasks.push(fn)});
+  vm.runInNewContext(fs.readFileSync(new URL('../static/dashboard.js',import.meta.url),'utf8'),{document,window:{location:{href:'https://local.invalid/app/connectors/provider'},history:{replaceState(){}}},navigator:{clipboard},URL,URLSearchParams,WeakMap,Map,setTimeout,queueMicrotask:fn=>microtasks.push(fn)});
   const emit=(type,target,extra={})=>{const event={target,button:0,preventDefault(){this.prevented=true;},stopImmediatePropagation(){this.stopped=true;},...extra};for(const fn of listeners[type]??[]){fn(event);if(event.stopped)break;}return event;};
   const fetch=(type,argsRaw={})=>emit('datastar-fetch',document,{detail:{type,el:form,argsRaw}});
   return {nodes,node,root,tabs,rail,account,selection,inputs,form,run,clipboard,emit,fetch,document,flush(){while(microtasks.length)microtasks.shift()();}};
@@ -176,7 +176,7 @@ function dynamicOptionsFixture() {
   const tabs = ['tools', 'accounts', 'events', 'code', 'settings'].map((name, index) => {
     const wrap = node('tk-tab-' + name, { dataset: { tab: name, selected: String(index === 0) } });
     const link = node('tab-' + name, { parentElement: wrap,
-      attrs: { href: '/app/toolkits/provider?tab=' + name },
+      attrs: { href: '/app/connectors/provider?tab=' + name },
       matches: s => s === '#tk-tabs a' });
     wrap.querySelector = () => link; node('tk-panel-' + name, { hidden: index !== 0 }); return link;
   });
@@ -186,7 +186,7 @@ function dynamicOptionsFixture() {
   node('tk-selected-action', { value: 'mail.read' });
   node('tk-status');
   const search = node('tk-search-f.actor', { value: '',
-    attrs: { role: 'combobox', 'aria-controls': 'tk-opts-f.actor', 'data-options-source': '/app/toolkits/provider/options' },
+    attrs: { role: 'combobox', 'aria-controls': 'tk-opts-f.actor', 'data-options-source': '/app/connectors/provider/options' },
     matches: s => s === '[role="combobox"][aria-controls]' || s === '[role="combobox"][aria-controls][data-options-source]' });
   const hidden = node('f.actor', { value: 'one' });
   const optionOne = node('tk-opt-f.actor-0', { textContent: 'One',
@@ -206,7 +206,7 @@ function dynamicOptionsFixture() {
     matches: s => s === '[role="combobox"][aria-controls]' });
   root.querySelectorAll = s => s === '#tk-tabs a' ? tabs : s === '.tk-tool-item a' ? [] : s === 'a' ? tabs : [];
   vm.runInNewContext(fs.readFileSync(new URL('../static/dashboard.js', import.meta.url), 'utf8'), {
-    document, window: { location: { href: 'https://local.invalid/app/toolkits/provider' }, history: { replaceState() {} } },
+    document, window: { location: { href: 'https://local.invalid/app/connectors/provider' }, history: { replaceState() {} } },
     navigator: {}, URL, URLSearchParams, WeakMap, Map, setTimeout, queueMicrotask: fn => microtasks.push(fn)
   });
   const emit = (type, target, extra = {}) => {
@@ -458,7 +458,7 @@ test('dynamic option dismissal, focus changes, and replacements survive async co
 });
 test('Connect activates Settings and focuses its heading without submitting',()=>{
   const f=fixture();const setup=f.node('tk-setup');
-  const link=f.node('connect',{attrs:{href:'/app/toolkits/provider?tab=settings#tk-setup'}});link.closest=s=>s==='a'?link:null;
+  const link=f.node('connect',{attrs:{href:'/app/connectors/provider?tab=settings#tk-setup'}});link.closest=s=>s==='a'?link:null;
   f.emit('click',link);assert.equal(f.nodes.get('tk-panel-settings').hidden,false);assert.equal(f.document.activeElement,setup);
 });
 test('network and missing-result failures retain result heading and render an alert child',()=>{

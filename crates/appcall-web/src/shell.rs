@@ -33,19 +33,48 @@ mod tests {
         ] {
             assert!(html.contains(expected), "missing {expected}");
         }
-        for forbidden in ["h-screen", "href=\"/app/qa\"", "fonts.googleapis.com"] {
+        for forbidden in [
+            "h-screen",
+            "href=\"/app/certification\"",
+            "fonts.googleapis.com",
+        ] {
             assert!(!html.contains(forbidden), "unexpected {forbidden}");
+        }
+    }
+    #[test]
+    fn observe_navigation_uses_specified_order_and_canonical_destinations() {
+        let session = Session {
+            user_id: String::new(),
+            tenant_id: String::new(),
+            tenant_name: String::new(),
+            email: String::new(),
+            access_token: String::new(),
+            refresh_token: String::new(),
+        };
+        let html = layout("Title", &session, "", "/app");
+        let observe = html
+            .split("<p class=\"shell-group-label\">OBSERVE</p>")
+            .nth(1)
+            .and_then(|group| group.split("</div>").next())
+            .expect("observe navigation group");
+        let mut previous = 0;
+        for href in ["/app/logs", "/app/runs", "/app/events", "/app/usage"] {
+            let position = observe
+                .find(&format!("href=\"{href}\""))
+                .unwrap_or_else(|| panic!("missing canonical Observe destination: {href}"));
+            assert!(position >= previous, "Observe order changed at {href}");
+            previous = position;
         }
     }
     #[test]
     fn active_routes_have_one_owner_and_segment_boundaries() {
         for (path, expected) in [
             ("/app", Some("/app")),
-            ("/app/toolkits/slack", Some("/app/toolkits")),
-            ("/app/toolkits-extra", None),
-            ("/app/settings/usage?month=9", Some("/app/settings/usage")),
+            ("/app/connectors/slack", Some("/app/connectors")),
+            ("/app/connectors-extra", None),
+            ("/app/usage?month=9", Some("/app/usage")),
             ("/app/settings/account", Some("/app/settings")),
-            ("/app/users/member", Some("/app/settings")),
+            ("/app/settings/team/member", Some("/app/settings")),
             ("/app/sessions", Some("/app/settings")),
             ("/app/support", Some("/app/settings")),
             ("/app/runs", Some("/app/runs")),
@@ -113,13 +142,13 @@ const NAV: &[Destination] = &[
         group: Group::Build,
     },
     Destination {
-        href: "/app/toolkits",
+        href: "/app/connectors",
         label: "Connectors",
         glyph: "◇",
         group: Group::Build,
     },
     Destination {
-        href: "/app/auth-configs",
+        href: "/app/connections",
         label: "Connections",
         glyph: "⇄",
         group: Group::Build,
@@ -131,21 +160,21 @@ const NAV: &[Destination] = &[
         group: Group::Observe,
     },
     Destination {
-        href: "/app/triggers",
+        href: "/app/runs",
+        label: "Runs",
+        glyph: "↻",
+        group: Group::Observe,
+    },
+    Destination {
+        href: "/app/events",
         label: "Events",
         glyph: "↯",
         group: Group::Observe,
     },
     Destination {
-        href: "/app/settings/usage",
+        href: "/app/usage",
         label: "Usage",
         glyph: "▥",
-        group: Group::Observe,
-    },
-    Destination {
-        href: "/app/runs",
-        label: "Runs",
-        glyph: "↻",
         group: Group::Observe,
     },
     Destination {
@@ -163,7 +192,7 @@ const NAV: &[Destination] = &[
 ];
 fn active_destination(path: &str) -> Option<&'static str> {
     let path = path.split(['?', '#']).next().unwrap_or(path);
-    if ["/app/users", "/app/sessions", "/app/support"]
+    if ["/app/settings/team", "/app/sessions", "/app/support"]
         .iter()
         .any(|prefix| owns_path(prefix, path))
     {

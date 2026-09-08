@@ -324,7 +324,7 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
     let cookie = host.login();
     let start = host.request(
         "POST",
-        "/app/toolkits/google-workspace/setup",
+        "/app/connectors/google-workspace/setup",
         &cookie,
         "externalAccountId=brand-browser",
     );
@@ -352,7 +352,7 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
     assert!(callback.starts_with("HTTP/1.1 302"), "{callback}");
     assert_eq!(
         header(&callback, "location"),
-        Some("/app/toolkits/google-workspace?success=1")
+        Some("/app/connectors/google-workspace?success=1")
     );
     assert_eq!(
         database.status(&id),
@@ -371,7 +371,7 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
     assert!(!replay.starts_with("HTTP/1.1 302"));
     let reconnect = host.request(
         "POST",
-        "/app/toolkits/google-workspace/setup",
+        "/app/connectors/google-workspace/setup",
         &cookie,
         &format!("externalAccountId=brand-browser&connectionId={id}"),
     );
@@ -393,7 +393,20 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
     for (production, managed) in [(false, true), (true, false)] {
         let host = Host::start(&database, &broker, &fixture, production, managed);
         let cookie = host.login();
-        let response = host.request("POST", "/app/toolkits/google-workspace/setup", &cookie, "");
+        let normal_before: i64 = database.admin.query_one(
+            "SELECT count(*) FROM connections WHERE project_id='proj_dev' AND connector='google-workspace' AND external_account_id='brand-browser' AND id NOT LIKE 'conn_dev_%' AND status='disconnected'",
+            &[],
+        ).unwrap().get(0);
+        let response = host.request(
+            "POST",
+            "/app/connectors/google-workspace/setup",
+            &cookie,
+            "externalAccountId=brand-browser",
+        );
+        assert!(
+            response.starts_with("HTTP/1.1 503"),
+            "valid setup must reach the unconfigured managed OAuth path, not input validation: {response}"
+        );
         assert!(
             !header(&response, "location").is_some_and(|u| u.starts_with("/oauth/local/authorize")),
             "fallback forbidden for production={production}, managed={managed}: {response}"
@@ -403,11 +416,29 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
             before,
             "forbidden fallback created a local connection"
         );
+        let normal_after: i64 = database.admin.query_one(
+            "SELECT count(*) FROM connections WHERE project_id='proj_dev' AND connector='google-workspace' AND external_account_id='brand-browser' AND id NOT LIKE 'conn_dev_%' AND status='disconnected'",
+            &[],
+        ).unwrap().get(0);
+        assert_eq!(
+            normal_after, normal_before + 1,
+            "normal OAuth setup must have persisted its disconnected candidate before credential configuration failed"
+        );
         let blocked = host.request("GET", forbidden_callback, &cookie, "");
+        // Production does not install the local adapter, so this cookie-only
+        // request reaches API-key authentication. Development installs it but
+        // refuses managed connectors before touching the pending connection.
+        let (expected_status, expected_code) = if production {
+            ("HTTP/1.1 401", "UNAUTHORIZED")
+        } else {
+            ("HTTP/1.1 404", "CONNECTION_NOT_FOUND")
+        };
         assert!(
-            !blocked.starts_with("HTTP/1.1 302"),
+            blocked.starts_with(expected_status),
             "local callback must not be available: {blocked}"
         );
+        let body: Value = serde_json::from_str(blocked.split_once("\r\n\r\n").unwrap().1).unwrap();
+        assert_eq!(body["error"]["code"], expected_code, "{blocked}");
         assert_eq!(
             database.status("conn_dev_forbidden").0,
             "authorizing",

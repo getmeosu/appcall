@@ -48,7 +48,7 @@ async fn rejected_request_fixtures_leave_time_to_inspect_pending() {
         let started = std::time::Instant::now();
         assert!(data
             .execute(crate::tests::dashboard_request(
-                DashboardOperation::RequestToolkit
+                DashboardOperation::RequestConnector
             ))
             .await
             .is_err());
@@ -74,7 +74,7 @@ async fn whitespace_in_header_names_cannot_hide_body_framing() {
 fn unsafe_targets_cannot_be_normalized_into_allowed_routes() {
     for target in [
         "//elsewhere/app/login",
-        "/app/toolkits/../login",
+        "/app/connectors/../login",
         "/app/login#fragment",
         "/app/%2e%2e/app/login",
         "/app\\login",
@@ -150,16 +150,16 @@ async fn broker_joins_fragmented_body_and_rejects_malformed_requests() {
 async fn dispatcher_uses_real_routes_counts_and_authorization() {
     let data = ScenarioData::new(Scenario::Populated);
     for (path, status, key) in [
-        ("/app/toolkits/connector-0/setup", 302, "setup"),
-        ("/app/auth-configs/preview_connection/test", 302, "check"),
+        ("/app/connectors/connector-0/setup", 302, "setup"),
+        ("/app/connections/preview_connection/test", 302, "check"),
         (
-            "/app/auth-configs/preview_connection/disconnect",
+            "/app/connections/preview_connection/disconnect",
             302,
             "disconnect",
         ),
         ("/app/logs/preview_original/replay", 302, "replay-trace"),
-        ("/app/triggers/preview_event/replay", 302, "replay-event"),
-        ("/app/toolkits/request", 200, "request"),
+        ("/app/events/preview_event/replay", 302, "replay-event"),
+        ("/app/connectors/request", 200, "request"),
     ] {
         assert_eq!(
             dispatch_preview("POST", path, b"name=PRIVATE", &data)
@@ -174,7 +174,7 @@ async fn dispatcher_uses_real_routes_counts_and_authorization() {
     assert_eq!(data.stats()["operations"]["request-attempts"], 1);
     assert!(!data.stats().to_string().contains("PRIVATE"));
     assert_eq!(
-        dispatch_preview("POST", "/app/toolkits/other/test", b"", &data)
+        dispatch_preview("POST", "/app/connectors/other/test", b"", &data)
             .await
             .unwrap()
             .status,
@@ -184,7 +184,7 @@ async fn dispatcher_uses_real_routes_counts_and_authorization() {
     for (scenario, status) in [(Scenario::NoSession, 302), (Scenario::UntrustedOrigin, 403)] {
         let data = ScenarioData::new(scenario);
         assert_eq!(
-            dispatch_preview("POST", "/app/toolkits/request", b"name=PRIVATE", &data)
+            dispatch_preview("POST", "/app/connectors/request", b"name=PRIVATE", &data)
                 .await
                 .unwrap()
                 .status,
@@ -202,7 +202,7 @@ async fn request_delivery_failure_occurs_only_after_real_acceptance() {
         let started = std::time::Instant::now();
         let response = dispatch_preview(
             "POST",
-            "/app/toolkits/request",
+            "/app/connectors/request",
             b"name=PRIVATE&email=synthetic%40example.invalid&notes=unchanged",
             &data,
         )
@@ -211,7 +211,7 @@ async fn request_delivery_failure_occurs_only_after_real_acceptance() {
         assert!(started.elapsed() >= Duration::from_millis(1800));
         assert!(response.body.contains("data-request-state=\"success\""));
         assert_eq!(data.stats()["operations"]["request"], 1);
-        let delivery = request_result(scenario, "POST", "/app/toolkits/request", response);
+        let delivery = request_result(scenario, "POST", "/app/connectors/request", response);
         if scenario == Scenario::RequestDrop {
             assert!(delivery.is_none());
         } else {
@@ -223,7 +223,7 @@ async fn request_delivery_failure_occurs_only_after_real_acceptance() {
         assert!(request_result(
             scenario,
             "POST",
-            "/app/toolkits/request",
+            "/app/connectors/request",
             plain_response(403, "Access denied".into())
         )
         .is_some());

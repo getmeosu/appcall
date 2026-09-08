@@ -432,7 +432,7 @@ fn connection_value(row: &ConnectionRow) -> Value {
         "state": state,
         "title": title,
         "body": body,
-        "href": "/app/auth-configs",
+        "href": "/app/connections",
     })
 }
 
@@ -607,7 +607,7 @@ mod tests {
             value["attention"][0]["href"],
             "/app/logs?status=failed&connector=slack&requestId=req_failed"
         );
-        assert_eq!(value["attention"][1]["href"], "/app/auth-configs");
+        assert_eq!(value["attention"][1]["href"], "/app/connections");
         assert!(!value.to_string().contains("OLD_FAILURE"));
     }
 

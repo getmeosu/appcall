@@ -297,10 +297,10 @@ impl MemoryBackend {
 impl Backend for MemoryBackend {
     async fn event_stream(&self, r: &Request) -> Result<Option<crate::streaming::StreamResponse>> {
         let url = request_url(r)?;
-        if r.method != "GET" || !matches!(url.path(), "/v1/events" | "/app/triggers/stream") {
+        if r.method != "GET" || !matches!(url.path(), "/v1/events" | "/app/events/stream") {
             return Ok(None);
         }
-        let dashboard = url.path() == "/app/triggers/stream";
+        let dashboard = url.path() == "/app/events/stream";
         let (principal, cookie, verify): (Principal, String, crate::streaming::SessionVerifier) =
             if dashboard {
                 let browser = self
@@ -515,7 +515,7 @@ impl Backend for MemoryBackend {
                         Some(RawResponse {
                             status: 302,
                             body: vec![],
-                            headers: vec![("location".into(), "/app/auth-configs".into())],
+                            headers: vec![("location".into(), "/app/connections".into())],
                         })
                     })
                     .map_err(setup_error)

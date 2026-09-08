@@ -26,7 +26,7 @@ fn guided_input_uses_schema_types_and_preserves_repeated_key_values() {
 }
 #[test]
 fn datastar_patch_escapes_event_html_and_cannot_inject_frames() {
-    let result = render_trigger_patch(
+    let result = render_event_patch(
         &json!({"id":"event-1","connector":"<script>\nevent: injected","operation":"received"}),
     )
     .unwrap();
@@ -73,7 +73,7 @@ async fn action_page(path: &str, data: serde_json::Value) -> String {
 #[tokio::test]
 async fn copy_connection_and_replay_actions_keep_routes() {
     let connections = action_page(
-        "/app/auth-configs",
+        "/app/connections",
         json!({"connections":[{"id":"conn_1","connector":"provider","status":"active"}]}),
     )
     .await;
@@ -84,7 +84,7 @@ async fn copy_connection_and_replay_actions_keep_routes() {
         .find(|form| {
             form.split('>').next().is_some_and(|opening| {
                 opening.contains("method=\"post\"")
-                    && opening.contains("action=\"/app/auth-configs/conn_1/test\"")
+                    && opening.contains("action=\"/app/connections/conn_1/test\"")
             })
         })
         .expect("native connection check form")
@@ -93,23 +93,23 @@ async fn copy_connection_and_replay_actions_keep_routes() {
         .unwrap();
     assert!(check.contains("ui-button-secondary"));
     assert!(check.contains("type=\"submit\""));
-    assert!(connections.contains("action=\"/app/auth-configs/conn_1/test\""));
+    assert!(connections.contains("action=\"/app/connections/conn_1/test\""));
     assert!(
         !check.contains("data-on:submit"),
         "connection checks must navigate to their redirect or error response"
     );
-    assert!(connections.contains("action=\"/app/auth-configs/conn_1/disconnect\""));
+    assert!(connections.contains("action=\"/app/connections/conn_1/disconnect\""));
     let event = json!({"id":"evt_1"});
-    let initial = action_page("/app/triggers", json!({"events":[event.clone()]})).await;
-    let streamed = render_trigger_patch(&event).unwrap();
+    let initial = action_page("/app/events", json!({"events":[event.clone()]})).await;
+    let streamed = render_event_patch(&event).unwrap();
     let trace = action_page(
         "/app/logs/request_1",
         json!({"requestId":"request_1","replayAvailable":true}),
     )
     .await;
     for (html, route) in [
-        (&initial, "/app/triggers/evt_1/replay"),
-        (&streamed, "/app/triggers/evt_1/replay"),
+        (&initial, "/app/events/evt_1/replay"),
+        (&streamed, "/app/events/evt_1/replay"),
         (&trace, "/app/logs/request_1/replay"),
     ] {
         assert!(html.contains(">Run this again</span>"));
@@ -150,7 +150,7 @@ fn assert_confirmation(html: &str, heading: &str, body: &str, route: &str) -> St
 #[tokio::test]
 async fn copy_confirmations_name_targets_without_provider_promises() {
     let connections = action_page(
-        "/app/auth-configs",
+        "/app/connections",
         json!({"connections":[{"id":"conn_1","connector":"provider","status":"active"}]}),
     )
     .await;
@@ -158,7 +158,7 @@ async fn copy_confirmations_name_targets_without_provider_promises() {
         &connections,
         "Disconnect provider connection conn_1?",
         "Tool runs for provider connection conn_1 will stop until you reconnect it.",
-        "/app/auth-configs/conn_1/disconnect",
+        "/app/connections/conn_1/disconnect",
     );
     let trace = action_page(
         "/app/logs/request_1",
@@ -167,9 +167,9 @@ async fn copy_confirmations_name_targets_without_provider_promises() {
     .await;
     assert_confirmation(&trace, "Run this tool again?", "Run the tool for recorded request request_1 again using saved input? This creates another tool execution and may repeat changes at the provider.", "/app/logs/request_1/replay");
     let event = json!({"id":"evt_1"});
-    let initial = action_page("/app/triggers", json!({"events":[event.clone()]})).await;
-    let first = render_trigger_patch(&event).unwrap();
-    let second = render_trigger_patch(&event).unwrap();
+    let initial = action_page("/app/events", json!({"events":[event.clone()]})).await;
+    let first = render_event_patch(&event).unwrap();
+    let second = render_event_patch(&event).unwrap();
     let ids: std::collections::BTreeSet<_> = [&initial, &first, &second]
         .into_iter()
         .map(|html| {
@@ -177,7 +177,7 @@ async fn copy_confirmations_name_targets_without_provider_promises() {
                 html,
                 "Dispatch this event again?",
                 "Dispatch event evt_1 again? Consumers may process the event again.",
-                "/app/triggers/evt_1/replay",
+                "/app/events/evt_1/replay",
             )
         })
         .collect();
@@ -197,7 +197,7 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
     }
     .handle(&Request {
         method: "GET",
-        path: "/app/triggers",
+        path: "/app/events",
         cookies: "",
         origin: None,
         referer: None,
@@ -207,7 +207,7 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
     .await
     .unwrap()
     .body;
-    assert_eq!(initial.matches("@get('/app/triggers/stream')").count(), 1);
+    assert_eq!(initial.matches("@get('/app/events/stream')").count(), 1);
     let mut tbody = initial
         .split("<tbody id=\"trigger-rows\"")
         .nth(1)
@@ -225,7 +225,7 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
     // Apply the actual frame modes to a bounded table-body string model. Browser
     // qualification separately verifies these frames against bundled Datastar.
     for id in ["first", "second"] {
-        let frames = render_trigger_patch(&json!({"id":id,"connector":id})).unwrap();
+        let frames = render_event_patch(&json!({"id":id,"connector":id})).unwrap();
         for frame in frames.split("\n\n").filter(|f| !f.is_empty()) {
             let lines: Vec<_> = frame.lines().collect();
             if lines.contains(&"data: mode prepend") {
@@ -248,28 +248,28 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
         }
         assert!(!tbody.contains("No webhook events to show."));
         assert!(!tbody.contains("trigger-empty-state"));
-        assert!(tbody.contains("/app/triggers/first/replay"));
+        assert!(tbody.contains("/app/events/first/replay"));
     }
-    assert!(tbody.contains("/app/triggers/second/replay"));
+    assert!(tbody.contains("/app/events/second/replay"));
     assert!(
-        tbody.find("/app/triggers/second/replay").unwrap()
-            < tbody.find("/app/triggers/first/replay").unwrap()
+        tbody.find("/app/events/second/replay").unwrap()
+            < tbody.find("/app/events/first/replay").unwrap()
     );
     // Rows now inherit table styling; an opening tag need not have attributes.
     assert_eq!(tbody.matches("</tr>").count(), 2);
     for id in ["../bad", "bad/id", "<event>", "a?b", "a b"] {
         let initial = action_page(
-            "/app/triggers",
+            "/app/events",
             json!({"events":[{"id":id,"connector":"<connector>"}]}),
         )
         .await;
         assert!(initial.contains("Replay unavailable"), "{id}");
         assert!(initial.contains("&lt;connector&gt;"), "{id}");
         assert!(
-            !initial.contains(&format!("/app/triggers/{id}/replay")),
+            !initial.contains(&format!("/app/events/{id}/replay")),
             "{id}"
         );
-        let streamed = render_trigger_patch(&json!({
+        let streamed = render_event_patch(&json!({
             "id": id,
             "connector": "<connector>",
         }))
@@ -277,7 +277,7 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
         assert!(streamed.contains("Replay unavailable"), "{id}");
         assert!(streamed.contains("&lt;connector&gt;"), "{id}");
         assert!(
-            !streamed.contains(&format!("/app/triggers/{id}/replay")),
+            !streamed.contains(&format!("/app/events/{id}/replay")),
             "{id}"
         );
     }
@@ -290,7 +290,7 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
         json!({"id": "a\nevent: injected"}),
         json!({"id": oversized}),
     ] {
-        assert_eq!(render_trigger_patch(&invalid), Err(Error::Invalid));
+        assert_eq!(render_event_patch(&invalid), Err(Error::Invalid));
     }
 }
 
@@ -312,7 +312,7 @@ async fn guided_html(schema: serde_json::Value, sample: serde_json::Value) -> St
     }
     .handle(&Request {
         method: "GET",
-        path: "/app/toolkits/provider/test-form",
+        path: "/app/connectors/provider/test-form",
         cookies: "",
         origin: None,
         referer: None,
@@ -423,12 +423,12 @@ async fn guided_nested_map_boolean_and_dynamic_fields_preserve_submission_contra
     assert!(checkbox.contains("type=\"checkbox\" value=\"true\" checked"));
     assert!(!checkbox.contains(" required"));
     assert!(html.contains("name=\"f.actor\" type=\"hidden\" value=\"a&quot;&amp;&lt;b&gt;\""));
-    assert!(html.contains("data-options-source=\"/app/toolkits/provider/options?"));
+    assert!(html.contains("data-options-source=\"/app/connectors/provider/options?"));
     assert!(html.contains("source=actors.%27%3Coptions%3E"));
     assert!(html.contains("Actor &quot;&lt;name&gt; (Required)"));
     assert!(html.contains("evt.target.dataset.optionsSource"));
     assert!(html.contains("getElementById(&#39;tk-connection&#39;)"));
     assert!(html.contains("id=\"tk-opts-f.actor\""));
     assert!(html.contains("aria-describedby=\"tk-search-662e6163746f72-help\""));
-    assert!(!html.contains("@get(&#39;/app/toolkits"));
+    assert!(!html.contains("@get(&#39;/app/connectors"));
 }

@@ -63,23 +63,23 @@ async fn copy_direct_failures_render_specific_recovery() {
         (
             Cause::InvalidJson,
             "The JSON input is not valid.",
-            "/app/toolkits/mail",
+            "/app/connectors/mail",
         ),
         (
             Cause::InvalidActionInput,
             "The input does not match this tool",
-            "/app/toolkits/mail",
+            "/app/connectors/mail",
         ),
-        (Cause::MissingSetupField, "Add", "/app/toolkits/mail"),
+        (Cause::MissingSetupField, "Add", "/app/connectors/mail"),
         (
             Cause::CredentialsUnavailable,
             "Appcall could not obtain credentials",
-            "/app/auth-configs",
+            "/app/connections",
         ),
         (
             Cause::ConnectionDisconnected,
             "This connection is disconnected.",
-            "/app/auth-configs",
+            "/app/connections",
         ),
         (Cause::Timeout, "This request timed out.", "/app/logs"),
         (
@@ -90,14 +90,14 @@ async fn copy_direct_failures_render_specific_recovery() {
         (
             Cause::UsageLimited,
             "Appcall reported a usage limit",
-            "/app/settings/usage",
+            "/app/usage",
         ),
         (Cause::ResponseTooLarge, "Narrow", "/app/logs"),
-        (Cause::InputTooLarge, "Reduce", "/app/toolkits/mail"),
+        (Cause::InputTooLarge, "Reduce", "/app/connectors/mail"),
         (
             Cause::VerificationFailed,
             "Appcall could not verify this connection.",
-            "/app/auth-configs",
+            "/app/connections",
         ),
     ];
     for (cause, copy, recovery) in cases {
@@ -120,7 +120,7 @@ async fn copy_direct_failures_render_specific_recovery() {
                     detailed_calls: AtomicUsize::new(0),
                     legacy_calls: AtomicUsize::new(0),
                 };
-                let mut r = request("/app/toolkits/mail/test");
+                let mut r = request("/app/connectors/mail/test");
                 for key in ["input_raw", "callerToken", "password"] {
                     r.fields
                         .insert(key.into(), vec!["private-submitted-value".into()]);
@@ -173,10 +173,14 @@ async fn copy_direct_failures_render_specific_recovery() {
         }
     }
     for (operation, path, original) in [
-        (DashboardOperation::Setup, "/app/toolkits/mail/setup", false),
+        (
+            DashboardOperation::Setup,
+            "/app/connectors/mail/setup",
+            false,
+        ),
         (
             DashboardOperation::TestConnection,
-            "/app/auth-configs/connection/test",
+            "/app/connections/connection/test",
             false,
         ),
         (
@@ -215,7 +219,7 @@ async fn copy_direct_failures_render_specific_recovery() {
         if operation == DashboardOperation::Setup {
             assert!(response
                 .body
-                .contains("href=\"/app/toolkits/mail?tab=settings\""));
+                .contains("href=\"/app/connectors/mail?tab=settings\""));
         }
         assert_eq!(data.detailed_calls.load(Ordering::SeqCst), 1);
         assert_eq!(data.legacy_calls.load(Ordering::SeqCst), 0);
@@ -237,9 +241,9 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
         legacy_calls: AtomicUsize::new(0),
     };
     for (cause, primary) in [
-        (Cause::UsageLimited, "/app/settings/usage"),
-        (Cause::CredentialsUnavailable, "/app/auth-configs"),
-        (Cause::ConnectionDisconnected, "/app/auth-configs"),
+        (Cause::UsageLimited, "/app/usage"),
+        (Cause::CredentialsUnavailable, "/app/connections"),
+        (Cause::ConnectionDisconnected, "/app/connections"),
         (Cause::InvalidActionInput, "/app/logs/original"),
         (Cause::InputTooLarge, "/app/logs/original"),
         (Cause::Unknown, "/app/logs/original"),
@@ -272,10 +276,10 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
     }
     for classification in [Error::Unauthorized, Error::Forbidden] {
         for (operation, path) in [
-            (DashboardOperation::Setup, "/app/toolkits/mail/setup"),
+            (DashboardOperation::Setup, "/app/connectors/mail/setup"),
             (
                 DashboardOperation::TestConnection,
-                "/app/auth-configs/connection/test",
+                "/app/connections/connection/test",
             ),
             (DashboardOperation::ReplayTrace, "/app/logs/original/replay"),
         ] {
@@ -290,7 +294,7 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
         );
         let response = render(
             &data,
-            &request("/app/toolkits/mail/test"),
+            &request("/app/connectors/mail/test"),
             Some(DashboardOperation::Test),
         )
         .await
@@ -316,7 +320,7 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
         );
         let response = render(
             &data,
-            &request("/app/toolkits/mail/test-form"),
+            &request("/app/connectors/mail/test-form"),
             Some(DashboardOperation::TestForm),
         )
         .await
@@ -355,7 +359,7 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
         ));
         assert_eq!(response.body.matches("ui-button-secondary").count(), 1);
         assert!(!response.body.contains(
-            "class=\"ui-button ui-button-secondary ui-button-sm\" href=\"/app/auth-configs\""
+            "class=\"ui-button ui-button-secondary ui-button-sm\" href=\"/app/connections\""
         ));
         assert_eq!(
             response.body.contains("The tool may have run."),
@@ -366,7 +370,7 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
     let data = fixture(DashboardFailure::new(Error::Unavailable, Cause::Timeout));
     let response = render(
         &data,
-        &request("/app/auth-configs/connection/test"),
+        &request("/app/connections/connection/test"),
         Some(DashboardOperation::TestConnection),
     )
     .await
@@ -377,7 +381,7 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
     let data = fixture(DashboardFailure::new(Error::Configuration, Cause::Unknown));
     let response = render(
         &data,
-        &request("/app/toolkits/mail/test"),
+        &request("/app/connectors/mail/test"),
         Some(DashboardOperation::Test),
     )
     .await
@@ -451,12 +455,12 @@ async fn copy_direct_failures_handle_preserves_csrf_identity_and_session_cookie(
     };
     for (path, status, message) in [
         (
-            "/app/auth-configs/connection/test",
+            "/app/connections/connection/test",
             503,
             "Appcall could not verify this connection.",
         ),
         (
-            "/app/toolkits/request",
+            "/app/connectors/request",
             200,
             "Appcall could not confirm receipt of this connector request.",
         ),
@@ -595,13 +599,13 @@ async fn toolkit_operation_failures_replace_their_live_region_without_fake_resul
         for (operation, path, target, label) in [
             (
                 DashboardOperation::Test,
-                "/app/toolkits/mail/test",
+                "/app/connectors/mail/test",
                 "tk-test-result",
                 "tk-result-label",
             ),
             (
                 DashboardOperation::TestForm,
-                "/app/toolkits/mail/test-form",
+                "/app/connectors/mail/test-form",
                 "tk-test-fields",
                 "tk-fields-label",
             ),
@@ -772,9 +776,9 @@ async fn toolkit_tab_request_is_allowlisted_for_wrapped_and_unwrapped_dtos() {
         ] {
             let dto = json!({"name":"Provider","operations":[],"tab":"settings"});
             let data = fixture(if wrapped { json!({"data":dto}) } else { dto });
-            let mut r = request("/app/toolkits/provider");
+            let mut r = request("/app/connectors/provider");
             r.fields.insert("tab".into(), vec![requested.into()]);
-            let response = render(&data, &r, Some(DashboardOperation::Toolkit))
+            let response = render(&data, &r, Some(DashboardOperation::Connector))
                 .await
                 .unwrap();
             assert_eq!(response.status, 200);
@@ -796,7 +800,7 @@ async fn toolkit_tab_request_is_allowlisted_for_wrapped_and_unwrapped_dtos() {
             }
             let calls = data.requests.lock().unwrap();
             assert_eq!(calls.len(), 1);
-            assert_eq!(calls[0].operation, DashboardOperation::Toolkit);
+            assert_eq!(calls[0].operation, DashboardOperation::Connector);
             assert_eq!(calls[0].resource.as_deref(), Some("provider"));
         }
     }
@@ -808,7 +812,7 @@ async fn catalog_filter_keeps_category_navigation_and_forwards_account_identity(
         {"key":"mail","name":"Mail only","categories":["Messaging","Productivity"]},
         {"key":"drive","name":"Drive only","categories":["Files","Productivity"]}
     ]}}));
-    let mut r = request("/app/toolkits");
+    let mut r = request("/app/connectors");
     r.fields.insert("category".into(), vec!["Messaging".into()]);
     r.fields
         .insert("externalAccountId".into(), vec!["customer-1".into()]);
@@ -839,7 +843,7 @@ async fn catalog_search_matches_connector_categories_and_tool_titles() {
         ("FILES", "Drive", "Mail"),
         ("upload document", "Drive", "Mail"),
     ] {
-        let mut r = request("/app/toolkits");
+        let mut r = request("/app/connectors");
         r.fields.insert("search".into(), vec![query.into()]);
         let response = render(&data, &r, Some(DashboardOperation::Catalog))
             .await
@@ -869,7 +873,7 @@ async fn invalid_fields_and_resource_ids_fail_before_data_execution() {
             .map(|i| (format!("field{i}"), vec!["v".into()]))
             .collect(),
     ] {
-        let mut r = request("/app/toolkits/mail/test");
+        let mut r = request("/app/connectors/mail/test");
         r.fields = fields;
         assert!(matches!(
             render(&data, &r, Some(DashboardOperation::Test)).await,
@@ -877,12 +881,12 @@ async fn invalid_fields_and_resource_ids_fail_before_data_execution() {
         ));
     }
     for path in [
-        "/app/toolkits/",
-        "/app/toolkits/bad%2Fid",
-        "/app/toolkits/<evil>",
+        "/app/connectors/",
+        "/app/connectors/bad%2Fid",
+        "/app/connectors/<evil>",
     ] {
         assert!(matches!(
-            render(&data, &request(path), Some(DashboardOperation::Toolkit)).await,
+            render(&data, &request(path), Some(DashboardOperation::Connector)).await,
             Err(Error::Invalid)
         ));
     }
@@ -892,7 +896,7 @@ async fn invalid_fields_and_resource_ids_fail_before_data_execution() {
 #[tokio::test]
 async fn repeated_guided_pairs_are_preserved_without_scalar_ambiguity() {
     let data = fixture(json!({"ok":true}));
-    let mut r = request("/app/toolkits/mail/test");
+    let mut r = request("/app/connectors/mail/test");
     r.fields = BTreeMap::from([
         (
             "f.headers.key".into(),
@@ -917,39 +921,39 @@ async fn action_redirects_distinguish_verified_and_unverified_connections() {
     for (op, path, value, target) in [
         (
             TestConnection,
-            "/app/auth-configs/c/test",
+            "/app/connections/c/test",
             json!({"data":{"lastTestStatus":"passed"}}),
-            "/app/auth-configs?success=test-passed",
+            "/app/connections?success=test-passed",
         ),
         (
             TestConnection,
-            "/app/auth-configs/c/test",
+            "/app/connections/c/test",
             json!({"last_test_status":"passed"}),
-            "/app/auth-configs?success=test-passed",
+            "/app/connections?success=test-passed",
         ),
         (
             TestConnection,
-            "/app/auth-configs/c/test",
+            "/app/connections/c/test",
             json!({"lastTest":"passed"}),
-            "/app/auth-configs?success=test-passed",
+            "/app/connections?success=test-passed",
         ),
         (
             TestConnection,
-            "/app/auth-configs/c/test",
+            "/app/connections/c/test",
             json!({}),
-            "/app/auth-configs?success=test-unverified",
+            "/app/connections?success=test-unverified",
         ),
         (
             DisconnectConnection,
-            "/app/auth-configs/c/disconnect",
+            "/app/connections/c/disconnect",
             json!({}),
-            "/app/auth-configs?success=disconnected",
+            "/app/connections?success=disconnected",
         ),
         (
             ReplayEvent,
-            "/app/triggers/e/replay",
+            "/app/events/e/replay",
             json!({}),
-            "/app/triggers?replayed=1",
+            "/app/events?replayed=1",
         ),
         (
             ReplayTrace,
@@ -965,9 +969,9 @@ async fn action_redirects_distinguish_verified_and_unverified_connections() {
         ),
         (
             Setup,
-            "/app/toolkits/mail/setup",
+            "/app/connectors/mail/setup",
             json!({}),
-            "/app/toolkits/mail?success=1",
+            "/app/connectors/mail?success=1",
         ),
     ] {
         let response = render(&fixture(value), &request(path), Some(op))
@@ -980,7 +984,7 @@ async fn action_redirects_distinguish_verified_and_unverified_connections() {
 
 #[tokio::test]
 async fn setup_redirect_rejects_credentials_and_untrusted_local_urls() {
-    let path = request("/app/toolkits/mail/setup");
+    let path = request("/app/connectors/mail/setup");
     for url in [
         "http://provider.test/oauth",
         "https://user:pass@provider.test/oauth",
@@ -1019,7 +1023,7 @@ async fn setup_redirect_rejects_credentials_and_untrusted_local_urls() {
 async fn pagination_retains_supported_filters_and_encodes_cursor() {
     for (op, path, key) in [
         (DashboardOperation::Logs, "/app/logs", "logs"),
-        (DashboardOperation::Triggers, "/app/triggers", "events"),
+        (DashboardOperation::Events, "/app/events", "events"),
     ] {
         let data = fixture(json!({"data":{key:[],"pagination":{"nextCursor":"a+b&c"}}}));
         let mut r = request(path);
@@ -1039,7 +1043,7 @@ async fn pagination_retains_supported_filters_and_encodes_cursor() {
 
 #[tokio::test]
 async fn fragment_and_stream_responses_have_correct_targets_and_content_type() {
-    let mut r = request("/app/toolkits/mail/options");
+    let mut r = request("/app/connectors/mail/options");
     r.fields.insert("fieldName".into(), vec!["f.actor".into()]);
     r.fields.insert("detailSource".into(), vec!["actor".into()]);
     let options = render(
@@ -1057,7 +1061,7 @@ async fn fragment_and_stream_responses_have_correct_targets_and_content_type() {
         .any(|(k, v)| k == "Content-Type" && v == "text/event-stream"));
     let stream = render(
         &fixture(json!({"events":[{"id":"e1","connector":"<evil>"}]})),
-        &request("/app/triggers/stream"),
+        &request("/app/events/stream"),
         Some(DashboardOperation::Stream),
     )
     .await
@@ -1068,7 +1072,7 @@ async fn fragment_and_stream_responses_have_correct_targets_and_content_type() {
     assert!(matches!(
         render(
             &fixture(json!({})),
-            &request("/app/triggers/stream"),
+            &request("/app/events/stream"),
             Some(DashboardOperation::Stream)
         )
         .await,
@@ -1114,9 +1118,9 @@ async fn copy_query_hints_do_not_confirm_mutations_or_invent_connection_causes()
             "Check the connection&#39;s current status before running another tool.",
         ),
     ] {
-        let mut r = request("/app/auth-configs");
+        let mut r = request("/app/connections");
         r.fields.insert(key.into(), vec![value.into()]);
-        let response = render(&data, &r, Some(DashboardOperation::AuthConfigs))
+        let response = render(&data, &r, Some(DashboardOperation::Connections))
             .await
             .unwrap();
         assert!(response.body.contains(message), "{message}");
@@ -1145,19 +1149,19 @@ async fn copy_query_hints_do_not_confirm_mutations_or_invent_connection_causes()
         .body
         .contains("Review the current branding settings below."));
     assert!(!response.body.contains("Branding saved."));
-    let mut r = request("/app/auth-configs");
+    let mut r = request("/app/connections");
     r.fields
         .insert("success".into(), vec!["test-passed".into()]);
     let response = render(
         &fixture(json!({"connections":[]})),
         &r,
-        Some(DashboardOperation::AuthConfigs),
+        Some(DashboardOperation::Connections),
     )
     .await
     .unwrap();
     assert!(!response.body.contains("recorded check result below"));
     r.fields.insert("success".into(), vec!["unknown".into()]);
-    let response = render(&data, &r, Some(DashboardOperation::AuthConfigs))
+    let response = render(&data, &r, Some(DashboardOperation::Connections))
         .await
         .unwrap();
     assert!(!response.body.contains("recorded check result below"));

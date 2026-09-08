@@ -1,5 +1,21 @@
 use super::*;
 use serde_json::json;
+#[test]
+fn signal_revoke_recovery_uses_account_anchor_and_renders_honest_feedback() {
+    assert_eq!(
+        failure_target("/app/settings/account/sessions/session-one/revoke"),
+        Some("/app/settings/account?error=revoke#account-sessions")
+    );
+    for (key, value, role) in [("revoked", "1", "status"), ("error", "revoke", "alert")] {
+        let html = hint("/app/settings/account", key, value);
+        assert!(
+            html.contains("Review the sessions list before repeating a revocation."),
+            "{html}"
+        );
+        assert!(html.contains(&format!("role=\"{role}\"")), "{html}");
+        assert!(!html.contains("Session revoked"));
+    }
+}
 fn hint(path: &str, key: &str, value: &str) -> String {
     flash(&Request {
         method: "GET",
@@ -16,19 +32,19 @@ fn hint(path: &str, key: &str, value: &str) -> String {
 fn copy_query_hints_do_not_confirm_mutations() {
     for (path, key, value, message) in [
         (
-            "/app/users",
+            "/app/settings/team",
             "invited",
             "1",
             "Check the members list before sending another invitation.",
         ),
         (
-            "/app/users",
+            "/app/settings/team",
             "removed",
             "1",
             "Review the members list before repeating a removal.",
         ),
         (
-            "/app/users",
+            "/app/settings/team",
             "role",
             "updated",
             "Review the member&#39;s current role before making another change.",
@@ -72,17 +88,17 @@ fn copy_query_hints_do_not_confirm_mutations() {
 fn copy_recovery_hints_do_not_invent_causes() {
     for (path, topic, message) in [
         (
-            "/app/users",
+            "/app/settings/team",
             "invite",
             "Check the members list before sending another invitation.",
         ),
         (
-            "/app/users",
+            "/app/settings/team",
             "remove",
             "Review the members list before repeating a removal.",
         ),
         (
-            "/app/users",
+            "/app/settings/team",
             "role",
             "Review the member&#39;s current role before making another change.",
         ),
@@ -340,17 +356,12 @@ fn copy_billing_missing_data_never_invents_state_or_amounts() {
 #[test]
 fn settings_hub_exposes_all_subpages_and_verified_project() {
     let html = settings("proj_verified", "Project", "Organization");
-    for path in [
-        "organization",
-        "account",
-        "billing",
-        "usage",
-        "white-labeling",
-    ] {
+    for path in ["organization", "account", "billing", "white-labeling"] {
         assert!(html.contains(&format!("href=\"/app/settings/{path}\"")));
     }
     assert!(html.contains("proj_verified"));
-    for path in ["/app/users", "/app/support"] {
+    assert!(html.contains("href=\"/app/usage\""));
+    for path in ["/app/settings/team", "/app/support"] {
         assert!(html.contains(&format!("href=\"{path}\"")), "missing {path}");
     }
     assert!(!html.contains("href=\"/app/sessions\""));
@@ -377,12 +388,12 @@ fn billing_preserves_partial_failures_and_only_active_portal() {
 #[test]
 fn redirect_errors_are_fixed_and_unknown_paths_fail_closed() {
     assert_eq!(
-        failure_target("/app/users/member-1/remove"),
-        Some("/app/users?error=remove")
+        failure_target("/app/settings/team/member-1/remove"),
+        Some("/app/settings/team?error=remove")
     );
     assert_eq!(
         failure_target("/app/settings/billing/portal"),
         Some("/app/settings/billing?error=portal")
     );
-    assert_eq!(failure_target("/app/users/x/unknown"), None);
+    assert_eq!(failure_target("/app/settings/team/x/unknown"), None);
 }

@@ -123,14 +123,14 @@ fn copy_confirmations_escape_target_text_and_keep_native_standalone_submission()
         heading: "Dispatch this event again?",
         body: "Dispatch event <event&\"one> again? Consumers may process the event again.",
         confirm: "Run this again",
-        action: LocalPath::new("/app/triggers/event_1/replay").unwrap(),
+        action: LocalPath::new("/app/events/event_1/replay").unwrap(),
         form: None,
     }
     .render();
     assert!(html.contains("Dispatch event &lt;event&amp;&quot;one&gt; again?"));
     assert_eq!(html.matches("<form ").count(), 1);
     assert!(html.contains(
-        "form=\"replay-one-form\" formaction=\"/app/triggers/event_1/replay\" formmethod=\"post\""
+        "form=\"replay-one-form\" formaction=\"/app/events/event_1/replay\" formmethod=\"post\""
     ));
     assert!(html.contains("data-confirm-cancel autofocus"));
     assert!(html.find("</dialog>").unwrap() < html.find("<form ").unwrap());

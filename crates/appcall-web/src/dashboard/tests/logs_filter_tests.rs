@@ -192,8 +192,8 @@ async fn logs_invalid_filter_keeps_form_and_live_recovery_without_fake_results()
     assert!(matches!(
         render(
             &Failing(Error::Invalid),
-            &request("/app/triggers"),
-            Some(DashboardOperation::Triggers)
+            &request("/app/events"),
+            Some(DashboardOperation::Events)
         )
         .await,
         Err(Error::Invalid)

@@ -30,7 +30,7 @@ async fn connections_preview_states_use_real_dto_fields_and_separate_intent_age(
     let data = data("connections");
     let value = data
         .execute(crate::tests::dashboard_request(
-            DashboardOperation::AuthConfigs,
+            DashboardOperation::Connections,
         ))
         .await
         .unwrap();
@@ -62,7 +62,7 @@ async fn connections_preview_states_use_real_dto_fields_and_separate_intent_age(
         assert!(row.get("credential").is_none());
         assert!(row.get("secretRefId").is_none());
     }
-    let response = page(&data, "/app/auth-configs", &[]).await;
+    let response = page(&data, "/app/connections", &[]).await;
     assert_eq!(response.status, 200);
     for text in [
         "Active",
@@ -96,7 +96,7 @@ async fn connections_preview_reconnect_preserves_the_exact_non_active_sibling() 
     ] {
         let response = page(
             &data,
-            "/app/toolkits/connector-0",
+            "/app/connectors/connector-0",
             &[("tab", "settings"), ("connectionId", id)],
         )
         .await;
@@ -118,7 +118,7 @@ async fn connections_preview_reconnect_preserves_the_exact_non_active_sibling() 
     }
     let invalid = page(
         &data,
-        "/app/toolkits/connector-0",
+        "/app/connectors/connector-0",
         &[("connectionId", "missing_sibling")],
     )
     .await;
@@ -130,7 +130,7 @@ async fn connections_preview_malformed_empty_and_unavailable_stay_distinct() {
     let malformed = data("connections-malformed");
     let payload = malformed
         .execute(crate::tests::dashboard_request(
-            DashboardOperation::AuthConfigs,
+            DashboardOperation::Connections,
         ))
         .await
         .unwrap();
@@ -139,10 +139,10 @@ async fn connections_preview_malformed_empty_and_unavailable_stay_distinct() {
         .as_str()
         .unwrap()
         .contains('/'));
-    assert_eq!(page(&malformed, "/app/auth-configs", &[]).await.status, 503);
-    let empty = page(&data("empty"), "/app/auth-configs", &[]).await;
+    assert_eq!(page(&malformed, "/app/connections", &[]).await.status, 503);
+    let empty = page(&data("empty"), "/app/connections", &[]).await;
     assert_eq!(empty.status, 200);
     assert!(empty.body.contains("No connections"));
-    let unavailable = page(&data("unavailable"), "/app/auth-configs", &[]).await;
+    let unavailable = page(&data("unavailable"), "/app/connections", &[]).await;
     assert_eq!(unavailable.status, 503);
 }

@@ -369,7 +369,7 @@ fn encode_page(events: Vec<Event>, cursor: &str, format: Format) -> Result<Page>
             }
             Format::Dashboard => format!(
                 "id: {next}\n{}",
-                appcall_web::render_trigger_patch(&data)
+                appcall_web::render_event_patch(&data)
                     .map_err(|_| ApiError::new("INVALID_RESPONSE"))?
             )
             .into_bytes(),

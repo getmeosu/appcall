@@ -13,7 +13,7 @@ async fn certification_direct_memory_dispatch_denies_all_grants() {
         let result = dashboard
             .execute(DashboardRequest {
                 principal,
-                operation: DashboardOperation::Qa,
+                operation: DashboardOperation::Certification,
                 resource: None,
                 account_id: None,
                 fields: Default::default(),
@@ -405,7 +405,7 @@ async fn toolkit_selection_memory_routes_validate_explicit_actions() {
         "auth":{"type":"api_key"},"network":{"egress":"none"},
         "operations":{"a_sync":action("sync","read"),"b_write":action("action","write"),"c_read":action("action","read")}
     }));
-    for operation in [DashboardOperation::Toolkit, DashboardOperation::TestForm] {
+    for operation in [DashboardOperation::Connector, DashboardOperation::TestForm] {
         for (action, expected) in [
             (None, Some("b_write")),
             (Some(""), Some("b_write")),
@@ -487,7 +487,7 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
         form_values: Default::default(),
     };
     let inventory = dashboard
-        .execute(dashboard_request(DashboardOperation::AuthConfigs))
+        .execute(dashboard_request(DashboardOperation::Connections))
         .await
         .unwrap();
     assert_eq!(inventory["connections"].as_array().unwrap().len(), 1);
@@ -503,12 +503,12 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
     assert!(logs.to_string().contains(&result.request_id));
     assert!(!logs.to_string().contains("synthetic-secret"));
     let qa = dashboard
-        .execute(dashboard_request(DashboardOperation::Qa))
+        .execute(dashboard_request(DashboardOperation::Certification))
         .await
         .unwrap_err();
     assert_eq!(qa, appcall_web::Error::Forbidden);
     let triggers = dashboard
-        .execute(dashboard_request(DashboardOperation::Triggers))
+        .execute(dashboard_request(DashboardOperation::Events))
         .await
         .unwrap();
     assert!(triggers["events"].as_array().unwrap().is_empty());
@@ -524,7 +524,7 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
     let wire = String::from_utf8(mcp.body).unwrap();
     assert!(wire.contains("test__write"), "{wire}");
     assert!(!wire.contains("synthetic-secret"));
-    let mut forbidden = dashboard_request(DashboardOperation::AuthConfigs);
+    let mut forbidden = dashboard_request(DashboardOperation::Connections);
     forbidden.principal = appcall_auth::Principal::project("victim").unwrap();
     assert!(dashboard.execute(forbidden).await.is_err());
     assert_eq!(
@@ -696,7 +696,7 @@ async fn dashboard_requests_obey_shared_payload_capacity() {
         backend.core.repository.limits().payload_bytes;
     let request = DashboardRequest {
         principal: appcall_auth::Principal::project("proj_dev").unwrap(),
-        operation: DashboardOperation::RequestToolkit,
+        operation: DashboardOperation::RequestConnector,
         resource: None,
         account_id: None,
         fields: std::collections::BTreeMap::from([("name".into(), "Requested connector".into())]),

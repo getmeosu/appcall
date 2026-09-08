@@ -201,7 +201,7 @@ async fn copy_empty_filter_state_comes_from_request() {
     ] {
         for selected in ["", "unknown"] {
             let (result, _) =
-                response(value.clone(), "/app/toolkits", &[("category", selected)]).await;
+                response(value.clone(), "/app/connectors", &[("category", selected)]).await;
             assert!(result.body.contains(if selected.is_empty() {
                 "No connectors are available in this catalog."
             } else {
@@ -223,19 +223,16 @@ async fn copy_event_stream_initializes_once_with_a_polite_result_target() {
         json!([]),
         json!([{"id":"event-one","connector":"mail","operation":"received","connectionId":"connection-one","createdAt":"2026-09-08"}]),
     ] {
-        let (result, _) = response(json!({"events":events}), "/app/triggers", &[]).await;
+        let (result, _) = response(json!({"events":events}), "/app/events", &[]).await;
         assert_eq!(
             result
                 .body
-                .matches("data-init=\"@get('/app/triggers/stream')\"")
+                .matches("data-init=\"@get('/app/events/stream')\"")
                 .count(),
             1,
             "the bundled Datastar init plugin must start the event stream"
         );
-        assert_eq!(
-            result.body.matches("@get('/app/triggers/stream')").count(),
-            1
-        );
+        assert_eq!(result.body.matches("@get('/app/events/stream')").count(), 1);
         assert_eq!(result.body.matches("id=\"trigger-rows\"").count(), 1);
         let target = result
             .body
@@ -253,7 +250,7 @@ async fn copy_event_stream_initializes_once_with_a_polite_result_target() {
 async fn copy_request_receipt_and_navigation_are_truthful() {
     let (result, calls) = response(
         json!({}),
-        "/app/toolkits/request",
+        "/app/connectors/request",
         &[
             ("name", "Needed"),
             ("email", "a@example.test"),
@@ -265,8 +262,8 @@ async fn copy_request_receipt_and_navigation_are_truthful() {
     assert!(result.body.contains("id=\"toolkit-request-result\""));
     assert!(result.body.contains("data-request-state=\"success\""));
     assert_eq!(calls.len(), 1);
-    assert_eq!(calls[0].operation, DashboardOperation::RequestToolkit);
-    for path in ["/app/logs", "/app/triggers"] {
+    assert_eq!(calls[0].operation, DashboardOperation::RequestConnector);
+    for path in ["/app/logs", "/app/events"] {
         let value = if path.ends_with("logs") {
             json!({"logs":[],"pagination":{"nextCursor":"a/b &?"}})
         } else {
@@ -285,8 +282,8 @@ async fn copy_request_receipt_and_navigation_are_truthful() {
 #[tokio::test]
 async fn copy_request_result_is_a_polite_live_region() {
     for (value, path) in [
-        (json!({"connectors":[]}), "/app/toolkits"),
-        (json!({}), "/app/toolkits/request"),
+        (json!({"connectors":[]}), "/app/connectors"),
+        (json!({}), "/app/connectors/request"),
     ] {
         let (result, _) = response(value, path, &[]).await;
         let target = result
@@ -339,7 +336,7 @@ async fn copy_request_failures_use_exact_sse_target_and_preserve_access_errors()
         };
         let request = Request {
             method: "POST",
-            path: "/app/toolkits/request",
+            path: "/app/connectors/request",
             cookies: "",
             origin: None,
             referer: None,
@@ -354,7 +351,7 @@ async fn copy_request_failures_use_exact_sse_target_and_preserve_access_errors()
         let result = DashboardRenderer { data: &data }
             .render(
                 &request,
-                Some(DashboardOperation::RequestToolkit),
+                Some(DashboardOperation::RequestConnector),
                 &session,
                 Principal::project("verified-project").unwrap(),
             )
@@ -410,7 +407,7 @@ async fn copy_request_failures_use_exact_sse_target_and_preserve_access_errors()
 
 #[tokio::test]
 async fn copy_request_form_uses_one_attempt_transport_and_shared_working_label() {
-    let (response, _) = response(json!({"connectors":[]}), "/app/toolkits", &[]).await;
+    let (response, _) = response(json!({"connectors":[]}), "/app/connectors", &[]).await;
     for expected in [
         "contentType: 'form'",
         "retry:'never'",

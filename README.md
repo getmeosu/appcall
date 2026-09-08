@@ -33,6 +33,15 @@ and the bundled SQLx migrator for startup migrations. The worker requires Postgr
 dashboard accounts additionally require an independently provisioned Anusa
 service and its identity database; Anusa server software is not included here.
 
+Browser URLs use Connectors, Connections, Events, Usage, Certification, and
+Settings Team. For one compatibility release, exact legacy GET routes return
+301 with the original query preserved. Legacy POST routes are dispatched
+internally once to the canonical handler instead of redirected: this preserves
+form bodies, repeated fields, and CSRF checks without resubmitting mutations.
+The `tk-*` and `trigger-*` browser hooks remain compatible for that release.
+External SDK/API fields, `/v1` routes, connector manifests, and storage names
+are unchanged. Sessions links recover to Account's sessions section.
+
 ## Database upgrades
 
 SQLx runs the existing numbered SQL files at startup and records checksums in

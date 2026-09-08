@@ -128,24 +128,23 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
     let origin = format!("http://{host}");
     for path in [
         "/app",
-        "/app/toolkits",
-        "/app/auth-configs",
-        "/app/triggers",
+        "/app/connectors",
+        "/app/connections",
+        "/app/events",
         "/app/logs",
         "/app/settings",
-        "/app/settings/usage",
+        "/app/usage",
         "/app/settings/white-labeling",
     ] {
         let response = f.request("GET", path, &host, &origin, "");
         assert!(response.starts_with("HTTP/1.1 200"), "{path}: {response}");
         assert!(response.contains("dev@appcall.local"));
     }
-    let qa = f.request("GET", "/app/qa", &host, &origin, "");
-    assert!(qa.starts_with("HTTP/1.1 403"));
-    assert!(!qa.contains("manifestFingerprint"));
+    let certification = f.request("GET", "/app/certification", &host, &origin, "");
+    assert!(certification.starts_with("HTTP/1.1 403"));
+    assert!(!certification.contains("manifestFingerprint"));
     for path in [
-        "/app/users",
-        "/app/sessions",
+        "/app/settings/team",
         "/app/settings/account",
         "/app/settings/organization",
         "/app/settings/billing",
@@ -154,6 +153,17 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
             .request("GET", path, &host, &origin, "")
             .contains("Configure anusa auth"));
     }
+    let legacy_sessions = f.request("GET", "/app/sessions", &host, &origin, "");
+    assert!(
+        legacy_sessions.starts_with("HTTP/1.1 301"),
+        "{legacy_sessions}"
+    );
+    let location = legacy_sessions.lines().find_map(|line| {
+        line.split_once(':')
+            .filter(|(key, _)| key.eq_ignore_ascii_case("Location"))
+            .map(|(_, value)| value.trim())
+    });
+    assert_eq!(location, Some("/app/settings/account#account-sessions"));
     let save = f.request(
         "POST",
         "/app/settings/white-labeling",
@@ -175,12 +185,12 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         )
         .starts_with("HTTP/1.1 403"));
     assert!(f
-        .request("GET", "/app/toolkits", "evil.example", &origin, "")
+        .request("GET", "/app/connectors", "evil.example", &origin, "")
         .starts_with("HTTP/1.1 403"));
     assert!(f
         .request(
             "POST",
-            "/app/users/invite",
+            "/app/settings/team/invite",
             &host,
             &origin,
             "email=ignored@example.invalid"
@@ -188,7 +198,7 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         .starts_with("HTTP/1.1 302"));
     let setup = f.request(
         "POST",
-        "/app/toolkits/google-workspace/setup",
+        "/app/connectors/google-workspace/setup",
         &host,
         &origin,
         "projectId=other&externalAccountId=development-brand",
@@ -215,7 +225,7 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         .unwrap();
     write!(
         stream,
-        "GET /app/triggers/stream HTTP/1.1\r\nHost: {host}\r\n\r\n"
+        "GET /app/events/stream HTTP/1.1\r\nHost: {host}\r\n\r\n"
     )
     .unwrap();
     let mut wire = String::new();

@@ -32,7 +32,7 @@ impl MemoryDashboard {
     }
     async fn run(&self, r: DashboardRequest) -> Result<Value, DashboardFailure> {
         // Development mode does not confer trusted operator authority.
-        if r.operation == Op::Qa {
+        if r.operation == Op::Certification {
             return Err(Error::Forbidden.into());
         }
         let account_id = r
@@ -76,7 +76,7 @@ impl MemoryDashboard {
             Op::Catalog => Ok(
                 json!({"connectors":self.core.registry().public_list().map(|c|crate::browser_host::catalog_item(c.manifest())).collect::<Vec<_>>()}),
             ),
-            Op::Toolkit | Op::TestForm => {
+            Op::Connector | Op::TestForm => {
                 let c = self
                     .core
                     .registry()
@@ -164,7 +164,7 @@ impl MemoryDashboard {
                     chrono::Utc::now(),
                 ))
             }
-            Op::AuthConfigs => Ok(
+            Op::Connections => Ok(
                 json!({"connections":self.core.connections(&identity).await.map_err(web_error)?.iter().map(crate::browser_host::connection_value).collect::<Vec<_>>()}),
             ),
             Op::TestConnection => Ok(crate::browser_host::connection_value(
@@ -189,10 +189,10 @@ impl MemoryDashboard {
                 value["toolCalls"] = value["actionCalls"].clone();
                 Ok(value)
             }
-            Op::Qa => Ok(json!({"unavailable":true,"certifications":[]})),
+            Op::Certification => Ok(json!({"unavailable":true,"certifications":[]})),
             Op::Runs => Ok(json!({"unavailable":true})),
             Op::RunNow | Op::ResetRun | Op::CancelRun => Err(Error::Forbidden.into()),
-            Op::Logs | Op::Trace | Op::Triggers | Op::Stream => {
+            Op::Logs | Op::Trace | Op::Events | Op::Stream => {
                 let path = match r.operation {
                     Op::Logs => "/v1/action-logs".to_owned(),
                     Op::Trace => format!("/v1/requests/{resource}"),
@@ -219,7 +219,7 @@ impl MemoryDashboard {
                         url.query_pairs_mut().append_pair(k, v);
                     }
                 }
-                let response = if matches!(r.operation, Op::Triggers | Op::Stream) {
+                let response = if matches!(r.operation, Op::Events | Op::Stream) {
                     let principal = appcall_auth::Principal {
                         brand_id: (!account_id.is_empty()).then(|| account_id.to_owned()),
                         ..r.principal.clone()
@@ -331,7 +331,7 @@ impl MemoryDashboard {
                 state.branding.insert(identity.project_id, value.clone());
                 Ok(value)
             }
-            Op::RequestToolkit => {
+            Op::RequestConnector => {
                 if field("name").trim().is_empty()
                     || field("name").len() > 256
                     || field("email").len() > 256

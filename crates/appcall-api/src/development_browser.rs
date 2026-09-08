@@ -78,7 +78,11 @@ impl DevelopmentBrowserHost {
             return Ok(None);
         }
         self.config.validate_request(r)?;
-        let parsed = parse_request(r)?;
+        let validated = crate::browser_host::validate_request(r)?;
+        if let Some(response) = crate::browser_host::legacy_redirect(r) {
+            return Ok(Some(response));
+        }
+        let parsed = crate::browser_host::parse_request_validated(r, validated)?;
         let permit = self
             .admission
             .clone()

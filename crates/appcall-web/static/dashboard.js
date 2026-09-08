@@ -482,7 +482,7 @@ if (brandingName && brandingLogo && brandingColor) {
     get('tk-selection-connection').value = connection;
     for (const a of root.querySelectorAll('a')) {
       const url = new URL(a.getAttribute('href'), window.location.href);
-      if (url.pathname !== '/app/toolkits/' + root.dataset.toolkitKey) continue;
+      if (url.pathname !== '/app/connectors/' + root.dataset.toolkitKey) continue;
       const clean = new URLSearchParams();
       for (const key of ['action', 'tab']) if (url.searchParams.get(key)) clean.set(key, url.searchParams.get(key));
       if (connection) clean.set('connectionId', connection);
@@ -557,7 +557,7 @@ if (brandingName && brandingLogo && brandingColor) {
     const anchor = event.target.closest?.('a');
     if (anchor && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {
       const url = new URL(anchor.getAttribute('href'), window.location.href);
-      if (url.pathname === '/app/toolkits/' + root.dataset.toolkitKey && url.hash === '#tk-setup') {
+      if (url.pathname === '/app/connectors/' + root.dataset.toolkitKey && url.hash === '#tk-setup') {
         event.preventDefault(); activate(tabs.find(a => a.parentElement.dataset.tab === 'settings')); get('tk-setup')?.focus(); return;
       }
     }

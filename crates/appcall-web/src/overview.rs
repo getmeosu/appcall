@@ -105,13 +105,13 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
 fn activation() -> String {
     let cta = ui::Button {
         target: ui::ButtonTarget::Link(
-            ui::LocalPath::new("/app/toolkits").expect("static activation path"),
+            ui::LocalPath::new("/app/connectors").expect("static activation path"),
         ),
         ..ui::Button::new("Browse connectors")
     }
     .render();
     format!(
-        "<section id=\"overview-activation\" class=\"overview-activation\" aria-labelledby=\"overview-activation-title\"><p class=\"overview-label\">PROJECT ACTIVATION</p><h1 id=\"overview-activation-title\">Activate this project</h1><p>Connect an account to start recording tool activity and provider health.</p><ol class=\"overview-activation-steps\"><li><span class=\"overview-step-number\" aria-hidden=\"true\">01</span><div><a href=\"/app/toolkits\">Connect your first account</a><p>Authorize one connector for this project.</p></div></li><li><span class=\"overview-step-number\" aria-hidden=\"true\">02</span><div><a href=\"/app/toolkits\">Run a tool call</a><p>Choose a tool and inspect its recorded result.</p></div></li><li><span class=\"overview-step-number\" aria-hidden=\"true\">03</span><div><a href=\"/app/triggers\">Receive an event</a><p>Watch provider events arrive in the project log.</p></div></li></ol>{cta}</section>",
+        "<section id=\"overview-activation\" class=\"overview-activation\" aria-labelledby=\"overview-activation-title\"><p class=\"overview-label\">PROJECT ACTIVATION</p><h1 id=\"overview-activation-title\">Activate this project</h1><p>Connect an account to start recording tool activity and provider health.</p><ol class=\"overview-activation-steps\"><li><span class=\"overview-step-number\" aria-hidden=\"true\">01</span><div><a href=\"/app/connectors\">Connect your first account</a><p>Authorize one connector for this project.</p></div></li><li><span class=\"overview-step-number\" aria-hidden=\"true\">02</span><div><a href=\"/app/connectors\">Run a tool call</a><p>Choose a tool and inspect its recorded result.</p></div></li><li><span class=\"overview-step-number\" aria-hidden=\"true\">03</span><div><a href=\"/app/events\">Receive an event</a><p>Watch provider events arrive in the project log.</p></div></li></ol>{cta}</section>",
         cta = cta
     )
 }
@@ -515,8 +515,8 @@ mod tests {
         assert!(html.contains("id=\"overview-activation\""));
         assert!(html.contains("Activate this project"));
         assert!(html.contains("Connect your first account"));
-        assert!(html.contains("href=\"/app/toolkits\""));
-        assert!(html.contains("href=\"/app/triggers\""));
+        assert!(html.contains("href=\"/app/connectors\""));
+        assert!(html.contains("href=\"/app/events\""));
         assert!(!html.contains("Getting Started"));
         assert!(!html.contains("Setup checklist"));
         assert!(!html.contains("overview-kpis"));
@@ -542,7 +542,7 @@ mod tests {
             ],
             "attention": [
                 {"kind":"failure","title":"Slack failed","body":"Open the failed log.","href":"/app/logs?status=failed&connector=slack"},
-                {"kind":"connection","title":"Notion disconnected","body":"Reconnect this account.","href":"/app/auth-configs/conn_notion"}
+                {"kind":"connection","title":"Notion disconnected","body":"Reconnect this account.","href":"/app/connections/conn_notion"}
             ],
             "deadRuns": [
                 {"runId":"run_sync_stopped","kind":"dead_run","state":"dead","title":"Sync run stopped","body":"Review the terminal run.","href":"/app/runs?status=dead"}
@@ -566,7 +566,7 @@ mod tests {
         assert!(html.contains("LAST 24H"));
         assert!(html.contains("Needs attention"));
         assert!(html.contains("/app/logs?status=failed&amp;connector=slack"));
-        assert!(html.contains("/app/auth-configs/conn_notion"));
+        assert!(html.contains("/app/connections/conn_notion"));
         assert!(html.contains("/app/runs?status=dead"));
         assert!(!html.to_ascii_lowercase().contains("latency"));
         assert!(!html.to_ascii_lowercase().contains("p95"));
@@ -587,7 +587,7 @@ mod tests {
                 "kind":"connection",
                 "title":"Notion connection is degraded",
                 "body":"Reconnect this account.",
-                "href":"/app/auth-configs/conn_notion"
+                "href":"/app/connections/conn_notion"
             }],
             "deadRuns": []
         });

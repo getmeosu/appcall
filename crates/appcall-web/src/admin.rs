@@ -4,15 +4,15 @@ use serde_json::{json, Value};
 pub(crate) fn route(p: &str) -> bool {
     matches!(
         p,
-        "/app/users"
-            | "/app/users/invite"
+        "/app/settings/team"
+            | "/app/settings/team/invite"
             | "/app/sessions"
             | "/app/settings"
             | "/app/settings/account"
             | "/app/settings/organization"
             | "/app/settings/billing"
-    ) || p.starts_with("/app/users/")
-        || p.starts_with("/app/sessions/")
+    ) || p.starts_with("/app/settings/team/")
+        || p.starts_with("/app/settings/account/sessions/")
         || p.starts_with("/app/settings/account/")
         || p.starts_with("/app/settings/billing/")
 }
@@ -42,7 +42,7 @@ impl Browser<'_> {
                 if response.status == 200 {
                     response.body = crate::shell::layout(
                         match r.path {
-                            "/app/users" => "Team",
+                            "/app/settings/team" => "Team",
                             "/app/sessions" => "Sessions",
                             "/app/settings/account" => "Account",
                             "/app/settings/account/mfa/setup" => "Enable MFA",
@@ -77,7 +77,7 @@ impl Browser<'_> {
                     &session,
                     &crate::admin_ui::banner(
                         match r.path {
-                            "/app/users" => "Could not load members.",
+                            "/app/settings/team" => "Could not load members.",
                             "/app/sessions" => "Could not load sessions.",
                             "/app/settings/account" => "Could not load account details.",
                             _ => "Could not load settings. Please refresh.",
@@ -154,11 +154,11 @@ impl Browser<'_> {
             "user"
         };
         let (method, path, body, target) = match r.path {
-            "/app/users/invite" => (
+            "/app/settings/team/invite" => (
                 Method::POST,
                 "/api/tenant/members/invite".into(),
                 json!({"email":r.field("email")?,"role":role}),
-                "/app/users?invited=1",
+                "/app/settings/team?invited=1",
             ),
             "/app/settings/organization" => (
                 Method::PATCH,
@@ -237,25 +237,32 @@ impl Browser<'_> {
             }
             path => {
                 let parts: Vec<_> = path.trim_start_matches('/').split('/').collect();
-                if parts.len() != 4 || !identifier(parts[2]) {
+                let (kind, id, action) = match parts.as_slice() {
+                    ["app", "settings", "team", id, action] => ("team", *id, *action),
+                    ["app", "settings", "account", "sessions", id, "revoke"] => {
+                        ("sessions", *id, "revoke")
+                    }
+                    _ => return Err(Error::Invalid),
+                };
+                if !identifier(id) {
                     return Err(Error::Invalid);
                 }
-                match (parts[1], parts[3]) {
-                    ("users", "remove") => (
+                match (kind, action) {
+                    ("team", "remove") => (
                         Method::DELETE,
-                        format!("/api/tenant/members/{}", parts[2]),
+                        format!("/api/tenant/members/{id}"),
                         Value::Null,
-                        "/app/users?removed=1",
+                        "/app/settings/team?removed=1",
                     ),
-                    ("users", "role") => (
+                    ("team", "role") => (
                         Method::PATCH,
-                        format!("/api/tenant/members/{}/role", parts[2]),
+                        format!("/api/tenant/members/{id}/role"),
                         json!({"role":role}),
-                        "/app/users?role=updated",
+                        "/app/settings/team?role=updated",
                     ),
                     ("sessions", "revoke") => (
                         Method::DELETE,
-                        format!("/api/auth/sessions/{}", parts[2]),
+                        format!("/api/auth/sessions/{id}"),
                         Value::Null,
                         "/app/settings/account?revoked=1#account-sessions",
                     ),
@@ -304,7 +311,7 @@ impl Browser<'_> {
                     ),
                 ))
             }
-            "/app/users" => {
+            "/app/settings/team" => {
                 let value = self
                     .identity
                     .broker
@@ -315,7 +322,7 @@ impl Browser<'_> {
                     .and_then(Value::as_array)
                     .ok_or(Error::Unavailable)?;
                 let mut content = form(
-                    "/app/users/invite",
+                    "/app/settings/team/invite",
                     &[
                         ("email", "Email", "email", ""),
                         ("role", "Role (user or admin)", "text", "user"),
@@ -334,7 +341,7 @@ impl Browser<'_> {
                         format!(
                             "{}{}",
                             form(
-                                &format!("/app/users/{id}/role"),
+                                &format!("/app/settings/team/{id}/role"),
                                 &[(
                                     "role",
                                     "Role",
@@ -342,7 +349,7 @@ impl Browser<'_> {
                                     member["role"].as_str().unwrap_or("user")
                                 )]
                             ),
-                            form(&format!("/app/users/{id}/remove"), &[])
+                            form(&format!("/app/settings/team/{id}/remove"), &[])
                         )
                     };
                     content.push_str(&format!(
@@ -415,7 +422,7 @@ impl Browser<'_> {
         };
         Ok(page(
             match path {
-                "/app/users" => "Team",
+                "/app/settings/team" => "Team",
                 "/app/sessions" => "Sessions",
                 "/app/settings/account" => "Account",
                 "/app/settings/billing" => "Billing",
@@ -463,7 +470,7 @@ pub(crate) fn plan_price(cents: i64, currency: &str, interval: &str) -> String {
 
 pub(crate) fn form(action: &str, fields: &[(&str, &str, &str, &str)]) -> String {
     let label = match action {
-        "/app/users/invite" => "Send invitation",
+        "/app/settings/team/invite" => "Send invitation",
         "/app/settings/organization" => "Rename organisation",
         "/app/settings/account/change-password" => "Change password",
         "/app/settings/account/mfa/setup" => "Enable MFA",

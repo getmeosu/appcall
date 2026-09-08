@@ -29,14 +29,14 @@ async fn developer_dashboard_keeps_identity_and_admin_unavailable() {
         public_origin: "http://127.0.0.1:5080",
         data: &data,
     };
-    let mut r = request("GET", "/app/toolkits", None);
+    let mut r = request("GET", "/app/connectors", None);
     r.fields.insert("projectId".into(), vec!["victim".into()]);
     let result = dashboard.handle(&r).await.unwrap();
     assert_eq!(result.status, 200);
     assert!(result.body.contains("dev@appcall.local"));
     assert_eq!(data.0.lock().unwrap()[0].principal.project_id, "proj_dev");
     for path in [
-        "/app/users",
+        "/app/settings/team",
         "/app/sessions",
         "/app/settings/account",
         "/app/settings/organization",
@@ -53,7 +53,7 @@ async fn developer_dashboard_keeps_identity_and_admin_unavailable() {
     let response = dashboard
         .handle(&request(
             "POST",
-            "/app/users/invite",
+            "/app/settings/team/invite",
             Some("http://127.0.0.1:5080"),
         ))
         .await
@@ -82,8 +82,8 @@ async fn developer_mutations_require_same_origin_before_data_access() {
     };
     for origin in [None, Some("https://evil.example"), Some("null")] {
         for path in [
-            "/app/toolkits/slack/setup",
-            "/app/users/invite",
+            "/app/connectors/slack/setup",
+            "/app/settings/team/invite",
             "/app/settings/white-labeling",
         ] {
             assert_eq!(

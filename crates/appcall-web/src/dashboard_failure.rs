@@ -329,7 +329,7 @@ pub(crate) fn recovery(
     }
     let toolkit = resource
         .filter(|_| matches!(operation, Op::Test | Op::TestForm | Op::Setup))
-        .map(|id| format!("/app/toolkits/{id}"));
+        .map(|id| format!("/app/connectors/{id}"));
     let settings = toolkit.as_ref().map(|path| format!("{path}?tab=settings"));
     let original = resource
         .filter(|_| operation == Op::ReplayTrace)
@@ -339,24 +339,24 @@ pub(crate) fn recovery(
             ("/app/runs", "Review Runs")
         }
         _ if fields => (
-            toolkit.as_deref().unwrap_or("/app/toolkits"),
+            toolkit.as_deref().unwrap_or("/app/connectors"),
             "Select the tool again",
         ),
         _ if operation == Op::Setup => (
-            settings.as_deref().unwrap_or("/app/auth-configs"),
+            settings.as_deref().unwrap_or("/app/connections"),
             "Review connection setup",
         ),
-        _ if operation == Op::TestConnection => ("/app/auth-configs", "Review connections"),
-        UsageLimited => ("/app/settings/usage", "Review usage"),
+        _ if operation == Op::TestConnection => ("/app/connections", "Review connections"),
+        UsageLimited => ("/app/usage", "Review usage"),
         CredentialsUnavailable | ConnectionDisconnected | VerificationFailed => {
-            ("/app/auth-configs", "Review connections")
+            ("/app/connections", "Review connections")
         }
         _ if operation == Op::ReplayTrace => (
             original.as_deref().unwrap_or("/app/logs"),
             "Review the original request",
         ),
         InvalidJson | InvalidActionInput | MissingSetupField | InputTooLarge => (
-            toolkit.as_deref().unwrap_or("/app/auth-configs"),
+            toolkit.as_deref().unwrap_or("/app/connections"),
             "Review setup and input",
         ),
         _ => ("/app/logs", "Review execution logs"),

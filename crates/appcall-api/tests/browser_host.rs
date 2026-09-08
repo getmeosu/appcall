@@ -5,6 +5,7 @@ mod copy_failure_cases;
 #[test]
 fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     assert!(public_path("GET", "/app/login"));
+    assert!(public_path("POST", "/app/settings/team/u/remove"));
     assert!(public_path("GET", "/app/runs"));
     assert!(public_path("POST", "/app/runs/run_1/cancel"));
     assert!(public_path("POST", "/app/users/u/remove"));
@@ -15,6 +16,8 @@ fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     for path in [
         "/v1/actions",
         "/app/../v1/actions",
+        "/app/settings/team/u/arbitrary",
+        "/app/connectors/x%2Fy",
         "/app/users/u/arbitrary",
         "/app/toolkits/x%2Fy",
         "/static/../../secret",
@@ -359,7 +362,7 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
                         copy_data.as_ref(),
                         appcall_web::DashboardRequest {
                             principal: principal.clone(),
-                            operation: appcall_web::DashboardOperation::Qa,
+                            operation: appcall_web::DashboardOperation::Certification,
                             resource: None,
                             account_id: None,
                             fields: Default::default(),
@@ -428,10 +431,9 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
     runtime.block_on(async {
         for path in [
             "/app?projectId=forged",
-            "/app/toolkits",
-            "/app/auth-configs",
-            "/app/settings/usage?month=2026-01",
-            "/app/qa",
+            "/app/connectors",
+            "/app/connections",
+            "/app/usage?month=2026-01",
         ] {
             let response = host
                 .handle(&Request {
@@ -445,11 +447,23 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
                 .unwrap();
             assert_eq!(
                 response.status,
-                if path == "/app/qa" { 403 } else { 200 },
+                200,
                 "{path}: {}",
                 String::from_utf8_lossy(&response.body)
             );
         }
+        let certification = host
+            .handle(&Request {
+                method: "GET".into(),
+                uri: "/app/certification".into(),
+                headers: vec![("Cookie".into(), cookie.clone())],
+                body: vec![],
+            })
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(certification.status, 403);
+        assert!(!String::from_utf8_lossy(&certification.body).contains("manifestFingerprint"));
     });
     assert_eq!(
         admin
