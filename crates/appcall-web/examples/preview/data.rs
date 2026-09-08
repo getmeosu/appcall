@@ -46,6 +46,18 @@ impl ScenarioData {
     }
     async fn run(&self, r: DashboardRequest) -> Result<Value, DashboardFailure> {
         use DashboardOperation as Op;
+        if is_logs_scenario(self.scenario) {
+            if r.operation == Op::Logs {
+                return logs_collection(&r).map_err(Into::into);
+            }
+            if r.operation == Op::Trace && logs_trace_id(r.resource.as_deref().unwrap_or("")) {
+                let id = r.resource.as_deref().ok_or(Error::Invalid)?;
+                if id == "preview_original" {
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                }
+                return Ok(logs_trace(id));
+            }
+        }
         let counter = match r.operation {
             Op::Setup => Some(0),
             Op::Test => Some(1),
@@ -86,6 +98,15 @@ impl ScenarioData {
             Op::Branding => json!({"appName":"Sample App","tagColor":"#67e8f9"}),
             Op::Overview => json!({"toolkitCount":24,"connectionCount":3,"toolCalls":1205}),
             Op::Runs => runs_fixture(self.scenario, &r)?,
+            Op::Usage => match self.scenario {
+                Scenario::Unavailable => return Err(Error::Unavailable.into()),
+                Scenario::Empty => {
+                    json!({"synthetic":true,"month":"2026-09 (synthetic preview)","toolCalls":0,"syncedRecords":0,"webhookEvents":0})
+                }
+                _ => {
+                    json!({"synthetic":true,"month":"2026-09 (synthetic preview)","toolCalls":1205,"syncedRecords":340,"webhookEvents":27})
+                }
+            },
             Op::Setup if r.resource.as_deref() == Some("connector-0") => json!({"synthetic":true}),
             Op::TestConnection | Op::DisconnectConnection
                 if r.resource.as_deref() == Some("preview_connection") =>

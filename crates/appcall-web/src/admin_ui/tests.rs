@@ -350,9 +350,10 @@ fn settings_hub_exposes_all_subpages_and_verified_project() {
         assert!(html.contains(&format!("href=\"/app/settings/{path}\"")));
     }
     assert!(html.contains("proj_verified"));
-    for path in ["/app/users", "/app/sessions", "/app/support"] {
+    for path in ["/app/users", "/app/support"] {
         assert!(html.contains(&format!("href=\"{path}\"")), "missing {path}");
     }
+    assert!(!html.contains("href=\"/app/sessions\""));
 }
 #[test]
 fn billing_preserves_partial_failures_and_only_active_portal() {

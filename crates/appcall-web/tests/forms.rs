@@ -97,7 +97,11 @@ async fn copy_connection_and_replay_actions_keep_routes() {
     let event = json!({"id":"evt_1"});
     let initial = action_page("/app/triggers", json!({"events":[event.clone()]})).await;
     let streamed = render_trigger_patch(&event).unwrap();
-    let trace = action_page("/app/logs/request_1", json!({"requestId":"request_1"})).await;
+    let trace = action_page(
+        "/app/logs/request_1",
+        json!({"requestId":"request_1","replayAvailable":true}),
+    )
+    .await;
     for (html, route) in [
         (&initial, "/app/triggers/evt_1/replay"),
         (&streamed, "/app/triggers/evt_1/replay"),
@@ -151,7 +155,11 @@ async fn copy_confirmations_name_targets_without_provider_promises() {
         "Disconnect connection conn_1? Tool runs require an active connection.",
         "/app/auth-configs/conn_1/disconnect",
     );
-    let trace = action_page("/app/logs/request_1", json!({"requestId":"request_1"})).await;
+    let trace = action_page(
+        "/app/logs/request_1",
+        json!({"requestId":"request_1","replayAvailable":true}),
+    )
+    .await;
     assert_confirmation(&trace, "Run this tool again?", "Run the tool for recorded request request_1 again using saved input? This creates another tool execution and may repeat changes at the provider.", "/app/logs/request_1/replay");
     let event = json!({"id":"evt_1"});
     let initial = action_page("/app/triggers", json!({"events":[event.clone()]})).await;
@@ -242,12 +250,42 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
         tbody.find("/app/triggers/second/replay").unwrap()
             < tbody.find("/app/triggers/first/replay").unwrap()
     );
-    assert_eq!(tbody.matches("<tr ").count(), 2);
-    for invalid in ["", "../bad", "a\nevent: injected"] {
-        assert_eq!(
-            render_trigger_patch(&json!({"id":invalid})),
-            Err(Error::Invalid)
+    // Rows now inherit table styling; an opening tag need not have attributes.
+    assert_eq!(tbody.matches("</tr>").count(), 2);
+    for id in ["../bad", "bad/id", "<event>", "a?b", "a b"] {
+        let initial = action_page(
+            "/app/triggers",
+            json!({"events":[{"id":id,"connector":"<connector>"}]}),
+        )
+        .await;
+        assert!(initial.contains("Replay unavailable"), "{id}");
+        assert!(initial.contains("&lt;connector&gt;"), "{id}");
+        assert!(
+            !initial.contains(&format!("/app/triggers/{id}/replay")),
+            "{id}"
         );
+        let streamed = render_trigger_patch(&json!({
+            "id": id,
+            "connector": "<connector>",
+        }))
+        .unwrap();
+        assert!(streamed.contains("Replay unavailable"), "{id}");
+        assert!(streamed.contains("&lt;connector&gt;"), "{id}");
+        assert!(
+            !streamed.contains(&format!("/app/triggers/{id}/replay")),
+            "{id}"
+        );
+    }
+    let oversized = "x".repeat(1025);
+    for invalid in [
+        json!({}),
+        json!({"id": null}),
+        json!({"id": 42}),
+        json!({"id": ""}),
+        json!({"id": "a\nevent: injected"}),
+        json!({"id": oversized}),
+    ] {
+        assert_eq!(render_trigger_patch(&invalid), Err(Error::Invalid));
     }
 }
 

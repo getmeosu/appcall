@@ -1,15 +1,18 @@
 use crate::{http::escape, Error, Request};
 use serde_json::Value;
 pub(crate) fn banner(message: &str, success: bool) -> String {
-    let tone = if success {
-        "border-emerald-900 bg-emerald-950/60 text-emerald-300"
-    } else {
-        "border-red-900 bg-red-950/60 text-red-300"
-    };
     format!(
-        "<div role=\"{}\" class=\"mb-4 rounded-lg border px-3 py-2 text-sm {tone}\">{}</div>",
+        "<div role=\"{}\" aria-live=\"{}\" class=\"remaining-notice\">{}</div>",
         if success { "status" } else { "alert" },
-        escape(message)
+        if success { "polite" } else { "assertive" },
+        crate::ui::state(
+            if success {
+                crate::ui::Tone::Ok
+            } else {
+                crate::ui::Tone::Warn
+            },
+            message
+        )
     )
 }
 pub(crate) fn failure_target(path: &str) -> Option<&'static str> {
@@ -25,7 +28,7 @@ pub(crate) fn failure_target(path: &str) -> Option<&'static str> {
         p if p.starts_with("/app/users/") && p.ends_with("/remove") => "/app/users?error=remove",
         p if p.starts_with("/app/users/") && p.ends_with("/role") => "/app/users?error=role",
         p if p.starts_with("/app/sessions/") && p.ends_with("/revoke") => {
-            "/app/sessions?error=revoke"
+            "/app/settings/account?error=revoke#account-sessions"
         }
         _ => return None,
     })
@@ -53,7 +56,9 @@ pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
         ("/app/users", "invite") => "Check the members list before sending another invitation.",
         ("/app/users", "remove") => "Review the members list before repeating a removal.",
         ("/app/users", "role") => "Review the member's current role before making another change.",
-        ("/app/sessions", "revoke") => "Review the sessions list before repeating a revocation.",
+        ("/app/sessions" | "/app/settings/account", "revoke") => {
+            "Review the sessions list before repeating a revocation."
+        }
         ("/app/settings/organization", "org") => {
             "Check the current organisation name before making another change."
         }
@@ -79,7 +84,7 @@ pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
         "/app/users" if r.field("role")? == "updated" => {
             "Review the member's current role before making another change."
         }
-        "/app/sessions" if r.field("revoked")? == "1" => {
+        "/app/sessions" | "/app/settings/account" if r.field("revoked")? == "1" => {
             "Review the sessions list before repeating a revocation."
         }
         "/app/settings/account" if r.field("password")? == "changed" => {
@@ -97,7 +102,7 @@ pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
     })
 }
 pub(crate) fn billing(status: Result<Value, Error>, plans: Result<Value, Error>) -> String {
-    let mut body = String::from("<div class=\"space-y-8\"><section><h3 class=\"mb-3 text-sm font-semibold uppercase tracking-wider text-dusk-blue-500\">Current Plan</h3>");
+    let mut body = String::from("<div class=\"space-y-8\"><section><h3 class=\"mb-3 text-sm font-semibold uppercase tracking-wider text-ink-300\">Current Plan</h3>");
     let status = match status {
         Ok(v) if v.is_object() => v,
         _ => {
@@ -113,11 +118,12 @@ pub(crate) fn billing(status: Result<Value, Error>, plans: Result<Value, Error>)
         .unwrap_or("")
         .to_ascii_lowercase();
     let (label, tone) = match raw_status.as_str() {
-        "active" => ("Active", "bg-tropical-teal-900 text-tropical-teal-300"),
-        "past_due" => ("Past due", "text-yellow-300"),
-        "canceled" => ("Canceled", "text-dusk-blue-300"),
-        _ => ("Subscription status unavailable", "text-dusk-blue-300"),
+        "active" => ("Active", crate::ui::Tone::Ok),
+        "past_due" => ("Past due", crate::ui::Tone::Warn),
+        "canceled" => ("Canceled", crate::ui::Tone::Idle),
+        _ => ("Subscription status unavailable", crate::ui::Tone::Idle),
     };
+    let state = crate::ui::state(tone, label);
     let plan = status["plan"]["name"]
         .as_str()
         .filter(|v| !v.trim().is_empty())
@@ -129,7 +135,7 @@ pub(crate) fn billing(status: Result<Value, Error>, plans: Result<Value, Error>)
     let grouped = credits
         .map(group_credits)
         .unwrap_or_else(|| "Credits unavailable".into());
-    body.push_str(&format!("<div class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><div class=\"flex flex-wrap items-start justify-between gap-4\"><div class=\"space-y-3\"><p class=\"text-base font-semibold text-dusk-blue-50\">{} <span class=\"text-xs {tone}\">{label}</span></p><p class=\"text-xs uppercase text-dusk-blue-500\">Credits</p><p class=\"text-lg font-semibold\">{grouped}</p>",escape(plan)));
+    body.push_str(&format!("<div class=\"rounded-panel border border-line bg-panel p-5\"><div class=\"flex flex-wrap items-start justify-between gap-4\"><div class=\"space-y-3\"><p class=\"text-base font-semibold text-ink-50\">{} {state}</p><p class=\"text-xs uppercase text-ink-300\">Credits</p><p class=\"text-lg font-semibold\">{grouped}</p>",escape(plan)));
     if let Some(date) = status["currentPeriodEnd"].as_str().and_then(billing_date) {
         body.push_str(&format!(
             "<p>Current period ends <time>{}</time></p>",
@@ -140,7 +146,7 @@ pub(crate) fn billing(status: Result<Value, Error>, plans: Result<Value, Error>)
     if raw_status == "active" && status["plan"].is_object() {
         body.push_str(&crate::admin::form("/app/settings/billing/portal", &[]));
     }
-    body.push_str("</div></div></section><section><h3 class=\"mb-3 text-sm font-semibold uppercase tracking-wider text-dusk-blue-500\">Available Plans</h3>");
+    body.push_str("</div></div></section><section><h3 class=\"mb-3 text-sm font-semibold uppercase tracking-wider text-ink-300\">Available Plans</h3>");
     match plans {
         Ok(v)
             if v["plans"]
@@ -171,7 +177,7 @@ pub(crate) fn billing(status: Result<Value, Error>, plans: Result<Value, Error>)
                 } else {
                     "<p>Plan selection unavailable.</p>".into()
                 };
-                body.push_str(&format!("<article class=\"flex flex-col rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><h3 class=\"text-base font-semibold\">{}</h3><p class=\"text-2xl font-bold text-neon-ice-400\">{}</p><p class=\"text-sm text-dusk-blue-400\">{}</p>{checkout}</article>",escape(str("name")),escape(&billing_price(plan)),escape(str("description"))));
+                body.push_str(&format!("<article class=\"flex flex-col rounded-panel border border-line bg-panel p-5\"><h3 class=\"text-base font-semibold\">{}</h3><p class=\"text-2xl font-bold text-ink-50\">{}</p><p class=\"text-sm text-ink-300\">{}</p>{checkout}</article>",escape(str("name")),escape(&billing_price(plan)),escape(str("description"))));
             }
             body.push_str("</div>");
         }
@@ -377,7 +383,7 @@ pub(crate) fn display_date(value: &str, with_time: bool) -> String {
 }
 
 pub(crate) fn settings(project_id: &str, project_name: &str, organization: &str) -> String {
-    let mut body = format!("<p class=\"mb-6 text-sm text-dusk-blue-400\">Manage your project, organization, account, and billing.</p><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2\"><section class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\"><h3 class=\"text-sm font-semibold\">Project</h3><p class=\"mt-4 text-sm\">Name: {}</p><p class=\"mt-3 text-sm\">Project ID: <code>{}</code></p><p class=\"mt-4 text-xs text-dusk-blue-500\">API keys for this project are managed via the API.</p></section>",escape(project_name),escape(project_id));
+    let mut body = format!("<p class=\"mb-6 text-sm text-ink-300\">Manage your project, organization, account, and billing.</p><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2\"><section class=\"rounded-panel border border-line bg-panel p-5\"><h3 class=\"text-sm font-semibold\">Project</h3><p class=\"mt-4 text-sm\">Name: {}</p><p class=\"mt-3 text-sm\">Project ID: <code>{}</code></p><p class=\"mt-4 text-xs text-ink-300\">API keys for this project are managed via the API.</p></section>",escape(project_name),escape(project_id));
     for (path, title, description) in [
         (
             "organization",
@@ -387,7 +393,7 @@ pub(crate) fn settings(project_id: &str, project_name: &str, organization: &str)
         (
             "account",
             "Account",
-            "Multi-factor authentication and personal security.",
+            "Password, multi-factor authentication, and account sessions.",
         ),
         (
             "billing",
@@ -405,15 +411,10 @@ pub(crate) fn settings(project_id: &str, project_name: &str, organization: &str)
             "Customize your branding on the OAuth consent screen.",
         ),
     ] {
-        body.push_str(&format!("<a href=\"/app/settings/{path}\" class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-neon-ice-500\"><h3 class=\"text-sm font-semibold\">{title} →</h3><p class=\"mt-2 text-sm text-dusk-blue-400\">{description}</p>{}</a>",if path=="organization" {format!("<p class=\"mt-3 text-xs text-dusk-blue-500\">{}</p>",escape(organization))} else {String::new()}));
+        body.push_str(&format!("<a href=\"/app/settings/{path}\" class=\"rounded-panel border border-line bg-panel p-5 transition hover:border-iris-400\"><h3 class=\"text-sm font-semibold\">{title} →</h3><p class=\"mt-2 text-sm text-ink-300\">{description}</p>{}</a>",if path=="organization" {format!("<p class=\"mt-3 text-xs text-ink-300\">{}</p>",escape(organization))} else {String::new()}));
     }
     for (href, label, description) in [
         ("/app/users", "Team", "Manage team members and invitations."),
-        (
-            "/app/sessions",
-            "Sessions",
-            "Review and revoke account sessions.",
-        ),
         ("/app/support", "Help", "Find support for your project."),
     ] {
         body.push_str(&format!("<a class=\"shell-settings-link\" href=\"{href}\"><h3>{label}</h3><p>{description}</p></a>"));

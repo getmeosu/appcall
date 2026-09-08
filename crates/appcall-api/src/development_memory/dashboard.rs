@@ -31,6 +31,10 @@ impl MemoryDashboard {
         }
     }
     async fn run(&self, r: DashboardRequest) -> Result<Value, DashboardFailure> {
+        // Development mode does not confer trusted operator authority.
+        if r.operation == Op::Qa {
+            return Err(Error::Forbidden.into());
+        }
         let account_id = r
             .account_id
             .as_deref()
@@ -154,6 +158,8 @@ impl MemoryDashboard {
                         "operation",
                     ]
                     .contains(&k.as_str())
+                        || r.operation == Op::Logs
+                            && ["createdFrom", "createdBefore"].contains(&k.as_str())
                     {
                         url.query_pairs_mut().append_pair(k, v);
                     }
@@ -461,9 +467,24 @@ fn web_error(error: ApiError) -> DashboardFailure {
         | "INVALID_CURSOR"
         | "INVALID_RUN_STATUS"
         | "INVALID_RUN_FILTER"
+        | "INVALID_TIME_RANGE"
+        | "INVALID_STATUS"
+        | "INVALID_ERROR_CODE"
         | "UNKNOWN_ACTION"
         | "MISSING_SETUP_FIELD" => Error::Invalid,
         _ => Error::Unavailable,
     };
     crate::browser_host::dashboard_failure::map_classified(error, classification)
+}
+
+#[cfg(test)]
+#[test]
+fn logs_filter_errors_are_invalid_in_memory_dashboard() {
+    for code in ["INVALID_TIME_RANGE", "INVALID_STATUS", "INVALID_ERROR_CODE"] {
+        assert_eq!(
+            web_error(ApiError::new(code)).classification(),
+            Error::Invalid,
+            "{code}"
+        );
+    }
 }

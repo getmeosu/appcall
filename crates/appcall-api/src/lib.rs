@@ -427,6 +427,7 @@ fn error_response(error: ApiError) -> Response {
         "INVALID_RUN_FILTER" => (400, "Run filter is invalid."),
         "INVALID_ERROR_CODE" => (400, "Error code must be a stable action error code."),
         "INVALID_CURSOR" => (400, "Cursor is invalid."),
+        "INVALID_TIME_RANGE" => (400, "Created time range is invalid."),
         "INVALID_MONTH" => (400, "Month must use YYYY-MM format."),
         "INVALID_QUANTITY" => (
             400,
@@ -672,6 +673,18 @@ fn connector_token(headers: &[(String, String)]) -> &str {
 #[cfg(test)]
 mod action_error_tests {
     use super::*;
+    #[test]
+    fn invalid_created_time_range_has_fixed_public_error() {
+        let response = error_response(ApiError::new("INVALID_TIME_RANGE"));
+        assert_eq!(response.status, 400);
+        assert_eq!(
+            response.body,
+            serde_json::json!({
+                "error": {"code": "INVALID_TIME_RANGE", "message": "Created time range is invalid."}
+            })
+        );
+    }
+
     #[test]
     fn action_errors_keep_identity_status_and_retry_contract() {
         for (code, status) in [

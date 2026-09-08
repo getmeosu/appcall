@@ -501,6 +501,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
                 | "/static/app.css"
                 | "/static/dashboard.css"
                 | "/static/dashboard.js"
+                | "/static/logs.js"
                 | "/static/datastar.js"
                 | "/static/palette.js"
                 | "/static/oauth-callback.js"
@@ -661,6 +662,10 @@ impl ApiDashboard {
     }
     async fn run(&self, r: DashboardRequest) -> std::result::Result<Value, DashboardFailure> {
         use appcall_web::Error;
+        // Global certification data requires trusted operator authority, not tenant grants.
+        if r.operation == appcall_web::DashboardOperation::Qa {
+            return Err(Error::Forbidden.into());
+        }
         let account = r
             .account_id
             .as_deref()
@@ -717,7 +722,7 @@ impl ApiDashboard {
             Op::DisconnectConnection=>{self.core.disconnect(&identity,resource).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"disconnected":true}))},
             Op::Logs|Op::Triggers|Op::Stream|Op::Trace=>{
                 let mut url=url::Url::parse(&format!("http://local.invalid{}",match r.operation{Op::Logs=>"/v1/action-logs".to_owned(),Op::Trace=>format!("/v1/requests/{resource}"),_=>"/v1/webhook-events".to_owned()})).map_err(|_|Error::Invalid)?;
-                for (k,v) in &r.fields {if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
+                for (k,v) in &r.fields {if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation"].contains(&k.as_str()) || r.operation == Op::Logs && ["createdFrom","createdBefore"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
                 self.db(|client| Ok(crate::data_routes::read(client,&identity,&url)))?.map_err(dashboard_failure::map_api_error)?.map(|r|r.body).ok_or_else(|| Error::Invalid.into())
             },
             Op::Runs=>{
@@ -820,9 +825,8 @@ fn api_error(error: ApiError) -> appcall_web::Error {
         "RUN_NOT_FOUND" => appcall_web::Error::NotFound,
         "RUN_STATE_CONFLICT" => appcall_web::Error::Conflict,
         "INVALID_REQUEST" | "INVALID_JSON" | "INVALID_LIMIT" | "INVALID_CURSOR"
-        | "INVALID_RUN_STATUS" | "INVALID_RUN_FILTER" | "UNKNOWN_ACTION" => {
-            appcall_web::Error::Invalid
-        }
+        | "INVALID_RUN_STATUS" | "INVALID_RUN_FILTER" | "INVALID_TIME_RANGE" | "INVALID_STATUS"
+        | "INVALID_ERROR_CODE" | "UNKNOWN_ACTION" => appcall_web::Error::Invalid,
         _ => appcall_web::Error::Unavailable,
     }
 }
@@ -912,3 +916,15 @@ pub fn guided_action_input(
 mod cancellation_tests;
 #[cfg(test)]
 mod toolkit_tests;
+
+#[cfg(test)]
+#[test]
+fn logs_filter_errors_are_invalid_in_production_dashboard() {
+    for code in ["INVALID_TIME_RANGE", "INVALID_STATUS", "INVALID_ERROR_CODE"] {
+        assert_eq!(
+            api_error(ApiError::new(code)),
+            appcall_web::Error::Invalid,
+            "{code}"
+        );
+    }
+}

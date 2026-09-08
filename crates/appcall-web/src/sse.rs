@@ -1,4 +1,4 @@
-use crate::{http::escape, Error, Response};
+use crate::{Error, Response};
 use serde_json::Value;
 fn patch(html: &str, selector: Option<&str>, prepend: bool) -> String {
     let mut frame = String::from("event: datastar-patch-elements\n");
@@ -27,20 +27,7 @@ pub(crate) fn response(html: &str) -> Response {
 /// Source-compatible Datastar prepend frame for the host's persistent event
 /// subscription. Recheck tenant/session authorization during long subscriptions.
 pub fn render_trigger_patch(event: &Value) -> Result<String, Error> {
-    let id = event
-        .get("id")
-        .and_then(Value::as_str)
-        .ok_or(Error::Invalid)?;
-    if id.is_empty()
-        || id.len() > 256
-        || !id
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
-    {
-        return Err(Error::Invalid);
-    }
-    let text = |key| escape(event.get(key).and_then(Value::as_str).unwrap_or(""));
-    let row=format!("<tr class=\"hover:bg-space-indigo-900/40 transition-colors\"><td class=\"px-4 py-3 text-sm text-dusk-blue-100\">{}</td><td class=\"px-4 py-3 text-sm text-dusk-blue-100\">{}</td><td class=\"px-4 py-3 text-sm\"><span class=\"font-mono text-xs text-dusk-blue-300\">{}</span></td><td class=\"px-4 py-3 text-sm text-dusk-blue-300\">{}</td><td class=\"px-4 py-3 text-sm\">{}</td></tr>",text("connector"),text("operation"),text("connectionId"),text("createdAt"),crate::pages::event_replay(id)?);
+    let row = crate::remaining_pages::event_row(event)?;
     let mut frames = patch(&row, Some("#trigger-rows"), true);
     frames.push_str("event: datastar-patch-elements\ndata: selector #trigger-empty-state\ndata: mode remove\n\n");
     Ok(frames)

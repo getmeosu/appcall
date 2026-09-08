@@ -1,9 +1,96 @@
 use super::*;
 use appcall_mcp::ConnectionLister;
 use appcall_store::{AuthType, Connection, CredentialOwner, Status, TestStatus};
+use appcall_web::{DashboardData, DashboardOperation, DashboardRequest};
 use std::sync::Arc;
+#[tokio::test]
+async fn certification_direct_memory_dispatch_denies_all_grants() {
+    let (_, dashboard) = composition();
+    for user in [None, Some("normal-member")] {
+        let mut principal = appcall_auth::Principal::project("proj_dev").unwrap();
+        principal.user_id = user.map(str::to_owned);
+        assert_eq!(principal.scopes, appcall_auth::Grant::All);
+        let result = dashboard
+            .execute(DashboardRequest {
+                principal,
+                operation: DashboardOperation::Qa,
+                resource: None,
+                account_id: None,
+                fields: Default::default(),
+                form_values: Default::default(),
+            })
+            .await;
+        assert_eq!(result.unwrap_err(), appcall_web::Error::Forbidden);
+    }
+}
 #[path = "../../tests/browser_host/failure_cases.rs"]
 mod copy_failure_cases;
+
+#[path = "../../tests/browser_host/log_filter_cases.rs"]
+mod log_filter_cases;
+
+#[tokio::test]
+async fn logs_dashboard_forwards_created_bounds_and_maps_invalid_time_memory() {
+    let (backend, dashboard) = composition();
+    backend
+        .core
+        .repository
+        .create_connection(
+            Connection {
+                id: "copy-connection".into(),
+                project_id: "proj_dev".into(),
+                external_account_id: "brand".into(),
+                connector: "test".into(),
+                auth_type: AuthType::ApiKey,
+                status: Status::Active,
+                secret_ref_id: String::new(),
+                last_test_status: TestStatus::Unknown,
+                credential_owner: CredentialOwner::Brand,
+            },
+            None,
+        )
+        .unwrap();
+    for (id, at) in [
+        ("filter-old", "2026-09-07T09:59:59Z"),
+        ("filter-start", "2026-09-07T10:00:00Z"),
+        ("filter-end", "2026-09-07T11:00:00Z"),
+    ] {
+        backend.core.repository.lock().unwrap().action_logs.insert(
+            id.into(),
+            super::state::ActionLog {
+                attempt: appcall_actions::Attempt {
+                    request_id: "filter-request".into(),
+                    project_id: "proj_dev".into(),
+                    connection_id: "copy-connection".into(),
+                    connector: "test".into(),
+                    external_account_id: "brand".into(),
+                    action: "write".into(),
+                    key: id.into(),
+                    input_hash: "hash".into(),
+                    lease_ms: 1000,
+                },
+                status: "failed".into(),
+                error_code: "ACTION_TIMEOUT".into(),
+                created_at: chrono::DateTime::parse_from_rfc3339(at).unwrap().to_utc(),
+            },
+        );
+    }
+    log_filter_cases::assert_log_filters(
+        &dashboard,
+        appcall_auth::Principal::project("proj_dev").unwrap(),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn logs_dashboard_invalid_filter_classifications_memory() {
+    let (_, dashboard) = composition();
+    log_filter_cases::assert_invalid_filters(
+        &dashboard,
+        appcall_auth::Principal::project("proj_dev").unwrap(),
+    )
+    .await;
+}
 
 #[tokio::test]
 async fn copy_dashboard_failures_have_backend_parity_memory() {
@@ -341,8 +428,8 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
     let qa = dashboard
         .execute(dashboard_request(DashboardOperation::Qa))
         .await
-        .unwrap();
-    assert_eq!(qa["unavailable"], true);
+        .unwrap_err();
+    assert_eq!(qa, appcall_web::Error::Forbidden);
     let triggers = dashboard
         .execute(dashboard_request(DashboardOperation::Triggers))
         .await

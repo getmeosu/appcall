@@ -61,10 +61,25 @@ test('palette filters all markers, announces no results and Enter only selects f
   assert.equal(f.nodes.get('cmdk-status').textContent,'No matching pages.');
   f.key('Enter');assert.equal(f.window.location.href,'/app/logs');
 });
+test('palette exposes the active page as a keyboard listbox selection',()=>{
+  const f=fixture('palette.js');f.opener.emit('click');
+  assert.equal(f.input.getAttribute('aria-expanded'),'true');
+  assert.equal(f.input.getAttribute('aria-activedescendant'),'overview');
+  assert.equal(f.list.children[0].getAttribute('aria-selected'),'true');
+  assert.equal(f.list.children[1].getAttribute('aria-selected'),'false');
+  f.key('ArrowDown');
+  assert.equal(f.input.getAttribute('aria-activedescendant'),'logs');
+  assert.equal(f.list.children[0].getAttribute('aria-selected'),'false');
+  assert.equal(f.list.children[1].getAttribute('aria-selected'),'true');
+  f.input.value='missing';f.input.emit('input');
+  assert.equal(f.input.getAttribute('aria-expanded'),'false');
+  assert.equal(f.input.getAttribute('aria-activedescendant'),null);
+});
 test('palette Escape and native close restore the invoking control',()=>{
   const f=fixture('palette.js');f.opener.emit('click');assert.equal(f.document.activeElement,f.input);
   f.key('Escape');assert.equal(f.dialog.open,false);assert.equal(f.document.activeElement,f.opener);
   f.key('k',f.opener,{ctrlKey:true});f.dialog.close();assert.equal(f.document.activeElement,f.opener);
+  assert.equal(f.list.children[0].getAttribute('aria-selected'),'false');
 });
 test('mobile drawer focuses navigation and resets on desktop breakpoint',()=>{
   const f=fixture('dashboard.js');f.toggle.focus();f.toggle.emit('click');

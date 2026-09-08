@@ -1,6 +1,52 @@
 use crate::{pages::render, DashboardOperation as Op};
 use serde_json::{json, Value};
 
+#[test]
+fn signal_setup_json_keeps_escaping_without_removed_ramps() {
+    let html = render(
+        Op::Setup,
+        &json!({"result":"<script>private & value</script>"}),
+        Some("provider"),
+    )
+    .unwrap();
+    assert!(html.contains("&lt;script&gt;private &amp; value&lt;/script&gt;"));
+    assert!(!html.contains("<script>"));
+    assert!(html.contains("<pre"));
+    for ramp in [
+        "prussian-blue",
+        "space-indigo",
+        "dusk-blue",
+        "neon-ice",
+        "fresh-sky",
+    ] {
+        assert!(!html.contains(ramp), "removed ramp {ramp}");
+    }
+}
+
+#[test]
+fn signal_dynamic_runinput_initial_and_patch_declare_live_regions() {
+    let initial = crate::toolkit::test_fields(&fixture(), "provider").unwrap();
+    let patch = render(
+        Op::RunInputFields,
+        &json!({"schema":{"type":"object","properties":{"query":{"type":"string"}}}}),
+        Some("provider"),
+    )
+    .unwrap();
+    for (kind, html) in [("initial", initial), ("replacement", patch)] {
+        let opening = html
+            .split("id=\"tk-runinput\"")
+            .nth(1)
+            .unwrap()
+            .split('>')
+            .next()
+            .unwrap();
+        assert!(
+            opening.contains("aria-live=\"polite\""),
+            "{kind} target needs its own live region"
+        );
+    }
+}
+
 fn fixture() -> Value {
     json!({"name":"<Provider>","description":"Use <tools>","action":"mail.read",
         "inputSchema":{"type":"object","properties":{"query":{"type":"string"}}},
@@ -122,6 +168,42 @@ fn signal_search_status_and_table_headers_have_semantic_hooks() {
     assert!(html.contains("id=\"tk-status\" role=\"status\""));
     assert!(html.contains("<caption class=\"sr-only\">Connector accounts</caption>"));
     assert_eq!(html.matches("<th scope=\"col\">").count(), 4);
+}
+
+#[test]
+fn dynamic_options_render_a_keyboard_listbox_contract() {
+    let html = page(&serde_json::json!({
+        "name": "Provider",
+        "action": "mail.read",
+        "inputSchema":{"type":"object","properties": {
+            "actor": {"type":"string","title":"Actor","x-dynamic-options":{"source":"actors.options"}}
+        }},
+        "sample": {"actor":"actor-1"},
+        "operations": [{"name":"mail.read","title":"Read","kind":"action"}],
+        "connections": [{"id":"active_1","connector":"provider","status":"active"}]
+    }));
+    assert!(html.contains("role=\"combobox\""));
+    assert!(html.contains("aria-autocomplete=\"list\""));
+    assert!(html.contains("aria-controls=\"tk-opts-f.actor\""));
+    assert!(html.contains("role=\"listbox\""));
+    assert!(html.contains("aria-live=\"polite\""));
+    assert!(!html.contains("role=\"option\""));
+    assert!(html.contains("data-input-id=\"tk-search-"));
+
+    let loaded = render(
+        Op::Options,
+        &serde_json::json!({
+            "fieldName":"f.actor",
+            "key":"provider",
+            "detailSource":"actors.options",
+            "options":[{"id":"actor-1","name":"Alice"}]
+        }),
+        None,
+    )
+    .unwrap();
+    assert!(loaded.contains("role=\"listbox\""));
+    assert!(loaded.contains("role=\"option\""));
+    assert!(loaded.contains("aria-selected=\"false\""));
 }
 
 #[test]

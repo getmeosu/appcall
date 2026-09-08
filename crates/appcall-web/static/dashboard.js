@@ -201,6 +201,220 @@ if (brandingName && brandingLogo && brandingColor) {
   }, true);
 })();
 
+// Dynamic manifest options use the native text input as a combobox and keep
+// focus there while the server replaces the listbox fragment. Mouse activation
+// still reaches the server-provided Datastar action; keyboard activation only
+// adds the same selection state before invoking it.
+(() => {
+  if (!document.getElementById('tk-detail')) return;
+  const asCombobox = target => target?.closest?.('[role="combobox"][aria-controls][data-options-source]');
+  const listFor = input => {
+    const id = input?.getAttribute('aria-controls');
+    return id ? document.getElementById(id) : null;
+  };
+  const allOptionsFor = list => Array.from(list?.querySelectorAll?.('[role="option"]') || [])
+    .filter(option => !option.hidden && !option.disabled && option.getAttribute('aria-disabled') !== 'true');
+  const optionsFor = list => {
+    if (!list || list.hidden || list.getAttribute('aria-busy') === 'true') return [];
+    return allOptionsFor(list);
+  };
+  const states = new WeakMap();
+  const stateFor = input => {
+    let state = states.get(input);
+    if (!state) {
+      state = { generation: 0, requestGeneration: 0, dismissed: true, failed: false };
+      states.set(input, state);
+    }
+    return state;
+  };
+  const statusFor = list => {
+    const id = list?.getAttribute('data-status-id');
+    return id ? document.getElementById(id) : null;
+  };
+  const hiddenFor = list => {
+    const id = list?.getAttribute('data-value-id');
+    return id ? document.getElementById(id) : null;
+  };
+  const labelFor = option => (option.getAttribute('data-label') || option.textContent || '').trim();
+  const announce = (list, message) => { const status = statusFor(list); if (status) status.textContent = message; };
+  const syncSelected = (list, options) => {
+    const value = hiddenFor(list)?.value || '';
+    for (const option of options) option.setAttribute('aria-selected', String(option.getAttribute('data-value') === value));
+  };
+  const clearActive = (input, list) => {
+    input?.removeAttribute('aria-activedescendant');
+    for (const option of allOptionsFor(list)) option.removeAttribute('data-active');
+  };
+  const setActive = (input, list, index) => {
+    const options = optionsFor(list);
+    if (!options.length) { clearActive(input, list); return; }
+    const active = options[(index + options.length) % options.length];
+    for (const option of options) option.removeAttribute('data-active');
+    active.setAttribute('data-active', '');
+    input.setAttribute('aria-activedescendant', active.id);
+    active.scrollIntoView?.({ block: 'nearest' });
+    announce(list, `${labelFor(active)}. ${options.indexOf(active) + 1} of ${options.length} options.`);
+  };
+  const close = (input, list, message, restoreFocus) => {
+    stateFor(input).dismissed = true;
+    clearActive(input, list);
+    input.setAttribute('aria-expanded', 'false');
+    if (list) list.hidden = true;
+    if (message) announce(list, message);
+    if (restoreFocus) input.focus();
+  };
+  const open = (input, list) => {
+    if (!list) return [];
+    if (list.getAttribute('aria-busy') === 'true') {
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+      announce(list, 'Loading options…');
+      return [];
+    }
+    const options = allOptionsFor(list);
+    list.hidden = options.length === 0;
+    input.setAttribute('aria-expanded', String(options.length > 0));
+    syncSelected(list, options);
+    if (options.length) announce(list, `${options.length} ${options.length === 1 ? 'option' : 'options'} available.`);
+    else announce(list, 'No matching options.');
+    return options;
+  };
+  const choose = (input, list, option, invokeAction) => {
+    const value = option.getAttribute('data-value') || '';
+    const hidden = hiddenFor(list);
+    if (hidden) hidden.value = value;
+    const options = optionsFor(list);
+    for (const candidate of options) candidate.setAttribute('aria-selected', String(candidate === option));
+    input.value = labelFor(option);
+    close(input, list, `Selected ${labelFor(option)}.`, true);
+    // Preserve the server's detail-source request and its existing action.
+    if (invokeAction) option.click?.();
+  };
+  const committing = new WeakSet();
+  document.addEventListener('input', event => {
+    const input = asCombobox(event.target);
+    if (!input) return;
+    const list = listFor(input);
+    const state = stateFor(input);
+    state.generation += 1;
+    state.dismissed = false;
+    state.failed = false;
+    open(input, list);
+    clearActive(input, list);
+  });
+  document.addEventListener('keydown', event => {
+    const input = asCombobox(event.target);
+    if (!input) return;
+    const list = listFor(input);
+    if (!list) return;
+    const state = stateFor(input);
+    if (event.key === 'Tab') {
+      close(input, list, 'Options closed.', false);
+      return;
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (list.getAttribute('aria-busy') === 'true') {
+        announce(list, 'Loading options…');
+        return;
+      }
+      state.dismissed = false;
+      open(input, list);
+      const options = optionsFor(list);
+      const active = options.findIndex(option => option.id === input.getAttribute('aria-activedescendant'));
+      setActive(input, list, active < 0 ? (event.key === 'ArrowDown' ? 0 : options.length - 1) : active + (event.key === 'ArrowDown' ? 1 : -1));
+    } else if (event.key === 'Home' || event.key === 'End') {
+      const options = optionsFor(list);
+      if (options.length) {
+        event.preventDefault();
+        setActive(input, list, event.key === 'Home' ? 0 : options.length - 1);
+      }
+    } else if (event.key === 'Enter') {
+      const options = optionsFor(list);
+      const active = options.findIndex(option => option.id === input.getAttribute('aria-activedescendant'));
+      const ready = !state.dismissed && !list.hidden && input.getAttribute('aria-expanded') === 'true' && list.getAttribute('aria-busy') !== 'true';
+      // This input lives inside the run form. Consume Enter even when the
+      // list is closed, busy, or has no active option so it cannot submit a
+      // request with a stale hidden value.
+      event.preventDefault();
+      const option = ready && active >= 0 ? options[active] : null;
+      if (option) { committing.add(option); choose(input, list, option, true); setTimeout(() => committing.delete(option), 0); }
+    } else if (event.key === 'Escape') {
+      event.preventDefault(); close(input, list, 'Options closed.', true);
+    }
+  });
+  document.addEventListener('focusout', event => {
+    const input = asCombobox(event.target);
+    if (!input) return;
+    const list = listFor(input);
+    const enteringList = event.relatedTarget === list
+      || event.relatedTarget?.closest?.('[role="listbox"]') === list;
+    if (event.relatedTarget === input || enteringList) return;
+    close(input, list, 'Options closed.', false);
+  });
+  document.addEventListener('click', event => {
+    const option = event.target.closest?.('[role="option"]');
+    if (!option || committing.has(option)) return;
+    const list = option.closest?.('[role="listbox"]');
+    const inputId = list?.getAttribute('data-input-id');
+    const input = inputId ? document.getElementById(inputId) : null;
+    if (!input || !list) return;
+    const valid = !stateFor(input).dismissed
+      && input.getAttribute('aria-expanded') === 'true'
+      && optionsFor(list).includes(option);
+    if (!valid) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    choose(input, list, option, false);
+  }, true);
+  document.addEventListener('datastar-fetch', event => {
+    const { type, el } = event.detail || {};
+    const input = asCombobox(el);
+    if (!input) return;
+    const list = listFor(input);
+    if (!list) return;
+    const state = stateFor(input);
+    if (type === 'started') {
+      state.requestGeneration = state.generation;
+      state.failed = false;
+      list.setAttribute('aria-busy', 'true');
+      const engaged = !state.dismissed && document.activeElement === input;
+      list.hidden = !engaged;
+      input.setAttribute('aria-expanded', String(engaged));
+      announce(list, 'Loading options…');
+    } else if (['error', 'retries-failed'].includes(type)) {
+      state.failed = true;
+      list.setAttribute('aria-busy', 'false');
+      close(input, list, 'Options unavailable.', false);
+    } else if (type === 'retrying') {
+      state.failed = false;
+      list.setAttribute('aria-busy', 'true');
+      announce(list, 'Retrying options…');
+    } else if (type === 'datastar-patch-elements') {
+      clearActive(input, list);
+    } else if (type === 'finished') {
+      list.setAttribute('aria-busy', 'false');
+      clearActive(input, listFor(input));
+      if (state.failed) {
+        state.failed = false;
+        return;
+      }
+      const shouldReopen = state.requestGeneration === state.generation && !state.dismissed && document.activeElement === input;
+      if (shouldReopen) queueMicrotask(() => {
+        const current = listFor(input);
+        if (current && !state.dismissed && document.activeElement === input) open(input, current);
+      });
+      else {
+        const current = listFor(input);
+        if (current) current.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+      }
+    }
+  });
+})();
+
 // Connector navigation enhances native GET links. Executions remain owned by
 // the form's Datastar POST; this module never fetches or retries an operation.
 (() => {
@@ -294,6 +508,7 @@ if (brandingName && brandingLogo && brandingColor) {
       const selected = a === tab;
       const wrapper = a.parentElement;
       a.setAttribute('role', 'tab');
+      a.removeAttribute('aria-current');
       a.setAttribute('id', wrapper.id + '-link');
       a.setAttribute('aria-controls', 'tk-panel-' + wrapper.dataset.tab);
       a.setAttribute('aria-selected', String(selected));

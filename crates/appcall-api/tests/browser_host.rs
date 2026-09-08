@@ -9,6 +9,9 @@ fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     assert!(public_path("POST", "/app/runs/run_1/cancel"));
     assert!(public_path("POST", "/app/users/u/remove"));
     assert!(public_path("GET", "/static/app.css"));
+    assert!(public_path("GET", "/static/logs.js"));
+    assert!(!public_path("POST", "/static/logs.js"));
+    assert!(!public_path("GET", "/static/logs.js/extra"));
     for path in [
         "/v1/actions",
         "/app/../v1/actions",
@@ -310,9 +313,21 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
         )
         .unwrap();
     admin.batch_execute("INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,secret_ref_id) VALUES('copy-check','proj_copy-test','copy-check-toolkit','api_key','active','brand','brand','copy-secret'); INSERT INTO action_replay_logs(id,project_id,connection_id,connector,action,request_id,sanitized_input,external_account_id) VALUES('copy-replay','proj_copy-test','copy-connection','test','write','original-copy-request','[]','brand')").unwrap();
+    for (id, at) in [
+        ("filter-old", "2026-09-07T09:59:59Z"),
+        ("filter-start", "2026-09-07T10:00:00Z"),
+        ("filter-end", "2026-09-07T11:00:00Z"),
+    ] {
+        admin.execute("INSERT INTO action_logs(id,project_id,connection_id,connector,action,status,error_code,request_id,external_account_id,created_at) VALUES($1,'proj_copy-test','copy-connection','test','write','failed','ACTION_TIMEOUT','filter-request','brand',$2::text::timestamptz)", &[&id,&at]).unwrap();
+    }
     let mut principal = appcall_auth::Principal::project("proj_copy-test").unwrap();
     principal.user_id = Some("11111111-1111-1111-1111-111111111111".into());
     let copy_data = data.clone();
+    // The global QA table is deliberately unavailable: the service must reject
+    // this operation without attempting its SELECT, even for Grant::All.
+    admin
+        .batch_execute("ALTER TABLE qa_connector_status RENAME TO qa_connector_status_unreadable")
+        .unwrap();
     let runner_calls = transport.calls.clone();
     runtime.block_on(async move {
         tokio::task::spawn_blocking(move || {
@@ -330,6 +345,25 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
             let waker = std::task::Waker::from(Arc::new(Signal(std::thread::current())));
             let mut context = std::task::Context::from_waker(&waker);
             let mut future = std::pin::pin!(async {
+                assert_eq!(
+                    appcall_web::DashboardData::execute(
+                        copy_data.as_ref(),
+                        appcall_web::DashboardRequest {
+                            principal: principal.clone(),
+                            operation: appcall_web::DashboardOperation::Qa,
+                            resource: None,
+                            account_id: None,
+                            fields: Default::default(),
+                            form_values: Default::default()
+                        }
+                    )
+                    .await
+                    .unwrap_err(),
+                    appcall_web::Error::Forbidden
+                );
+                log_filter_cases::assert_log_filters(copy_data.as_ref(), principal.clone()).await;
+                log_filter_cases::assert_invalid_filters(copy_data.as_ref(), principal.clone())
+                    .await;
                 copy_failure_cases::assert_failures(copy_data.as_ref(), principal.clone()).await;
                 copy_failure_cases::assert_service_failures(
                     copy_data.as_ref(),
@@ -402,7 +436,7 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
                 .unwrap();
             assert_eq!(
                 response.status,
-                200,
+                if path == "/app/qa" { 403 } else { 200 },
                 "{path}: {}",
                 String::from_utf8_lossy(&response.body)
             );
@@ -431,3 +465,6 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
 }
+
+#[path = "browser_host/log_filter_cases.rs"]
+mod log_filter_cases;

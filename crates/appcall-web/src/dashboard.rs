@@ -77,6 +77,10 @@ impl Dashboard<'_> {
             Some(o) => o,
             None => return None,
         };
+        let trace_drawer = match crate::trace::drawer_request(r, operation) {
+            Ok(drawer) => drawer,
+            Err(error) => return Some(Response::new(400, escape(&error.to_string()))),
+        };
         if r.method == "POST"
             && verify_csrf(self.browser.public_origin, r.origin, r.referer).is_err()
         {
@@ -90,7 +94,7 @@ impl Dashboard<'_> {
             Some(s) => s,
             None => {
                 return Some(
-                    Response::redirect("/app/login").cookie(self.browser.codec.clear_session()),
+                    session_required(trace_drawer).cookie(self.browser.codec.clear_session()),
                 )
             }
         };
@@ -101,7 +105,7 @@ impl Dashboard<'_> {
             }
             Err(_) => {
                 return Some(
-                    Response::redirect("/app/login").cookie(self.browser.codec.clear_session()),
+                    session_required(trace_drawer).cookie(self.browser.codec.clear_session()),
                 )
             }
         };
@@ -127,9 +131,49 @@ impl Dashboard<'_> {
         })
     }
 }
+fn session_required(drawer: bool) -> Response {
+    if drawer {
+        Response::new(401, "Sign in to inspect this trace.".into())
+    } else {
+        Response::redirect("/app/login")
+    }
+}
 pub(crate) struct DashboardRenderer<'a> {
     pub data: &'a dyn DashboardData,
 }
+
+fn catalog_matches(connector: &Value, query: &str) -> bool {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return true;
+    }
+    let text_matches = |value: Option<&str>| {
+        value
+            .map(str::to_lowercase)
+            .is_some_and(|value| value.contains(&query))
+    };
+    text_matches(connector.get("name").and_then(Value::as_str))
+        || text_matches(connector.get("key").and_then(Value::as_str))
+        || connector
+            .get("categories")
+            .and_then(Value::as_array)
+            .is_some_and(|categories| {
+                categories
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .any(|category| text_matches(Some(category)))
+            })
+        || connector
+            .get("operations")
+            .and_then(Value::as_array)
+            .is_some_and(|operations| {
+                operations.iter().any(|operation| {
+                    text_matches(operation.get("title").and_then(Value::as_str))
+                        || text_matches(operation.get("name").and_then(Value::as_str))
+                })
+            })
+}
+
 impl DashboardRenderer<'_> {
     pub(crate) async fn render(
         &self,
@@ -154,14 +198,21 @@ impl DashboardRenderer<'_> {
             ));
         }
         let operation = operation.ok_or(Error::Invalid)?;
+        // No trusted operator authority is configured; tenant grants cannot authorize QA.
+        if operation == DashboardOperation::Qa {
+            return Err(Error::Forbidden);
+        }
+        let trace_drawer = crate::trace::drawer_request(r, Some(operation))?;
+        let log_filters = if operation == DashboardOperation::Logs {
+            crate::logs::Filters::from_request(r)?
+        } else {
+            crate::logs::Filters::default()
+        };
         let has_filters = match operation {
-            DashboardOperation::Catalog => !r.field("category")?.is_empty(),
-            DashboardOperation::Logs => ["status", "connector", "action", "connectionId"]
-                .iter()
-                .map(|key| r.field(key))
-                .collect::<Result<Vec<_>, _>>()?
-                .iter()
-                .any(|value| !value.is_empty()),
+            DashboardOperation::Catalog => {
+                !r.field("category")?.trim().is_empty() || !r.field("search")?.trim().is_empty()
+            }
+            DashboardOperation::Logs => log_filters.active(),
             DashboardOperation::Runs => ["status", "connector", "tool", "accountId"]
                 .iter()
                 .map(|key| r.field(key))
@@ -175,6 +226,9 @@ impl DashboardRenderer<'_> {
             return Err(Error::Invalid);
         }
         for (key, values) in &r.fields {
+            if operation == DashboardOperation::Trace && key == "view" {
+                continue;
+            }
             if values.len() > 1
                 && key.starts_with("f.")
                 && (key.ends_with(".key") || key.ends_with(".val"))
@@ -213,6 +267,12 @@ impl DashboardRenderer<'_> {
             .get("externalAccountId")
             .filter(|id| !id.is_empty())
             .cloned();
+        let form_values = r
+            .fields
+            .iter()
+            .filter(|(key, _)| operation != DashboardOperation::Trace || key.as_str() != "view")
+            .map(|(key, values)| (key.clone(), values.clone()))
+            .collect();
         let value = self
             .data
             .execute_detailed(DashboardRequest {
@@ -221,11 +281,25 @@ impl DashboardRenderer<'_> {
                 resource: resource.clone(),
                 account_id,
                 fields,
-                form_values: r.fields.clone(),
+                form_values,
             })
             .await;
         let mut value = match value {
             Ok(value) => value,
+            Err(error)
+                if operation == DashboardOperation::Logs
+                    && error.classification() == Error::Invalid =>
+            {
+                return Ok(Response::new(
+                    400,
+                    crate::shell::layout(
+                        "Logs",
+                        session,
+                        &crate::logs::invalid(&log_filters),
+                        r.path,
+                    ),
+                ));
+            }
             Err(error)
                 if operation == DashboardOperation::RequestToolkit
                     && matches!(
@@ -357,20 +431,27 @@ impl DashboardRenderer<'_> {
                 .map(str::to_owned)
                 .collect::<std::collections::BTreeSet<_>>();
             let selected = r.field("category")?;
+            let search = r.field("search")?;
             let filtered = connectors
                 .iter()
                 .filter(|c| {
-                    selected.is_empty()
+                    (selected.trim().is_empty()
                         || c.get("categories")
                             .and_then(Value::as_array)
                             .is_some_and(|values| {
-                                values.iter().any(|v| v.as_str() == Some(selected))
-                            })
+                                values
+                                    .iter()
+                                    .filter_map(Value::as_str)
+                                    .any(|value| value.trim().eq_ignore_ascii_case(selected.trim()))
+                            }))
+                        && catalog_matches(c, search)
                 })
                 .cloned()
                 .collect::<Vec<_>>();
             map.insert("connectors".into(), Value::Array(filtered));
             map.insert("categories".into(), serde_json::json!(categories));
+            map.insert("category".into(), Value::String(selected.into()));
+            map.insert("search".into(), Value::String(search.into()));
         }
         if operation == DashboardOperation::Options {
             let target = if value.get("data").is_some() {
@@ -471,7 +552,17 @@ impl DashboardRenderer<'_> {
                 .ok_or(Error::Unavailable)?
                 .insert("tab".into(), tab.into());
         }
-        let mut content = crate::pages::render(operation, &value, resource.as_deref())?;
+        if trace_drawer {
+            return Ok(Response::new(
+                200,
+                crate::trace::content(&value, resource.as_deref().ok_or(Error::Invalid)?)?,
+            ));
+        }
+        let mut content = if operation == Logs {
+            crate::logs::render(&value, &log_filters, has_filters)?
+        } else {
+            crate::pages::render(operation, &value, resource.as_deref())?
+        };
         if operation == Branding && r.field("saved")? == "1" {
             content = crate::admin_ui::banner("Review the current branding settings below.", true)
                 + &content;
@@ -519,6 +610,8 @@ impl DashboardRenderer<'_> {
                     .map_err(|_| Error::Invalid)?;
                 let filter_keys: &[&str] = if operation == Runs {
                     &["status", "connector", "tool", "accountId"]
+                } else if operation == Logs {
+                    crate::logs::FILTER_KEYS
                 } else {
                     &["status", "connector", "action", "connectionId"]
                 };
@@ -543,7 +636,7 @@ impl DashboardRenderer<'_> {
             }
         }
         if !banner.is_empty() {
-            content=format!("<div role=\"{}\" class=\"mb-4 rounded-lg border border-space-indigo-800 p-4 text-sm\">{}</div>{content}",if recovery {"alert"} else {"status"},escape(banner));
+            content = crate::admin_ui::banner(banner, !recovery) + &content;
         }
         if matches!(
             operation,
