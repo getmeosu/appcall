@@ -12,8 +12,8 @@ mod dashboard;
 mod dashboard_failure;
 pub use dashboard_failure::*;
 mod logs;
-mod pages;
 mod overview;
+mod pages;
 mod shell;
 mod toolkit;
 #[cfg(test)]

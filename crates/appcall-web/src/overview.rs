@@ -119,11 +119,11 @@ fn activation() -> String {
 pub(crate) fn unavailable() -> String {
     let retry = ui::Button {
         target: ui::ButtonTarget::Link(ui::LocalPath::new("/app").expect("static overview path")),
-        ..ui::Button::new("Try again")
+        ..ui::Button::new("Reload Overview")
     }
     .render();
     format!(
-        "<section class=\"ui-empty-state overview-unavailable\" role=\"alert\" aria-labelledby=\"overview-unavailable-title\"><h3 id=\"overview-unavailable-title\">Overview temporarily unavailable</h3><p>Current project health could not be loaded. Try again shortly.</p>{retry}</section>"
+        "<section class=\"ui-empty-state overview-unavailable\" role=\"alert\" aria-labelledby=\"overview-unavailable-title\"><h3 id=\"overview-unavailable-title\">Overview temporarily unavailable</h3><p>Current project health could not be loaded.</p>{retry}</section>"
     )
 }
 
@@ -780,12 +780,15 @@ mod tests {
             for expected in [
                 "<title>Overview · appcall</title>",
                 "role=\"alert\"",
-                "Try again",
+                "Reload Overview",
+                "Current project health could not be loaded.",
             ] {
                 assert!(response.body.contains(expected), "missing {expected}");
             }
             assert!(!response.body.contains("overview-kpi"));
             assert!(!response.body.contains("Calls per hour"));
+            assert!(!response.body.contains("Try again"));
+            assert!(response.body.contains("href=\"/app\""));
         }
     }
 
