@@ -13,6 +13,7 @@ pub use sse::*;
 mod usage;
 pub use unified::*;
 pub use usage::*;
+pub(crate) mod overview;
 
 // Go QueryParam/url.Values.Get selects the first scalar value.
 fn first_query_values(url: &url::Url) -> BTreeMap<String, String> {

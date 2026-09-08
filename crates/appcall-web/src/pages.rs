@@ -2,7 +2,7 @@ use crate::{http::escape, DashboardOperation as Op, Error};
 use serde_json::Value;
 pub(crate) fn title(op: Op) -> &'static str {
     match op {
-        Op::Overview => "Getting Started",
+        Op::Overview => "Overview",
         Op::Catalog | Op::Toolkit | Op::Setup => "Toolkits",
         Op::AuthConfigs => "Auth Configs",
         Op::Triggers => "Triggers",
@@ -128,11 +128,7 @@ pub(crate) fn event_replay(id: &str) -> Result<String, Error> {
 pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<String, Error> {
     let v = raw.get("data").unwrap_or(raw);
     let body=match op{
-  Op::Overview=>{
-   let mut body=header("Getting Started","Connect a toolkit, run your first tool call, and wire up triggers.");body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");
-   for (label,key) in [("Toolkits available","toolkitCount"),("Connected accounts","connectionCount"),("Tool calls this month","toolCalls")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?))}body.push_str("</div>");
-   body.push_str(&card("<h3 class=\"text-sm font-semibold text-dusk-blue-100\">Setup checklist</h3><ul class=\"mt-4 space-y-3\"><li><a href=\"/app/toolkits\">Browse the toolkit catalog</a></li><li><a href=\"/app/toolkits\">Connect an account</a></li><li><a href=\"/app/toolkits\">Run a tool call</a></li><li><a href=\"/app/triggers\">Add a trigger</a></li></ul>"));body
-  },
+  Op::Overview=>crate::overview::render(v)?,
   Op::Catalog=>{
    let items=rows(v,&["connectors","items","cards"])?;
    let mut body=header("Toolkits","Connect your apps and explore their tools.");
@@ -614,7 +610,18 @@ mod rendering_contract_tests {
         for (op, data, expected) in [
             (
                 Op::Overview,
-                json!({"toolkitCount":2,"connectionCount":3,"toolCalls":4}),
+                json!({
+                    "toolkitCount":2,
+                    "connectionCount":3,
+                    "activeConnectionCount":2,
+                    "toolCalls":4,
+                    "successfulCalls":3,
+                    "failedCalls":1,
+                    "activity":[{"label":"Sep 08","calls":4}],
+                    "failureActivity":[{"label":"Sep 08","failures":1}],
+                    "attention":[],
+                    "deadRuns":[]
+                }),
                 ">4</p>",
             ),
             (

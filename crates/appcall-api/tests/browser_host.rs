@@ -61,7 +61,17 @@ fn browser_host_runs_cookie_membership_and_broker_on_current_thread_runtime() {
         > {
             Box::pin(async move {
                 self.0.lock().unwrap().push(r.principal.project_id);
-                Ok(json!({"toolkitCount":1,"connectionCount":2,"toolCalls":3}))
+                Ok(json!({
+                    "toolkitCount":1,
+                    "connectionCount":2,
+                    "activeConnectionCount":2,
+                    "toolCalls":3,
+                    "successfulCalls":3,
+                    "failedCalls":0,
+                    "activity":[{"label":"Sep 08","calls":3}],
+                    "failureActivity":[{"label":"Sep 08","failures":0}],
+                    "attention":[]
+                }))
             })
         }
     }
@@ -144,9 +154,7 @@ fn browser_host_runs_cookie_membership_and_broker_on_current_thread_runtime() {
         };
         let page = host.handle(&request).await.unwrap().unwrap();
         assert_eq!(page.status, 200);
-        assert!(String::from_utf8(page.body)
-            .unwrap()
-            .contains("Getting Started"));
+        assert!(String::from_utf8(page.body).unwrap().contains("Overview"));
         assert_eq!(seen.lock().unwrap().as_slice(), ["proj_tenant-a"]);
         let principal = host
             .authorize_headers(&[

@@ -84,7 +84,10 @@ impl ScenarioData {
             Op::Test => fixture_run(&r).await?,
             Op::Options | Op::RunInputFields => fixture_dynamic(&r)?,
             Op::Branding => json!({"appName":"Sample App","tagColor":"#67e8f9"}),
-            Op::Overview => json!({"toolkitCount":24,"connectionCount":3,"toolCalls":1205}),
+            Op::Overview if self.scenario == Scenario::Unavailable => {
+                return Err(Error::Unavailable.into())
+            }
+            Op::Overview => overview_fixture(self.scenario),
             Op::Setup if r.resource.as_deref() == Some("connector-0") => json!({"synthetic":true}),
             Op::TestConnection | Op::DisconnectConnection
                 if r.resource.as_deref() == Some("preview_connection") =>
@@ -117,6 +120,53 @@ impl ScenarioData {
             _ => return Err(Error::Invalid.into()),
         })
     }
+}
+fn overview_fixture(scenario: Scenario) -> Value {
+    if scenario == Scenario::Empty {
+        return json!({
+            "synthetic": true,
+            "toolkitCount": 24,
+            "connectionCount": 0,
+            "activeConnectionCount": 0,
+            "actionCalls": 0,
+            "successfulCalls": 0,
+            "failedCalls": 0,
+            "successRate": null,
+            "activity": [],
+            "failureActivity": [],
+            "attention": [],
+            "deadRuns": []
+        });
+    }
+    json!({
+        "synthetic": true,
+        "toolkitCount": 24,
+        "connectionCount": 3,
+        "activeConnectionCount": 2,
+        "actionCalls": 1205,
+        "successfulCalls": 1187,
+        "failedCalls": 18,
+        "successRate": 98.5,
+        "activity": [
+            {"date":"2026-09-08T14:00:00Z","label":"14:00","calls":188,"succeeded":185,"failed":3},
+            {"date":"2026-09-08T15:00:00Z","label":"15:00","calls":246,"succeeded":243,"failed":3},
+            {"date":"2026-09-08T16:00:00Z","label":"16:00","calls":291,"succeeded":286,"failed":5},
+            {"date":"2026-09-08T17:00:00Z","label":"17:00","calls":233,"succeeded":228,"failed":5},
+            {"date":"2026-09-08T18:00:00Z","label":"18:00","calls":247,"succeeded":245,"failed":2}
+        ],
+        "failureActivity": [
+            {"date":"2026-09-08T14:00:00Z","label":"14:00","failures":3},
+            {"date":"2026-09-08T15:00:00Z","label":"15:00","failures":3},
+            {"date":"2026-09-08T16:00:00Z","label":"16:00","failures":5},
+            {"date":"2026-09-08T17:00:00Z","label":"17:00","failures":5},
+            {"date":"2026-09-08T18:00:00Z","label":"18:00","failures":2}
+        ],
+        "deadRuns": [],
+        "attention": [
+            {"kind":"failure","title":"Slack / messages.send failed","body":"Error code: CONNECTOR_RATE_LIMITED.","href":"/app/logs?status=failed&connector=slack&requestId=preview_failed"},
+            {"kind":"connection","title":"Notion connection is degraded","body":"Provider status: degraded. Last test: failed.","href":"/app/auth-configs"}
+        ]
+    })
 }
 fn trace_fixture(scenario: Scenario, id: &str) -> Value {
     let status = if id == "preview_current" && matches!(scenario, Scenario::Failure(_)) {

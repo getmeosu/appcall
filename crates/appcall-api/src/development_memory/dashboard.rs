@@ -96,9 +96,64 @@ impl MemoryDashboard {
                 }
                 Ok(item)
             }
-            Op::Overview => Ok(
-                json!({"toolkitCount":self.core.registry().public_list().count(),"connectionCount":self.core.connections(&identity).await.map_err(web_error)?.len(),"toolCalls":self.core.usage(&identity,"").map_err(web_error)?["actionCalls"]}),
-            ),
+            Op::Overview => {
+                let connections = self
+                    .core
+                    .repository
+                    .list_connections(&identity.project_id, None)
+                    .map_err(|_| Error::Unavailable)?;
+                let connections = connections
+                    .into_iter()
+                    .filter(|connection| {
+                        identity.account_id.is_empty()
+                            || connection.external_account_id == identity.account_id
+                            || connection.credential_owner.as_str() == "platform"
+                    })
+                    .collect::<Vec<_>>();
+                let connection_ids = connections
+                    .iter()
+                    .map(|connection| connection.id.as_str())
+                    .collect::<std::collections::BTreeSet<_>>();
+                let actions = {
+                    let data = self
+                        .core
+                        .repository
+                        .lock()
+                        .map_err(|_| Error::Unavailable)?;
+                    data.action_logs
+                        .values()
+                        .filter(|log| {
+                            log.attempt.project_id == identity.project_id
+                                && connection_ids.contains(log.attempt.connection_id.as_str())
+                                && (identity.account_id.is_empty()
+                                    || log.attempt.external_account_id == identity.account_id)
+                        })
+                        .map(|log| crate::data_routes::overview::ActionRow {
+                            request_id: log.attempt.request_id.clone(),
+                            connector: log.attempt.connector.clone(),
+                            action: log.attempt.action.clone(),
+                            status: log.status.clone(),
+                            error_code: log.error_code.clone(),
+                            created_at: log.created_at,
+                        })
+                        .collect::<Vec<_>>()
+                };
+                let connection_rows = connections
+                    .iter()
+                    .map(|connection| crate::data_routes::overview::ConnectionRow {
+                        id: connection.id.clone(),
+                        connector: connection.connector.clone(),
+                        status: connection.status.as_str().into(),
+                        last_test_status: connection.last_test_status.as_str().into(),
+                    })
+                    .collect::<Vec<_>>();
+                Ok(crate::data_routes::overview::from_rows(
+                    self.core.registry().public_list().count(),
+                    &connection_rows,
+                    &actions,
+                    chrono::Utc::now(),
+                ))
+            }
             Op::AuthConfigs => Ok(
                 json!({"connections":self.core.connections(&identity).await.map_err(web_error)?.iter().map(crate::browser_host::connection_value).collect::<Vec<_>>()}),
             ),
