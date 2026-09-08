@@ -59,7 +59,16 @@ fn form(action: &str, content: &str, label: &str) -> String {
     } else {
         String::new()
     };
-    format!("<form method=\"post\" action=\"{}\" class=\"mt-5 space-y-4\"{datastar}>{content}<button class=\"inline-flex items-center gap-2 rounded-lg bg-neon-ice-500 px-3.5 py-2 text-sm font-semibold text-prussian-blue-950 transition hover:bg-neon-ice-400\">{}</button></form>",escape(action),escape(label))
+    let button = crate::ui::Button {
+        target: crate::ui::ButtonTarget::Button {
+            kind: crate::ui::ButtonType::Submit,
+            form: None,
+            action: None,
+        },
+        ..crate::ui::Button::new(label)
+    }
+    .render();
+    format!("<form method=\"post\" action=\"{}\" class=\"mt-5 space-y-4\"{datastar}>{content}{button}</form>",escape(action))
 }
 fn json(v: &Value) -> String {
     format!("<pre class=\"overflow-x-auto rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 text-xs\">{}</pre>",escape(&serde_json::to_string_pretty(v).unwrap_or_default()))
@@ -285,6 +294,19 @@ pub(crate) fn static_page(path: &str) -> String {
 }
 #[cfg(test)]
 mod memory_qa_tests {
+    #[test]
+    fn form_uses_shared_submit_without_losing_native_or_datastar_action() {
+        let html = super::form(
+            "/app/toolkits/request",
+            "<input name=\"name\">",
+            "Request toolkit",
+        );
+        assert!(html.contains("ui-button-primary"));
+        assert!(html.contains("type=\"submit\""));
+        assert!(html.contains("method=\"post\" action=\"/app/toolkits/request\""));
+        assert!(html
+            .contains("data-on:submit=\"@post('/app/toolkits/request', {contentType: 'form'})\""));
+    }
     #[test]
     fn missing_qa_storage_is_unavailable_not_empty_certification() {
         let html = super::render(
