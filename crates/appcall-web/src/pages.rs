@@ -263,11 +263,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::Logs=>crate::logs::render(v, &crate::logs::Filters::default(), v.get("hasFilters").and_then(Value::as_bool)==Some(true))?,
   Op::Triggers=>crate::remaining_pages::events(v)?,
   Op::Trace=>crate::trace::standalone(v, resource.ok_or(Error::Invalid)?)?,
-  Op::Qa if v.get("unavailable").and_then(Value::as_bool)==Some(true)=>header("QA","Connector certification and manifest fingerprint drift.")+&card("<p>QA status unavailable</p><p class=\"text-sm text-dusk-blue-400\">Configure PostgreSQL and run connector QA to view certification results.</p>"),
-  Op::Qa=>{
-   let items=rows(v,&["certifications","rows","items"])?;
-   header("QA","Connector certification and manifest fingerprint drift.")+&if items.is_empty(){"<section class=\"ui-empty-state\" aria-labelledby=\"qa-empty-heading\"><h3 id=\"qa-empty-heading\">No connector QA results to show.</h3><p>Connector QA results are not available in this list.</p></section>".into()}else{table(items,&[("Connector","connector"),("Status","status"),("Total","total"),("Passed","passed"),("Failed","failed"),("Not certified","notCertified"),("Manifest drift","drifted"),("Manifest fingerprint","manifestFingerprint"),("Last run","certifiedAt")],None)?}
-  },
+  Op::Qa=>return Err(Error::Forbidden),
   Op::Usage=>crate::remaining_pages::usage(v)?,
   Op::Branding=>crate::branding::render(v),
   Op::Test=>crate::toolkit::result(Some(v)),
@@ -466,13 +462,6 @@ mod rendering_contract_tests {
                 "Browse connectors to inspect their declared events.",
                 "Browse connectors",
             ),
-            (
-                Op::Qa,
-                vec!["certifications", "rows", "items"],
-                "No connector QA results to show.",
-                "Connector QA results are not available in this list.",
-                "",
-            ),
         ] {
             let mut values = vec![json!([])];
             for key in &keys {
@@ -501,14 +490,6 @@ mod rendering_contract_tests {
                 );
             }
         }
-        let unavailable = render(
-            Op::Qa,
-            &json!({"unavailable":true,"certifications":[]}),
-            None,
-        )
-        .unwrap();
-        assert!(unavailable.contains("QA status unavailable"));
-        assert!(!unavailable.contains("No connector QA results to show."));
     }
 
     #[test]
@@ -729,11 +710,6 @@ mod rendering_contract_tests {
                 json!({"events":[{"id":"evt_1","connector":"<evil>"}]}),
                 "/app/triggers/evt_1/replay",
             ),
-            (
-                Op::Qa,
-                json!({"certifications":[{"connector":"<evil>","passed":4,"drifted":false}]}),
-                "false",
-            ),
         ] {
             let html = render(op, &data, None).unwrap();
             assert!(html.contains(expected), "{expected}");
@@ -815,21 +791,18 @@ mod memory_qa_tests {
             .contains("data-on:submit=\"@post('/app/toolkits/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\""));
     }
     #[test]
-    fn missing_qa_storage_is_unavailable_not_empty_certification() {
-        let html = super::render(
-            super::Op::Qa,
-            &serde_json::json!({"unavailable":true,"certifications":[]}),
-            None,
-        )
-        .unwrap();
-        assert!(html.contains("QA status unavailable"));
-        assert!(!html.contains("<table"));
-        let persisted = super::render(
-            super::Op::Qa,
-            &serde_json::json!({"certifications":[]}),
-            None,
-        )
-        .unwrap();
-        assert!(!persisted.contains("QA status unavailable"));
+    fn direct_qa_page_is_forbidden_for_every_payload() {
+        for payload in [
+            serde_json::json!({"unavailable": true}),
+            serde_json::json!({"certifications": []}),
+            serde_json::json!({
+                "certifications": [{"connector": "mail", "status": "passed"}]
+            }),
+        ] {
+            assert_eq!(
+                super::render(super::Op::Qa, &payload, None),
+                Err(super::Error::Forbidden)
+            );
+        }
     }
 }
