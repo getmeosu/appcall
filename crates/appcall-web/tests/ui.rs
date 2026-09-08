@@ -76,6 +76,29 @@ fn fields_keep_values_associations_and_developer_owned_datastar_binding() {
 }
 
 #[test]
+fn dynamic_field_source_is_escaped_data_not_executable_code() {
+    let source = LocalPath::new("/options?source=actor&label=\"<name>").unwrap();
+    let html = Field {
+        options_source: Some(source),
+        on_input_debounced: Some("@get(evt.target.dataset.optionsSource)"),
+        ..Field::new(
+            "actor-search",
+            "",
+            "Search actor",
+            Control::Input(InputType::Search),
+        )
+    }
+    .render();
+    assert!(
+        html.contains("data-options-source=\"/options?source=actor&amp;label=&quot;&lt;name&gt;\"")
+    );
+    assert!(
+        html.contains("data-on:input__debounce.300ms=\"@get(evt.target.dataset.optionsSource)\"")
+    );
+    assert!(!html.contains("label=\"<name>"));
+}
+
+#[test]
 fn confirmation_with_existing_form_never_creates_a_nested_form() {
     let html = ConfirmButton {
         id: "delete",

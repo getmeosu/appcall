@@ -697,7 +697,7 @@ impl ApiDashboard {
         match r.operation {
             Op::Catalog=>Ok(json!({"connectors":self.registry.public_list().map(|c|catalog_item(c.manifest())).collect::<Vec<_>>()})),
             Op::Toolkit|Op::TestForm=>{let c=self.registry.public_connector(resource).map_err(|_|Error::Invalid)?;let mut item=catalog_item(c.manifest());item["setup"]=serde_json::to_value(&c.manifest().auth.setup).map_err(|_|Error::Unavailable)?;
-                let selected=if !field("action").is_empty(){c.manifest().operations.get_key_value(field("action"))}else{c.manifest().operations.iter().find(|(_,op)|op.kind==appcall_connectors::OperationKind::Action)};
+                let selected=selected_action(c.manifest(),field("action"))?;
                 item["connections"]=self.core.connections(&identity).await.map_err(api_error)?.iter().filter(|c|c.connector==resource).map(connection_value).collect();
                 if let Some((action,op))=selected{item["action"]=action.clone().into();item["inputSchema"]=op.input_schema.clone().unwrap_or_else(||json!({"type":"object"}));item["sample"]=op.sample.clone().unwrap_or(Value::Null);item["connectionId"]=field("connectionId").into();}Ok(item)},
             Op::Overview=>{let connections=self.core.connections(&identity).await.map_err(api_error)?;let usage=self.usage(&identity)?;Ok(json!({"toolkitCount":self.registry.public_list().count(),"connectionCount":connections.len(),"toolCalls":usage["actionCalls"]}))},
@@ -790,7 +790,28 @@ pub(crate) fn connection_value(c: &appcall_store::Connection) -> Value {
     json!({"id":c.id,"connector":c.connector,"authType":c.auth_type,"status":c.status,"lastTest":c.last_test_status})
 }
 pub(crate) fn catalog_item(m: &appcall_connectors::Manifest) -> Value {
-    json!({"key":m.key,"name":m.name,"categories":m.categories,"operations":m.operations.iter().map(|(name,op)|json!({"name":name,"key":name,"title":op.title,"kind":op.kind,"description":op.description,"inputSchema":op.input_schema})).collect::<Vec<_>>()})
+    json!({"key":m.key,"name":m.name,"categories":m.categories,"operations":m.operations.iter().map(|(name,op)|json!({"name":name,"key":name,"title":op.title,"kind":op.kind,"description":op.description,"inputSchema":op.input_schema,"outputSchema":op.output_schema,"readOnly":op.is_read_only(),"destructive":op.is_destructive()})).collect::<Vec<_>>()})
+}
+/// Keep the alphabetical default for an omitted action, but never substitute
+/// another operation for an explicitly requested invalid or non-action key.
+pub(crate) fn selected_action<'a>(
+    manifest: &'a appcall_connectors::Manifest,
+    action: &str,
+) -> std::result::Result<Option<(&'a String, &'a appcall_connectors::Operation)>, appcall_web::Error>
+{
+    if action.is_empty() {
+        Ok(manifest
+            .operations
+            .iter()
+            .find(|(_, op)| op.kind == appcall_connectors::OperationKind::Action))
+    } else {
+        manifest
+            .operations
+            .get_key_value(action)
+            .filter(|(_, op)| op.kind == appcall_connectors::OperationKind::Action)
+            .map(Some)
+            .ok_or(appcall_web::Error::Invalid)
+    }
 }
 /// Only the manifest shapes ordinary action input. The actor schema is limited
 /// to the provider's freeform runInput object, then ordinary action validation
@@ -828,3 +849,5 @@ pub fn guided_action_input(
 
 #[cfg(test)]
 mod cancellation_tests;
+#[cfg(test)]
+mod toolkit_tests;

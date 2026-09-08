@@ -33,7 +33,7 @@ fn request(path: &str) -> Request<'_> {
     }
 }
 async fn render(
-    data: &Fixture,
+    data: &dyn DashboardData,
     r: &Request<'_>,
     operation: Option<DashboardOperation>,
 ) -> Result<Response, Error> {
@@ -54,12 +54,132 @@ async fn render(
         )
         .await
 }
+
+struct Failing(Error);
+impl DashboardData for Failing {
+    fn execute(
+        &self,
+        _: DashboardRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<Value, Error>> + Send + '_>> {
+        Box::pin(async { Err(self.0) })
+    }
+}
+
+#[tokio::test]
+async fn toolkit_operation_failures_replace_their_live_region_without_fake_results() {
+    for error in [
+        Error::Invalid,
+        Error::Unauthorized,
+        Error::Forbidden,
+        Error::Unavailable,
+        Error::Configuration,
+    ] {
+        for (operation, path, target, label) in [
+            (
+                DashboardOperation::Test,
+                "/app/toolkits/mail/test",
+                "tk-test-result",
+                "tk-result-label",
+            ),
+            (
+                DashboardOperation::TestForm,
+                "/app/toolkits/mail/test-form",
+                "tk-test-fields",
+                "tk-fields-label",
+            ),
+        ] {
+            let response = render(&Failing(error), &request(path), Some(operation))
+                .await
+                .expect("operation failures need an accessible fragment, not a lost HTTP error");
+            assert_eq!(response.status, 200);
+            assert!(response
+                .headers
+                .iter()
+                .any(|(k, v)| k == "Content-Type" && v == "text/event-stream"));
+            for expected in [
+                format!("id=\"{target}\""),
+                format!("aria-labelledby=\"{label}\""),
+                "aria-live=\"polite\"".into(),
+                "aria-busy=\"false\"".into(),
+                "role=\"alert\"".into(),
+            ] {
+                assert!(
+                    response.body.contains(&expected),
+                    "{operation:?} {error:?}: {expected}"
+                );
+            }
+            assert!(!response.body.contains("Succeeded"));
+            assert!(!response.body.contains("/app/logs/"));
+            if operation == DashboardOperation::TestForm {
+                assert!(response.body.contains("data-fields-valid=\"false\""));
+                assert!(!response.body.contains("name=\"f."));
+                assert!(
+                    !response.body.contains("tool may have run"),
+                    "loading a schema cannot execute the tool"
+                );
+            }
+        }
+    }
+    assert!(matches!(
+        render(
+            &Failing(Error::Forbidden),
+            &request("/app/logs"),
+            Some(DashboardOperation::Logs)
+        )
+        .await,
+        Err(Error::Forbidden)
+    ));
+}
 fn location(response: &Response) -> Option<&str> {
     response
         .headers
         .iter()
         .find(|(k, _)| k == "Location")
         .map(|(_, v)| v.as_str())
+}
+
+#[tokio::test]
+async fn toolkit_tab_request_is_allowlisted_for_wrapped_and_unwrapped_dtos() {
+    for wrapped in [false, true] {
+        for (requested, selected) in [
+            ("tools", "tools"),
+            ("accounts", "accounts"),
+            ("events", "events"),
+            ("code", "code"),
+            ("settings", "settings"),
+            ("<unknown>", "tools"),
+            ("", "tools"),
+        ] {
+            let dto = json!({"name":"Provider","operations":[],"tab":"settings"});
+            let data = fixture(if wrapped { json!({"data":dto}) } else { dto });
+            let mut r = request("/app/toolkits/provider");
+            r.fields.insert("tab".into(), vec![requested.into()]);
+            let response = render(&data, &r, Some(DashboardOperation::Toolkit))
+                .await
+                .unwrap();
+            assert_eq!(response.status, 200);
+            for (tab, label) in [
+                ("tools", "Tools"),
+                ("accounts", "Accounts"),
+                ("events", "Events"),
+                ("code", "Code"),
+                ("settings", "Settings"),
+            ] {
+                let expected = format!(
+                    "id=\"tk-panel-{tab}\" class=\"tk-panel\" aria-label=\"{label}\"{}>",
+                    if tab == selected { "" } else { " hidden" }
+                );
+                assert!(
+                    response.body.contains(&expected),
+                    "wrapped={wrapped}, requested={requested}: {expected}"
+                );
+            }
+            let calls = data.requests.lock().unwrap();
+            assert_eq!(calls.len(), 1);
+            assert_eq!(calls[0].operation, DashboardOperation::Toolkit);
+            assert_eq!(calls[0].resource.as_deref(), Some("provider"));
+        }
+    }
 }
 
 #[tokio::test]
