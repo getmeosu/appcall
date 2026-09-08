@@ -6,6 +6,9 @@ mod copy_failure_cases;
 fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     assert!(public_path("GET", "/app/login"));
     assert!(public_path("POST", "/app/settings/team/u/remove"));
+    assert!(public_path("GET", "/app/runs"));
+    assert!(public_path("POST", "/app/runs/run_1/cancel"));
+    assert!(public_path("POST", "/app/users/u/remove"));
     assert!(public_path("GET", "/static/app.css"));
     assert!(public_path("GET", "/static/logs.js"));
     assert!(!public_path("POST", "/static/logs.js"));
@@ -15,8 +18,11 @@ fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
         "/app/../v1/actions",
         "/app/settings/team/u/arbitrary",
         "/app/connectors/x%2Fy",
+        "/app/users/u/arbitrary",
+        "/app/toolkits/x%2Fy",
         "/static/../../secret",
         "/app/oauth/unknown",
+        "/app/runs/run_1/force",
     ] {
         assert!(!public_path("GET", path), "{path}")
     }
@@ -64,7 +70,18 @@ fn browser_host_runs_cookie_membership_and_broker_on_current_thread_runtime() {
         > {
             Box::pin(async move {
                 self.0.lock().unwrap().push(r.principal.project_id);
-                Ok(json!({"toolkitCount":1,"connectionCount":2,"toolCalls":3}))
+                Ok(json!({
+                    "toolkitCount":1,
+                    "connectionCount":2,
+                    "activeConnectionCount":2,
+                    "toolCalls":3,
+                    "successfulCalls":3,
+                    "failedCalls":0,
+                    "activity":[{"label":"Sep 08","calls":3}],
+                    "failureActivity":[{"label":"Sep 08","failures":0}],
+                    "attention":[],
+                    "deadRunsUnavailable":true
+                }))
             })
         }
     }
@@ -147,9 +164,7 @@ fn browser_host_runs_cookie_membership_and_broker_on_current_thread_runtime() {
         };
         let page = host.handle(&request).await.unwrap().unwrap();
         assert_eq!(page.status, 200);
-        assert!(String::from_utf8(page.body)
-            .unwrap()
-            .contains("Getting Started"));
+        assert!(String::from_utf8(page.body).unwrap().contains("Overview"));
         assert_eq!(seen.lock().unwrap().as_slice(), ["proj_tenant-a"]);
         let principal = host
             .authorize_headers(&[
@@ -320,6 +335,11 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
     let mut principal = appcall_auth::Principal::project("proj_copy-test").unwrap();
     principal.user_id = Some("11111111-1111-1111-1111-111111111111".into());
     let copy_data = data.clone();
+    // The global QA table is deliberately unavailable: the service must reject
+    // this operation without attempting its SELECT, even for Grant::All.
+    admin
+        .batch_execute("ALTER TABLE qa_connector_status RENAME TO qa_connector_status_unreadable")
+        .unwrap();
     let runner_calls = transport.calls.clone();
     runtime.block_on(async move {
         tokio::task::spawn_blocking(move || {
@@ -337,6 +357,22 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
             let waker = std::task::Waker::from(Arc::new(Signal(std::thread::current())));
             let mut context = std::task::Context::from_waker(&waker);
             let mut future = std::pin::pin!(async {
+                assert_eq!(
+                    appcall_web::DashboardData::execute(
+                        copy_data.as_ref(),
+                        appcall_web::DashboardRequest {
+                            principal: principal.clone(),
+                            operation: appcall_web::DashboardOperation::Certification,
+                            resource: None,
+                            account_id: None,
+                            fields: Default::default(),
+                            form_values: Default::default()
+                        }
+                    )
+                    .await
+                    .unwrap_err(),
+                    appcall_web::Error::Forbidden
+                );
                 log_filter_cases::assert_log_filters(copy_data.as_ref(), principal.clone()).await;
                 log_filter_cases::assert_invalid_filters(copy_data.as_ref(), principal.clone())
                     .await;
@@ -398,7 +434,6 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
             "/app/connectors",
             "/app/connections",
             "/app/usage?month=2026-01",
-            "/app/certification",
         ] {
             let response = host
                 .handle(&Request {
@@ -417,6 +452,18 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
                 String::from_utf8_lossy(&response.body)
             );
         }
+        let certification = host
+            .handle(&Request {
+                method: "GET".into(),
+                uri: "/app/certification".into(),
+                headers: vec![("Cookie".into(), cookie.clone())],
+                body: vec![],
+            })
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(certification.status, 403);
+        assert!(!String::from_utf8_lossy(&certification.body).contains("manifestFingerprint"));
     });
     assert_eq!(
         admin

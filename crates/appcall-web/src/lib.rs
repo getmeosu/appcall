@@ -13,11 +13,13 @@ mod admin;
 mod dashboard;
 mod dashboard_failure;
 pub use dashboard_failure::*;
+mod connections;
 mod connector;
 #[cfg(test)]
 #[path = "connector/tests.rs"]
 mod connector_tests;
 mod logs;
+mod overview;
 mod pages;
 mod shell;
 mod trace;
@@ -36,4 +38,7 @@ mod branding;
 mod development;
 pub use development::DevelopmentDashboard;
 
+mod remaining_pages;
+#[cfg(test)]
+mod remaining_tests;
 pub mod ui;

@@ -47,6 +47,37 @@ impl Repository {
     pub fn enqueue(&mut self, r: &ScheduleRequest) -> Result<Job> {
         enqueue(&mut self.client, r)
     }
+    pub fn control(
+        &mut self,
+        project_id: &str,
+        account_id: &str,
+        job_id: &str,
+        action: OperatorAction,
+    ) -> Result<()> {
+        let mut tx = self.client.transaction()?;
+        control_in_transaction(&mut tx, project_id, account_id, job_id, action)?;
+        tx.commit()?;
+        Ok(())
+    }
+    pub fn run_now(&mut self, project_id: &str, account_id: &str, job_id: &str) -> Result<()> {
+        self.control(project_id, account_id, job_id, OperatorAction::RunNow)
+    }
+    pub fn reset_attempts(
+        &mut self,
+        project_id: &str,
+        account_id: &str,
+        job_id: &str,
+    ) -> Result<()> {
+        self.control(
+            project_id,
+            account_id,
+            job_id,
+            OperatorAction::ResetAttempts,
+        )
+    }
+    pub fn cancel(&mut self, project_id: &str, account_id: &str, job_id: &str) -> Result<()> {
+        self.control(project_id, account_id, job_id, OperatorAction::Cancel)
+    }
     pub fn claim(&mut self, worker: &str, lease: Duration) -> Result<Option<Job>> {
         if worker.is_empty()
             || worker.len() > 256
@@ -151,6 +182,75 @@ impl Repository {
         Ok(())
     }
 }
+
+/// Apply an operator control inside a caller-owned transaction.
+///
+/// The job row is locked before its connection row. Every mutation clears the
+/// worker lease, so a worker that still holds an older claim fails the normal
+/// owner/input/lease fence before it can commit a page or record a failure.
+pub fn control_in_transaction<C: GenericClient>(
+    db: &mut C,
+    project_id: &str,
+    account_id: &str,
+    job_id: &str,
+    action: OperatorAction,
+) -> Result<()> {
+    if project_id.is_empty()
+        || project_id.len() > 512
+        || job_id.is_empty()
+        || job_id.len() > 512
+        || account_id.len() > 512
+    {
+        return Err(Error::InvalidInput);
+    }
+    let job = db
+        .query_opt(
+            "SELECT connection_id,status,COALESCE(status='running' AND leased_until>clock_timestamp(),false) AS active_lease FROM sync_jobs WHERE id=$1 AND project_id=$2 FOR UPDATE",
+            &[&job_id, &project_id],
+        )?
+        .ok_or(Error::NotFound)?;
+    let connection_id: String = job.get("connection_id");
+    if db
+        .query_opt(
+            "SELECT id FROM connections WHERE id=$1 AND project_id=$2 AND ($3='' OR (external_account_id=$3 AND credential_owner<>'platform')) FOR UPDATE",
+            &[&connection_id, &project_id, &account_id],
+        )?
+        .is_none()
+    {
+        return Err(Error::NotFound);
+    }
+    let status: String = job.get("status");
+    let active_lease: bool = job.get("active_lease");
+    let allowed = match action {
+        OperatorAction::RunNow => (status == "pending") || (status == "running" && !active_lease),
+        OperatorAction::ResetAttempts => {
+            status == "pending" || status == "failed" || (status == "running" && !active_lease)
+        }
+        OperatorAction::Cancel => status == "pending" || status == "running",
+    };
+    if !allowed {
+        return Err(Error::Conflict);
+    }
+    let updated = match action {
+        OperatorAction::RunNow => db.execute(
+            "UPDATE sync_jobs SET status='pending',worker_id='',leased_until=NULL,run_after=clock_timestamp(),updated_at=clock_timestamp() WHERE id=$1 AND project_id=$2",
+            &[&job_id, &project_id],
+        )?,
+        OperatorAction::ResetAttempts => db.execute(
+            "UPDATE sync_jobs SET status='pending',attempts=0,worker_id='',leased_until=NULL,run_after=clock_timestamp(),last_error='',updated_at=clock_timestamp() WHERE id=$1 AND project_id=$2",
+            &[&job_id, &project_id],
+        )?,
+        OperatorAction::Cancel => db.execute(
+            "UPDATE sync_jobs SET status='cancelled',worker_id='',leased_until=NULL,run_after=clock_timestamp(),last_error='cancelled by operator',updated_at=clock_timestamp() WHERE id=$1 AND project_id=$2",
+            &[&job_id, &project_id],
+        )?,
+    };
+    if updated != 1 {
+        return Err(Error::Conflict);
+    }
+    Ok(())
+}
+
 fn lock(tx: &mut postgres::Transaction<'_>, j: &Job) -> Result<()> {
     if tx.query_opt("SELECT id FROM sync_jobs WHERE id=$1 AND project_id=$2 AND connection_id=$3 AND operation=$4 AND worker_id=$5 AND leased_until=$6 AND input=$7 AND status='running' AND leased_until>clock_timestamp() FOR UPDATE",&[&j.id,&j.project_id,&j.connection_id,&j.operation,&j.worker_id,&j.leased_until,&j.input])?.is_none(){return Err(Error::LeaseLost)}
     Ok(())

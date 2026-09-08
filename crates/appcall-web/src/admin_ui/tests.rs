@@ -356,19 +356,15 @@ fn copy_billing_missing_data_never_invents_state_or_amounts() {
 #[test]
 fn settings_hub_exposes_all_subpages_and_verified_project() {
     let html = settings("proj_verified", "Project", "Organization");
-    for path in [
-        "organization",
-        "account",
-        "billing",
-        "usage",
-        "white-labeling",
-    ] {
+    for path in ["organization", "account", "billing", "white-labeling"] {
         assert!(html.contains(&format!("href=\"/app/settings/{path}\"")));
     }
     assert!(html.contains("proj_verified"));
-    for path in ["/app/settings/team", "/app/sessions", "/app/support"] {
+    assert!(html.contains("href=\"/app/usage\""));
+    for path in ["/app/settings/team", "/app/support"] {
         assert!(html.contains(&format!("href=\"{path}\"")), "missing {path}");
     }
+    assert!(!html.contains("href=\"/app/sessions\""));
 }
 #[test]
 fn billing_preserves_partial_failures_and_only_active_portal() {

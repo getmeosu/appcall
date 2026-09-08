@@ -21,7 +21,7 @@ function fixture(destructive = false) {
   let elementSequence=0;document.createElement=()=>node('created-'+elementSequence++);
   const tabs=['tools','accounts','events','code','settings'].map((name,i)=>{
     const wrap=node('tk-tab-'+name,{dataset:{tab:name,selected:String(!i)}});
-    const a=node('tab-'+name,{parentElement:wrap,attrs:{href:'/app/connectors/provider?tab='+name+'&action=mail.read&callerToken=SECRET'},matches:s=>s==='#tk-tabs a'});
+    const a=node('tab-'+name,{parentElement:wrap,attrs:{href:'/app/connectors/provider?tab='+name+'&action=mail.read&callerToken=SECRET',...(i===0?{'aria-current':'page'}:{})},matches:s=>s==='#tk-tabs a'});
     wrap.querySelector=()=>a; node('tk-panel-'+name,{hidden:!!i}); return a;
   });
   const rail=['mail.read','mail.write'].map(action=>node(action,{attrs:{href:'/app/connectors/provider?action='+action},matches:s=>s==='.tk-tool-item a'}));
@@ -57,6 +57,13 @@ test('tabs enhance real links with roving keyboard focus and Tab exits',()=>{
   assert.equal(f.emit('keydown',f.tabs[4],{key:'Tab'}).prevented,undefined);
   assert.equal(f.emit('click',f.tabs[4],{ctrlKey:true}).prevented,undefined);
   f.emit('keydown',f.rail[0],{key:'ArrowDown'});assert.equal(f.document.activeElement,f.rail[1]);
+});
+test('tab enhancement replaces native page-current semantics with tab selection',()=>{
+  const f=fixture();
+  assert.equal(f.tabs[0].attrs['aria-current'],undefined);
+  assert.equal(f.tabs[0].attrs['aria-selected'],'true');
+  assert.equal(f.tabs[1].attrs['aria-current'],undefined);
+  assert.equal(f.tabs[1].attrs['aria-selected'],'false');
 });
 test('Run as refreshes navigation and inert sample using only eligible account',()=>{
   const f=fixture();f.account.value='active_2';f.emit('change',f.account);
@@ -147,6 +154,307 @@ test('filter matches tool titles and names and reports an empty search',()=>{
   const items=f.rail.map((link,i)=>{const item=f.node('item-'+i,{textContent:link.id});link.closest=s=>s==='.tk-tool-item'?item:null;return item;});
   f.emit('input',filter);assert.equal(items[0].hidden,true);assert.equal(items[1].hidden,false);
   filter.value='unknown';f.emit('input',filter);assert.match(f.nodes.get('tk-status').textContent,/No matching tools/);
+});
+
+function dynamicOptionsFixture() {
+  const nodes = new Map(), listeners = {}, microtasks = [];
+  const document = { getElementById: id => nodes.get(id), activeElement: null,
+    addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+    createElement: () => node('created-' + nodes.size) };
+  function node(id, extra = {}) {
+    const n = { id, dataset: {}, attrs: {}, hidden: false, disabled: false, isConnected: true,
+      value: '', textContent: '', children: [],
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+      getAttribute(k) { return this.attrs[k] ?? null; },
+      removeAttribute(k) { delete this.attrs[k]; },
+      focus() { document.activeElement = this; },
+      closest(s) { return this.matches?.(s) ? this : null; },
+      querySelectorAll() { return []; }, querySelector() { return null; }, ...extra };
+    nodes.set(id, n); return n;
+  }
+  const root = node('tk-detail', { dataset: { toolkitKey: 'provider' } });
+  const tabs = ['tools', 'accounts', 'events', 'code', 'settings'].map((name, index) => {
+    const wrap = node('tk-tab-' + name, { dataset: { tab: name, selected: String(index === 0) } });
+    const link = node('tab-' + name, { parentElement: wrap,
+      attrs: { href: '/app/connectors/provider?tab=' + name },
+      matches: s => s === '#tk-tabs a' });
+    wrap.querySelector = () => link; node('tk-panel-' + name, { hidden: index !== 0 }); return link;
+  });
+  node('tk-tabs', { querySelectorAll: () => tabs });
+  node('tk-connection', { value: 'active_1', options: [{ value: 'active_1', disabled: false }] });
+  node('tk-selection-connection', { value: '' });
+  node('tk-selected-action', { value: 'mail.read' });
+  node('tk-status');
+  const search = node('tk-search-f.actor', { value: '',
+    attrs: { role: 'combobox', 'aria-controls': 'tk-opts-f.actor', 'data-options-source': '/app/connectors/provider/options' },
+    matches: s => s === '[role="combobox"][aria-controls]' || s === '[role="combobox"][aria-controls][data-options-source]' });
+  const hidden = node('f.actor', { value: 'one' });
+  const optionOne = node('tk-opt-f.actor-0', { textContent: 'One',
+    attrs: { role: 'option', tabindex: '-1', 'data-value': 'one', 'aria-selected': 'false' },
+    matches: s => s === '[role="option"]', click() { this.clicked = (this.clicked || 0) + 1; } });
+  const optionTwo = node('tk-opt-f.actor-1', { textContent: 'Two',
+    attrs: { role: 'option', tabindex: '-1', 'data-value': 'two', 'aria-selected': 'false' },
+    matches: s => s === '[role="option"]' });
+  let listOptions = [optionOne, optionTwo];
+  const list = node('tk-opts-f.actor', { dataset: { inputId: search.id, valueId: hidden.id, statusId: 'tk-opts-f.actor-status' },
+    attrs: { role: 'listbox', 'data-input-id': search.id, 'data-value-id': hidden.id, 'data-status-id': 'tk-opts-f.actor-status' }, querySelectorAll: s => s === '[role="option"]' ? listOptions : [] });
+  for (const option of [optionOne, optionTwo]) option.closest = s => s === '[role="option"]' ? option : s === '[role="listbox"]' ? list : null;
+  node('tk-opts-f.actor-status');
+  const commandOption = node('cmdk-option-0', { textContent: 'Pages', attrs: { role: 'option' }, matches: s => s === '[role="option"]' });
+  const commandList = node('cmdk-list', { hidden: false, attrs: { role: 'listbox' }, querySelectorAll: s => s === '[role="option"]' ? [commandOption] : [] });
+  const commandSearch = node('cmdk-search', { value: '', attrs: { role: 'combobox', 'aria-controls': 'cmdk-list' },
+    matches: s => s === '[role="combobox"][aria-controls]' });
+  root.querySelectorAll = s => s === '#tk-tabs a' ? tabs : s === '.tk-tool-item a' ? [] : s === 'a' ? tabs : [];
+  vm.runInNewContext(fs.readFileSync(new URL('../static/dashboard.js', import.meta.url), 'utf8'), {
+    document, window: { location: { href: 'https://local.invalid/app/connectors/provider' }, history: { replaceState() {} } },
+    navigator: {}, URL, URLSearchParams, WeakMap, Map, setTimeout, queueMicrotask: fn => microtasks.push(fn)
+  });
+  const emit = (type, target, extra = {}) => {
+    const event = { target, button: 0, preventDefault() { this.prevented = true; }, stopImmediatePropagation() { this.stopped = true; }, ...extra };
+    for (const fn of listeners[type] ?? []) { fn(event); if (event.stopped) break; }
+    return event;
+  };
+  return { document, nodes, node, search, hidden, list, optionOne, optionTwo, commandSearch, commandList, emit,
+    on(type, fn) { (listeners[type] ??= []).push(fn); },
+    removeOption(option) { listOptions = listOptions.filter(candidate => candidate !== option); },
+    flush() { while (microtasks.length) microtasks.shift()(); } };
+}
+
+test('dynamic options provide combobox listbox keyboard selection and announcements', () => {
+  const f = dynamicOptionsFixture();
+  f.emit('input', f.search); f.flush();
+  assert.equal(f.search.attrs['aria-expanded'], 'true');
+  let event = f.emit('keydown', f.search, { key: 'ArrowDown' });
+  assert.equal(event.prevented, true);
+  assert.equal(f.search.attrs['aria-activedescendant'], f.optionOne.id);
+  f.emit('keydown', f.search, { key: 'ArrowDown' });
+  assert.equal(f.search.attrs['aria-activedescendant'], f.optionTwo.id);
+  f.emit('keydown', f.search, { key: 'ArrowUp' });
+  assert.equal(f.search.attrs['aria-activedescendant'], f.optionOne.id);
+  f.emit('keydown', f.search, { key: 'Enter' });
+  assert.equal(f.hidden.value, 'one');
+  assert.equal(f.optionOne.clicked, 1);
+  assert.equal(f.optionOne.attrs['aria-selected'], 'true');
+  assert.equal(f.optionTwo.attrs['aria-selected'], 'false');
+  assert.equal(f.search.attrs['aria-expanded'], 'false');
+  assert.equal(f.list.hidden, true);
+  assert.match(f.nodes.get('tk-opts-f.actor-status').textContent, /Selected One/);
+  f.emit('input', f.search); f.flush(); f.emit('click', f.optionTwo);
+  assert.equal(f.hidden.value, 'two');
+  assert.equal(f.optionTwo.attrs['aria-selected'], 'true');
+  assert.equal(f.search.attrs['aria-expanded'], 'false');
+  f.emit('input', f.search); f.flush(); f.emit('keydown', f.search, { key: 'Escape' });
+  assert.equal(f.search.attrs['aria-expanded'], 'false');
+  assert.equal(f.list.hidden, true);
+});
+test('dynamic options expose loading and error states through the live status', () => {
+  const f = dynamicOptionsFixture();
+  f.search.focus();
+  f.emit('input', f.search); f.flush();
+  f.emit('datastar-fetch', f.search, { detail: { type: 'started', el: f.search } });
+  assert.equal(f.list.attrs['aria-busy'], 'true');
+  assert.equal(f.search.attrs['aria-expanded'], 'true');
+  assert.match(f.nodes.get('tk-opts-f.actor-status').textContent, /Loading options/);
+  f.emit('datastar-fetch', f.search, { detail: { type: 'finished', el: f.search } });
+  f.flush();
+  assert.equal(f.list.attrs['aria-busy'], 'false');
+  assert.equal(f.search.attrs['aria-expanded'], 'true');
+  f.emit('datastar-fetch', f.search, { detail: { type: 'error', el: f.search } });
+  f.emit('datastar-fetch', f.search, { detail: { type: 'finished', el: f.search } });
+  assert.equal(f.search.attrs['aria-expanded'], 'false');
+  assert.equal(f.list.hidden, true);
+  assert.match(f.nodes.get('tk-opts-f.actor-status').textContent, /unavailable/i);
+});
+test('dynamic option handling ignores the command palette combobox', () => {
+  const f = dynamicOptionsFixture();
+  f.commandSearch.focus();
+  const event = f.emit('keydown', f.commandSearch, { key: 'Escape' });
+  assert.equal(event.prevented, undefined);
+  assert.equal(f.commandList.hidden, false);
+});
+test('dynamic options require an explicit active option in a visible ready list', () => {
+  const f = dynamicOptionsFixture();
+  f.search.focus();
+  f.hidden.value = 'seed';
+  f.emit('input', f.search); f.flush();
+  f.emit('keydown', f.search, { key: 'Enter' });
+  assert.equal(f.hidden.value, 'seed');
+  assert.equal(f.optionOne.clicked || 0, 0);
+  f.list.setAttribute('aria-busy', 'true');
+  f.emit('keydown', f.search, { key: 'ArrowDown' });
+  assert.equal(f.search.getAttribute('aria-activedescendant'), null);
+  f.list.setAttribute('aria-busy', 'false');
+  f.list.hidden = true;
+  f.search.setAttribute('aria-expanded', 'false');
+  f.emit('keydown', f.search, { key: 'Home' });
+  assert.equal(f.search.getAttribute('aria-activedescendant'), null);
+});
+test('dynamic option pointer focus transition keeps the list open until click selection', () => {
+  const f = dynamicOptionsFixture();
+  f.search.focus();
+  f.emit('input', f.search); f.flush();
+  // Native focusout precedes the click when a pointer targets a tabindex=-1
+  // option. The option must remain in the active list for that click.
+  f.emit('focusout', f.search, { relatedTarget: f.optionTwo });
+  assert.equal(f.list.hidden, false);
+  f.emit('click', f.optionTwo);
+  assert.equal(f.hidden.value, 'two');
+  assert.equal(f.list.hidden, true);
+});
+test('dynamic option clicks ignore hidden and busy stale options', () => {
+  const f = dynamicOptionsFixture();
+  f.hidden.value = 'seed';
+  f.search.focus();
+  f.emit('input', f.search); f.flush();
+  f.list.hidden = true;
+  f.search.setAttribute('aria-expanded', 'false');
+  f.emit('click', f.optionOne);
+  assert.equal(f.hidden.value, 'seed');
+
+  f.list.hidden = false;
+  f.search.setAttribute('aria-expanded', 'true');
+  f.list.setAttribute('aria-busy', 'true');
+  f.emit('click', f.optionTwo);
+  assert.equal(f.hidden.value, 'seed');
+});
+test('dynamic option capture blocks stale Datastar effects but allows one valid effect', () => {
+  const f = dynamicOptionsFixture();
+  let effects = 0;
+  // Models the target listener installed by data-on:click after the document
+  // capture guard. It must never run for an option outside the ready list.
+  f.on('click', event => {
+    if (event.target.matches?.('[role="option"]')) effects += 1;
+  });
+  f.hidden.value = 'seed';
+  f.search.focus();
+  f.emit('input', f.search); f.flush();
+
+  f.list.hidden = true;
+  f.search.setAttribute('aria-expanded', 'false');
+  let event = f.emit('click', f.optionOne);
+  assert.equal(event.prevented, true);
+  assert.equal(event.stopped, true);
+  assert.equal(effects, 0);
+
+  f.emit('input', f.search); f.flush();
+  f.list.setAttribute('aria-busy', 'true');
+  event = f.emit('click', f.optionTwo);
+  assert.equal(event.prevented, true);
+  assert.equal(event.stopped, true);
+  assert.equal(effects, 0);
+
+  f.list.setAttribute('aria-busy', 'false');
+  f.emit('input', f.search); f.flush();
+  f.removeOption(f.optionOne);
+  event = f.emit('click', f.optionOne);
+  assert.equal(event.prevented, true);
+  assert.equal(event.stopped, true);
+  assert.equal(effects, 0);
+
+  f.emit('input', f.search); f.flush();
+  f.emit('click', f.optionTwo);
+  assert.equal(effects, 1);
+  assert.equal(f.hidden.value, 'two');
+});
+test('dynamic option dismissal survives delayed Datastar start after Escape or Tab', () => {
+  for (const key of ['Escape', 'Tab']) {
+    const f = dynamicOptionsFixture();
+    f.search.focus();
+    f.emit('input', f.search); f.flush();
+    f.emit('keydown', f.search, { key });
+    f.emit('datastar-fetch', f.search, { detail: { type: 'started', el: f.search } });
+    assert.equal(f.list.hidden, true, key);
+    assert.equal(f.search.getAttribute('aria-expanded'), 'false', key);
+    f.emit('datastar-fetch', f.search, { detail: { type: 'finished', el: f.search } });
+    f.flush();
+    assert.equal(f.list.hidden, true, key);
+    assert.equal(f.search.getAttribute('aria-expanded'), 'false', key);
+  }
+});
+test('dynamic combobox Enter always consumes native submit except for other inputs', () => {
+  const runEnter = (f, form) => {
+    const event = f.emit('keydown', f.search, { key: 'Enter' });
+    if (!event.prevented) f.emit('submit', form);
+    return event;
+  };
+  const assertConsumed = (f, setup) => {
+    const form = f.node('parent-form');
+    let submits = 0;
+    f.on('submit', event => { if (event.target === form) submits += 1; });
+    f.search.focus();
+    f.emit('input', f.search); f.flush();
+    setup(f);
+    const event = runEnter(f, form);
+    assert.equal(event.prevented, true);
+    assert.equal(submits, 0);
+    assert.equal(f.optionOne.clicked || 0, 0);
+  };
+
+  assertConsumed(dynamicOptionsFixture(), f => f.emit('keydown', f.search, { key: 'Escape' }));
+  assertConsumed(dynamicOptionsFixture(), f => f.list.setAttribute('aria-busy', 'true'));
+  assertConsumed(dynamicOptionsFixture(), f => {
+    f.emit('keydown', f.search, { key: 'Tab' });
+    f.list.hidden = false;
+    f.search.setAttribute('aria-expanded', 'true');
+  });
+  assertConsumed(dynamicOptionsFixture(), () => {});
+
+  const ready = dynamicOptionsFixture();
+  const readyForm = ready.node('ready-form');
+  let readySubmits = 0;
+  ready.on('submit', event => { if (event.target === readyForm) readySubmits += 1; });
+  ready.search.focus();
+  ready.emit('input', ready.search); ready.flush();
+  ready.emit('keydown', ready.search, { key: 'ArrowDown' });
+  let event = runEnter(ready, readyForm);
+  assert.equal(event.prevented, true);
+  assert.equal(ready.optionOne.clicked, 1);
+  event = runEnter(ready, readyForm);
+  assert.equal(event.prevented, true);
+  assert.equal(ready.optionOne.clicked, 1);
+  assert.equal(readySubmits, 0);
+
+  const plain = dynamicOptionsFixture();
+  const plainInput = plain.node('plain-input');
+  const plainForm = plain.node('plain-form');
+  let nativeSubmits = 0;
+  plain.on('submit', event => { if (event.target === plainForm) nativeSubmits += 1; });
+  event = plain.emit('keydown', plainInput, { key: 'Enter' });
+  if (!event.prevented) plain.emit('submit', plainForm);
+  assert.equal(event.prevented, undefined);
+  assert.equal(nativeSubmits, 1);
+});
+test('dynamic option dismissal, focus changes, and replacements survive async completion', () => {
+  const f = dynamicOptionsFixture();
+  const other = f.node('other');
+  f.search.focus();
+  f.emit('input', f.search); f.flush();
+  f.emit('datastar-fetch', f.search, { detail: { type: 'started', el: f.search } });
+  f.emit('keydown', f.search, { key: 'Escape' });
+  f.emit('datastar-fetch', f.search, { detail: { type: 'finished', el: f.search } });
+  f.flush();
+  assert.equal(f.list.hidden, true);
+  assert.equal(f.search.getAttribute('aria-expanded'), 'false');
+
+  f.search.focus();
+  f.emit('input', f.search); f.flush();
+  f.emit('datastar-fetch', f.search, { detail: { type: 'started', el: f.search } });
+  f.emit('keydown', f.search, { key: 'Tab' });
+  f.emit('datastar-fetch', f.search, { detail: { type: 'finished', el: f.search } });
+  f.flush();
+  assert.equal(f.list.hidden, true);
+  assert.equal(f.search.getAttribute('aria-expanded'), 'false');
+
+  f.search.focus();
+  f.emit('input', f.search); f.flush();
+  f.emit('keydown', f.search, { key: 'ArrowDown' });
+  assert.ok(f.search.getAttribute('aria-activedescendant'));
+  f.emit('datastar-fetch', f.search, { detail: { type: 'datastar-patch-elements', el: f.search } });
+  assert.equal(f.search.getAttribute('aria-activedescendant'), null);
+  f.emit('datastar-fetch', f.search, { detail: { type: 'started', el: f.search } });
+  f.search.focus(); other.focus();
+  f.emit('datastar-fetch', f.search, { detail: { type: 'error', el: f.search } });
+  assert.equal(f.document.activeElement, other);
 });
 test('Connect activates Settings and focuses its heading without submitting',()=>{
   const f=fixture();const setup=f.node('tk-setup');

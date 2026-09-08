@@ -20,6 +20,10 @@ pub enum DashboardOperation {
     ReplayEvent,
     Stream,
     Logs,
+    Runs,
+    RunNow,
+    ResetRun,
+    CancelRun,
     Trace,
     ReplayTrace,
     Certification,
@@ -118,6 +122,8 @@ impl Dashboard<'_> {
                     Error::Invalid => 400,
                     Error::Unauthorized => 401,
                     Error::Forbidden => 403,
+                    Error::NotFound => 404,
+                    Error::Conflict => 409,
                     _ => 503,
                 },
                 escape(&e.to_string()),
@@ -135,6 +141,39 @@ fn session_required(drawer: bool) -> Response {
 pub(crate) struct DashboardRenderer<'a> {
     pub data: &'a dyn DashboardData,
 }
+
+fn catalog_matches(connector: &Value, query: &str) -> bool {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return true;
+    }
+    let text_matches = |value: Option<&str>| {
+        value
+            .map(str::to_lowercase)
+            .is_some_and(|value| value.contains(&query))
+    };
+    text_matches(connector.get("name").and_then(Value::as_str))
+        || text_matches(connector.get("key").and_then(Value::as_str))
+        || connector
+            .get("categories")
+            .and_then(Value::as_array)
+            .is_some_and(|categories| {
+                categories
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .any(|category| text_matches(Some(category)))
+            })
+        || connector
+            .get("operations")
+            .and_then(Value::as_array)
+            .is_some_and(|operations| {
+                operations.iter().any(|operation| {
+                    text_matches(operation.get("title").and_then(Value::as_str))
+                        || text_matches(operation.get("name").and_then(Value::as_str))
+                })
+            })
+}
+
 impl DashboardRenderer<'_> {
     pub(crate) async fn render(
         &self,
@@ -159,15 +198,42 @@ impl DashboardRenderer<'_> {
             ));
         }
         let operation = operation.ok_or(Error::Invalid)?;
+        // No trusted operator authority is configured; tenant grants cannot authorize certification.
+        if operation == DashboardOperation::Certification {
+            return Err(Error::Forbidden);
+        }
         let trace_drawer = crate::trace::drawer_request(r, Some(operation))?;
         let log_filters = if operation == DashboardOperation::Logs {
             crate::logs::Filters::from_request(r)?
         } else {
             crate::logs::Filters::default()
         };
+        // Match the Runs API alias precedence without changing forwarded fields
+        // or the principal's account scope. Navigation emits the canonical key.
+        let run_account_filter = if operation == DashboardOperation::Runs {
+            let account = r.field("accountId")?;
+            if account.is_empty() {
+                r.field("externalAccountId")?
+            } else {
+                account
+            }
+        } else {
+            ""
+        };
         let has_filters = match operation {
-            DashboardOperation::Catalog => !r.field("category")?.is_empty(),
+            DashboardOperation::Catalog => {
+                !r.field("category")?.trim().is_empty() || !r.field("search")?.trim().is_empty()
+            }
             DashboardOperation::Logs => log_filters.active(),
+            DashboardOperation::Runs => {
+                ["status", "connector", "tool"]
+                    .iter()
+                    .map(|key| r.field(key))
+                    .collect::<Result<Vec<_>, _>>()?
+                    .iter()
+                    .any(|value| !value.is_empty())
+                    || !run_account_filter.is_empty()
+            }
             _ => false,
         };
         let mut fields = BTreeMap::new();
@@ -236,6 +302,20 @@ impl DashboardRenderer<'_> {
         let mut value = match value {
             Ok(value) => value,
             Err(error)
+                if operation == DashboardOperation::Overview
+                    && error.classification() == Error::Unavailable =>
+            {
+                return Ok(Response::new(
+                    503,
+                    crate::shell::layout(
+                        crate::pages::title(operation),
+                        session,
+                        &crate::overview::unavailable(),
+                        r.path,
+                    ),
+                ));
+            }
+            Err(error)
                 if operation == DashboardOperation::Logs
                     && error.classification() == Error::Invalid =>
             {
@@ -288,11 +368,39 @@ impl DashboardRenderer<'_> {
                     crate::shell::layout(crate::pages::title(operation), session, &content, r.path),
                 ));
             }
+            Err(error)
+                if matches!(
+                    operation,
+                    DashboardOperation::RunNow
+                        | DashboardOperation::ResetRun
+                        | DashboardOperation::CancelRun
+                ) =>
+            {
+                let status = match error.classification() {
+                    Error::Invalid => 400,
+                    Error::Unauthorized => 401,
+                    Error::Forbidden => 403,
+                    Error::NotFound => 404,
+                    Error::Conflict => 409,
+                    _ => 503,
+                };
+                let content =
+                    crate::dashboard_failure::recovery(operation, resource.as_deref(), &error);
+                return Ok(Response::new(
+                    status,
+                    crate::shell::layout(
+                        crate::pages::title(operation),
+                        session,
+                        &content,
+                        "/app/runs",
+                    ),
+                ));
+            }
             Err(error) => return Err(error.classification()),
         };
         if matches!(
             operation,
-            DashboardOperation::Catalog | DashboardOperation::Logs
+            DashboardOperation::Catalog | DashboardOperation::Logs | DashboardOperation::Runs
         ) {
             let target = if value.get("data").is_some() {
                 value.get_mut("data").ok_or(Error::Unavailable)?
@@ -300,10 +408,11 @@ impl DashboardRenderer<'_> {
                 &mut value
             };
             if target.is_array() {
-                let key = if operation == DashboardOperation::Catalog {
-                    "connectors"
-                } else {
-                    "logs"
+                let key = match operation {
+                    DashboardOperation::Catalog => "connectors",
+                    DashboardOperation::Logs => "logs",
+                    DashboardOperation::Runs => "runs",
+                    _ => unreachable!(),
                 };
                 *target = serde_json::json!({key:target.clone()});
             }
@@ -311,6 +420,22 @@ impl DashboardRenderer<'_> {
             // This presentation flag is derived only from the current request,
             // overwriting any provider-supplied value without echoing query text.
             map.insert("hasFilters".into(), Value::Bool(has_filters));
+        }
+        if operation == DashboardOperation::Runs {
+            let target = if value.get("data").is_some() {
+                value.get_mut("data").ok_or(Error::Unavailable)?
+            } else {
+                &mut value
+            };
+            let map = target.as_object_mut().ok_or(Error::Unavailable)?;
+            for (query_key, data_key) in [
+                ("status", "selectedStatus"),
+                ("connector", "selectedConnector"),
+                ("tool", "selectedTool"),
+            ] {
+                map.insert(data_key.into(), r.field(query_key)?.into());
+            }
+            map.insert("selectedAccountId".into(), run_account_filter.into());
         }
         if operation == DashboardOperation::Catalog {
             let target = if value.get("data").is_some() {
@@ -335,20 +460,27 @@ impl DashboardRenderer<'_> {
                 .map(str::to_owned)
                 .collect::<std::collections::BTreeSet<_>>();
             let selected = r.field("category")?;
+            let search = r.field("search")?;
             let filtered = connectors
                 .iter()
                 .filter(|c| {
-                    selected.is_empty()
+                    (selected.trim().is_empty()
                         || c.get("categories")
                             .and_then(Value::as_array)
                             .is_some_and(|values| {
-                                values.iter().any(|v| v.as_str() == Some(selected))
-                            })
+                                values
+                                    .iter()
+                                    .filter_map(Value::as_str)
+                                    .any(|value| value.trim().eq_ignore_ascii_case(selected.trim()))
+                            }))
+                        && catalog_matches(c, search)
                 })
                 .cloned()
                 .collect::<Vec<_>>();
             map.insert("connectors".into(), Value::Array(filtered));
             map.insert("categories".into(), serde_json::json!(categories));
+            map.insert("category".into(), Value::String(selected.into()));
+            map.insert("search".into(), Value::String(search.into()));
         }
         if operation == DashboardOperation::Options {
             let target = if value.get("data").is_some() {
@@ -390,6 +522,9 @@ impl DashboardRenderer<'_> {
                 "/app/logs/{}?replayed=1",
                 resource.as_deref().unwrap_or("")
             )),
+            RunNow => Some("/app/runs?success=run-now".to_owned()),
+            ResetRun => Some("/app/runs?success=reset".to_owned()),
+            CancelRun => Some("/app/runs?success=cancelled".to_owned()),
             SaveBranding => Some("/app/settings/white-labeling?saved=1".to_owned()),
             _ => None,
         };
@@ -455,7 +590,21 @@ impl DashboardRenderer<'_> {
         let mut content = if operation == Logs {
             crate::logs::render(&value, &log_filters, has_filters)?
         } else {
-            crate::pages::render(operation, &value, resource.as_deref())?
+            match crate::pages::render(operation, &value, resource.as_deref()) {
+                Ok(content) => content,
+                Err(Error::Unavailable) if operation == Overview => {
+                    return Ok(Response::new(
+                        503,
+                        crate::shell::layout(
+                            crate::pages::title(operation),
+                            session,
+                            &crate::overview::unavailable(),
+                            r.path,
+                        ),
+                    ));
+                }
+                Err(error) => return Err(error),
+            }
         };
         if operation == Branding && r.field("saved")? == "1" {
             content = crate::admin_ui::banner("Review the current branding settings below.", true)
@@ -482,9 +631,18 @@ impl DashboardRenderer<'_> {
                 "Check the connection's current status before running another tool.",
                 false,
             ),
+            (Runs, "run-now", _) => ("Run queued now. Refreshing the current queue state.", false),
+            (Runs, "reset", _) => (
+                "Attempts reset and the run was queued from its saved checkpoint.",
+                false,
+            ),
+            (Runs, "cancelled", _) => (
+                "Run cancelled. Any older worker lease is fenced from committing.",
+                false,
+            ),
             _ => ("", false),
         };
-        if matches!(operation, Logs | Events) {
+        if matches!(operation, Logs | Events | Runs) {
             let data = value.get("data").unwrap_or(&value);
             if let Some(cursor) = data
                 .pointer("/pagination/nextCursor")
@@ -493,13 +651,19 @@ impl DashboardRenderer<'_> {
             {
                 let mut url = reqwest::Url::parse(&format!("https://local.invalid{}", r.path))
                     .map_err(|_| Error::Invalid)?;
-                let keys: &[&str] = if operation == Logs {
+                let filter_keys: &[&str] = if operation == Runs {
+                    &["status", "connector", "tool", "accountId"]
+                } else if operation == Logs {
                     crate::logs::FILTER_KEYS
                 } else {
                     &["status", "connector", "action", "connectionId"]
                 };
-                for key in keys {
-                    let value = r.field(key)?;
+                for key in filter_keys {
+                    let value = if operation == Runs && *key == "accountId" {
+                        run_account_filter
+                    } else {
+                        r.field(key)?
+                    };
                     if !value.is_empty() {
                         url.query_pairs_mut().append_pair(key, value);
                     }
@@ -519,7 +683,7 @@ impl DashboardRenderer<'_> {
             }
         }
         if !banner.is_empty() {
-            content=format!("<div role=\"{}\" class=\"mb-4 rounded-lg border border-space-indigo-800 p-4 text-sm\">{}</div>{content}",if recovery {"alert"} else {"status"},escape(banner));
+            content = crate::admin_ui::banner(banner, !recovery) + &content;
         }
         if matches!(
             operation,
@@ -577,6 +741,7 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
         ("GET", "/app/logs") => Logs,
         ("GET", "/app/certification") => Certification,
         ("GET", "/app/usage") => Usage,
+        ("GET", "/app/runs") => Runs,
         ("GET", "/app/settings/white-labeling") => Branding,
         ("POST", "/app/settings/white-labeling") => SaveBranding,
         ("GET", "/app/docs" | "/app/support") => return Some(None),
@@ -600,6 +765,9 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
                 ("POST", Some("connections"), 4, Some("test")) => TestConnection,
                 ("POST", Some("connections"), 4, Some("disconnect")) => DisconnectConnection,
                 ("POST", Some("events"), 4, Some("replay")) => ReplayEvent,
+                ("POST", Some("runs"), 4, Some("run-now")) => RunNow,
+                ("POST", Some("runs"), 4, Some("reset")) => ResetRun,
+                ("POST", Some("runs"), 4, Some("cancel")) => CancelRun,
                 ("GET", Some("logs"), 3, _) => Trace,
                 ("POST", Some("logs"), 4, Some("replay")) => ReplayTrace,
                 _ => return None,

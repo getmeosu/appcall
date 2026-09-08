@@ -263,7 +263,7 @@ async fn members_page_uses_verified_tenant_and_escapes_broker_data() {
         assert!(request.starts_with("get /api/tenant/members "));
         assert!(request.contains("x-tenant-id: tenant-a"));
         assert!(request.contains("authorization: bearer "));
-        let body = r#"{"members":[{"userId":"owner-id","displayName":"<script>alert(1)</script>","email":"safe@example.invalid","role":"owner"}]}"#;
+        let body = r#"{"members":[{"userId":"owner-id","displayName":"<script>alert(1)</script>","email":"safe@example.invalid","role":"owner"},{"userId":"member-one","displayName":"One","email":"one@example.invalid","role":"user"},{"userId":"member-two","displayName":"Two","email":"two@example.invalid","role":"admin"}]}"#;
         let response=format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
         stream.write_all(response.as_bytes()).await.unwrap();
     });
@@ -305,6 +305,9 @@ async fn members_page_uses_verified_tenant_and_escapes_broker_data() {
     assert!(response.body.contains("&lt;script&gt;"));
     assert!(!response.body.contains("<script>"));
     assert!(!response.body.contains("/owner-id/remove"));
+    assert!(response.body.contains("/member-one/role"));
+    assert!(response.body.contains("/member-two/role"));
+    assert!(response.body.matches("ui-button-primary").count() <= 1);
     server.await.unwrap();
 }
 struct DashboardFixture;

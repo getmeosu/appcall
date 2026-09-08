@@ -58,6 +58,12 @@ pub struct Service {
     oauth: Arc<Lifecycle>,
     validator: Arc<dyn Validator>,
 }
+#[derive(Clone, Copy)]
+enum SaveTarget<'a> {
+    Existing(&'a str),
+    ReuseExisting,
+    New,
+}
 fn id(prefix: &str) -> Result<String> {
     let mut bytes = [0; 24];
     getrandom::fill(&mut bytes).map_err(|_| Error::Persistence)?;
@@ -160,7 +166,36 @@ impl Service {
         fields: &BTreeMap<String, String>,
         active: &dyn Fn() -> bool,
     ) -> Result<Connection> {
-        self.save(scope, None, connector, route, fields, active)
+        self.save(
+            scope,
+            SaveTarget::ReuseExisting,
+            connector,
+            route,
+            fields,
+            active,
+        )
+    }
+    pub fn submit_new(
+        &self,
+        scope: &SetupScope,
+        connector: &str,
+        route: &str,
+        fields: &BTreeMap<String, String>,
+    ) -> Result<Connection> {
+        self.submit_new_checked(scope, connector, route, fields, &|| true)
+    }
+    /// Create a new connection even when the same connector/account already
+    /// exists. Browser setup uses this when no connection id was selected;
+    /// replacement requires an explicit id via `update_checked`.
+    pub fn submit_new_checked(
+        &self,
+        scope: &SetupScope,
+        connector: &str,
+        route: &str,
+        fields: &BTreeMap<String, String>,
+        active: &dyn Fn() -> bool,
+    ) -> Result<Connection> {
+        self.save(scope, SaveTarget::New, connector, route, fields, active)
     }
     pub fn update(
         &self,
@@ -170,12 +205,30 @@ impl Service {
         route: &str,
         fields: &BTreeMap<String, String>,
     ) -> Result<Connection> {
-        self.save(scope, Some(id), connector, route, fields, &|| true)
+        self.update_checked(scope, id, connector, route, fields, &|| true)
+    }
+    pub fn update_checked(
+        &self,
+        scope: &SetupScope,
+        id: &str,
+        connector: &str,
+        route: &str,
+        fields: &BTreeMap<String, String>,
+        active: &dyn Fn() -> bool,
+    ) -> Result<Connection> {
+        self.save(
+            scope,
+            SaveTarget::Existing(id),
+            connector,
+            route,
+            fields,
+            active,
+        )
     }
     fn save(
         &self,
         scope: &SetupScope,
-        existing: Option<&str>,
+        target: SaveTarget<'_>,
         connector: &str,
         route: &str,
         fields: &BTreeMap<String, String>,
@@ -200,20 +253,47 @@ impl Service {
             Credentials(BTreeMap::new())
         };
         // Scope validation precedes external validation; persistence repeats under lock.
-        if let Some(existing) = existing {
+        // Keep the selected connection snapshot across provider validation. The final
+        // transaction must not overwrite a connection changed by another lifecycle.
+        let prevalidated = if !matches!(target, SaveTarget::New) {
             self.store
                 .lock()
                 .map_err(|_| Error::Persistence)?
                 .transaction(|tx| {
                     check_store_active(active)?;
-                    let current = tx.lock_connection(&scope.scope, existing)?;
+                    let target_id = match target {
+                        SaveTarget::Existing(id) => Some(id.to_owned()),
+                        SaveTarget::ReuseExisting => tx
+                            .client()
+                            .query_opt(
+                                "SELECT id FROM connections WHERE project_id=$1 AND connector=$2 AND COALESCE(external_account_id,'')=$3 ORDER BY created_at DESC,id LIMIT 1",
+                                &[&scope.project, &connector, &scope.account],
+                            )?
+                            .map(|row| row.get::<_, String>("id")),
+                        SaveTarget::New => None,
+                    };
+                    let current = target_id
+                        .as_deref()
+                        .map(|id| tx.lock_connection(&scope.scope, id))
+                        .transpose()?;
                     check_store_active(active)?;
-                    if current.connector != connector {
+                    if current
+                        .as_ref()
+                        .is_some_and(|connection| connection.connector != connector)
+                    {
                         return Err(appcall_store::Error::NotFound);
                     }
-                    Ok(())
-                })?;
-        }
+                    if current
+                        .as_ref()
+                        .is_some_and(|connection| connection.status == Status::Authorizing)
+                    {
+                        return Err(appcall_store::Error::Conflict);
+                    }
+                    Ok(current)
+                })?
+        } else {
+            None
+        };
         check_active(active)?;
         if credentialed {
             self.validator
@@ -228,20 +308,88 @@ impl Service {
         let encoded =
             Zeroizing::new(serde_json::to_vec(&credentials.0).map_err(|_| Error::InvalidInput)?);
         let new_id = id("conn")?;
-        self.store.lock().map_err(|_|Error::Persistence)?.transaction(|tx|{
-   check_store_active(active)?;
-   // A missing row cannot be locked. Serialize creation by owner identity, too.
-   let identity=serde_json::to_string(&(&scope.project,connector,&scope.account)).map_err(|_|appcall_store::Error::Invalid)?;
-   tx.client().query_one("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",&[&identity])?;
-   check_store_active(active)?;
-   let target=match existing{Some(id)=>Some(id.to_owned()),None=>tx.client().query_opt("SELECT id FROM connections WHERE project_id=$1 AND connector=$2 AND COALESCE(external_account_id,'')=$3 ORDER BY created_at DESC,id LIMIT 1 FOR UPDATE",&[&scope.project,&connector,&scope.account])?.map(|r|r.get::<_,String>(0))};
-   if let Some(target)=&target{let current=tx.lock_connection(&scope.scope,target)?;if current.connector!=connector{return Err(appcall_store::Error::NotFound)}}
-   check_store_active(active)?;
-   if !secret.is_empty(){tx.store_secret(&scope.project,&secret,"connector_setup_bundle",&encoded)?;}
-   let saved = match target{Some(target)=>tx.replace_credentials(&scope.scope,&target,&secret,auth),None=>tx.create(&scope.scope,&Connection{id:new_id.clone(),project_id:scope.project.clone(),connector:connector.into(),auth_type:auth,status:Status::Active,secret_ref_id:secret.clone(),last_test_status:TestStatus::Unknown,external_account_id:scope.account.clone(),credential_owner:if scope.account.is_empty(){CredentialOwner::Platform}else{CredentialOwner::Brand}})}?;
-   check_store_active(active)?;
-   Ok(saved)
-  }).map_err(|error| if active() {error.into()} else {Error::Cancelled})
+        let credential_owner = if scope.account.is_empty() {
+            CredentialOwner::Platform
+        } else {
+            CredentialOwner::Brand
+        };
+        self.store
+            .lock()
+            .map_err(|_| Error::Persistence)?
+            .transaction(|tx| {
+                check_store_active(active)?;
+                // A missing row cannot be locked. Serialize creation by owner identity, too.
+                let identity = serde_json::to_string(&(&scope.project, connector, &scope.account))
+                    .map_err(|_| appcall_store::Error::Invalid)?;
+                tx.client().query_one(
+                    "SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+                    &[&identity],
+                )?;
+                check_store_active(active)?;
+                let target_id = match target {
+                    SaveTarget::Existing(id) => Some(id.to_owned()),
+                    SaveTarget::ReuseExisting => match prevalidated.as_ref() {
+                        Some(connection) => Some(connection.id.clone()),
+                        None => tx
+                            .client()
+                            .query_opt(
+                                "SELECT id FROM connections WHERE project_id=$1 AND connector=$2 AND COALESCE(external_account_id,'')=$3 ORDER BY created_at DESC,id LIMIT 1 FOR UPDATE",
+                                &[&scope.project, &connector, &scope.account],
+                            )?
+                            .map(|row| row.get::<_, String>(0)),
+                    },
+                    SaveTarget::New => None,
+                };
+                if let Some(target_id) = &target_id {
+                    let current = tx.lock_connection(&scope.scope, target_id)?;
+                    if current.connector != connector {
+                        return Err(appcall_store::Error::NotFound);
+                    }
+                    if matches!(target, SaveTarget::ReuseExisting)
+                        && (current.status == Status::Authorizing
+                            || current.auth_type != auth
+                            || current.credential_owner != credential_owner)
+                    {
+                        return Err(appcall_store::Error::Conflict);
+                    }
+                    if let Some(expected) = prevalidated.as_ref() {
+                        if &current != expected {
+                            return Err(appcall_store::Error::Conflict);
+                        }
+                    }
+                }
+                check_store_active(active)?;
+                if !secret.is_empty() {
+                    tx.store_secret(
+                        &scope.project,
+                        &secret,
+                        "connector_setup_bundle",
+                        &encoded,
+                    )?;
+                }
+                let saved = match target_id {
+                    Some(target_id) => {
+                        tx.replace_credentials(&scope.scope, &target_id, &secret, auth)
+                    }
+                    None => tx.create(
+                        &scope.scope,
+                        &Connection {
+                            id: new_id.clone(),
+                            project_id: scope.project.clone(),
+                            connector: connector.into(),
+                            auth_type: auth,
+                            status: Status::Active,
+                            secret_ref_id: secret.clone(),
+                            last_test_status: TestStatus::Unknown,
+                            external_account_id: scope.account.clone(),
+                            credential_owner,
+                        },
+                    ),
+                }?;
+                check_store_active(active)?;
+                Ok(saved)
+            })
+            .map_err(|error| if active() { error.into() } else { Error::Cancelled })
     }
     pub fn start(
         &self,

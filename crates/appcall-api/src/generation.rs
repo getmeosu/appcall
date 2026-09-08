@@ -308,6 +308,9 @@ impl<B: ManagedBackend> Backend for Generation<B> {
     async fn auxiliary_route(&self, i: &Identity, r: &Request) -> Result<Option<Response>> {
         self.snapshot()?.backend.auxiliary_route(i, r).await
     }
+    async fn authorize_sync_control(&self, i: &Identity, r: &Request) -> Result<()> {
+        self.snapshot()?.backend.authorize_sync_control(i, r).await
+    }
     async fn authorize(&self, h: &[(String, String)]) -> Result<Identity> {
         self.snapshot()?.backend.authorize(h).await
     }

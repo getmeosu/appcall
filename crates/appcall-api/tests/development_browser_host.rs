@@ -132,7 +132,6 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         "/app/connections",
         "/app/events",
         "/app/logs",
-        "/app/certification",
         "/app/settings",
         "/app/usage",
         "/app/settings/white-labeling",
@@ -141,6 +140,9 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         assert!(response.starts_with("HTTP/1.1 200"), "{path}: {response}");
         assert!(response.contains("dev@appcall.local"));
     }
+    let certification = f.request("GET", "/app/certification", &host, &origin, "");
+    assert!(certification.starts_with("HTTP/1.1 403"));
+    assert!(!certification.contains("manifestFingerprint"));
     for path in [
         "/app/settings/team",
         "/app/sessions",

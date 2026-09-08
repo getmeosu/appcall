@@ -56,8 +56,7 @@ fn signal_fonts_survive_real_http_without_text_conversion() {
     let host = Host::start(&[]);
     for name in [
         "archivo-latin-variable.woff2",
-        "ibm-plex-mono-regular.woff2",
-        "ibm-plex-mono-medium.woff2",
+        "ibm-plex-mono-variable.woff2",
     ] {
         let mut socket = TcpStream::connect(host.address).unwrap();
         socket
@@ -230,9 +229,9 @@ fn memory_api_dashboard_actions_and_restart_share_ephemeral_state() {
         let (status, _) = host.request("GET", path, false, "");
         assert_eq!(status, 200, "{path}");
     }
-    let (status, qa) = host.request("GET", "/app/certification", false, "");
-    assert_eq!(status, 200);
-    assert!(qa.contains("unavailable") || qa.contains("requires"));
+    let (status, certification) = host.request("GET", "/app/certification", false, "");
+    assert_eq!(status, 403);
+    assert!(!certification.contains("manifestFingerprint"));
     assert_eq!(host.request("GET", "/v1/unipile/accounts", true, "").0, 404);
     let rows = host.json("GET", "/v1/connections", 200, Value::Null);
     assert_eq!(rows["connections"].as_array().unwrap().len(), 1);

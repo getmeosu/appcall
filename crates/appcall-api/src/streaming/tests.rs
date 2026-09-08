@@ -61,6 +61,43 @@ fn event(position: i64) -> Event {
         stream_position: position,
     }
 }
+
+#[test]
+fn dashboard_page_preserves_unsupported_ids_without_replay_targets() {
+    let mut malformed = event(2);
+    malformed.id = "bad/id".into();
+    let page = encode_page(vec![event(1), malformed, event(3)], "", Format::Dashboard)
+        .expect("one unsupported replay id must not discard the event row");
+    assert_eq!(page.frames.len(), 3);
+    let frames = page
+        .frames
+        .iter()
+        .map(|(_, frame)| String::from_utf8_lossy(frame))
+        .collect::<Vec<_>>();
+    assert!(frames[0].contains("/app/events/event-1/replay"));
+    assert!(frames[1].contains("Replay unavailable"));
+    assert!(!frames[1].contains("/app/events/bad/id/replay"));
+    assert!(frames[2].contains("/app/events/event-3/replay"));
+}
+
+#[test]
+fn dashboard_page_advances_cursor_across_all_unsupported_ids() {
+    let mut first = event(1);
+    first.id = "bad/id".into();
+    let mut second = event(2);
+    second.id = "still unsupported".into();
+    let page = encode_page(vec![first, second], "", Format::Dashboard)
+        .expect("unsupported replay ids must still produce stream frames");
+    assert_eq!(page.frames.len(), 2);
+    assert_ne!(page.frames[0].0, page.frames[1].0);
+    for (_, frame) in page.frames {
+        let frame = String::from_utf8_lossy(&frame);
+        assert!(frame.contains("Replay unavailable"));
+        assert!(!frame.contains("/app/events/bad/id/replay"));
+        assert!(!frame.contains("/app/events/still unsupported/replay"));
+    }
+}
+
 fn source(events: Vec<Event>) -> Arc<Source> {
     Arc::new(Source {
         events: std::sync::Mutex::new(events),

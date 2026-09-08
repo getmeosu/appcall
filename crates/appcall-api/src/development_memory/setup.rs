@@ -121,7 +121,23 @@ impl MemorySetup {
         fields: &BTreeMap<String, String>,
         check: &dyn Fn() -> bool,
     ) -> Result<Connection> {
-        self.save(project, account, None, connector, route, fields, check)
+        self.save(
+            project, account, None, true, connector, route, fields, check,
+        )
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub fn submit_new_checked(
+        &self,
+        project: &str,
+        account: Option<&str>,
+        connector: &str,
+        route: &str,
+        fields: &BTreeMap<String, String>,
+        check: &dyn Fn() -> bool,
+    ) -> Result<Connection> {
+        self.save(
+            project, account, None, false, connector, route, fields, check,
+        )
     }
     #[allow(clippy::too_many_arguments)]
     pub fn update_checked(
@@ -134,7 +150,16 @@ impl MemorySetup {
         fields: &BTreeMap<String, String>,
         check: &dyn Fn() -> bool,
     ) -> Result<Connection> {
-        self.save(project, account, Some(id), connector, route, fields, check)
+        self.save(
+            project,
+            account,
+            Some(id),
+            false,
+            connector,
+            route,
+            fields,
+            check,
+        )
     }
     #[allow(clippy::too_many_arguments)]
     fn save(
@@ -142,6 +167,7 @@ impl MemorySetup {
         project: &str,
         account: Option<&str>,
         existing: Option<&str>,
+        reuse_existing: bool,
         connector: &str,
         route: &str,
         fields: &BTreeMap<String, String>,
@@ -172,7 +198,7 @@ impl MemorySetup {
                     .get_connection(project, account, id)
                     .map_err(memory_error)?,
             ),
-            None => self
+            None if reuse_existing => self
                 .list(project, account)?
                 .into_iter()
                 .find(|c| {
@@ -184,11 +210,19 @@ impl MemorySetup {
                         .map_err(memory_error)
                 })
                 .transpose()?,
+            None => None,
         };
         if selected.as_ref().is_some_and(|(c, _)| {
             c.connector != connector || c.external_account_id != account.unwrap_or_default()
         }) {
             return Err(Error::NotFound);
+        }
+        // A save must not replace credentials owned by an in-flight authorization.
+        if selected
+            .as_ref()
+            .is_some_and(|(c, _)| c.status == Status::Authorizing)
+        {
+            return Err(Error::Conflict);
         }
         active(check)?;
         if credentialed {
@@ -208,6 +242,12 @@ impl MemorySetup {
             c.last_test_status = TestStatus::Unknown;
             self.repository
                 .replace_connection_checked(project, account, revision, c, secret, check)
+        } else if reuse_existing {
+            self.repository.create_or_reuse_connection_checked(
+                new_connection(project, account, connector, auth),
+                secret,
+                check,
+            )
         } else {
             self.repository.create_connection_checked(
                 new_connection(project, account, connector, auth),

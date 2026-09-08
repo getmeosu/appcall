@@ -258,7 +258,7 @@ fn text_value(value: &Value) -> String {
 
 // Presentation IDs occupy a namespace separate from submitted f.* names and
 // dynamic hidden targets. Hex cannot contain generated help/error separators.
-fn presentation_id(kind: &str, name: &str) -> String {
+pub(crate) fn presentation_id(kind: &str, name: &str) -> String {
     let encoded: String = name.bytes().map(|byte| format!("{byte:02x}")).collect();
     format!("tk-{kind}-{encoded}")
 }
@@ -456,13 +456,28 @@ fn dynamic_control(
         ..ui::Field::new(name, name, "", ui::Control::Input(ui::InputType::Hidden))
     }
     .render();
+    let search_id = presentation_id("search", name);
+    let list_id = format!("tk-opts-{name}");
+    let status_id = format!("{list_id}-status");
     let search = ui::Field {
         help, options_source:Some(ui::LocalPath::new(&endpoint).ok_or(Error::Invalid)?),
         on_input_debounced:Some("@get(evt.target.dataset.optionsSource + '&connectionId=' + encodeURIComponent(document.getElementById('tk-connection').value) + '&q=' + encodeURIComponent(evt.target.value))"),
-        ..ui::Field::new(&presentation_id("search", name),"",&format!("Search {label}"),ui::Control::Input(ui::InputType::Search))
-    }.render();
+        ..ui::Field::new(&search_id,"",&format!("Search {label}"),ui::Control::Input(ui::InputType::Search))
+    }.render().replacen(
+        "<input class=\"ui-control\"",
+        &format!(
+            "<input role=\"combobox\" aria-haspopup=\"listbox\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-controls=\"{}\" class=\"ui-control\"",
+            escape(&list_id)
+        ),
+        1,
+    );
     Ok(format!(
-        "{hidden}{search}<div id=\"tk-opts-{}\"></div>",
-        escape(name)
+        "{hidden}{search}<div id=\"{}\" class=\"tk-opts\" role=\"listbox\" aria-label=\"Options for {}\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" data-input-id=\"{}\" data-value-id=\"{}\" data-status-id=\"{}\" hidden></div><p id=\"{}\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"></p>",
+        escape(&list_id),
+        escape(label),
+        escape(&search_id),
+        escape(name),
+        escape(&status_id),
+        escape(&status_id)
     ))
 }

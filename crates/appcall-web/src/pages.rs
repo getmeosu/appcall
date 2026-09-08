@@ -2,22 +2,27 @@ use crate::{http::escape, DashboardOperation as Op, Error};
 use serde_json::Value;
 pub(crate) fn title(op: Op) -> &'static str {
     match op {
-        Op::Overview => "Getting Started",
+        Op::Overview => "Overview",
         Op::Catalog | Op::Connector | Op::Setup => "Connectors",
         Op::Connections => "Connections",
         Op::Events => "Events",
         Op::Logs | Op::Trace => "Logs",
+        Op::Runs | Op::RunNow | Op::ResetRun | Op::CancelRun => "Runs",
         Op::Certification => "Certification",
         Op::Usage => "Usage",
         Op::Branding => "White Labeling",
         _ => "Result",
     }
 }
-fn header(title: &str, subtitle: &str) -> String {
-    format!("<div class=\"mb-6\"><h2 class=\"text-xl font-semibold tracking-tight text-dusk-blue-50\">{}</h2><p class=\"mt-1 text-sm text-dusk-blue-400\">{}</p></div>",escape(title),escape(subtitle))
+fn catalog_header(title: &str, subtitle: &str) -> String {
+    format!(
+        "<header class=\"catalog-header\"><h2>{}</h2><p>{}</p></header>",
+        escape(title),
+        escape(subtitle)
+    )
 }
-fn card(body: &str) -> String {
-    format!("<div class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5\">{body}</div>")
+fn catalog_card(body: &str) -> String {
+    format!("<section class=\"catalog-request-panel\">{body}</section>")
 }
 fn empty(title: &str, body: &str, action: &str, href: &str) -> String {
     crate::ui::EmptyState {
@@ -27,9 +32,6 @@ fn empty(title: &str, body: &str, action: &str, href: &str) -> String {
         action_href: crate::ui::LocalPath::new(href).expect("static local empty-state link"),
     }
     .render()
-}
-fn stat(label: &str, value: &Value) -> String {
-    card(&format!("<p class=\"text-xs font-medium uppercase tracking-wider text-dusk-blue-500\">{}</p><p class=\"mt-2 text-2xl font-semibold text-dusk-blue-50\">{}</p>",escape(label),escape(&value.to_string())))
 }
 fn string<'a>(v: &'a Value, keys: &[&str]) -> &'a str {
     keys.iter()
@@ -57,10 +59,18 @@ fn id(v: &Value, keys: &[&str]) -> Result<String, Error> {
     Ok(value.into())
 }
 fn input(name: &str, label: &str, value: &str, kind: &str) -> String {
-    format!("<div><label class=\"mb-1.5 block text-xs font-medium text-dusk-blue-300\">{}<input name=\"{}\" type=\"{}\" value=\"{}\" class=\"w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 text-sm text-dusk-blue-100 focus:border-neon-ice-500 focus:outline-none focus:ring-1 focus:ring-neon-ice-500\"></label></div>",escape(label),escape(name),escape(kind),escape(value))
-}
-fn form(action: &str, content: &str, label: &str) -> String {
-    form_with_variant(action, content, label, crate::ui::ButtonVariant::Primary)
+    let control = match kind {
+        "email" => crate::ui::InputType::Email,
+        "password" => crate::ui::InputType::Password,
+        "number" => crate::ui::InputType::Number,
+        "search" => crate::ui::InputType::Search,
+        _ => crate::ui::InputType::Text,
+    };
+    crate::ui::Field {
+        value,
+        ..crate::ui::Field::new(name, name, label, crate::ui::Control::Input(control))
+    }
+    .render()
 }
 fn form_with_variant(
     action: &str,
@@ -100,10 +110,10 @@ fn request_recovery() -> String {
     format!("<p role=\"alert\">Appcall could not confirm receipt of this connector request. Open Support to check whether it was received before submitting another request.</p>{support}")
 }
 pub(crate) fn request_failure() -> String {
-    format!("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-busy=\"false\" data-request-state=\"error\" class=\"rounded-lg border border-space-indigo-800 p-4\">{}</div>", request_recovery())
+    format!("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-busy=\"false\" data-request-state=\"error\" class=\"catalog-request-result\">{}</div>", request_recovery())
 }
 fn json(v: &Value) -> String {
-    format!("<pre class=\"overflow-x-auto rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 text-xs\">{}</pre>",escape(&serde_json::to_string_pretty(v).unwrap_or_default()))
+    format!("<pre class=\"overflow-x-auto rounded-panel border border-line bg-ground text-ink-100 p-5 text-xs\">{}</pre>",escape(&serde_json::to_string_pretty(v).unwrap_or_default()))
 }
 fn confirmation(action: &str, label: &str, heading: &str, body: &str) -> Result<String, Error> {
     Ok(crate::ui::ConfirmButton {
@@ -117,6 +127,38 @@ fn confirmation(action: &str, label: &str, heading: &str, body: &str) -> Result<
     }
     .render())
 }
+fn catalog_query_url(category: &str, search: &str) -> String {
+    let mut url =
+        reqwest::Url::parse("https://local.invalid/app/connectors").expect("static catalog route");
+    if !category.is_empty() {
+        url.query_pairs_mut().append_pair("category", category);
+    }
+    if !search.trim().is_empty() {
+        url.query_pairs_mut().append_pair("search", search);
+    }
+    format!(
+        "{}{}",
+        url.path(),
+        url.query()
+            .map(|query| format!("?{query}"))
+            .unwrap_or_default()
+    )
+}
+fn catalog_filter_link(label: &str, href: &str, current: bool) -> Result<String, Error> {
+    let path = crate::ui::LocalPath::new(href).ok_or(Error::Invalid)?;
+    let link = crate::ui::Button {
+        size: crate::ui::ButtonSize::Sm,
+        variant: crate::ui::ButtonVariant::Secondary,
+        target: crate::ui::ButtonTarget::Link(path),
+        ..crate::ui::Button::new(label)
+    }
+    .render();
+    Ok(if current {
+        link.replacen(" href=", " aria-current=\"page\" href=", 1)
+    } else {
+        link
+    })
+}
 pub(crate) fn event_replay(id: &str) -> Result<String, Error> {
     confirmation(
         &format!("/app/events/{id}/replay"),
@@ -125,136 +167,471 @@ pub(crate) fn event_replay(id: &str) -> Result<String, Error> {
         &format!("Dispatch event {id} again? Consumers may process the event again."),
     )
 }
+fn value_text(value: &Value, key: &str) -> String {
+    value
+        .get(key)
+        .filter(|value| !value.is_null())
+        .map(|value| {
+            value
+                .as_str()
+                .map(str::to_owned)
+                .unwrap_or_else(|| value.to_string())
+        })
+        .unwrap_or_default()
+}
+fn value_bool(value: &Value, key: &str) -> bool {
+    value.get(key).and_then(Value::as_bool).unwrap_or(false)
+}
+fn run_health(value: &Value) -> Result<(&'static str, crate::ui::Tone), Error> {
+    match value.get("health").and_then(Value::as_str) {
+        Some("pending") => Ok(("Pending", crate::ui::Tone::Idle)),
+        Some("running") => Ok(("Running", crate::ui::Tone::Running)),
+        Some("backingoff") => Ok(("Backing off", crate::ui::Tone::Warn)),
+        Some("dead" | "failed" | "cancelled") => Ok(("Dead", crate::ui::Tone::Dead)),
+        Some("succeeded") => Ok(("Succeeded", crate::ui::Tone::Ok)),
+        _ => Err(Error::Unavailable),
+    }
+}
+fn required_nonnegative(value: &Value, key: &str) -> Result<String, Error> {
+    value
+        .get(key)
+        .and_then(nonnegative_number)
+        .map(|value| value.to_string())
+        .ok_or(Error::Unavailable)
+}
+fn required_nonnegative_value(value: &Value) -> Result<String, Error> {
+    nonnegative_number(value)
+        .map(|value| value.to_string())
+        .ok_or(Error::Unavailable)
+}
+fn nonnegative_number(value: &Value) -> Option<u64> {
+    value.as_u64().or_else(|| {
+        value
+            .as_i64()
+            .filter(|value| *value >= 0)
+            .map(|value| value as u64)
+    })
+}
+fn unavailable_telemetry(label: &str) -> String {
+    format!(
+        "<span class=\"runs-telemetry-unavailable\" aria-label=\"{} unavailable\">Unavailable</span>",
+        escape(label)
+    )
+}
+fn optional_text(value: &Value, key: &str, label: &str, empty: &str) -> String {
+    match value.get(key).and_then(Value::as_str) {
+        Some(text) if !text.is_empty() => escape(text),
+        Some(_) => escape(empty),
+        None => unavailable_telemetry(label),
+    }
+}
+fn run_control(
+    _action: &str,
+    _id: &str,
+    _value: &Value,
+    _operator_controls_unavailable: bool,
+) -> Result<String, Error> {
+    // No trusted operator capability exists in the current auth contract.
+    // Queue eligibility is still rendered as read-only state evidence, but no
+    // request payload may turn it into a write confirmation.
+    Ok(String::new())
+}
+fn runs_header() -> String {
+    "<header class=\"runs-header\"><h2 id=\"runs-heading\">Runs</h2><p>Monitor durable message sync work and recover queue state.</p></header>".to_owned()
+}
+fn runs_card(body: &str) -> String {
+    format!("<div class=\"runs-card\">{body}</div>")
+}
+fn runs_stat(label: &str, value: &str) -> String {
+    format!(
+        "<div class=\"runs-card runs-stat\"><p class=\"runs-stat-label\">{}</p><p class=\"runs-stat-value\">{}</p></div>",
+        escape(label),
+        escape(value)
+    )
+}
+fn runs_filter_field(id: &str, name: &str, label: &str, value: &str) -> String {
+    let mut field = crate::ui::Field::new(
+        id,
+        name,
+        label,
+        crate::ui::Control::Input(crate::ui::InputType::Search),
+    );
+    field.value = value;
+    field.autocomplete = Some("off");
+    field.render()
+}
+fn runs_status_field(value: &str) -> String {
+    let options = [
+        crate::ui::SelectOption {
+            value: "",
+            label: "All statuses",
+            disabled: false,
+        },
+        crate::ui::SelectOption {
+            value: "pending",
+            label: "Pending",
+            disabled: false,
+        },
+        crate::ui::SelectOption {
+            value: "running",
+            label: "Running",
+            disabled: false,
+        },
+        crate::ui::SelectOption {
+            value: "backingoff",
+            label: "Backing off",
+            disabled: false,
+        },
+        crate::ui::SelectOption {
+            value: "dead",
+            label: "Dead",
+            disabled: false,
+        },
+        crate::ui::SelectOption {
+            value: "succeeded",
+            label: "Succeeded",
+            disabled: false,
+        },
+    ];
+    let mut field = crate::ui::Field::new(
+        "runs-status-filter",
+        "status",
+        "Status",
+        crate::ui::Control::Select(&options),
+    );
+    field.value = value;
+    field.render()
+}
+fn runs_submit_button() -> String {
+    let mut button = crate::ui::Button::new("Filter runs");
+    button.size = crate::ui::ButtonSize::Sm;
+    button.working_label = Some("Filtering…");
+    button.target = crate::ui::ButtonTarget::Button {
+        kind: crate::ui::ButtonType::Submit,
+        form: None,
+        action: None,
+    };
+    button.render()
+}
+fn runs_link_button(
+    label: &str,
+    variant: crate::ui::ButtonVariant,
+    href: &str,
+) -> Result<String, Error> {
+    let mut button = crate::ui::Button::new(label);
+    button.variant = variant;
+    button.size = crate::ui::ButtonSize::Sm;
+    button.target =
+        crate::ui::ButtonTarget::Link(crate::ui::LocalPath::new(href).ok_or(Error::Invalid)?);
+    Ok(button.render())
+}
+fn runs(v: &Value) -> Result<String, Error> {
+    if value_bool(v, "unavailable") {
+        return Ok(format!(
+            "<section id=\"runs-page\" data-runs-page aria-labelledby=\"runs-heading\">{}{}</section>",
+            runs_header(),
+            runs_card(
+                "<h3>Runs status unavailable</h3><p>Configure PostgreSQL and the Rust sync queue to inspect durable runs.</p>",
+            )
+            .replacen(
+                "class=\"runs-card\"",
+                "class=\"runs-card runs-unavailable-card\"",
+                1,
+            )
+        ));
+    }
+    let items = rows(v, &["runs", "items", "rows"])?;
+    let records_24h = match v.get("records24h") {
+        Some(value) => Some(required_nonnegative_value(value)?),
+        None if value_bool(v, "records24hUnavailable") => None,
+        None => return Err(Error::Unavailable),
+    };
+    let pending_runs = required_nonnegative(v, "pendingRuns")?;
+    let running_runs = required_nonnegative(v, "runningRuns")?;
+    let backingoff_runs = required_nonnegative(v, "backingoffRuns")?;
+    let dead_runs = required_nonnegative(v, "deadRuns")?;
+    if !value_bool(v, "workerHeartbeatUnavailable") {
+        return Err(Error::Unavailable);
+    }
+    let mut body =
+        String::from("<section id=\"runs-page\" data-runs-page aria-labelledby=\"runs-heading\">");
+    body.push_str(&runs_header());
+    body.push_str("<p id=\"runs-live-status\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-busy=\"false\"></p>");
+    let reload = runs_link_button(
+        "Reload Runs status",
+        crate::ui::ButtonVariant::Quiet,
+        "/app/runs",
+    )?
+    .replacen("<a ", "<a id=\"runs-reload\" ", 1);
+    body.push_str(&format!(
+        "<div id=\"runs-recovery\" class=\"runs-card runs-recovery\" hidden><p id=\"runs-recovery-message\">Run control outcome is unknown. Reload Runs status before trying again.</p>{reload}</div>"
+    ));
+    body.push_str("<div id=\"runs-operator-controls-unavailable\" role=\"note\" class=\"runs-card runs-operator-notice\"><h3>Operator controls unavailable</h3><p>Run, reset, and cancel require a trusted operator principal. Queue state remains available as read-only evidence.</p></div>");
+    body.push_str(
+        "<form id=\"runs-filters\" class=\"runs-card runs-filters\" method=\"get\" action=\"/app/runs\" role=\"search\" aria-label=\"Filter runs\"><div class=\"runs-filter-grid\">",
+    );
+    let status = value_text(v, "selectedStatus");
+    body.push_str(&runs_status_field(&status));
+    for (id, key, label, selected_key) in [
+        (
+            "runs-connector-filter",
+            "connector",
+            "Connector",
+            "selectedConnector",
+        ),
+        ("runs-tool-filter", "tool", "Tool", "selectedTool"),
+        (
+            "runs-account-filter",
+            "accountId",
+            "Account",
+            "selectedAccountId",
+        ),
+    ] {
+        let selected = value_text(v, selected_key);
+        body.push_str(&runs_filter_field(id, key, label, &selected));
+    }
+    let clear_filters = runs_link_button(
+        "Clear filters",
+        crate::ui::ButtonVariant::Quiet,
+        "/app/runs",
+    )?;
+    body.push_str(&format!(
+        "</div><div class=\"runs-filter-actions\">{}{clear_filters}</div></form>",
+        runs_submit_button()
+    ));
+    let mut stats = String::new();
+    // Keep the presentation fail-closed even if an older or malformed data
+    // producer omits the explicit flag or supplies stale `*Allowed` values.
+    // The API emits this same fact; the renderer must not trust payload flags
+    // as a substitute for the unresolved trusted-operator authorization.
+    let operator_controls_unavailable = true;
+    stats.push_str(&runs_stat("Pending", &pending_runs));
+    stats.push_str(&runs_stat("Running", &running_runs));
+    stats.push_str(&runs_stat("Backing off", &backingoff_runs));
+    stats.push_str(&runs_stat("Dead", &dead_runs));
+    if let Some(records) = records_24h {
+        stats.push_str(&runs_stat("Records / 24h", &records));
+    } else {
+        stats.push_str(
+            "<div class=\"runs-card runs-stat\"><p class=\"runs-stat-label\">Records / 24h</p><p class=\"runs-stat-value runs-stat-unavailable\">Unavailable in the configured storage.</p></div>",
+        );
+    }
+    stats.push_str(&runs_stat(
+        "Worker heartbeat",
+        "Unavailable in the configured storage.",
+    ));
+    if !stats.is_empty() {
+        body.push_str(&format!(
+            "<div class=\"runs-stats\" aria-describedby=\"runs-summary-scope\">{stats}</div><p id=\"runs-summary-scope\" class=\"runs-summary-note\">Status filter narrows rows and health counts; Records / 24h remains a scoped storage total.</p>"
+        ));
+    }
+    if items.is_empty() {
+        let filtered = value_bool(v, "hasFilters");
+        body.push_str(&if filtered {
+            empty(
+                "No durable runs match these filters.",
+                "Clear the filters to view project runs.",
+                "Clear filters",
+                "/app/runs",
+            )
+        } else {
+            empty(
+                "No durable runs to show.",
+                "Queued message synchronization runs will appear here.",
+                "Browse connectors",
+                "/app/connectors",
+            )
+        });
+        body.push_str("</section>");
+        return Ok(body);
+    }
+    body.push_str("<div class=\"runs-card runs-table\"><div class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable sync runs\" tabindex=\"0\"><table><caption class=\"sr-only\">Durable sync runs</caption><thead><tr>");
+    for label in [
+        "Health",
+        "Run ID",
+        "Connector",
+        "Tool",
+        "Account",
+        "Attempts",
+        "Wake",
+        "Lease",
+        "Cursor",
+        "Last error",
+        "Actions",
+    ] {
+        body.push_str(&format!("<th scope=\"col\">{label}</th>"));
+    }
+    body.push_str("</tr></thead><tbody aria-live=\"polite\">");
+    for item in items {
+        let id = id(item, &["id"])?;
+        let (health_label, tone) = run_health(item)?;
+        let health = item
+            .get("health")
+            .and_then(Value::as_str)
+            .ok_or(Error::Unavailable)?;
+        let attempts = required_nonnegative(item, "attemptsSpent")?;
+        let max_attempts = required_nonnegative(item, "maxAttempts")?;
+        let remaining = required_nonnegative(item, "attemptsRemaining")?;
+        let wake = optional_text(item, "wakeAt", "Wake", "—");
+        let lease_until = item.get("leaseUntil").and_then(Value::as_str);
+        let lease = match lease_until {
+            None => unavailable_telemetry("Lease"),
+            Some("") => "—".to_owned(),
+            Some(lease) => {
+                let remaining = match item
+                    .get("leaseRemainingSeconds")
+                    .and_then(nonnegative_number)
+                {
+                    Some(0) => String::new(),
+                    Some(seconds) => format!(" ({seconds}s remaining)"),
+                    None => format!(" ({})", unavailable_telemetry("Lease remaining")),
+                };
+                format!("{}{remaining}", escape(lease))
+            }
+        };
+        let cursor = optional_text(item, "currentCursor", "Cursor", "—");
+        let error = match item.get("lastError").and_then(Value::as_str) {
+            None => unavailable_telemetry("Last error"),
+            Some("") => "<span class=\"runs-muted\">None recorded</span>".to_owned(),
+            Some(error) => escape(error),
+        };
+        body.push_str(&format!(
+            "<tr data-run-id=\"{}\" data-run-health=\"{}\"><td>{}</td><td><code class=\"runs-code\">{}</code></td><td>{}</td><td><code class=\"runs-code\">{}</code></td><td>{}</td><td><code class=\"runs-code\">{} / {}</code><span class=\"runs-secondary\">{} remaining</span></td><td><code class=\"runs-code\">{}</code></td><td><code class=\"runs-code\">{}</code></td><td><code class=\"runs-code\">{}</code></td><td>{}</td><td class=\"runs-actions\">{}{}{}{}</td></tr>",
+            escape(&id),
+            escape(health),
+            crate::ui::state(tone, health_label),
+            escape(&id),
+            escape(&value_text(item, "connector")),
+            escape(&value_text(item, "tool")),
+            escape(&value_text(item, "accountId")),
+            escape(&attempts),
+            escape(&max_attempts),
+            escape(&remaining),
+            wake,
+            lease,
+            cursor,
+            error,
+            run_control("run-now", &id, item, operator_controls_unavailable)?,
+            run_control("reset", &id, item, operator_controls_unavailable)?,
+            run_control("cancel", &id, item, operator_controls_unavailable)?,
+            if operator_controls_unavailable {
+                "<span class=\"runs-muted\">Operator controls unavailable</span>".to_owned()
+            } else if !value_bool(item, "runNowAllowed")
+                && !value_bool(item, "resetAllowed")
+                && !value_bool(item, "cancelAllowed")
+            {
+                "<span class=\"runs-muted\">No actions</span>".to_owned()
+            } else {
+                String::new()
+            },
+        ));
+    }
+    body.push_str("</tbody></table></div></div></section>");
+    Ok(body)
+}
 pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<String, Error> {
     let v = raw.get("data").unwrap_or(raw);
     let body=match op{
-  Op::Overview=>{
-   let mut body=header("Getting Started","Connect a toolkit, run your first tool call, and wire up triggers.");body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");
-   for (label,key) in [("Toolkits available","toolkitCount"),("Connected accounts","connectionCount"),("Tool calls this month","toolCalls")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?))}body.push_str("</div>");
-   body.push_str(&card("<h3 class=\"text-sm font-semibold text-dusk-blue-100\">Setup checklist</h3><ul class=\"mt-4 space-y-3\"><li><a href=\"/app/connectors\">Browse the toolkit catalog</a></li><li><a href=\"/app/connectors\">Connect an account</a></li><li><a href=\"/app/connectors\">Run a tool call</a></li><li><a href=\"/app/events\">Add a trigger</a></li></ul>"));body
-  },
+
+  Op::Overview=>crate::overview::render(v)?,
   Op::Catalog=>{
    let items=rows(v,&["connectors","items","cards"])?;
-   let mut body=header("Connectors","Connect your apps and explore their tools.");
-   body.push_str("<div class=\"mb-4 flex flex-wrap gap-2\"><a href=\"/app/connectors\">All</a>");
-   if let Some(categories)=v.get("categories").and_then(Value::as_array){for category in categories.iter().filter_map(Value::as_str){let mut url=reqwest::Url::parse("https://local.invalid/app/connectors").map_err(|_|Error::Invalid)?;url.query_pairs_mut().append_pair("category",category);body.push_str(&format!("<a class=\"rounded-full border border-space-indigo-700 px-3 py-1 text-xs\" href=\"/app/connectors?{}\">{}</a>",escape(url.query().unwrap_or("")),escape(category)));}}
-   body.push_str("</div><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3\">");
-   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/connectors/{key}\" class=\"group flex flex-col gap-3 rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-space-indigo-700\"><div class=\"flex items-center gap-3\"><span class=\"truncate text-sm font-semibold text-dusk-blue-50 group-hover:text-neon-ice-400\">{}</span></div><p class=\"text-xs text-dusk-blue-500\">{count} tools</p></a>",escape(name)));}
+   let search=string(v,&["search"]);
+   let category=string(v,&["category"]);
+   let mut body=catalog_header("Connectors","Connect your apps and explore their tools.");
+   body.push_str(&format!("<form id=\"toolkit-catalog-search\" method=\"get\" action=\"/app/connectors\" role=\"search\" aria-label=\"Search connector catalog\" class=\"mb-5 flex flex-wrap items-end gap-2\">{}{}{} </form>",
+       crate::ui::Field{value:search,placeholder:"Search connectors, categories, and tools…",..crate::ui::Field::new("toolkit-search","search","Search connectors",crate::ui::Control::Input(crate::ui::InputType::Search))}.render(),
+       if category.is_empty(){String::new()}else{format!("<input type=\"hidden\" name=\"category\" value=\"{}\">",escape(category))},
+       crate::ui::Button{size:crate::ui::ButtonSize::Sm,variant:crate::ui::ButtonVariant::Secondary,target:crate::ui::ButtonTarget::Button{kind:crate::ui::ButtonType::Submit,form:None,action:None},..crate::ui::Button::new("Search")}.render()));
+   body.push_str("<nav id=\"toolkit-catalog-filters\" class=\"mb-4 flex flex-wrap gap-2\" aria-label=\"Filter connectors by category\">");
+   body.push_str(&catalog_filter_link("All", &catalog_query_url("", search), category.is_empty())?);
+   if let Some(categories)=v.get("categories").and_then(Value::as_array){for value in categories.iter().filter_map(Value::as_str){body.push_str(&catalog_filter_link(value, &catalog_query_url(value, search), value.eq_ignore_ascii_case(category))?);}}
+   body.push_str("</nav>");
+   let result_label=if items.len()==1{"1 connector shown.".to_owned()}else{format!("{} connectors shown.",items.len())};
+   let clear_search_url=catalog_query_url(category, "");
+   body.push_str(&format!("<div id=\"toolkit-catalog-results\" aria-live=\"polite\" aria-atomic=\"true\" aria-labelledby=\"toolkit-catalog-results-heading\"><h3 id=\"toolkit-catalog-results-heading\" class=\"sr-only\">Connector results</h3><p id=\"toolkit-catalog-status\" role=\"status\" aria-live=\"polite\">{result_label}</p><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3\">"));
+   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/connectors/{key}\" aria-label=\"Open {} connector\" class=\"toolkit-catalog-card flex min-w-0 flex-col gap-3 p-5 transition\"><div class=\"flex min-w-0 items-center gap-3\"><span class=\"text-sm font-semibold\">{}</span></div><p class=\"text-xs\">{count} tools</p></a>",escape(name),escape(name)));}
    body.push_str("</div>");
-   if items.is_empty(){body.push_str(&if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/connectors")}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/connectors#toolkit-request-form")});}
-   body.push_str("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\"></div>");body.push_str(&format!("<template id=\"toolkit-request-recovery\">{}</template>",request_recovery()));body.push_str(&card(&format!("<h3 class=\"text-base font-semibold text-dusk-blue-50\">Request a connector</h3><p class=\"mt-1 text-sm text-dusk-blue-400\">Tell us which connector you need.</p>{}",form_with_variant("/app/connectors/request",&format!("{}{}{}",input("name","Connector name","","text"),input("email","Your email","","email"),input("notes","Notes (optional)","","text")),"Request this connector",if items.is_empty(){crate::ui::ButtonVariant::Secondary}else{crate::ui::ButtonVariant::Primary}).replacen("<form ","<form id=\"toolkit-request-form\" ",1))));body
+   if items.is_empty(){body.push_str(&if !search.trim().is_empty(){empty("No connectors match this search.","Try a different connector, category, or tool title.","Clear search",&clear_search_url)}else if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/connectors")}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/connectors#toolkit-request-form")});}
+   body.push_str("</div>");
+   body.push_str("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" class=\"catalog-request-result\"></div>");body.push_str(&format!("<template id=\"toolkit-request-recovery\">{}</template>",request_recovery()));body.push_str(&catalog_card(&format!("<h3>Request a connector</h3><p>Tell us which connector you need.</p>{}",form_with_variant("/app/connectors/request",&format!("{}{}{}",input("name","Connector name","","text"),input("email","Your email","","email"),input("notes","Notes (optional)","","text")),"Request this connector",if items.is_empty(){crate::ui::ButtonVariant::Secondary}else{crate::ui::ButtonVariant::Primary}).replacen("<form ","<form id=\"toolkit-request-form\" ",1))));body
   },
   Op::Connector=>crate::connector::render(v,resource.ok_or(Error::Invalid)?)?,
   Op::TestForm=>crate::connector::test_fields(v,resource.unwrap_or(""))?,
   Op::Options=>{
     let field=string(v,&["fieldName"]);if field.is_empty() || field.len()>256 || !field.bytes().all(|b|b.is_ascii_alphanumeric() || matches!(b,b'.'|b'_'|b'-')){return Err(Error::Invalid)}
-    let mut body=format!("<div id=\"tk-opts-{}\" class=\"tk-opts\">",escape(field));
+
+    let list_id=format!("tk-opts-{field}");
+    let search_id=crate::forms::presentation_id("search",field);
+    let status_id=format!("{list_id}-status");
+    let mut body=format!("<div id=\"{}\" class=\"tk-opts\" role=\"listbox\" aria-label=\"Options for {}\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" data-input-id=\"{}\" data-value-id=\"{}\" data-status-id=\"{}\">",escape(&list_id),escape(field),escape(&search_id),escape(field),escape(&status_id));
     let click=escape("document.getElementById(el.dataset.field).value=el.dataset.value; if(el.dataset.detail){@get('/app/connectors/' + encodeURIComponent(el.dataset.key) + '/runinput-fields?connectionId=' + encodeURIComponent(document.getElementById('tk-connection').value) + '&actorId=' + encodeURIComponent(el.dataset.value) + '&source=' + encodeURIComponent(el.dataset.detail))}");
-    for item in rows(v,&["options","items"])?{body.push_str(&format!("<button type=\"button\" class=\"block w-full px-3 py-2 text-left text-sm hover:bg-space-indigo-900\" data-field=\"{}\" data-value=\"{}\" data-key=\"{}\" data-detail=\"{}\" data-on:click=\"{click}\">{}</button>",escape(field),escape(string(item,&["value","id"])),escape(string(v,&["key"])),escape(string(v,&["detailSource"])),escape(string(item,&["label","name"]))));}body.push_str("</div>");body
+    for (index, item) in rows(v, &["options", "items"])?.iter().enumerate() {
+        let value = string(item, &["value", "id"]);
+        let label = string(item, &["label", "name"]);
+        let option = crate::ui::Button {
+            size: crate::ui::ButtonSize::Md,
+            variant: crate::ui::ButtonVariant::Quiet,
+            target: crate::ui::ButtonTarget::Button {
+                kind: crate::ui::ButtonType::Button,
+                form: None,
+                action: None,
+            },
+            ..crate::ui::Button::new(label)
+        }
+        .render()
+        .replacen(
+            "<button ",
+            &format!(
+                "<button id=\"{}-{}\" role=\"option\" aria-selected=\"false\" tabindex=\"-1\" data-label=\"{}\" data-field=\"{}\" data-value=\"{}\" data-key=\"{}\" data-detail=\"{}\" data-on:click=\"{click}\" ",
+                escape(&list_id),
+                index,
+                escape(label),
+                escape(field),
+                escape(value),
+                escape(string(v, &["key"])),
+                escape(string(v, &["detailSource"])),
+            ),
+            1,
+        )
+        .replacen(
+            "class=\"ui-button ui-button-quiet ui-button-md\"",
+            "class=\"ui-button ui-button-quiet ui-button-md tk-option\"",
+            1,
+        );
+        body.push_str(&option);
+    }
+    body.push_str("</div>");
+    body
   },
-  Op::RunInputFields=>{let schema=v.get("inputSchema").or_else(||v.get("schema")).unwrap_or(v);format!("<div id=\"tk-runinput\"><input type=\"hidden\" name=\"runInputSchema\" value=\"{}\">{}</div>",escape(&schema.to_string()),crate::forms::render_guided_fields(schema,&Value::Null,"f.runInput",resource)?)},
-  Op::Connections=>{
-   let items=rows(v,&["connections","rows","items"])?;
-   header("Connections","Connections authorize accounts for use with connectors.")+&if items.is_empty(){empty("No connections to show.","Browse connectors to configure a connection.","Browse connectors","/app/connectors")}else{table(items,&[("Connector","connector"),("Auth Type","authType"),("Status","status"),("Last Test","lastTest")],Some(("/app/connections","id",&["test","disconnect"])))?}
-  },
+  Op::RunInputFields=>{let schema=v.get("inputSchema").or_else(||v.get("schema")).unwrap_or(v);format!("<div id=\"tk-runinput\" aria-live=\"polite\"><input type=\"hidden\" name=\"runInputSchema\" value=\"{}\">{}</div>",escape(&schema.to_string()),crate::forms::render_guided_fields(schema,&Value::Null,"f.runInput",resource)?)},
+  Op::Connections=>crate::connections::render(v)?,
+  Op::Runs=>runs(v)?,
   Op::Logs=>crate::logs::render(v, &crate::logs::Filters::default(), v.get("hasFilters").and_then(Value::as_bool)==Some(true))?,
-  Op::Events=>{
-   let items=rows(v,&["events","items","rows"])?;
-   let mut events=table(items,&[("Connector","connector"),("Tool","operation"),("Connection","connectionId"),("Received","createdAt")],Some(("/app/events","id",&["replay"])))?.replace("<tbody class=", "<tbody id=\"trigger-rows\" aria-live=\"polite\" class=").replace("<table class=", "<table data-init=\"@get('/app/events/stream')\" class=");
-   if items.is_empty(){events=events.replace("</tbody>",&format!("<tr id=\"trigger-empty-state\"><td colspan=\"5\">{}</td></tr></tbody>",empty("No webhook events to show.","Browse connectors to inspect their declared events.","Browse connectors","/app/connectors")));}
-   header("Events","Receive and replay provider webhook events.")+&events
-  },
+  Op::Events=>crate::remaining_pages::events(v)?,
   Op::Trace=>crate::trace::standalone(v, resource.ok_or(Error::Invalid)?)?,
-  Op::Certification if v.get("unavailable").and_then(Value::as_bool)==Some(true)=>header("Certification","Connector certification and manifest fingerprint drift.")+&card("<p>Certification status unavailable</p><p class=\"text-sm text-dusk-blue-400\">Configure PostgreSQL and run connector certification to view results.</p>"),
-  Op::Certification=>{
-   let items=rows(v,&["certifications","rows","items"])?;
-   header("Certification","Connector certification and manifest fingerprint drift.")+&if items.is_empty(){"<section class=\"ui-empty-state\" aria-labelledby=\"qa-empty-heading\"><h3 id=\"qa-empty-heading\">No connector certification results to show.</h3><p>Connector certification results are not available in this list.</p></section>".into()}else{table(items,&[("Connector","connector"),("Status","status"),("Total","total"),("Passed","passed"),("Failed","failed"),("Not certified","notCertified"),("Manifest drift","drifted"),("Manifest fingerprint","manifestFingerprint"),("Last run","certifiedAt")],None)?}
-  },
-  Op::Usage=>{let mut body=header("Usage",string(v,&["month"]));body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");for (label,key) in [("Tool calls","toolCalls"),("Synced records","syncedRecords"),("Webhook events","webhookEvents")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?));}body.push_str("</div>");body},
+  Op::Certification=>return Err(Error::Forbidden),
+  Op::Usage=>crate::remaining_pages::usage(v)?,
   Op::Branding=>crate::branding::render(v),
   Op::Test=>crate::connector::result(Some(v)),
   Op::Setup=>json(v),
-  Op::RequestConnector=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-busy=\"false\" data-request-state=\"success\" class=\"rounded-lg border border-space-indigo-800 p-4\">Connector request received.</div>".into(),
+  Op::RequestConnector=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-atomic=\"true\" data-request-state=\"success\" class=\"catalog-request-result\">Connector request received.</div>".into(),
   _=>return Err(Error::Invalid)
  };
     Ok(body)
 }
-fn table(
-    items: &[Value],
-    columns: &[(&str, &str)],
-    actions: Option<(&str, &str, &[&str])>,
-) -> Result<String, Error> {
-    let mut body=String::from("<div class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950\"><div class=\"overflow-x-auto\"><table class=\"w-full\"><thead><tr class=\"border-b border-space-indigo-800\">");
-    for (label, _) in columns {
-        body.push_str(&format!("<th class=\"px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-dusk-blue-500\">{label}</th>"));
-    }
-    if actions.is_some() {
-        body.push_str("<th>Actions</th>")
-    }
-    body.push_str("</tr></thead><tbody class=\"divide-y divide-space-indigo-800\">");
-    for item in items {
-        body.push_str("<tr>");
-        for (_, key) in columns {
-            body.push_str(&format!(
-                "<td class=\"px-4 py-3 text-sm text-dusk-blue-300\">{}</td>",
-                escape(
-                    &item
-                        .get(*key)
-                        .filter(|v| !v.is_null())
-                        .map(|v| v
-                            .as_str()
-                            .map(str::to_owned)
-                            .unwrap_or_else(|| v.to_string()))
-                        .unwrap_or_default()
-                )
-            ));
-        }
-        if let Some((prefix, key, actions)) = actions {
-            let id = id(item, &[key])?;
-            body.push_str("<td>");
-            if actions.is_empty() {
-                body.push_str(&format!("<a href=\"{prefix}/{id}\">Inspect</a>"))
-            }
-            for action in actions {
-                let route = format!("{prefix}/{id}/{action}");
-                body.push_str(&match *action {
-                    "test" => form_with_variant(
-                        &route,
-                        "",
-                        "Check connection",
-                        crate::ui::ButtonVariant::Secondary,
-                    ),
-                    "disconnect" => confirmation(
-                        &route,
-                        "Disconnect",
-                        "Disconnect this connection?",
-                        &format!(
-                            "Disconnect connection {id}? Tool runs require an active connection."
-                        ),
-                    )?,
-                    "replay" => event_replay(&id)?,
-                    _ => form(&route, "", action),
-                });
-            }
-            body.push_str("</td>");
-        }
-        body.push_str("</tr>");
-    }
-    body.push_str("</tbody></table></div></div>");
-    Ok(body)
-}
 pub(crate) fn static_page(path: &str) -> String {
     if path == "/app/support" {
-        return header("Support","Contact the team for help with connectors, the API, or your account.")+&card("<p class=\"text-sm font-medium text-dusk-blue-100\">Email support</p><a href=\"mailto:info@manavritti.com\" class=\"mt-3 inline-flex items-center gap-2 rounded-lg bg-neon-ice-500 px-3.5 py-2 text-sm font-semibold text-prussian-blue-950\">info@manavritti.com</a>");
+        return crate::remaining_pages::heading("Help","Contact the team for help with connectors, the API, or your account.")+&crate::remaining_pages::panel("<p class=\"text-sm font-medium text-ink-100\">Email support</p><a href=\"mailto:info@manavritti.com\" class=\"remaining-contact-link\">info@manavritti.com</a>");
     }
-    let mut content = header(
+    let mut content = crate::remaining_pages::heading(
         "Documentation",
         "Guides and API reference for building on appcall.",
     );
     for (title, body, href) in [
         (
             "Quickstart",
-            "Connect your first toolkit and test an action from its detail page.",
+            "Connect your first connector and run a tool from its detail page.",
             "/app/connectors",
         ),
         (
@@ -273,7 +650,7 @@ pub(crate) fn static_page(path: &str) -> String {
             "/app/logs",
         ),
     ] {
-        content.push_str(&format!("<a href=\"{href}\" class=\"flex items-center justify-between rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-4 transition hover:border-space-indigo-700\"><span><span class=\"block text-sm font-medium text-dusk-blue-100\">{title}</span><span class=\"mt-0.5 block text-sm text-dusk-blue-500\">{body}</span></span><span class=\"text-dusk-blue-500\">→</span></a>"));
+        content.push_str(&format!("<a href=\"{href}\" class=\"flex items-center justify-between rounded-panel border border-line bg-panel p-4 transition hover:border-iris-400\"><span><span class=\"block text-sm font-medium text-ink-100\">{title}</span><span class=\"mt-0.5 block text-sm text-ink-300\">{body}</span></span><span class=\"text-ink-300\">→</span></a>"));
     }
     content
 }
@@ -281,6 +658,491 @@ pub(crate) fn static_page(path: &str) -> String {
 mod rendering_contract_tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn runs_list_exposes_truthful_health_and_fenced_controls() {
+        let html = render(
+            Op::Runs,
+            &json!({
+                "runs": [{
+                    "id": "run_1",
+                    "connector": "slack",
+                    "tool": "messages.list",
+                    "accountId": "brand-a",
+                    "health": "running",
+                    "attemptsSpent": 2,
+                    "attemptsRemaining": 8,
+                    "maxAttempts": 10,
+                    "wakeAt": "2026-09-08T10:00:00Z",
+                    "leaseUntil": "2026-09-08T10:01:00Z",
+                    "currentCursor": "cursor-1",
+                    "lastError": "",
+                    "runNowAllowed": false,
+                    "resetAllowed": false,
+                    "cancelAllowed": true
+                }],
+                "pendingRuns": 0,
+                "runningRuns": 1,
+                "backingoffRuns": 0,
+                "records24h": 4,
+                "deadRuns": 1,
+                "workerHeartbeatUnavailable": true
+            }),
+            None,
+        )
+        .unwrap();
+        for expected in [
+            "id=\"runs-page\"",
+            "Runs",
+            "Monitor durable message sync work",
+            "name=\"status\"",
+            "name=\"connector\"",
+            "name=\"tool\"",
+            "name=\"accountId\"",
+            "<caption class=\"sr-only\">Durable sync runs</caption>",
+            "<th scope=\"col\"",
+            "ui-state-running",
+            "messages.list",
+            "2 / 10",
+            "8 remaining",
+            "cursor-1",
+            "Records / 24h",
+            "Operator controls unavailable",
+        ] {
+            assert!(html.contains(expected), "missing {expected}: {html}");
+        }
+        assert!(!html.contains("/app/runs/run_1/cancel"));
+        assert!(!html.contains("data-confirm-open="));
+        assert!(!html.contains("workerHeartbeat"));
+        assert!(!html.contains("attemptTimeline"));
+    }
+
+    #[test]
+    fn ordinary_runs_payload_hides_mutations_but_preserves_queue_eligibility() {
+        let html = render(
+            Op::Runs,
+            &json!({
+                "operatorControlsUnavailable": true,
+                "runs": [{
+                    "id": "run_1",
+                    "connector": "slack",
+                    "tool": "messages.list",
+                    "accountId": "brand-a",
+                    "health": "running",
+                    "attemptsSpent": 2,
+                    "attemptsRemaining": 8,
+                    "maxAttempts": 10,
+                    "wakeAt": "2026-09-08T10:00:00Z",
+                    "leaseUntil": "2026-09-08T10:01:00Z",
+                    "leaseRemainingSeconds": 42,
+                    "currentCursor": "cursor-1",
+                    "lastError": "provider timeout",
+                    "runNowEligible": false,
+                    "resetEligible": false,
+                    "cancelEligible": true,
+                    "runNowAllowed": false,
+                    "resetAllowed": false,
+                    "cancelAllowed": false
+                }],
+                "pendingRuns": 0,
+                "runningRuns": 1,
+                "backingoffRuns": 0,
+                "records24hUnavailable": true,
+                "deadRuns": 1,
+                "workerHeartbeatUnavailable": true
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(html.contains("Operator controls unavailable"));
+        assert!(html.contains("Reload Runs status"));
+        assert!(html.contains("href=\"/app/runs\""));
+        for action in ["/run-now", "/reset", "/cancel"] {
+            assert!(!html.contains(action), "ordinary runs rendered {action}");
+        }
+    }
+
+    #[test]
+    fn runs_renderer_defaults_to_unavailable_controls_without_trusted_capability() {
+        let html = render(
+            Op::Runs,
+            &json!({
+                "runs": [{
+                    "id": "run_1",
+                    "connector": "slack",
+                    "tool": "messages.list",
+                    "accountId": "brand-a",
+                    "health": "pending",
+                    "attemptsSpent": 0,
+                    "attemptsRemaining": 10,
+                    "maxAttempts": 10,
+                    "wakeAt": "",
+                    "leaseUntil": "",
+                    "leaseRemainingSeconds": 0,
+                    "currentCursor": "",
+                    "lastError": "",
+                    "runNowAllowed": true,
+                    "resetAllowed": true,
+                    "cancelAllowed": true,
+                    "runNowEligible": true,
+                    "resetEligible": true,
+                    "cancelEligible": true
+                }],
+                "pendingRuns": 1,
+                "runningRuns": 0,
+                "backingoffRuns": 0,
+                "records24hUnavailable": true,
+                "deadRuns": 0,
+                "workerHeartbeatUnavailable": true
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(html.contains("Operator controls unavailable"));
+        for action in ["/run-now", "/reset", "/cancel"] {
+            assert!(
+                !html.contains(action),
+                "renderer trusted an unverified operator capability: {action}"
+            );
+        }
+    }
+
+    #[test]
+    fn empty_ordinary_runs_page_still_names_unavailable_controls() {
+        let html = render(
+            Op::Runs,
+            &json!({
+                "runs": [],
+                "pendingRuns": 0,
+                "runningRuns": 0,
+                "backingoffRuns": 0,
+                "records24hUnavailable": true,
+                "deadRuns": 0,
+                "workerHeartbeatUnavailable": true
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(html.contains("id=\"runs-operator-controls-unavailable\""));
+        assert!(html.contains("Operator controls unavailable"));
+        for action in ["/run-now", "/reset", "/cancel"] {
+            assert!(!html.contains(action));
+        }
+    }
+
+    #[test]
+    fn runs_list_uses_signal_primitives_without_legacy_controls() {
+        let html = render(
+            Op::Runs,
+            &json!({
+                "runs": [{
+                    "id": "run_1",
+                    "connector": "slack",
+                    "tool": "messages.list",
+                    "accountId": "brand-a",
+                    "health": "running",
+                    "attemptsSpent": 2,
+                    "attemptsRemaining": 8,
+                    "maxAttempts": 10,
+                    "wakeAt": "2026-09-08T10:00:00Z",
+                    "leaseUntil": "2026-09-08T10:01:00Z",
+                    "leaseRemainingSeconds": 42,
+                    "currentCursor": "cursor-1",
+                    "lastError": "provider timeout",
+                    "runNowAllowed": false,
+                    "resetAllowed": false,
+                    "cancelAllowed": false
+                }],
+                "pendingRuns": 0,
+                "runningRuns": 1,
+                "backingoffRuns": 0,
+                "records24h": 4,
+                "deadRuns": 1,
+                "workerHeartbeatUnavailable": true
+            }),
+            None,
+        )
+        .unwrap();
+
+        for expected in [
+            "runs-card",
+            "runs-stat",
+            "ui-field",
+            "ui-control",
+            "ui-button",
+            "ui-state-running",
+            "2 / 10",
+            "8 remaining",
+            "2026-09-08T10:00:00Z",
+            "2026-09-08T10:01:00Z (42s remaining)",
+            "cursor-1",
+            "provider timeout",
+            "Records / 24h",
+            "Dead",
+        ] {
+            assert!(html.contains(expected), "missing {expected}: {html}");
+        }
+        for legacy in [
+            "rounded-",
+            "border-space-indigo",
+            "bg-space-indigo",
+            "text-dusk-blue",
+            "text-neon-ice",
+            "focus:ring",
+            "focus:border",
+        ] {
+            assert!(
+                !html.contains(legacy),
+                "Runs rendered legacy token {legacy}"
+            );
+        }
+        assert!(!html.contains("<input name=\""));
+        assert!(!html.contains("<select id=\"runs-status-filter\""));
+        assert!(!html.contains("workerHeartbeat"));
+        assert!(!html.contains("attemptTimeline"));
+        assert!(!html.contains("/app/runs/run_1/cancel"));
+    }
+
+    #[test]
+    fn runs_health_strip_shows_scoped_states_and_explicit_heartbeat_unavailable() {
+        let html = render(
+            Op::Runs,
+            &json!({
+                "runs": [],
+                "pendingRuns": 2,
+                "runningRuns": 1,
+                "backingoffRuns": 1,
+                "deadRuns": 2,
+                "records24h": 12,
+                "workerHeartbeatUnavailable": true,
+                "selectedStatus": "running",
+                "selectedConnector": "slack",
+                "selectedTool": "messages.list",
+                "selectedAccountId": "brand-a"
+            }),
+            None,
+        )
+        .unwrap();
+        for expected in [
+            "Pending",
+            "Running",
+            "Backing off",
+            "Dead",
+            "Records / 24h",
+            "Worker heartbeat",
+            "2",
+            "1",
+            "12",
+            "Unavailable",
+            "Status filter narrows rows and health counts",
+        ] {
+            assert!(html.contains(expected), "missing {expected}: {html}");
+        }
+        assert!(html.contains("No durable runs to show."));
+        assert!(!html.contains("worker heartbeat active"));
+    }
+
+    #[test]
+    fn runs_health_strip_requires_explicit_heartbeat_availability_fact() {
+        let value = json!({
+            "runs": [],
+            "pendingRuns": 0,
+            "runningRuns": 0,
+            "backingoffRuns": 0,
+            "deadRuns": 0,
+            "records24hUnavailable": true
+        });
+        assert_eq!(
+            render(Op::Runs, &value, None),
+            Err(Error::Unavailable),
+            "missing heartbeat provenance must not become a healthy-looking strip"
+        );
+    }
+
+    #[test]
+    fn runs_renderer_rejects_missing_required_health_counters_and_metrics() {
+        let payload = || {
+            json!({
+                "runs": [{
+                    "id": "run_1",
+                    "connector": "slack",
+                    "tool": "messages.list",
+                    "accountId": "brand-a",
+                    "health": "running",
+                    "attemptsSpent": 2,
+                    "attemptsRemaining": 8,
+                    "maxAttempts": 10,
+                    "wakeAt": "2026-09-08T10:00:00Z",
+                    "leaseUntil": "2026-09-08T10:01:00Z",
+                    "leaseRemainingSeconds": 42,
+                    "currentCursor": "cursor-1",
+                    "lastError": "provider timeout"
+                }],
+                "pendingRuns": 0,
+                "runningRuns": 1,
+                "backingoffRuns": 0,
+                "records24h": 4,
+                "deadRuns": 1,
+                "workerHeartbeatUnavailable": true
+            })
+        };
+
+        for field in [
+            "health",
+            "attemptsSpent",
+            "attemptsRemaining",
+            "maxAttempts",
+        ] {
+            let mut value = payload();
+            value["runs"][0]
+                .as_object_mut()
+                .expect("run object")
+                .remove(field);
+            assert_eq!(
+                render(Op::Runs, &value, None),
+                Err(Error::Unavailable),
+                "missing required run field {field} rendered as healthy state"
+            );
+        }
+
+        let mut unknown_health = payload();
+        unknown_health["runs"][0]["health"] = json!("mystery");
+        assert_eq!(
+            render(Op::Runs, &unknown_health, None),
+            Err(Error::Unavailable),
+            "unknown health must not become Pending"
+        );
+
+        for field in ["records24h", "deadRuns"] {
+            let mut value = payload();
+            value
+                .as_object_mut()
+                .expect("runs payload object")
+                .remove(field);
+            assert_eq!(
+                render(Op::Runs, &value, None),
+                Err(Error::Unavailable),
+                "missing required metric {field} rendered without evidence"
+            );
+        }
+
+        for (path, invalid) in [
+            (("runs", 0, "attemptsSpent"), json!("2")),
+            (("runs", 0, "attemptsRemaining"), json!({"value": 8})),
+            (("runs", 0, "maxAttempts"), json!(null)),
+            (("top", 0, "records24h"), json!({"value": 4})),
+            (("top", 0, "deadRuns"), json!("1")),
+        ] {
+            let mut value = payload();
+            if path.0 == "top" {
+                value[path.2] = invalid;
+            } else {
+                value[path.0][path.1][path.2] = invalid;
+            }
+            assert_eq!(
+                render(Op::Runs, &value, None),
+                Err(Error::Unavailable),
+                "invalid required field {} must fail closed",
+                path.2
+            );
+        }
+    }
+
+    #[test]
+    fn runs_renderer_marks_missing_telemetry_as_unavailable() {
+        let payload = || {
+            json!({
+                "runs": [{
+                    "id": "run_1",
+                    "connector": "slack",
+                    "tool": "messages.list",
+                    "accountId": "brand-a",
+                    "health": "running",
+                    "attemptsSpent": 2,
+                    "attemptsRemaining": 8,
+                    "maxAttempts": 10,
+                    "wakeAt": "2026-09-08T10:00:00Z",
+                    "leaseUntil": "2026-09-08T10:01:00Z",
+                    "leaseRemainingSeconds": 42,
+                    "currentCursor": "cursor-1",
+                    "lastError": "provider timeout"
+                }],
+                "pendingRuns": 0,
+                "runningRuns": 1,
+                "backingoffRuns": 0,
+                "records24h": 4,
+                "deadRuns": 1,
+                "workerHeartbeatUnavailable": true
+            })
+        };
+        for (field, label) in [
+            ("wakeAt", "Wake"),
+            ("leaseUntil", "Lease"),
+            ("leaseRemainingSeconds", "Lease remaining"),
+            ("currentCursor", "Cursor"),
+            ("lastError", "Last error"),
+        ] {
+            let mut value = payload();
+            value["runs"][0]
+                .as_object_mut()
+                .expect("run object")
+                .remove(field);
+            let html = render(Op::Runs, &value, None).expect("optional telemetry is renderable");
+            assert!(
+                html.contains(&format!("aria-label=\"{label} unavailable\"")),
+                "missing {field} lacks explicit unavailable evidence: {html}"
+            );
+            if field == "lastError" {
+                assert!(!html.contains("None recorded"));
+            }
+        }
+
+        let mut records_unavailable = payload();
+        records_unavailable
+            .as_object_mut()
+            .expect("runs payload object")
+            .remove("records24h");
+        records_unavailable["records24hUnavailable"] = json!(true);
+        let html = render(Op::Runs, &records_unavailable, None)
+            .expect("explicitly unavailable records metric is renderable");
+        assert!(html.contains("Records / 24h"));
+        assert!(html.contains("Unavailable in the configured storage"));
+    }
+
+    #[test]
+    fn runs_table_scroll_is_a_named_keyboard_focusable_region() {
+        let html = render(
+            Op::Runs,
+            &json!({
+                "runs": [{
+                    "id": "run_1",
+                    "connector": "slack",
+                    "tool": "messages.list",
+                    "accountId": "brand-a",
+                    "health": "running",
+                    "attemptsSpent": 2,
+                    "attemptsRemaining": 8,
+                    "maxAttempts": 10,
+                    "wakeAt": "2026-09-08T10:00:00Z",
+                    "leaseUntil": "2026-09-08T10:01:00Z",
+                    "leaseRemainingSeconds": 42,
+                    "currentCursor": "cursor-1",
+                    "lastError": "provider timeout"
+                }],
+                "records24h": 4,
+                "deadRuns": 1,
+                "workerHeartbeatUnavailable": true,
+                "pendingRuns": 0,
+                "runningRuns": 1,
+                "backingoffRuns": 0
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(html.contains(
+            "class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable sync runs\" tabindex=\"0\""
+        ));
+    }
 
     #[test]
     fn copy_empty_catalog_has_one_primary_action() {
@@ -317,8 +1179,24 @@ mod rendering_contract_tests {
             None,
         )
         .unwrap();
-        assert_eq!(populated.matches("ui-button-primary").count(), 1);
-        assert!(!populated.contains("ui-button-secondary"));
+        let populated_search = populated
+            .split("<form id=\"toolkit-catalog-search\"")
+            .nth(1)
+            .unwrap()
+            .split("</form>")
+            .next()
+            .unwrap();
+        let populated_request = populated
+            .split("<form id=\"toolkit-request-form\"")
+            .nth(1)
+            .unwrap()
+            .split("</form>")
+            .next()
+            .unwrap();
+        assert_eq!(populated_search.matches("ui-button-secondary").count(), 1);
+        assert_eq!(populated_search.matches("ui-button-primary").count(), 0);
+        assert_eq!(populated_request.matches("ui-button-primary").count(), 1);
+        assert!(!populated_request.contains("ui-button-secondary"));
     }
 
     #[test]
@@ -352,13 +1230,6 @@ mod rendering_contract_tests {
                 "Browse connectors to inspect their declared events.",
                 "Browse connectors",
             ),
-            (
-                Op::Certification,
-                vec!["certifications", "rows", "items"],
-                "No connector certification results to show.",
-                "Connector certification results are not available in this list.",
-                "",
-            ),
         ] {
             let mut values = vec![json!([])];
             for key in &keys {
@@ -387,14 +1258,6 @@ mod rendering_contract_tests {
                 );
             }
         }
-        let unavailable = render(
-            Op::Certification,
-            &json!({"unavailable":true,"certifications":[]}),
-            None,
-        )
-        .unwrap();
-        assert!(unavailable.contains("Certification status unavailable"));
-        assert!(!unavailable.contains("No connector certification results to show."));
     }
 
     #[test]
@@ -437,31 +1300,54 @@ mod rendering_contract_tests {
         )
         .unwrap();
         assert!(events.contains(">Tool</th>"));
-        assert!(events.contains("messages.list"));
         assert!(!events.contains(">Operation</th>"));
+        assert!(events.contains("messages.list"));
+        assert!(events.contains("/app/events/stream"));
+        assert!(!events.contains("/app/triggers/stream"));
 
         let certification_unavailable = render(
             Op::Certification,
             &json!({"unavailable":true,"certifications":[]}),
             None,
-        )
-        .unwrap();
-        assert!(certification_unavailable.contains("Certification status unavailable"));
-        assert!(certification_unavailable
-            .contains("Configure PostgreSQL and run connector certification to view results."));
-        assert!(!certification_unavailable.contains("QA status unavailable"));
-        assert!(!certification_unavailable.contains("connector QA"));
-
-        let certification_empty =
-            render(Op::Certification, &json!({"certifications":[]}), None).unwrap();
-        assert!(certification_empty.contains("No connector certification results to show."));
-        assert!(certification_empty
-            .contains("Connector certification results are not available in this list."));
-        assert!(!certification_empty.contains("connector QA"));
+        );
+        assert_eq!(certification_unavailable, Err(Error::Forbidden));
+        assert_eq!(
+            render(Op::Certification, &json!({"certifications":[]}), None),
+            Err(Error::Forbidden)
+        );
 
         let docs = static_page("/app/docs");
         assert!(docs.contains(">Connectors</span>"));
         assert!(!docs.contains("Toolkits & connectors"));
+    }
+
+    #[test]
+    fn docs_quickstart_uses_connector_and_tool_vocabulary() {
+        let docs = static_page("/app/docs");
+        assert!(docs.contains("Connect your first connector and run a tool from its detail page."));
+        assert!(!docs.contains("Connect your first toolkit"));
+    }
+
+    #[test]
+    fn events_preserve_recorded_values_while_using_canonical_stream_route() {
+        let html = render(
+            Op::Events,
+            &json!({
+                "events": [{
+                    "id": "evt_1",
+                    "connector": "mail",
+                    "operation": "/app/toolkits?next=/app/triggers/stream",
+                    "connectionId": "connection-1",
+                    "createdAt": "2026-09-08T00:00:00Z"
+                }]
+            }),
+            None,
+        )
+        .unwrap();
+
+        assert!(html.contains("data-init=\"@get('/app/events/stream')\""));
+        assert!(html.contains("/app/toolkits?next=/app/triggers/stream"));
+        assert!(!html.contains("/app/connectors?next=/app/events/stream"));
     }
 
     #[test]
@@ -522,6 +1408,42 @@ mod rendering_contract_tests {
     }
 
     #[test]
+    fn catalog_search_has_a_named_get_control_and_live_results() {
+        let html = render(
+            Op::Catalog,
+            &json!({
+                "search": "Mail",
+                "category": "Messaging",
+                "categories": ["Messaging", "Files"],
+                "connectors": [{
+                    "key": "mail",
+                    "name": "Mail",
+                    "categories": ["Messaging"],
+                    "operations": [{"name": "send", "title": "Send message", "kind": "action"}]
+                }]
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(html.contains("<form id=\"toolkit-catalog-search\""));
+        assert!(html.contains("method=\"get\" action=\"/app/connectors\" role=\"search\""));
+        assert!(html.contains("id=\"toolkit-search\""));
+        assert!(html.contains("name=\"search\""));
+        assert!(html.contains("value=\"Mail\""));
+        assert!(html.contains("name=\"category\""));
+        assert!(html.contains("id=\"toolkit-catalog-results\""));
+        assert!(html.contains("aria-live=\"polite\" aria-atomic=\"true\""));
+        assert!(html.contains("aria-label=\"Open Mail connector\""));
+        assert!(html.contains("class=\"catalog-header\""));
+        assert!(html.contains("class=\"catalog-request-panel\""));
+        assert!(!html.contains("dusk-blue"));
+        assert!(!html.contains("space-indigo"));
+        assert!(!html.contains("rounded-full"));
+        assert!(!html.contains("rounded-xl"));
+        assert!(html.contains("aria-current=\"page\""));
+    }
+
+    #[test]
     fn toolkit_preserves_setup_routes_secrets_selection_and_action_only_picker() {
         let html = render(Op::Connector, &json!({
             "name":"<Provider>","description":"Use <token>",
@@ -558,9 +1480,17 @@ mod rendering_contract_tests {
         assert!(run_form.contains("method=\"post\" action=\"/app/connectors/provider/test\""));
         assert!(run_form.contains("data-on:submit="));
         assert!(run_form.contains("@post(&#39;/app/connectors/provider/test&#39;"));
+        assert_eq!(
+            render(
+                Op::Connector,
+                &json!({"operations":[],"setup":{"mode":"api_key","fields":[]},"connectionId":"manual"}),
+                Some("provider"),
+            ),
+            Err(Error::Unavailable)
+        );
         let fallback = render(
             Op::Connector,
-            &json!({"operations":[],"setup":{"mode":"api_key","fields":[]},"connectionId":"manual"}),
+            &json!({"operations":[],"setup":{"mode":"api_key","fields":[]},"connectionId":""}),
             Some("provider"),
         )
         .unwrap();
@@ -615,11 +1545,6 @@ mod rendering_contract_tests {
                 json!({"events":[{"id":"evt_1","connector":"<evil>"}]}),
                 "/app/events/evt_1/replay",
             ),
-            (
-                Op::Certification,
-                json!({"certifications":[{"connector":"<evil>","passed":4,"drifted":false}]}),
-                "false",
-            ),
         ] {
             let html = render(op, &data, None).unwrap();
             assert!(html.contains(expected), "{expected}");
@@ -647,7 +1572,18 @@ mod rendering_contract_tests {
         for (op, data, expected) in [
             (
                 Op::Overview,
-                json!({"toolkitCount":2,"connectionCount":3,"toolCalls":4}),
+                json!({
+                    "toolkitCount":2,
+                    "connectionCount":3,
+                    "activeConnectionCount":2,
+                    "toolCalls":4,
+                    "successfulCalls":3,
+                    "failedCalls":1,
+                    "activity":[{"label":"Sep 08","calls":4}],
+                    "failureActivity":[{"label":"Sep 08","failures":1}],
+                    "attention":[],
+                    "deadRuns":[]
+                }),
                 ">4</p>",
             ),
             (
@@ -693,10 +1629,11 @@ mod rendering_contract_tests {
 mod memory_qa_tests {
     #[test]
     fn form_uses_shared_submit_without_losing_native_or_datastar_action() {
-        let html = super::form(
+        let html = super::form_with_variant(
             "/app/connectors/request",
             "<input name=\"name\">",
             "Request toolkit",
+            crate::ui::ButtonVariant::Primary,
         );
         assert!(html.contains("ui-button-primary"));
         assert!(html.contains("type=\"submit\""));
@@ -705,21 +1642,18 @@ mod memory_qa_tests {
             .contains("data-on:submit=\"@post('/app/connectors/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\""));
     }
     #[test]
-    fn missing_qa_storage_is_unavailable_not_empty_certification() {
-        let html = super::render(
-            super::Op::Certification,
-            &serde_json::json!({"unavailable":true,"certifications":[]}),
-            None,
-        )
-        .unwrap();
-        assert!(html.contains("Certification status unavailable"));
-        assert!(!html.contains("<table"));
-        let persisted = super::render(
-            super::Op::Certification,
-            &serde_json::json!({"certifications":[]}),
-            None,
-        )
-        .unwrap();
-        assert!(!persisted.contains("Certification status unavailable"));
+    fn direct_certification_page_is_forbidden_for_every_payload() {
+        for payload in [
+            serde_json::json!({"unavailable": true}),
+            serde_json::json!({"certifications": []}),
+            serde_json::json!({
+                "certifications": [{"connector": "mail", "status": "passed"}]
+            }),
+        ] {
+            assert_eq!(
+                super::render(super::Op::Certification, &payload, None),
+                Err(super::Error::Forbidden)
+            );
+        }
     }
 }

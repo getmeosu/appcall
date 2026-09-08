@@ -39,7 +39,12 @@ impl DevelopmentDashboard<'_> {
                     let content = if r.path == "/app/settings" {
                         crate::admin_ui::settings("proj_dev", "Development", "Development")
                     } else {
-                        format!("<h1 class=\"text-2xl font-semibold\">{title}</h1><div class=\"flex flex-col items-center justify-center rounded-xl border border-dashed border-space-indigo-800 bg-space-indigo-950/40 px-6 py-16 text-center\"><p class=\"text-sm font-medium text-dusk-blue-200\">Sign in to manage {title}</p><p class=\"mt-1 max-w-sm text-sm text-dusk-blue-500\">{title} is powered by anusa identity. Configure anusa auth and sign in to view and manage it here.</p></div>")
+                        format!("{}{}", crate::remaining_pages::heading(title, "Identity management is unavailable in no-login development mode."), crate::ui::EmptyState {
+                            title: &format!("Sign in to manage {title}"),
+                            body: &format!("{title} is powered by anusa identity. Configure anusa auth and sign in to view and manage it here."),
+                            action_label: "Read setup documentation",
+                            action_href: crate::ui::LocalPath::new("/app/docs").unwrap(),
+                        }.render())
                     };
                     Response::new(200, crate::shell::layout(title, &session, &content, r.path))
                 }

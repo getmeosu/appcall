@@ -1,5 +1,51 @@
-use crate::{pages::render, DashboardOperation as Op};
+use crate::{pages::render, DashboardOperation as Op, Error};
 use serde_json::{json, Value};
+
+#[test]
+fn signal_setup_json_keeps_escaping_without_removed_ramps() {
+    let html = render(
+        Op::Setup,
+        &json!({"result":"<script>private & value</script>"}),
+        Some("provider"),
+    )
+    .unwrap();
+    assert!(html.contains("&lt;script&gt;private &amp; value&lt;/script&gt;"));
+    assert!(!html.contains("<script>"));
+    assert!(html.contains("<pre"));
+    for ramp in [
+        "prussian-blue",
+        "space-indigo",
+        "dusk-blue",
+        "neon-ice",
+        "fresh-sky",
+    ] {
+        assert!(!html.contains(ramp), "removed ramp {ramp}");
+    }
+}
+
+#[test]
+fn signal_dynamic_runinput_initial_and_patch_declare_live_regions() {
+    let initial = crate::connector::test_fields(&fixture(), "provider").unwrap();
+    let patch = render(
+        Op::RunInputFields,
+        &json!({"schema":{"type":"object","properties":{"query":{"type":"string"}}}}),
+        Some("provider"),
+    )
+    .unwrap();
+    for (kind, html) in [("initial", initial), ("replacement", patch)] {
+        let opening = html
+            .split("id=\"tk-runinput\"")
+            .nth(1)
+            .unwrap()
+            .split('>')
+            .next()
+            .unwrap();
+        assert!(
+            opening.contains("aria-live=\"polite\""),
+            "{kind} target needs its own live region"
+        );
+    }
+}
 
 fn fixture() -> Value {
     json!({"name":"<Provider>","description":"Use <tools>","action":"mail.read",
@@ -77,6 +123,63 @@ fn copy_setup_labels_follow_direct_modes_and_preserve_route_choices() {
 }
 
 #[test]
+fn reconnect_setup_preserves_the_selected_connection_in_every_setup_form() {
+    let mut v = fixture();
+    v["setup"]["routes"] = json!([]);
+    let html = page(&v);
+    assert!(html.contains("name=\"connectionId\" type=\"hidden\" value=\"active_1\""));
+
+    v["setup"]["routes"] = json!([
+        {"id":"one","label":"First","fields":[]},
+        {"id":"two","label":"Second","fields":[]}
+    ]);
+    let html = page(&v);
+    let settings = html.split("id=\"tk-setup\"").nth(1).unwrap();
+    assert_eq!(
+        settings
+            .matches("name=\"connectionId\" type=\"hidden\" value=\"active_1\"")
+            .count(),
+        2
+    );
+    assert!(html.contains("tk-setup-connection-0"));
+    assert!(html.contains("tk-setup-connection-1"));
+}
+
+#[test]
+fn reconnect_setup_preserves_an_explicit_non_active_connection() {
+    let mut v = fixture();
+    v["connectionId"] = json!("inactive_2");
+    v["setup"]["routes"] = json!([]);
+    let html = page(&v);
+    let settings = html.split("id=\"tk-setup\"").nth(1).unwrap();
+    assert!(settings.contains("name=\"connectionId\" type=\"hidden\" value=\"inactive_2\""));
+    assert!(!settings.contains("value=\"active_1\""));
+}
+
+#[test]
+fn invalid_requested_connection_fails_closed_without_selecting_a_sibling() {
+    for id in ["invalid/id", "missing"] {
+        let mut v = fixture();
+        v["connectionId"] = json!(id);
+        assert_eq!(
+            render(Op::Connector, &v, Some("provider")),
+            Err(Error::Unavailable),
+            "{id}"
+        );
+    }
+}
+
+#[test]
+fn absent_connection_id_leaves_setup_as_a_new_connection_by_default() {
+    let mut v = fixture();
+    v["connectionId"] = json!("");
+    v["setup"]["routes"] = json!([]);
+    let html = page(&v);
+    let settings = html.split("id=\"tk-setup\"").nth(1).unwrap();
+    assert!(!settings.contains("name=\"connectionId\""));
+}
+
+#[test]
 fn signal_mobile_tool_selection_does_not_compete_with_primary_execution() {
     let html = page(&fixture());
     let selector = html
@@ -112,6 +215,7 @@ fn signal_destructive_confirmation_is_explicit_and_uses_existing_form() {
     assert_eq!(html.matches("id=\"tk-run-form\"").count(), 1);
     assert!(!page(&fixture()).contains("id=\"tk-run-confirm\""));
     v["connections"] = json!([]);
+    v["connectionId"] = json!("");
     assert!(!page(&v).contains("id=\"tk-run-confirm\""));
 }
 
@@ -122,6 +226,42 @@ fn signal_search_status_and_table_headers_have_semantic_hooks() {
     assert!(html.contains("id=\"tk-status\" role=\"status\""));
     assert!(html.contains("<caption class=\"sr-only\">Connector accounts</caption>"));
     assert_eq!(html.matches("<th scope=\"col\">").count(), 4);
+}
+
+#[test]
+fn dynamic_options_render_a_keyboard_listbox_contract() {
+    let html = page(&serde_json::json!({
+        "name": "Provider",
+        "action": "mail.read",
+        "inputSchema":{"type":"object","properties": {
+            "actor": {"type":"string","title":"Actor","x-dynamic-options":{"source":"actors.options"}}
+        }},
+        "sample": {"actor":"actor-1"},
+        "operations": [{"name":"mail.read","title":"Read","kind":"action"}],
+        "connections": [{"id":"active_1","connector":"provider","status":"active"}]
+    }));
+    assert!(html.contains("role=\"combobox\""));
+    assert!(html.contains("aria-autocomplete=\"list\""));
+    assert!(html.contains("aria-controls=\"tk-opts-f.actor\""));
+    assert!(html.contains("role=\"listbox\""));
+    assert!(html.contains("aria-live=\"polite\""));
+    assert!(!html.contains("role=\"option\""));
+    assert!(html.contains("data-input-id=\"tk-search-"));
+
+    let loaded = render(
+        Op::Options,
+        &serde_json::json!({
+            "fieldName":"f.actor",
+            "key":"provider",
+            "detailSource":"actors.options",
+            "options":[{"id":"actor-1","name":"Alice"}]
+        }),
+        None,
+    )
+    .unwrap();
+    assert!(loaded.contains("role=\"listbox\""));
+    assert!(loaded.contains("role=\"option\""));
+    assert!(loaded.contains("aria-selected=\"false\""));
 }
 
 #[test]
@@ -202,6 +342,7 @@ fn signal_run_disabled_without_eligible_account_or_action() {
     ] {
         let mut v = fixture();
         v["connections"] = accounts;
+        v["connectionId"] = json!("");
         let html = page(&v);
         let run = html
             .split("id=\"tk-run-control\"")
@@ -242,6 +383,7 @@ fn signal_setup_events_and_none_are_truthful() {
     let mut v = fixture();
     v["setup"] = json!({"mode":"none"});
     v["connections"] = json!([]);
+    v["connectionId"] = json!("");
     let html = page(&v);
     assert!(!html.contains("/app/connectors/provider/setup"));
     assert!(html.contains("No additional configuration"));
@@ -286,6 +428,7 @@ fn signal_code_is_a_quoted_sample_with_external_scope_placeholder() {
     assert!(html.contains("&quot;input&quot;"));
     let mut v = fixture();
     v["connections"] = json!([]);
+    v["connectionId"] = json!("");
     assert!(page(&v).contains("/v1/connections/YOUR_CONNECTION_ID/actions/mail.read"));
 }
 
@@ -302,6 +445,7 @@ fn signal_unknown_setup_mode_does_not_offer_an_unsupported_flow() {
     let mut v = fixture();
     v["setup"] = json!({"mode":"invented","help":"<unsupported>"});
     v["connections"] = json!([]);
+    v["connectionId"] = json!("");
     let html = page(&v);
     assert!(!html.contains("/app/connectors/provider/setup"));
     assert!(html.contains("&lt;unsupported&gt;"));

@@ -255,6 +255,14 @@ async fn logs_inspector_has_native_fallback_accessible_result_and_shared_control
         .unwrap();
     assert!(inspector.contains("ui-button"));
     assert!(!inspector.contains("aria-modal=\"true\""));
-    assert!(!response.body.contains("aria-selected="));
+    let logs_page = response
+        .body
+        .split("<section class=\"logs-page\"")
+        .nth(1)
+        .expect("rendered Logs page")
+        .split("</section>")
+        .next()
+        .expect("closed Logs page");
+    assert!(!logs_page.contains("aria-selected="));
     assert!(response.body.contains("href=\"/app/logs/request-1\""));
 }

@@ -12,16 +12,23 @@
     let invoker = null;
     const visible = () => items.filter(item => !item.hasAttribute('hidden'));
     function setActive(index) {
-      items.forEach(item => item.removeAttribute('data-active'));
       const choices = visible();
       active = choices.length ? (index + choices.length) % choices.length : -1;
+      items.forEach(item => {
+        item.removeAttribute('data-active');
+        item.setAttribute('aria-selected', 'false');
+      });
       if (active >= 0) {
         choices[active].setAttribute('data-active', '');
+        choices[active].setAttribute('aria-selected', 'true');
+        input.setAttribute('aria-activedescendant', choices[active].id);
         choices[active].scrollIntoView({ block: 'nearest' });
         status.textContent = `${choices[active].getAttribute('data-cmd')}. ${active + 1} of ${choices.length} pages.`;
       } else {
+        input.removeAttribute('aria-activedescendant');
         status.textContent = 'No matching pages.';
       }
+      input.setAttribute('aria-expanded', String(choices.length > 0));
     }
     function filter(query) {
       const search = query.trim().toLowerCase();
@@ -40,8 +47,22 @@
       filter('');
       input.focus();
     }
-    function close() { if (dialog.open) dialog.close(); }
+    function close() {
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      items.forEach(item => {
+        item.removeAttribute('data-active');
+        item.setAttribute('aria-selected', 'false');
+      });
+      if (dialog.open) dialog.close();
+    }
     dialog.addEventListener('close', () => {
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      items.forEach(item => {
+        item.removeAttribute('data-active');
+        item.setAttribute('aria-selected', 'false');
+      });
       if (invoker?.isConnected) invoker.focus();
       invoker = null;
     });

@@ -6,6 +6,9 @@ pub use scenario::*;
 #[path = "data.rs"]
 mod data;
 pub use data::*;
+#[path = "runs.rs"]
+mod runs;
+pub use runs::runs_fixture;
 #[path = "broker.rs"]
 mod broker;
 pub use broker::*;
@@ -44,3 +47,7 @@ mod copy_tests;
 #[cfg(test)]
 #[path = "logs_tests.rs"]
 mod logs_tests;
+
+#[cfg(test)]
+#[path = "connections_tests.rs"]
+mod connections_tests;

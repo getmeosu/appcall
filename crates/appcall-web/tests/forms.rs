@@ -72,13 +72,21 @@ async fn action_page(path: &str, data: serde_json::Value) -> String {
 
 #[tokio::test]
 async fn copy_connection_and_replay_actions_keep_routes() {
-    let connections =
-        action_page("/app/connections", json!({"connections":[{"id":"conn_1"}]})).await;
+    let connections = action_page(
+        "/app/connections",
+        json!({"connections":[{"id":"conn_1","connector":"provider","status":"active"}]}),
+    )
+    .await;
     assert!(connections.contains(">Check connection</span>"));
     assert!(connections.contains(">Disconnect</span>"));
     let check = connections
         .split("<form ")
-        .find(|form| form.starts_with("method=\"post\" action=\"/app/connections/conn_1/test\""))
+        .find(|form| {
+            form.split('>').next().is_some_and(|opening| {
+                opening.contains("method=\"post\"")
+                    && opening.contains("action=\"/app/connections/conn_1/test\"")
+            })
+        })
         .expect("native connection check form")
         .split("</form>")
         .next()
@@ -141,12 +149,15 @@ fn assert_confirmation(html: &str, heading: &str, body: &str, route: &str) -> St
 
 #[tokio::test]
 async fn copy_confirmations_name_targets_without_provider_promises() {
-    let connections =
-        action_page("/app/connections", json!({"connections":[{"id":"conn_1"}]})).await;
+    let connections = action_page(
+        "/app/connections",
+        json!({"connections":[{"id":"conn_1","connector":"provider","status":"active"}]}),
+    )
+    .await;
     assert_confirmation(
         &connections,
-        "Disconnect this connection?",
-        "Disconnect connection conn_1? Tool runs require an active connection.",
+        "Disconnect provider connection conn_1?",
+        "Tool runs for provider connection conn_1 will stop until you reconnect it.",
         "/app/connections/conn_1/disconnect",
     );
     let trace = action_page(
@@ -244,12 +255,42 @@ async fn copy_empty_events_first_and_second_patch_preserve_rows() {
         tbody.find("/app/events/second/replay").unwrap()
             < tbody.find("/app/events/first/replay").unwrap()
     );
-    assert_eq!(tbody.matches("<tr ").count(), 2);
-    for invalid in ["", "../bad", "a\nevent: injected"] {
-        assert_eq!(
-            render_event_patch(&json!({"id":invalid})),
-            Err(Error::Invalid)
+    // Rows now inherit table styling; an opening tag need not have attributes.
+    assert_eq!(tbody.matches("</tr>").count(), 2);
+    for id in ["../bad", "bad/id", "<event>", "a?b", "a b"] {
+        let initial = action_page(
+            "/app/events",
+            json!({"events":[{"id":id,"connector":"<connector>"}]}),
+        )
+        .await;
+        assert!(initial.contains("Replay unavailable"), "{id}");
+        assert!(initial.contains("&lt;connector&gt;"), "{id}");
+        assert!(
+            !initial.contains(&format!("/app/events/{id}/replay")),
+            "{id}"
         );
+        let streamed = render_event_patch(&json!({
+            "id": id,
+            "connector": "<connector>",
+        }))
+        .unwrap();
+        assert!(streamed.contains("Replay unavailable"), "{id}");
+        assert!(streamed.contains("&lt;connector&gt;"), "{id}");
+        assert!(
+            !streamed.contains(&format!("/app/events/{id}/replay")),
+            "{id}"
+        );
+    }
+    let oversized = "x".repeat(1025);
+    for invalid in [
+        json!({}),
+        json!({"id": null}),
+        json!({"id": 42}),
+        json!({"id": ""}),
+        json!({"id": "a\nevent: injected"}),
+        json!({"id": oversized}),
+    ] {
+        assert_eq!(render_event_patch(&invalid), Err(Error::Invalid));
     }
 }
 

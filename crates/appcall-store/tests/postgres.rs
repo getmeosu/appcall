@@ -1,5 +1,6 @@
 use appcall_store::*;
 use postgres::{Client, NoTls};
+use std::{sync::mpsc, thread, time::Duration};
 #[test]
 #[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
 fn existing_schema_scopes_and_credential_transactions_are_atomic() {
@@ -22,6 +23,11 @@ fn existing_schema_scopes_and_credential_transactions_are_atomic() {
     client
         .batch_execute(include_str!(
             "../../../migrations/202605290004_connections_owner_check.sql"
+        ))
+        .unwrap();
+    client
+        .batch_execute(include_str!(
+            "../../../migrations/202609070004_oauth_refresh_intents.sql"
         ))
         .unwrap();
     client
@@ -154,6 +160,83 @@ fn existing_schema_scopes_and_credential_transactions_are_atomic() {
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
 }
+
+#[test]
+#[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
+fn stale_authorization_cleanup_skips_locked_connection_and_rechecks_intent() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "store_expiry_race_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+    ] {
+        admin.batch_execute(sql).unwrap();
+    }
+    admin
+        .batch_execute("INSERT INTO projects(id,name) VALUES('p','race'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,created_at,updated_at) VALUES('conn','p','slack','oauth2','authorizing','brand','brand',now()-interval '1 day',now()-interval '1 day'),('stale','p','slack','oauth2','authorizing','brand','brand',now()-interval '1 day',now()-interval '1 day'); INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,created_at,updated_at) VALUES('p','conn','old-attempt','old-secret','authorization','authorizing',now()-interval '31 minutes',now()-interval '31 minutes')")
+        .unwrap();
+    let scoped = format!(
+        "{url}{}options=-csearch_path%3D{schema}",
+        if url.contains('?') { '&' } else { '?' }
+    );
+    let mut authorizer = Client::connect(&scoped, NoTls).unwrap();
+    authorizer.batch_execute("BEGIN").unwrap();
+    authorizer
+        .query_one("SELECT id FROM connections WHERE id='conn' FOR UPDATE", &[])
+        .unwrap();
+    let cleanup_client = Client::connect(&scoped, NoTls).unwrap();
+    let (done_tx, done_rx) = mpsc::channel();
+    let cleanup = thread::spawn(move || {
+        let mut store = Store::new(cleanup_client, LocalProvider::new(&[7; 32]).unwrap());
+        let result = store.expire_stale_authorizing(
+            "p",
+            std::time::SystemTime::now() - std::time::Duration::from_secs(30 * 60),
+        );
+        done_tx.send(result).unwrap();
+        result
+    });
+    let observed = done_rx.recv_timeout(Duration::from_millis(250));
+    authorizer
+        .execute(
+            "UPDATE oauth_refresh_intents SET attempt_id='new-attempt',created_at=now(),updated_at=now() WHERE project_id='p' AND connection_id='conn'",
+            &[],
+        )
+        .unwrap();
+    authorizer.batch_execute("COMMIT").unwrap();
+    let cleanup_result = cleanup.join().unwrap();
+    let conn_status = authorizer
+        .query_one("SELECT status FROM connections WHERE id='conn'", &[])
+        .ok()
+        .map(|row| row.get::<_, String>(0));
+    let stale_status = authorizer
+        .query_one("SELECT status FROM connections WHERE id='stale'", &[])
+        .ok()
+        .map(|row| row.get::<_, String>(0));
+    let _ = admin.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"));
+    assert!(
+        matches!(&observed, Ok(Ok(1))),
+        "cleanup must skip the locked connection without waiting: observed={observed:?}, final={cleanup_result:?}"
+    );
+    assert_eq!(cleanup_result, Ok(1));
+    assert_eq!(conn_status.as_deref(), Some("authorizing"));
+    assert_eq!(stale_status.as_deref(), Some("disconnected"));
+}
+
 #[test]
 fn connection_wire_format_matches_go() {
     let json = r#"{"ID":"c","ProjectID":"p","Connector":"mock","AuthType":"api_key","Status":"active","SecretRefID":"","LastTestStatus":"unknown","ExternalAccountID":"a","CredentialOwner":"brand"}"#;

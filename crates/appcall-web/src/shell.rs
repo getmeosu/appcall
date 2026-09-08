@@ -20,9 +20,14 @@ mod tests {
             ">Connectors<",
             ">Connections<",
             ">Events<",
+            ">Runs<",
             "id=\"main-content\"",
             "href=\"#main-content\"",
             "aria-label=\"Search pages\"",
+            "role=\"combobox\"",
+            "aria-controls=\"cmdk-list\"",
+            "role=\"listbox\"",
+            "role=\"option\"",
             "/static/app.css?v=",
             "&lt;Tenant&gt;",
         ] {
@@ -30,11 +35,35 @@ mod tests {
         }
         for forbidden in [
             "h-screen",
-            "href=\"/app/runs\"",
             "href=\"/app/certification\"",
             "fonts.googleapis.com",
         ] {
             assert!(!html.contains(forbidden), "unexpected {forbidden}");
+        }
+    }
+    #[test]
+    fn observe_navigation_uses_specified_order_and_canonical_destinations() {
+        let session = Session {
+            user_id: String::new(),
+            tenant_id: String::new(),
+            tenant_name: String::new(),
+            email: String::new(),
+            access_token: String::new(),
+            refresh_token: String::new(),
+        };
+        let html = layout("Title", &session, "", "/app");
+        let observe = html
+            .split("<p class=\"shell-group-label\">OBSERVE</p>")
+            .nth(1)
+            .and_then(|group| group.split("</div>").next())
+            .expect("observe navigation group");
+        let mut previous = 0;
+        for href in ["/app/logs", "/app/runs", "/app/events", "/app/usage"] {
+            let position = observe
+                .find(&format!("href=\"{href}\""))
+                .unwrap_or_else(|| panic!("missing canonical Observe destination: {href}"));
+            assert!(position >= previous, "Observe order changed at {href}");
+            previous = position;
         }
     }
     #[test]
@@ -48,7 +77,7 @@ mod tests {
             ("/app/settings/team/member", Some("/app/settings")),
             ("/app/sessions", Some("/app/settings")),
             ("/app/support", Some("/app/settings")),
-            ("/app/runs", None),
+            ("/app/runs", Some("/app/runs")),
         ] {
             assert_eq!(active_destination(path), expected, "{path}");
             let s = Session {
@@ -128,6 +157,12 @@ const NAV: &[Destination] = &[
         href: "/app/logs",
         label: "Logs",
         glyph: "≡",
+        group: Group::Observe,
+    },
+    Destination {
+        href: "/app/runs",
+        label: "Runs",
+        glyph: "↻",
         group: Group::Observe,
     },
     Destination {
@@ -217,9 +252,10 @@ pub(crate) fn layout(title: &str, s: &Session, content: &str, path: &str) -> Str
     }
     let commands = NAV
         .iter()
-        .map(|item| {
+        .enumerate()
+        .map(|(index, item)| {
             format!(
-                "<a href=\"{}\" data-cmd=\"{}\">{}</a>",
+                "<a id=\"cmdk-option-{index}\" href=\"{}\" role=\"option\" aria-selected=\"false\" tabindex=\"-1\" data-cmd=\"{}\">{}</a>",
                 item.href, item.label, item.label
             )
         })
@@ -233,11 +269,23 @@ pub(crate) fn layout(title: &str, s: &Session, content: &str, path: &str) -> Str
     field.placeholder = "Search pages…";
     field.autocomplete = Some("off");
     field.aria_label = Some("Search pages");
-    let search_field = field.render();
+    let search_field = field.render().replacen(
+        "<input class=\"ui-control\"",
+        "<input role=\"combobox\" aria-haspopup=\"listbox\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-controls=\"cmdk-list\" class=\"ui-control\"",
+        1,
+    );
     let menu = shell_button("Menu", ShellAction::Navigation);
     let close_nav = shell_button("Close navigation", ShellAction::CloseNavigation);
     let search = shell_button("Search · ⌘K", ShellAction::Search);
     let close_search = shell_button("Close search", ShellAction::CloseSearch);
+    let archivo_font = asset_url(
+        "/static/fonts/archivo-latin-variable.woff2",
+        include_bytes!("../static/fonts/archivo-latin-variable.woff2"),
+    );
+    let mono_font = asset_url(
+        "/static/fonts/ibm-plex-mono-variable.woff2",
+        include_bytes!("../static/fonts/ibm-plex-mono-variable.woff2"),
+    );
     let app_css = asset_url("/static/app.css", include_bytes!("../static/app.css"));
     let dashboard_css = asset_url(
         "/static/dashboard.css",
@@ -250,10 +298,12 @@ pub(crate) fn layout(title: &str, s: &Session, content: &str, path: &str) -> Str
     let palette_js = asset_url("/static/palette.js", include_bytes!("../static/palette.js"));
     let logs_js = asset_url("/static/logs.js", include_bytes!("../static/logs.js"));
     format!(
-        r##"<!DOCTYPE html><html lang="en" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{title} · appcall</title><link rel="icon" type="image/svg+xml" href="/static/favicon.svg"><link rel="preload" href="/static/fonts/archivo-latin-variable.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/static/fonts/ibm-plex-mono-regular.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="{app_css}"><link rel="stylesheet" href="{dashboard_css}"><script src="{dashboard_js}" defer></script><script src="{logs_js}" defer></script><script type="module" src="/static/datastar.js"></script><script src="{palette_js}" defer></script></head><body data-dashboard><a class="shell-skip" href="#main-content">Skip to content</a><div class="shell"><aside id="dashboard-sidebar" aria-label="Workspace navigation"><div class="shell-brand"><span class="shell-mark" aria-hidden="true">a</span><span class="shell-brand-name">appcall</span>{close_nav}</div><div class="shell-project"><span class="shell-group-label">Project</span><span title="{tenant}">{tenant}</span></div><nav aria-label="Main navigation">{nav}</nav><div class="shell-account"><span title="{email}">{email}</span><a href="/app/logout" aria-label="Sign out">Sign out</a></div></aside><div id="shell-workspace"><header class="shell-topbar">{menu}<span class="shell-breadcrumb">{title}</span>{search}</header><main id="main-content" tabindex="-1">{content}</main></div></div><dialog id="nav-drawer" aria-label="Workspace navigation"></dialog><dialog id="cmdk" aria-label="Search pages"><div class="shell-search-heading">{search_field}{close_search}</div><div id="cmdk-list">{commands}</div><p id="cmdk-status" role="status" aria-live="polite"></p><p class="shell-search-help">↑ ↓ to choose · Enter to open · Esc to close</p></dialog></body></html>"##,
+        r##"<!DOCTYPE html><html lang="en" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{title} · appcall</title><link rel="icon" type="image/svg+xml" href="/static/favicon.svg"><link rel="preload" href="{archivo_font}" as="font" type="font/woff2" crossorigin><link rel="preload" href="{mono_font}" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="{app_css}"><link rel="stylesheet" href="{dashboard_css}"><script src="{dashboard_js}" defer></script><script src="{logs_js}" defer></script><script type="module" src="/static/datastar.js"></script><script src="{palette_js}" defer></script></head><body data-dashboard><a class="shell-skip" href="#main-content">Skip to content</a><div class="shell"><aside id="dashboard-sidebar" aria-label="Workspace navigation"><div class="shell-brand"><span class="shell-mark" aria-hidden="true">a</span><span class="shell-brand-name">appcall</span>{close_nav}</div><div class="shell-project"><span class="shell-group-label">Project</span><span title="{tenant}">{tenant}</span></div><nav aria-label="Main navigation">{nav}</nav><div class="shell-account"><span title="{email}">{email}</span><a href="/app/logout" aria-label="Sign out">Sign out</a></div></aside><div id="shell-workspace"><header class="shell-topbar">{menu}<span class="shell-breadcrumb">{title}</span>{search}</header><main id="main-content" tabindex="-1">{content}</main></div></div><dialog id="nav-drawer" aria-label="Workspace navigation"></dialog><dialog id="cmdk" aria-label="Search pages"><div class="shell-search-heading">{search_field}{close_search}</div><div id="cmdk-list" role="listbox" aria-label="Pages" aria-live="polite" aria-atomic="true">{commands}</div><p id="cmdk-status" role="status" aria-live="polite" aria-atomic="true"></p><p class="shell-search-help">↑ ↓ to choose · Enter to open · Esc to close</p></dialog></body></html>"##,
         title = escape(title),
         tenant = escape(&s.tenant_name),
-        email = escape(&s.email)
+        email = escape(&s.email),
+        archivo_font = archivo_font,
+        mono_font = mono_font
     )
 }
 /// Serves the exact embedded asset allowlist; fonts use `Response::binary_body`.
@@ -262,16 +312,14 @@ pub(crate) fn asset(path: &str, method: &str) -> Response {
     if method != "GET" {
         return Response::new(405, "Method not allowed".into());
     }
+    let path = path.split(['?', '#']).next().unwrap_or(path);
     let font: Option<&'static [u8]> = match path {
         "/static/fonts/archivo-latin-variable.woff2" => Some(include_bytes!(
             "../static/fonts/archivo-latin-variable.woff2"
         )),
-        "/static/fonts/ibm-plex-mono-regular.woff2" => Some(include_bytes!(
-            "../static/fonts/ibm-plex-mono-regular.woff2"
+        "/static/fonts/ibm-plex-mono-variable.woff2" => Some(include_bytes!(
+            "../static/fonts/ibm-plex-mono-variable.woff2"
         )),
-        "/static/fonts/ibm-plex-mono-medium.woff2" => {
-            Some(include_bytes!("../static/fonts/ibm-plex-mono-medium.woff2"))
-        }
         _ => None,
     };
     let (mime, body) = match path {

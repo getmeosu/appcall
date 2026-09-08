@@ -19,6 +19,14 @@ pub(crate) fn selected_tab(value: &str) -> &'static str {
 fn text<'a>(v: &'a Value, key: &str) -> &'a str {
     v.get(key).and_then(Value::as_str).unwrap_or("")
 }
+fn operation_title(operation: &Value) -> &str {
+    let title = text(operation, "title");
+    if title.is_empty() {
+        text(operation, "name")
+    } else {
+        title
+    }
+}
 fn array<'a>(v: &'a Value, key: &str) -> &'a [Value] {
     v.get(key)
         .and_then(Value::as_array)
@@ -60,6 +68,19 @@ fn styled_submit(label: &str, disabled: bool, variant: ui::ButtonVariant) -> Str
     }
     .render()
 }
+fn decorate_link(mut html: String, id: Option<&str>, current: bool) -> String {
+    let mut attributes = String::new();
+    if let Some(id) = id {
+        attributes.push_str(&format!(" id=\"{}\"", escape(id)));
+    }
+    if current {
+        attributes.push_str(" aria-current=\"page\"");
+    }
+    if !attributes.is_empty() {
+        html = html.replacen("<a ", &format!("<a{attributes} "), 1);
+    }
+    html
+}
 fn hidden(id: &str, name: &str, value: &str) -> String {
     ui::Field {
         value,
@@ -95,13 +116,20 @@ fn eligible<'a>(accounts: &[&'a Value]) -> Vec<&'a Value> {
         .filter(|c| text(c, "status") == "active" && valid_id(text(c, "id")))
         .collect()
 }
-fn selected_account<'a>(v: &Value, accounts: &[&'a Value]) -> &'a str {
+fn requested_account<'a>(v: &Value, accounts: &[&'a Value]) -> Result<Option<&'a Value>, Error> {
+    let requested = text(v, "connectionId");
+    if requested.is_empty() {
+        return Ok(None);
+    }
+    if !valid_id(requested) {
+        return Err(Error::Unavailable);
+    }
     accounts
         .iter()
-        .find(|c| text(c, "id") == text(v, "connectionId"))
-        .or_else(|| accounts.first())
-        .map(|c| text(c, "id"))
-        .unwrap_or("")
+        .copied()
+        .find(|c| text(c, "id") == requested)
+        .map(Some)
+        .ok_or(Error::Unavailable)
 }
 fn supported_setup(v: &Value) -> bool {
     matches!(text(v, "mode"), "api_key" | "oauth2" | "external_bearer")
@@ -121,7 +149,19 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
         .collect();
     let accounts = account_rows(v, key);
     let active = eligible(&accounts);
-    let connection = selected_account(v, &active);
+    let requested = requested_account(v, &accounts)?;
+    // Explicit reconnects stay attached to their requested row for settings
+    // and navigation, even when that row is degraded/disconnected. Execution
+    // still falls back to an active account because non-active rows cannot run.
+    let setup_connection = requested.map(|c| text(c, "id")).unwrap_or("");
+    let connection = requested
+        .filter(|c| text(c, "status") == "active" && valid_id(text(c, "id")))
+        .map(|c| text(c, "id"))
+        .or_else(|| active.first().map(|c| text(c, "id")))
+        .unwrap_or("");
+    // Preserve an omitted id across navigation too; adding the first active
+    // row to a settings link would turn a new setup into an implicit update.
+    let navigation_connection = setup_connection;
     let action = operations.iter().find(|o| {
         !text(v, "action").is_empty()
             && text(o, "kind") == "action"
@@ -136,7 +176,7 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
             &[
                 ("tab", "settings"),
                 ("action", action_name),
-                ("connectionId", connection)
+                ("connectionId", navigation_connection)
             ]
         )
     );
@@ -155,13 +195,17 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
             &[
                 ("tab", id),
                 ("action", action_name),
-                ("connectionId", connection),
+                ("connectionId", navigation_connection),
             ],
         );
         html.push_str(&format!(
             "<span id=\"tk-tab-{id}\" data-tab=\"{id}\" data-selected=\"{}\">{}</span>",
             id == tab,
-            link(label, &url)
+            decorate_link(
+                link(label, &url),
+                Some(&format!("tk-tab-{id}-link")),
+                id == tab,
+            )
         ));
     }
     html.push_str("</nav>");
@@ -170,7 +214,7 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
         accounts_panel(&accounts),
         events(key, &operations),
         code(v, connection, action_name),
-        settings(v, key)?,
+        settings(v, key, setup_connection)?,
     ];
     for ((id, label), content) in TABS.into_iter().zip(panels) {
         html.push_str(&format!("<section id=\"tk-panel-{id}\" class=\"tk-panel\" aria-label=\"{label}\"{}>{content}</section>",if id==tab{""}else{" hidden"}));
@@ -206,16 +250,20 @@ fn tools(
             .or_default()
             .push(op);
     }
-    let mut html=String::from("<div class=\"tk-tools-layout\"><aside class=\"tk-tool-list\" aria-label=\"Available tools\">");
-    html.push_str(
-        &ui::Field::new(
-            "tk-tool-filter",
-            "toolFilter",
-            "Filter tools",
-            ui::Control::Input(ui::InputType::Search),
-        )
-        .render(),
+    let filter = ui::Field::new(
+        "tk-tool-filter",
+        "toolFilter",
+        "Filter tools",
+        ui::Control::Input(ui::InputType::Search),
+    )
+    .render()
+    .replacen(
+        "<input class=\"ui-control\"",
+        "<input aria-controls=\"tk-tool-list\" class=\"ui-control\"",
+        1,
     );
+    let mut html=String::from("<div class=\"tk-tools-layout\"><aside id=\"tk-tool-list\" class=\"tk-tool-list\" aria-label=\"Available tools\">");
+    html.push_str(&filter);
     for (group, mut ops) in groups {
         ops.sort_by_key(|o| text(o, "name"));
         html.push_str(&format!(
@@ -224,17 +272,17 @@ fn tools(
         ));
         for op in ops {
             let name = text(op, "name");
-            let title = if text(op, "title").is_empty() {
-                name
-            } else {
-                text(op, "title")
-            };
+            let title = operation_title(op);
             html.push_str(&format!(
                 "<div class=\"tk-tool-item\" data-selected=\"{}\">{}<code>{}</code>{}</div>",
                 name == action_name,
-                link(
-                    title,
-                    &destination(key, &[("action", name), ("connectionId", connection)])
+                decorate_link(
+                    link(
+                        title,
+                        &destination(key, &[("action", name), ("connectionId", connection)]),
+                    ),
+                    None,
+                    name == action_name,
                 ),
                 escape(name),
                 if op.get("readOnly").and_then(Value::as_bool) == Some(true) {
@@ -251,11 +299,7 @@ fn tools(
         .iter()
         .map(|o| ui::SelectOption {
             value: text(o, "name"),
-            label: if text(o, "title").is_empty() {
-                text(o, "name")
-            } else {
-                text(o, "title")
-            },
+            label: operation_title(o),
             disabled: false,
         })
         .collect();
@@ -267,7 +311,7 @@ fn tools(
     .render();
     html.push_str(&format!("<form id=\"tk-tool-selector\" method=\"get\" action=\"/app/connectors/{key}\" class=\"tk-mobile-selector\">{selector}{}{}</form>",hidden("tk-selection-connection","connectionId",connection),styled_submit("Select tool",actions.is_empty(),ui::ButtonVariant::Quiet)));
     if let Some(op) = action {
-        html.push_str(&format!("<header class=\"tk-selected-tool\"><h2>{}</h2><code>{}</code><p>{}</p></header><details class=\"tk-schema\"><summary>Schema</summary><h3>Input schema</h3><pre aria-live=\"off\">{}</pre><h3>Output schema</h3><pre aria-live=\"off\">{}</pre></details>",escape(text(op,"title")),escape(action_name),escape(text(op,"description")),pretty(op.get("inputSchema").unwrap_or(&Value::Null)),pretty(op.get("outputSchema").unwrap_or(&Value::Null))));
+        html.push_str(&format!("<header class=\"tk-selected-tool\"><h2>{}</h2><code>{}</code><p>{}</p></header><details class=\"tk-schema\"><summary>Schema</summary><h3>Input schema</h3><pre aria-live=\"off\">{}</pre><h3>Output schema</h3><pre aria-live=\"off\">{}</pre></details>",escape(operation_title(op)),escape(action_name),escape(text(op,"description")),pretty(op.get("inputSchema").unwrap_or(&Value::Null)),pretty(op.get("outputSchema").unwrap_or(&Value::Null))));
     } else {
         html.push_str(
             &ui::EmptyState {
@@ -350,7 +394,7 @@ pub(crate) fn test_fields(v: &Value, key: &str) -> Result<String, Error> {
         )
     }
     .render();
-    Ok(format!("<div id=\"tk-test-fields\" aria-live=\"polite\" aria-busy=\"false\" aria-labelledby=\"tk-fields-label\" data-fields-valid=\"true\"><h3 id=\"tk-fields-label\">Tool input</h3>{guided}{credential}<details class=\"tk-raw-input\"><summary>Edit as JSON</summary>{raw}</details><div id=\"tk-runinput\"></div></div>"))
+    Ok(format!("<div id=\"tk-test-fields\" aria-live=\"polite\" aria-busy=\"false\" aria-labelledby=\"tk-fields-label\" data-fields-valid=\"true\"><h3 id=\"tk-fields-label\">Tool input</h3>{guided}{credential}<details class=\"tk-raw-input\"><summary>Edit as JSON</summary>{raw}</details><div id=\"tk-runinput\" aria-live=\"polite\"></div></div>"))
 }
 
 pub(crate) fn result(v: Option<&Value>) -> String {
@@ -427,7 +471,7 @@ fn events(key: &str, operations: &[Value]) -> String {
     for op in webhooks {
         html.push_str(&format!(
             "<article class=\"tk-event\"><h3>{}</h3><code>{}</code><p>{}</p></article>",
-            escape(text(op, "title")),
+            escape(operation_title(op)),
             escape(text(op, "name")),
             escape(text(op, "description"))
         ));
@@ -473,7 +517,7 @@ fn setup_controls(fields: &[Value], prefix: &str) -> Result<String, Error> {
     }
     Ok(html)
 }
-fn settings(v: &Value, key: &str) -> Result<String, Error> {
+fn settings(v: &Value, key: &str, connection: &str) -> Result<String, Error> {
     let mut html = String::from("<div id=\"tk-setup\" tabindex=\"-1\"><h2>Settings</h2>");
     if let Some(setup) = v.get("setup") {
         html.push_str(&format!("<p>{}</p>", escape(text(setup, "help"))));
@@ -491,7 +535,12 @@ fn settings(v: &Value, key: &str) -> Result<String, Error> {
                     _ => "Connect".to_owned(),
                 };
                 html.push_str(&format!(
-                    "<form method=\"post\" action=\"/app/connectors/{key}/setup\">{}{}</form>",
+                    "<form method=\"post\" action=\"/app/connectors/{key}/setup\">{}{}{}</form>",
+                    if connection.is_empty() {
+                        String::new()
+                    } else {
+                        hidden("tk-setup-connection", "connectionId", connection)
+                    },
                     setup_controls(array(setup, "fields"), "base")?,
                     submit(&label, false)
                 ));
@@ -501,7 +550,7 @@ fn settings(v: &Value, key: &str) -> Result<String, Error> {
                     if !valid_id(route_id) {
                         return Err(Error::Unavailable);
                     }
-                    html.push_str(&format!("<form method=\"post\" action=\"/app/connectors/{key}/setup\"><h3>{}</h3><p>{}</p>{}{}{}{}</form>",escape(text(route,"label")),escape(text(route,"help")),setup_controls(array(setup,"fields"),&format!("{index}-base"))?,hidden(&format!("tk-setup-route-{index}"),"route",route_id),setup_controls(array(route,"fields"),&format!("{index}-route"))?,submit(text(route,"label"),false)));
+                    html.push_str(&format!("<form method=\"post\" action=\"/app/connectors/{key}/setup\"><h3>{}</h3><p>{}</p>{}{}{}{}{}</form>",escape(text(route,"label")),escape(text(route,"help")),if connection.is_empty(){String::new()}else{hidden(&format!("tk-setup-connection-{index}"),"connectionId",connection)},setup_controls(array(setup,"fields"),&format!("{index}-base"))?,hidden(&format!("tk-setup-route-{index}"),"route",route_id),setup_controls(array(route,"fields"),&format!("{index}-route"))?,submit(text(route,"label"),false)));
                 }
             }
         } else if text(setup, "mode") == "none" {

@@ -86,6 +86,12 @@ impl ScenarioData {
         Ok(match r.operation {
             Op::Connector | Op::TestForm => {
                 let mut value = connector_fixture(&r)?;
+                if self.scenario == Scenario::Connections
+                    && r.resource.as_deref() == Some("connector-0")
+                {
+                    value["connections"] = json!(connections_fixture());
+                    value["synthetic"] = true.into();
+                }
                 if self.scenario != Scenario::Preview
                     && r.resource.as_deref() == Some("connector-0")
                 {
@@ -96,7 +102,20 @@ impl ScenarioData {
             Op::Test => fixture_run(&r).await?,
             Op::Options | Op::RunInputFields => fixture_dynamic(&r)?,
             Op::Branding => json!({"appName":"Sample App","tagColor":"#67e8f9"}),
-            Op::Overview => json!({"toolkitCount":24,"connectionCount":3,"toolCalls":1205}),
+            Op::Overview if self.scenario == Scenario::Unavailable => {
+                return Err(Error::Unavailable.into())
+            }
+            Op::Overview => overview_fixture(self.scenario),
+            Op::Runs => runs_fixture(self.scenario, &r)?,
+            Op::Usage => match self.scenario {
+                Scenario::Unavailable => return Err(Error::Unavailable.into()),
+                Scenario::Empty => {
+                    json!({"synthetic":true,"month":"2026-09 (synthetic preview)","toolCalls":0,"syncedRecords":0,"webhookEvents":0})
+                }
+                _ => {
+                    json!({"synthetic":true,"month":"2026-09 (synthetic preview)","toolCalls":1205,"syncedRecords":340,"webhookEvents":27})
+                }
+            },
             Op::Setup if r.resource.as_deref() == Some("connector-0") => json!({"synthetic":true}),
             Op::TestConnection | Op::DisconnectConnection
                 if r.resource.as_deref() == Some("preview_connection") =>
@@ -129,6 +148,53 @@ impl ScenarioData {
             _ => return Err(Error::Invalid.into()),
         })
     }
+}
+fn overview_fixture(scenario: Scenario) -> Value {
+    if scenario == Scenario::Empty {
+        return json!({
+            "synthetic": true,
+            "toolkitCount": 24,
+            "connectionCount": 0,
+            "activeConnectionCount": 0,
+            "actionCalls": 0,
+            "successfulCalls": 0,
+            "failedCalls": 0,
+            "successRate": null,
+            "activity": [],
+            "failureActivity": [],
+            "attention": [],
+            "deadRuns": []
+        });
+    }
+    json!({
+        "synthetic": true,
+        "toolkitCount": 24,
+        "connectionCount": 3,
+        "activeConnectionCount": 2,
+        "actionCalls": 1205,
+        "successfulCalls": 1187,
+        "failedCalls": 18,
+        "successRate": 98.5,
+        "activity": [
+            {"date":"2026-09-08T14:00:00Z","label":"14:00","calls":188,"succeeded":185,"failed":3},
+            {"date":"2026-09-08T15:00:00Z","label":"15:00","calls":246,"succeeded":243,"failed":3},
+            {"date":"2026-09-08T16:00:00Z","label":"16:00","calls":291,"succeeded":286,"failed":5},
+            {"date":"2026-09-08T17:00:00Z","label":"17:00","calls":233,"succeeded":228,"failed":5},
+            {"date":"2026-09-08T18:00:00Z","label":"18:00","calls":247,"succeeded":245,"failed":2}
+        ],
+        "failureActivity": [
+            {"date":"2026-09-08T14:00:00Z","label":"14:00","failures":3},
+            {"date":"2026-09-08T15:00:00Z","label":"15:00","failures":3},
+            {"date":"2026-09-08T16:00:00Z","label":"16:00","failures":5},
+            {"date":"2026-09-08T17:00:00Z","label":"17:00","failures":5},
+            {"date":"2026-09-08T18:00:00Z","label":"18:00","failures":2}
+        ],
+        "deadRuns": [],
+        "attention": [
+            {"kind":"failure","title":"Slack / messages.send failed","body":"Error code: CONNECTOR_RATE_LIMITED.","href":"/app/logs?status=failed&connector=slack&requestId=preview_failed"},
+            {"kind":"connection","title":"Notion connection is degraded","body":"Provider status: degraded. Last test: failed.","href":"/app/connections"}
+        ]
+    })
 }
 fn trace_fixture(scenario: Scenario, id: &str) -> Value {
     let status = if id == "preview_current" && matches!(scenario, Scenario::Failure(_)) {
@@ -176,6 +242,18 @@ fn collection(scenario: Scenario, r: &DashboardRequest) -> Option<Result<Value, 
     if scenario == Scenario::Unavailable {
         return Some(Err(Error::Unavailable));
     }
+    if r.operation == Op::Connections {
+        if scenario == Scenario::Connections {
+            return Some(Ok(
+                json!({"synthetic":true,"connections":connections_fixture()}),
+            ));
+        }
+        if scenario == Scenario::ConnectionsMalformed {
+            return Some(Ok(json!({"synthetic":true,"connections":[{
+                "id":"synthetic/invalid-id","connector":"connector-0","status":"active"
+            }]})));
+        }
+    }
     if scenario == Scenario::Empty
         || scenario == Scenario::EventsStream && r.operation == Op::Events
     {
@@ -192,6 +270,20 @@ fn collection(scenario: Scenario, r: &DashboardRequest) -> Option<Result<Value, 
         _ => unreachable!("collection operation checked above"),
     };
     Some(Ok(json!({key:rows})))
+}
+
+/// Fixed display evidence only. Ages are synthetic DTO values, not claims
+/// about a provider request or a live OAuth intent. No secrets are present.
+fn connections_fixture() -> Vec<Value> {
+    vec![
+        json!({"id":"preview_connection","connector":"connector-0","authType":"api_key","status":"active","lastTestStatus":"passed","createdAgeSeconds":3600}),
+        json!({"id":"synthetic_authorizing","connector":"connector-0","authType":"oauth2","status":"authorizing","lastTestStatus":"unknown","createdAgeSeconds":86400,"authorizationAgeSeconds":42}),
+        json!({"id":"synthetic_authorizing_no_intent","connector":"connector-0","authType":"oauth2","status":"authorizing","lastTestStatus":"unknown","createdAgeSeconds":86400}),
+        json!({"id":"synthetic_degraded","connector":"connector-0","authType":"oauth2","status":"degraded","lastTestStatus":"failed","createdAgeSeconds":7200}),
+        json!({"id":"synthetic_disconnected","connector":"connector-0","authType":"api_key","status":"disconnected","lastTestStatus":"unknown","createdAgeSeconds":172800}),
+        json!({"id":"synthetic_unknown","connector":"connector-0","authType":"","status":"","lastTestStatus":"unknown"}),
+        json!({"id":format!("synthetic_long_{}", "workspace_region_".repeat(12)),"connector":"connector-0","authType":"external_bearer","status":"disconnected","lastTestStatus":"unknown","createdAgeSeconds":604800}),
+    ]
 }
 fn event_fixture(operation: &str) -> Value {
     json!({"id":"preview_event","connector":"Synthetic Workspace & \"regional operations\"","operation":operation,"connectionId":"preview_connection","createdAt":"2026-09-08T10:00:00Z"})

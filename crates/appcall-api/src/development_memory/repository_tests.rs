@@ -49,6 +49,51 @@ fn permits_only_absent_database_development() {
     assert!(DevelopmentPermit::validate(false, Some("invalid database")).is_err());
     assert!(DevelopmentPermit::validate(false, None).is_ok());
 }
+
+fn assert_reuse_fence(authorizing: bool) {
+    let repo = repository(MemoryLimits::default());
+    let mut existing = connection("existing", "proj_dev", "brand");
+    if authorizing {
+        existing.status = Status::Authorizing;
+    } else {
+        existing.credential_owner = CredentialOwner::Platform;
+    }
+    let existing = repo
+        .create_connection(existing, Some(("api_key", b"original-synthetic")))
+        .unwrap();
+    let before = repo
+        .get_connection("proj_dev", Some("brand"), &existing.id)
+        .unwrap();
+    let result = repo.create_or_reuse_connection_checked(
+        connection("candidate", "proj_dev", "brand"),
+        Some(("api_key", b"replacement-synthetic")),
+        &|| true,
+    );
+    assert!(
+        matches!(result, Err(MemoryError::Conflict)),
+        "reuse fence must reject without mutation"
+    );
+    assert_eq!(
+        repo.get_connection("proj_dev", Some("brand"), &existing.id)
+            .unwrap(),
+        before
+    );
+    assert!(repo
+        .get_connection("proj_dev", Some("brand"), "candidate")
+        .is_err());
+    let (_, secret) = repo
+        .secret("proj_dev", &existing.id, &existing.secret_ref_id)
+        .unwrap();
+    assert_eq!(secret.as_bytes(), b"original-synthetic");
+}
+#[test]
+fn atomic_reuse_rejects_authorizing_without_mutation() {
+    assert_reuse_fence(true);
+}
+#[test]
+fn atomic_reuse_rejects_mismatched_owner_without_mutation() {
+    assert_reuse_fence(false);
+}
 #[test]
 fn scoped_vault_and_connection_revision_are_atomic() {
     let r = repository(MemoryLimits::default());

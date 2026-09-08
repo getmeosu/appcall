@@ -31,6 +31,10 @@ impl MemoryDashboard {
         }
     }
     async fn run(&self, r: DashboardRequest) -> Result<Value, DashboardFailure> {
+        // Development mode does not confer trusted operator authority.
+        if r.operation == Op::Certification {
+            return Err(Error::Forbidden.into());
+        }
         let account_id = r
             .account_id
             .as_deref()
@@ -46,6 +50,12 @@ impl MemoryDashboard {
             || !r.principal.allowed_brands.permits(account_id)
             || r.principal.scopes != appcall_auth::Grant::All
         {
+            return Err(Error::Forbidden.into());
+        }
+        if matches!(r.operation, Op::RunNow | Op::ResetRun | Op::CancelRun) {
+            // The product has not defined a trusted operator principal yet;
+            // keep browser mutations fail-closed while scoped reads remain
+            // available to ordinary dashboard principals.
             return Err(Error::Forbidden.into());
         }
         self.core
@@ -96,9 +106,64 @@ impl MemoryDashboard {
                 }
                 Ok(item)
             }
-            Op::Overview => Ok(
-                json!({"toolkitCount":self.core.registry().public_list().count(),"connectionCount":self.core.connections(&identity).await.map_err(web_error)?.len(),"toolCalls":self.core.usage(&identity,"").map_err(web_error)?["actionCalls"]}),
-            ),
+            Op::Overview => {
+                let connections = self
+                    .core
+                    .repository
+                    .list_connections(&identity.project_id, None)
+                    .map_err(|_| Error::Unavailable)?;
+                let connections = connections
+                    .into_iter()
+                    .filter(|connection| {
+                        identity.account_id.is_empty()
+                            || connection.external_account_id == identity.account_id
+                            || connection.credential_owner.as_str() == "platform"
+                    })
+                    .collect::<Vec<_>>();
+                let connection_ids = connections
+                    .iter()
+                    .map(|connection| connection.id.as_str())
+                    .collect::<std::collections::BTreeSet<_>>();
+                let actions = {
+                    let data = self
+                        .core
+                        .repository
+                        .lock()
+                        .map_err(|_| Error::Unavailable)?;
+                    data.action_logs
+                        .values()
+                        .filter(|log| {
+                            log.attempt.project_id == identity.project_id
+                                && connection_ids.contains(log.attempt.connection_id.as_str())
+                                && (identity.account_id.is_empty()
+                                    || log.attempt.external_account_id == identity.account_id)
+                        })
+                        .map(|log| crate::data_routes::overview::ActionRow {
+                            request_id: log.attempt.request_id.clone(),
+                            connector: log.attempt.connector.clone(),
+                            action: log.attempt.action.clone(),
+                            status: log.status.clone(),
+                            error_code: log.error_code.clone(),
+                            created_at: log.created_at,
+                        })
+                        .collect::<Vec<_>>()
+                };
+                let connection_rows = connections
+                    .iter()
+                    .map(|connection| crate::data_routes::overview::ConnectionRow {
+                        id: connection.id.clone(),
+                        connector: connection.connector.clone(),
+                        status: connection.status.as_str().into(),
+                        last_test_status: connection.last_test_status.as_str().into(),
+                    })
+                    .collect::<Vec<_>>();
+                Ok(crate::data_routes::overview::from_rows(
+                    self.core.registry().public_list().count(),
+                    &connection_rows,
+                    &actions,
+                    chrono::Utc::now(),
+                ))
+            }
             Op::Connections => Ok(
                 json!({"connections":self.core.connections(&identity).await.map_err(web_error)?.iter().map(crate::browser_host::connection_value).collect::<Vec<_>>()}),
             ),
@@ -125,6 +190,8 @@ impl MemoryDashboard {
                 Ok(value)
             }
             Op::Certification => Ok(json!({"unavailable":true,"certifications":[]})),
+            Op::Runs => Ok(json!({"unavailable":true})),
+            Op::RunNow | Op::ResetRun | Op::CancelRun => Err(Error::Forbidden.into()),
             Op::Logs | Op::Trace | Op::Events | Op::Stream => {
                 let path = match r.operation {
                     Op::Logs => "/v1/action-logs".to_owned(),
@@ -317,8 +384,11 @@ impl MemoryDashboard {
                         setup.start_checked(&identity.project_id, account(&identity), &resource, (!existing.is_empty()).then_some(existing.as_str()), &active)
                             .map(|start| { let local = start.authorization_url.starts_with("/oauth/local/authorize?"); json!({"redirectUrl":start.authorization_url,"connectionId":start.connection.id,"developmentOAuth":local}) })
                             .map_err(map)
+                    } else if existing.is_empty() {
+                        setup.submit_new_checked(&identity.project_id, account(&identity), &resource, &route, &fields, &active)
+                            .map(|c| crate::browser_host::connection_value(&c)).map_err(map)
                     } else {
-                        setup.submit_checked(&identity.project_id, account(&identity), &resource, &route, &fields, &active)
+                        setup.update_checked(&identity.project_id, account(&identity), &existing, &resource, &route, &fields, &active)
                             .map(|c| crate::browser_host::connection_value(&c)).map_err(map)
                     };
                     Ok(result)
@@ -453,6 +523,8 @@ fn web_error(error: ApiError) -> DashboardFailure {
         | "INVALID_JSON"
         | "INVALID_LIMIT"
         | "INVALID_CURSOR"
+        | "INVALID_RUN_STATUS"
+        | "INVALID_RUN_FILTER"
         | "INVALID_TIME_RANGE"
         | "INVALID_STATUS"
         | "INVALID_ERROR_CODE"

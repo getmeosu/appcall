@@ -43,6 +43,118 @@ async fn response(
     (response, data.1.into_inner().unwrap())
 }
 
+struct OverviewRunsNavigationFixture(Mutex<Vec<(String, BTreeMap<String, String>)>>);
+impl DashboardData for OverviewRunsNavigationFixture {
+    fn execute(
+        &self,
+        request: DashboardRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<Value, Error>> + Send + '_>> {
+        let operation = format!("{:?}", request.operation);
+        self.0
+            .lock()
+            .unwrap()
+            .push((operation.clone(), request.fields));
+        let value = if operation == "Overview" {
+            json!({
+                "toolkitCount": 1,
+                "connectionCount": 1,
+                "activeConnectionCount": 1,
+                "actionCalls": 1,
+                "successfulCalls": 1,
+                "failedCalls": 0,
+                "activity": [{"label":"10:00","calls":1,"succeeded":1,"failed":0}],
+                "failureActivity": [{"label":"10:00","failures":0}],
+                "attention": [{"kind":"failure","title":"Sync run failed","body":"Open the dead run.","href":"/app/runs?status=dead"}],
+                "deadRuns": [{"runId":"run_dead","kind":"dead_run","state":"dead","title":"Sync run failed","body":"Review the terminal run.","href":"/app/runs?status=dead"}]
+            })
+        } else {
+            json!({
+                "runs": [{
+                    "id":"run_dead",
+                    "connectionId":"connection-1",
+                    "connector":"synthetic-mail",
+                    "tool":"messages.sync",
+                    "accountId":"synthetic-account",
+                    "status":"failed",
+                    "health":"dead",
+                    "attemptsSpent":10,
+                    "attemptsRemaining":0,
+                    "maxAttempts":10,
+                    "wakeAt":"2026-09-08T10:02:00Z",
+                    "leaseUntil":"",
+                    "leaseRemainingSeconds":0,
+                    "createdAt":"2026-09-08T09:00:00Z",
+                    "updatedAt":"2026-09-08T10:00:00Z",
+                    "currentCursor":"synthetic-cursor",
+                    "lastError":"Synthetic terminal failure.",
+                    "runNowEligible":false,
+                    "resetEligible":true,
+                    "cancelEligible":false,
+                    "runNowAllowed":false,
+                    "resetAllowed":false,
+                    "cancelAllowed":false
+                }],
+                "pagination":{"hasMore":false},
+                "pendingRuns":0,
+                "runningRuns":0,
+                "backingoffRuns":0,
+                "deadRuns":1,
+                "records24h":1,
+                "workerHeartbeatUnavailable":true,
+                "operatorControlsUnavailable":true
+            })
+        };
+        Box::pin(async move { Ok(value) })
+    }
+}
+
+#[tokio::test]
+async fn overview_dead_run_link_reaches_the_runs_route() {
+    let data = OverviewRunsNavigationFixture(Mutex::new(Vec::new()));
+    let dashboard = DevelopmentDashboard {
+        public_origin: "http://127.0.0.1:5080",
+        data: &data,
+    };
+    let overview = dashboard
+        .handle(&Request {
+            method: "GET",
+            path: "/app",
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields: BTreeMap::new(),
+            now: 100,
+        })
+        .await
+        .expect("Overview route must be registered");
+    assert_eq!(overview.status, 200);
+    assert!(overview.body.contains("href=\"/app/runs?status=dead\""));
+
+    let runs = dashboard
+        .handle(&Request {
+            method: "GET",
+            path: "/app/runs",
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields: BTreeMap::from([("status".into(), vec!["dead".into()])]),
+            now: 100,
+        })
+        .await
+        .expect("Overview dead-run link must reach the Runs route");
+    assert_eq!(runs.status, 200);
+    assert!(runs.body.contains("id=\"runs-page\""));
+
+    let requests = data.0.lock().unwrap();
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[0].0, "Overview");
+    assert_eq!(requests[1].0, "Runs");
+    assert_eq!(
+        requests[1].1.get("status").map(String::as_str),
+        Some("dead")
+    );
+}
+
 #[tokio::test]
 async fn copy_empty_filter_state_comes_from_request() {
     for value in [

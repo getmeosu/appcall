@@ -1,7 +1,7 @@
 use super::state::*;
 use appcall_actions::{Acquisition, ActionCatalog, ActionError, ActionRepository, Attempt};
 use appcall_connectors::Registry;
-use appcall_store::{Connection, LocalProvider, SecretBytes};
+use appcall_store::{Connection, LocalProvider, SecretBytes, Status, TestStatus};
 use chrono::Utc;
 use serde_json::Value;
 use std::{
@@ -151,6 +151,65 @@ impl MemoryRepository {
         }
         self.insert_connection_locked(&mut d, c, secret)
     }
+    /// Complete a validated reuse submission whose initial lookup found no row.
+    /// The identity recheck and write share one lock; no provider work runs here.
+    pub(crate) fn create_or_reuse_connection_checked(
+        &self,
+        candidate: Connection,
+        secret: Option<(&str, &[u8])>,
+        active: &dyn Fn() -> bool,
+    ) -> Result<Connection> {
+        validate_connection(&candidate)?;
+        if !active() {
+            return Err(MemoryError::Unavailable);
+        }
+        let mut data = self.lock()?;
+        let selected = data
+            .connections
+            .values()
+            .find(|connection| {
+                connection.project_id == candidate.project_id
+                    && connection.connector == candidate.connector
+                    && connection.external_account_id == candidate.external_account_id
+            })
+            .cloned();
+        if selected.as_ref().is_some_and(|connection| {
+            connection.auth_type != candidate.auth_type
+                || connection.credential_owner != candidate.credential_owner
+                || connection.status == Status::Authorizing
+        }) {
+            return Err(MemoryError::Conflict);
+        }
+        let mut connection = selected.clone().unwrap_or(candidate);
+        connection.status = Status::Active;
+        connection.last_test_status = TestStatus::Unknown;
+        let prepared = secret
+            .map(|(kind, bytes)| {
+                self.prepare_secret(&connection.project_id, &connection.id, kind, bytes)
+            })
+            .transpose()?;
+        if !active() {
+            return Err(MemoryError::Unavailable);
+        }
+        if selected.is_some() {
+            let revision = *data
+                .connection_revision
+                .get(&connection.id)
+                .ok_or(MemoryError::Unavailable)?;
+            let project = connection.project_id.clone();
+            let account = connection.external_account_id.clone();
+            self.replace_connection_locked(
+                &mut data,
+                &project,
+                Some(&account),
+                revision,
+                connection,
+                prepared,
+            )
+        } else {
+            self.insert_connection_locked(&mut data, connection, prepared)
+        }
+    }
     pub(crate) fn insert_connection_locked(
         &self,
         d: &mut MemoryData,
@@ -161,9 +220,7 @@ impl MemoryRepository {
         if !d.projects.contains_key(&c.project_id) {
             return Err(MemoryError::NotFound);
         }
-        if d.connections.contains_key(&c.id)
-            || d.connections.values().any(|old| same_owner(old, &c))
-        {
+        if d.connections.contains_key(&c.id) {
             return Err(MemoryError::Conflict);
         }
         if d.connections.len() >= self.state.limits.connections {
