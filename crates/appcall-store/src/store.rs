@@ -45,25 +45,40 @@ impl Store {
         cutoff: std::time::SystemTime,
     ) -> Result<u64, Error> {
         self.transaction(|tx| {
-            // Take the connection row locks before evaluating the intent. Under
-            // READ COMMITTED, an UPDATE can wait on a concurrent reauthorization
-            // after its statement snapshot was taken. Locking in a statement of
-            // its own makes the following statement re-read the committed,
-            // current intent instead of applying a stale cleanup decision.
-            tx.client().query(
-                "SELECT id FROM connections \
-                 WHERE project_id=$1 AND status='authorizing' FOR UPDATE",
-                &[&project],
-            )?;
+            // Lock only stale candidates and skip rows currently owned by an
+            // authorization transaction. The UPDATE below gets a fresh READ
+            // COMMITTED snapshot and rechecks the intent before changing any
+            // row, so a candidate that was reauthorized while selected stays
+            // authorizing.
+            let stale_ids: Vec<String> = tx
+                .client()
+                .query(
+                    "SELECT c.id FROM connections AS c \
+                     WHERE c.project_id=$1 AND c.status='authorizing' \
+                       AND COALESCE((\
+                         SELECT i.created_at FROM oauth_refresh_intents AS i \
+                         WHERE i.project_id=c.project_id AND i.connection_id=c.id \
+                           AND i.operation='authorization' AND i.state='authorizing'\
+                       ), c.updated_at) < $2 \
+                     ORDER BY c.id \
+                     FOR UPDATE SKIP LOCKED",
+                    &[&project, &cutoff],
+                )?
+                .into_iter()
+                .map(|row| row.get("id"))
+                .collect();
+            if stale_ids.is_empty() {
+                return Ok(0);
+            }
             Ok(tx.client().execute(
                 "UPDATE connections AS c SET status='disconnected',updated_at=now() \
-                 WHERE c.project_id=$1 AND c.status='authorizing' \
+                 WHERE c.project_id=$1 AND c.id=ANY($2) AND c.status='authorizing' \
                    AND COALESCE((\
                      SELECT i.created_at FROM oauth_refresh_intents AS i \
                      WHERE i.project_id=c.project_id AND i.connection_id=c.id \
                        AND i.operation='authorization' AND i.state='authorizing'\
-                   ), c.updated_at) < $2",
-                &[&project, &cutoff],
+                   ), c.updated_at) < $3",
+                &[&project, &stale_ids, &cutoff],
             )?)
         })
     }

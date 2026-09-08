@@ -1,6 +1,6 @@
 use appcall_store::*;
 use postgres::{Client, NoTls};
-use std::{thread, time::Duration};
+use std::{sync::mpsc, thread, time::Duration};
 #[test]
 #[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
 fn existing_schema_scopes_and_credential_transactions_are_atomic() {
@@ -163,7 +163,7 @@ fn existing_schema_scopes_and_credential_transactions_are_atomic() {
 
 #[test]
 #[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
-fn stale_authorization_cleanup_rechecks_intent_after_waiting_for_connection_lock() {
+fn stale_authorization_cleanup_skips_locked_connection_and_rechecks_intent() {
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
     let schema = format!(
         "store_expiry_race_{}_{}",
@@ -188,7 +188,7 @@ fn stale_authorization_cleanup_rechecks_intent_after_waiting_for_connection_lock
         admin.batch_execute(sql).unwrap();
     }
     admin
-        .batch_execute("INSERT INTO projects(id,name) VALUES('p','race'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,created_at,updated_at) VALUES('conn','p','slack','oauth2','authorizing','brand','brand',now()-interval '1 day',now()-interval '1 day'); INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,created_at,updated_at) VALUES('p','conn','old-attempt','old-secret','authorization','authorizing',now()-interval '31 minutes',now()-interval '31 minutes')")
+        .batch_execute("INSERT INTO projects(id,name) VALUES('p','race'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,created_at,updated_at) VALUES('conn','p','slack','oauth2','authorizing','brand','brand',now()-interval '1 day',now()-interval '1 day'),('stale','p','slack','oauth2','authorizing','brand','brand',now()-interval '1 day',now()-interval '1 day'); INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,created_at,updated_at) VALUES('p','conn','old-attempt','old-secret','authorization','authorizing',now()-interval '31 minutes',now()-interval '31 minutes')")
         .unwrap();
     let scoped = format!(
         "{url}{}options=-csearch_path%3D{schema}",
@@ -199,38 +199,18 @@ fn stale_authorization_cleanup_rechecks_intent_after_waiting_for_connection_lock
     authorizer
         .query_one("SELECT id FROM connections WHERE id='conn' FOR UPDATE", &[])
         .unwrap();
-    let mut cleanup_client = Client::connect(&scoped, NoTls).unwrap();
-    let cleanup_pid: i32 = cleanup_client
-        .query_one("SELECT pg_backend_pid()", &[])
-        .unwrap()
-        .get(0);
+    let cleanup_client = Client::connect(&scoped, NoTls).unwrap();
+    let (done_tx, done_rx) = mpsc::channel();
     let cleanup = thread::spawn(move || {
         let mut store = Store::new(cleanup_client, LocalProvider::new(&[7; 32]).unwrap());
-        store.expire_stale_authorizing(
+        let result = store.expire_stale_authorizing(
             "p",
             std::time::SystemTime::now() - std::time::Duration::from_secs(30 * 60),
-        )
+        );
+        done_tx.send(result).unwrap();
+        result
     });
-    let mut waiting = false;
-    for _ in 0..400 {
-        let state = authorizer
-            .query_opt(
-                "SELECT wait_event_type FROM pg_stat_activity WHERE pid=$1",
-                &[&cleanup_pid],
-            )
-            .unwrap()
-            .and_then(|row| row.get::<_, Option<String>>(0));
-        if state.as_deref() == Some("Lock") {
-            waiting = true;
-            break;
-        }
-        thread::sleep(Duration::from_millis(5));
-    }
-    if !waiting {
-        authorizer.batch_execute("ROLLBACK").unwrap();
-        let _ = cleanup.join();
-        panic!("cleanup did not reach the connection row lock");
-    }
+    let observed = done_rx.recv_timeout(Duration::from_millis(250));
     authorizer
         .execute(
             "UPDATE oauth_refresh_intents SET attempt_id='new-attempt',created_at=now(),updated_at=now() WHERE project_id='p' AND connection_id='conn'",
@@ -238,17 +218,23 @@ fn stale_authorization_cleanup_rechecks_intent_after_waiting_for_connection_lock
         )
         .unwrap();
     authorizer.batch_execute("COMMIT").unwrap();
-    assert_eq!(cleanup.join().unwrap().unwrap(), 0);
-    assert_eq!(
-        authorizer
-            .query_one("SELECT status FROM connections WHERE id='conn'", &[])
-            .unwrap()
-            .get::<_, String>(0),
-        "authorizing"
+    let cleanup_result = cleanup.join().unwrap();
+    let conn_status = authorizer
+        .query_one("SELECT status FROM connections WHERE id='conn'", &[])
+        .ok()
+        .map(|row| row.get::<_, String>(0));
+    let stale_status = authorizer
+        .query_one("SELECT status FROM connections WHERE id='stale'", &[])
+        .ok()
+        .map(|row| row.get::<_, String>(0));
+    let _ = admin.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"));
+    assert!(
+        matches!(&observed, Ok(Ok(1))),
+        "cleanup must skip the locked connection without waiting: observed={observed:?}, final={cleanup_result:?}"
     );
-    admin
-        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
-        .unwrap();
+    assert_eq!(cleanup_result, Ok(1));
+    assert_eq!(conn_status.as_deref(), Some("authorizing"));
+    assert_eq!(stale_status.as_deref(), Some("disconnected"));
 }
 
 #[test]
