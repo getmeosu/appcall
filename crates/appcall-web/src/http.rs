@@ -1,6 +1,9 @@
 use crate::*;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
+#[cfg(test)]
+#[path = "auth_render_tests.rs"]
+mod auth_render_tests;
 pub struct Request<'a> {
     pub method: &'a str,
     pub path: &'a str,
@@ -77,7 +80,7 @@ impl Browser<'_> {
                     Error::Unauthorized => 401,
                     _ => 503,
                 },
-                escape(&e.to_string()),
+                auth_notice("Request unavailable", &e.to_string(), true),
             ),
         })
     }
@@ -132,7 +135,11 @@ impl Browser<'_> {
                 .await?;
             return Ok(Response::new(
                 200,
-                "Email verified. <a href=\"/app/login\">Sign in</a>".into(),
+                auth_notice(
+                    "Email verified",
+                    "Email verified. You can now sign in.",
+                    false,
+                ),
             ));
         }
         if r.method == "GET" && r.path == "/auth/login" {
@@ -188,15 +195,23 @@ impl Browser<'_> {
                         target
                             .query_pairs_mut()
                             .append_pair("next", safe_next(r.field("next")?));
-                        links.push_str(&format!("<a class=\"mt-3 block rounded-lg border border-space-indigo-700 px-3 py-2 text-center text-sm\" href=\"{}?{}\">{label}</a>",target.path(),escape(target.query().unwrap_or(""))));
+                        let href = format!("{}?{}", target.path(), target.query().unwrap_or(""));
+                        links.push_str(&auth_link(label, &href));
                     }
-                    body = body.replacen("</form>", &format!("</form>{links}"), 1);
+                    body = body.replacen(
+                        "</form>",
+                        &format!("</form><div class=\"mt-4 flex flex-col gap-3\">{links}</div>"),
+                        1,
+                    );
                 }
             }
             return Ok(Response::new(200, body));
         }
         if r.method != "POST" {
-            return Ok(Response::new(405, "Method not allowed".into()));
+            return Ok(Response::new(
+                405,
+                auth_notice("Method not allowed", "Method not allowed", true),
+            ));
         }
         let (endpoint, keys, auth): (&str, &[&str], bool) = match r.path {
             "/app/login" => ("/api/auth/login", &["email", "password"], true),
@@ -212,7 +227,12 @@ impl Browser<'_> {
             "/reset-password" => ("/api/auth/reset-password", &["token", "newPassword"], false),
             "/resend-verification" => ("/api/auth/resend-verification", &["email"], false),
             "/app/magic-link" => ("/api/auth/magic-link", &["email"], false),
-            _ => return Ok(Response::new(405, "Method not allowed".into())),
+            _ => {
+                return Ok(Response::new(
+                    405,
+                    auth_notice("Method not allowed", "Method not allowed", true),
+                ))
+            }
         };
         let mut payload = serde_json::Map::new();
         for key in keys {
@@ -286,7 +306,11 @@ impl Browser<'_> {
         }
         Ok(Response::new(
             200,
-            "Request received. Check your email for the next step.".into(),
+            auth_notice(
+                "Request received",
+                "Request received. Check your email for the next step.",
+                false,
+            ),
         ))
     }
     fn complete(&self, result: AuthResult, r: &Request<'_>) -> Result<Response, Error> {
@@ -350,7 +374,11 @@ impl Browser<'_> {
             .unwrap_or_else(|_| {
                 Response::new(
                     400,
-                    "Provider sign-in could not be completed. Please start again.".into(),
+                    auth_notice(
+                        "Sign-in unavailable",
+                        "Provider sign-in could not be completed. Please start again.",
+                        true,
+                    ),
                 )
             })
             .cookie(self.codec.clear_transaction())
@@ -433,8 +461,11 @@ fn form(path: &str, next: &str, token: &str, invitation: &str) -> String {
             ],
         ),
     };
-    let controls = fields.iter().map(|(name,label,kind,value)| format!("<label class=\"block\"><span class=\"mb-1.5 block text-sm font-medium text-dusk-blue-200\">{label}</span><input type=\"{kind}\" name=\"{name}\" value=\"{}\" autocomplete=\"off\" class=\"w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 text-sm text-dusk-blue-100 placeholder:text-dusk-blue-600 focus:border-neon-ice-500 focus:outline-none focus:ring-1 focus:ring-neon-ice-500\"></label>",escape(value))).collect::<String>();
-    let body = format!("<div class=\"rounded-2xl border border-space-indigo-800 bg-space-indigo-950 p-7\"><h1 class=\"text-lg font-semibold text-dusk-blue-50\">{title}</h1><p class=\"mt-1 text-sm text-dusk-blue-400\">{subtitle}</p><form method=\"post\" action=\"{action}\" class=\"mt-6 space-y-4\"><input type=\"hidden\" name=\"next\" value=\"{}\">{controls}<button type=\"submit\" class=\"w-full rounded-lg bg-neon-ice-500 px-3.5 py-2.5 text-sm font-semibold text-prussian-blue-950 transition hover:bg-neon-ice-400\">Continue</button></form><p class=\"mt-5 text-center text-sm text-dusk-blue-500\"><a href=\"/app/login/password\">Sign in with password instead</a> · <a href=\"/app/forgot-password\">Forgot password?</a></p></div><p class=\"mt-5 text-center text-sm text-dusk-blue-500\"><a href=\"/app/signup\">Create an account</a> · <a href=\"/app/login\">Sign in</a></p>",escape(safe_next(next)));
+    let controls = fields
+        .iter()
+        .map(|(name, label, kind, value)| auth_field(name, label, kind, value))
+        .collect::<String>();
+    let body = format!("<section class=\"rounded-panel border border-line bg-panel p-6\"><h1 class=\"text-lg font-semibold text-ink-50\">{title}</h1><p class=\"mt-1 text-sm text-ink-300\">{subtitle}</p><form method=\"post\" action=\"{action}\" class=\"mt-6 flex flex-col gap-4\">{}{controls}{}</form><nav aria-label=\"Other sign-in options\" class=\"mt-5 flex flex-col gap-3\">{}{}</nav></section><nav aria-label=\"Account access\" class=\"mt-5 flex flex-wrap justify-center gap-3\">{}{}</nav>",auth_field("next","","hidden",safe_next(next)),auth_submit("Continue"),crate::ui::back_link("Sign in with password instead",crate::ui::LocalPath::new("/app/login/password").unwrap()),crate::ui::back_link("Forgot password?",crate::ui::LocalPath::new("/app/forgot-password").unwrap()),crate::ui::back_link("Create an account",crate::ui::LocalPath::new("/app/signup").unwrap()),crate::ui::back_link("Sign in",crate::ui::LocalPath::new("/app/login").unwrap()));
     auth_layout(title, &body)
 }
 fn auth_failure(r: &Request<'_>) -> Result<String, Error> {
@@ -465,9 +496,13 @@ fn auth_failure(r: &Request<'_>) -> Result<String, Error> {
         ),
     };
     for field in ["email", "displayName"] {
+        let kind = if field == "email" { "email" } else { "text" };
         html = html.replace(
-            &format!("name=\"{field}\" value=\"\""),
-            &format!("name=\"{field}\" value=\"{}\"", escape(r.field(field)?)),
+            &format!("name=\"{field}\" type=\"{kind}\" value=\"\""),
+            &format!(
+                "name=\"{field}\" type=\"{kind}\" value=\"{}\"",
+                escape(r.field(field)?)
+            ),
         );
     }
     let message = match r.path {
@@ -483,27 +518,86 @@ fn auth_failure(r: &Request<'_>) -> Result<String, Error> {
     };
     Ok(html.replacen(
         "<form ",
-        &format!("<p role=\"alert\" class=\"mt-4 text-sm text-red-400\">{message}</p><form "),
+        &format!("<p role=\"alert\" aria-live=\"assertive\" class=\"mt-4 text-sm text-rose-400\">{message}</p><form "),
         1,
     ))
 }
 
 fn challenge_form(action: &str, title: &str, token_name: &str, token: &str, next: &str) -> String {
+    let code = crate::ui::Field {
+        required: true,
+        autocomplete: Some("one-time-code"),
+        ..crate::ui::Field::new(
+            "auth-code",
+            "code",
+            "Verification code",
+            crate::ui::Control::Input(crate::ui::InputType::Text),
+        )
+    }
+    .render();
     auth_layout(
         title,
         &format!(
-            r#"<div class="rounded-2xl border border-space-indigo-800 bg-space-indigo-950 p-7"><h1 class="text-lg font-semibold text-dusk-blue-50">{}</h1><p class="mt-1 text-sm text-dusk-blue-400">Enter your verification code to continue.</p><form method="post" action="{}" class="mt-6 space-y-4"><input type="hidden" name="{}" value="{}"><input type="hidden" name="next" value="{}"><label class="block"><span class="mb-1.5 block text-sm font-medium text-dusk-blue-200">Verification code</span><input name="code" required autocomplete="one-time-code" class="w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 text-sm text-dusk-blue-100"></label><button class="w-full rounded-lg bg-neon-ice-500 px-3.5 py-2.5 text-sm font-semibold text-prussian-blue-950">Verify</button></form></div>"#,
+            r#"<section class="rounded-panel border border-line bg-panel p-6"><h1 class="text-lg font-semibold text-ink-50">{}</h1><p class="mt-1 text-sm text-ink-300">Enter your verification code to continue.</p><form method="post" action="{}" class="mt-6 flex flex-col gap-4">{}{}{code}{}</form></section>"#,
             escape(title),
             escape(action),
-            escape(token_name),
-            escape(token),
-            escape(safe_next(next))
+            auth_field(token_name, "", "hidden", token),
+            auth_field("next", "", "hidden", safe_next(next)),
+            auth_submit("Verify")
         ),
     )
 }
 
+fn auth_field(name: &str, label: &str, kind: &str, value: &str) -> String {
+    let kind = match kind {
+        "hidden" => crate::ui::InputType::Hidden,
+        "email" => crate::ui::InputType::Email,
+        "password" => crate::ui::InputType::Password,
+        _ => crate::ui::InputType::Text,
+    };
+    crate::ui::Field {
+        value,
+        autocomplete: Some("off"),
+        ..crate::ui::Field::new(
+            &format!("auth-{name}"),
+            name,
+            label,
+            crate::ui::Control::Input(kind),
+        )
+    }
+    .render()
+}
+
+fn auth_submit(label: &str) -> String {
+    crate::ui::Button {
+        target: crate::ui::ButtonTarget::Button {
+            kind: crate::ui::ButtonType::Submit,
+            form: None,
+            action: None,
+        },
+        ..crate::ui::Button::new(label)
+    }
+    .render()
+}
+
+fn auth_link(label: &str, href: &str) -> String {
+    let Some(href) = crate::ui::LocalPath::new(href) else {
+        return String::new();
+    };
+    crate::ui::Button {
+        variant: crate::ui::ButtonVariant::Secondary,
+        target: crate::ui::ButtonTarget::Link(href),
+        ..crate::ui::Button::new(label)
+    }
+    .render()
+}
+
+pub(crate) fn auth_notice(title: &str, message: &str, error: bool) -> String {
+    auth_layout(title, &format!("<section class=\"rounded-panel border border-line bg-panel p-6\"><h1 class=\"text-lg font-semibold text-ink-50\">{}</h1><p role=\"{}\" class=\"mt-4 mb-5 text-ink-300\">{}</p>{}</section>",escape(title),if error {"alert"} else {"status"},escape(message),auth_link("Sign in","/app/login")))
+}
+
 pub(crate) fn auth_layout(title: &str, body: &str) -> String {
-    format!("<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} · appcall</title><link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/favicon.svg\"><link rel=\"stylesheet\" href=\"/static/app.css\"><script type=\"module\" src=\"/static/datastar.js\"></script></head><body class=\"flex min-h-screen items-center justify-center bg-surface px-4 text-dusk-blue-100 antialiased\"><div class=\"w-full max-w-sm\"><div class=\"mb-8 flex items-center justify-center gap-2.5\"><div class=\"flex size-8 items-center justify-center rounded-md bg-neon-ice-500 font-semibold text-prussian-blue-950\">a</div><span class=\"text-lg font-semibold tracking-tight text-dusk-blue-50\">appcall</span></div>{body}</div></body></html>",escape(title))
+    format!("<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>{} · appcall</title><link rel=\"icon\" type=\"image/svg+xml\" href=\"/static/favicon.svg\"><link rel=\"stylesheet\" href=\"/static/app.css\"><script type=\"module\" src=\"/static/datastar.js\"></script></head><body class=\"flex min-h-screen items-center justify-center bg-ground px-4 py-8 text-ink-100 antialiased\"><main class=\"w-full max-w-sm\"><div class=\"mb-8 flex items-center justify-center gap-3\"><div class=\"flex size-8 items-center justify-center rounded-ctl bg-iris-500 font-semibold text-ink-50\" aria-hidden=\"true\">a</div><span class=\"text-lg font-semibold tracking-tight text-ink-50\">appcall</span></div>{body}</main></body></html>",escape(title))
 }
 pub(crate) fn escape(s: &str) -> String {
     s.replace('&', "&amp;")
@@ -567,11 +661,18 @@ mod tests {
             );
             assert_eq!(html.matches("role=\"alert\"").count(), 1);
             assert!(html.contains(&format!("action=\"{path}\"")));
-            assert!(html.contains("name=\"next\" value=\"/app/logs?cursor=a&amp;limit=2\""));
+            assert!(html.contains(
+                "name=\"next\" type=\"hidden\" value=\"/app/logs?cursor=a&amp;limit=2\""
+            ));
             for key in retained {
                 let value = super::escape(request.field(key).unwrap());
+                let kind = match key {
+                    "email" if path != "/app/otp/verify" => "email",
+                    "displayName" => "text",
+                    _ => "hidden",
+                };
                 assert!(
-                    html.contains(&format!("name=\"{key}\" value=\"{value}\"")),
+                    html.contains(&format!("name=\"{key}\" type=\"{kind}\" value=\"{value}\"")),
                     "missing {key} for {path}"
                 );
             }
@@ -700,10 +801,10 @@ mod tests {
             if path == "/app/otp" {
                 assert!(accepted.body.contains("action=\"/app/otp/verify\""));
             } else {
-                assert_eq!(
-                    accepted.body,
-                    "Request received. Check your email for the next step."
-                );
+                assert!(accepted.body.starts_with("<!DOCTYPE html>"));
+                assert!(accepted
+                    .body
+                    .contains("Request received. Check your email for the next step."));
             }
             for (rejected, status) in rejected.iter().zip([400, 401, 403, 503]) {
                 assert_eq!(rejected.status, status);
@@ -723,10 +824,10 @@ mod tests {
                         "missing recovery copy for {path} ({status})"
                     );
                     assert!(rejected.body.contains(&format!("action=\"{path}\"")));
-                    assert!(rejected.body.contains("name=\"email\" value=\"synthetic&quot;&gt;&lt;script&gt;@example.invalid\""));
-                    assert!(rejected
-                        .body
-                        .contains("name=\"next\" value=\"/app/logs?cursor=a&amp;limit=2\""));
+                    assert!(rejected.body.contains("name=\"email\" type=\"email\" value=\"synthetic&quot;&gt;&lt;script&gt;@example.invalid\""));
+                    assert!(rejected.body.contains(
+                        "name=\"next\" type=\"hidden\" value=\"/app/logs?cursor=a&amp;limit=2\""
+                    ));
                     assert_eq!(rejected.body.matches("role=\"alert\"").count(), 1);
                     assert!(!rejected.body.contains("<script>"));
                 } else {

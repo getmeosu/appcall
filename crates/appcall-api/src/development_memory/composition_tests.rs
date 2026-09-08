@@ -1,7 +1,28 @@
 use super::*;
 use appcall_mcp::ConnectionLister;
 use appcall_store::{AuthType, Connection, CredentialOwner, Status, TestStatus};
+use appcall_web::{DashboardData, DashboardOperation, DashboardRequest};
 use std::sync::Arc;
+#[tokio::test]
+async fn certification_direct_memory_dispatch_denies_all_grants() {
+    let (_, dashboard) = composition();
+    for user in [None, Some("normal-member")] {
+        let mut principal = appcall_auth::Principal::project("proj_dev").unwrap();
+        principal.user_id = user.map(str::to_owned);
+        assert_eq!(principal.scopes, appcall_auth::Grant::All);
+        let result = dashboard
+            .execute(DashboardRequest {
+                principal,
+                operation: DashboardOperation::Qa,
+                resource: None,
+                account_id: None,
+                fields: Default::default(),
+                form_values: Default::default(),
+            })
+            .await;
+        assert_eq!(result.unwrap_err(), appcall_web::Error::Forbidden);
+    }
+}
 #[path = "../../tests/browser_host/failure_cases.rs"]
 mod copy_failure_cases;
 
@@ -407,8 +428,8 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
     let qa = dashboard
         .execute(dashboard_request(DashboardOperation::Qa))
         .await
-        .unwrap();
-    assert_eq!(qa["unavailable"], true);
+        .unwrap_err();
+    assert_eq!(qa, appcall_web::Error::Forbidden);
     let triggers = dashboard
         .execute(dashboard_request(DashboardOperation::Triggers))
         .await
