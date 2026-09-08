@@ -21,7 +21,7 @@ function fixture(destructive = false) {
   let elementSequence=0;document.createElement=()=>node('created-'+elementSequence++);
   const tabs=['tools','accounts','events','code','settings'].map((name,i)=>{
     const wrap=node('tk-tab-'+name,{dataset:{tab:name,selected:String(!i)}});
-    const a=node('tab-'+name,{parentElement:wrap,attrs:{href:'/app/toolkits/provider?tab='+name+'&action=mail.read&callerToken=SECRET'},matches:s=>s==='#tk-tabs a'});
+    const a=node('tab-'+name,{parentElement:wrap,attrs:{href:'/app/toolkits/provider?tab='+name+'&action=mail.read&callerToken=SECRET',...(i===0?{'aria-current':'page'}:{})},matches:s=>s==='#tk-tabs a'});
     wrap.querySelector=()=>a; node('tk-panel-'+name,{hidden:!!i}); return a;
   });
   const rail=['mail.read','mail.write'].map(action=>node(action,{attrs:{href:'/app/toolkits/provider?action='+action},matches:s=>s==='.tk-tool-item a'}));
@@ -57,6 +57,13 @@ test('tabs enhance real links with roving keyboard focus and Tab exits',()=>{
   assert.equal(f.emit('keydown',f.tabs[4],{key:'Tab'}).prevented,undefined);
   assert.equal(f.emit('click',f.tabs[4],{ctrlKey:true}).prevented,undefined);
   f.emit('keydown',f.rail[0],{key:'ArrowDown'});assert.equal(f.document.activeElement,f.rail[1]);
+});
+test('tab enhancement replaces native page-current semantics with tab selection',()=>{
+  const f=fixture();
+  assert.equal(f.tabs[0].attrs['aria-current'],undefined);
+  assert.equal(f.tabs[0].attrs['aria-selected'],'true');
+  assert.equal(f.tabs[1].attrs['aria-current'],undefined);
+  assert.equal(f.tabs[1].attrs['aria-selected'],'false');
 });
 test('Run as refreshes navigation and inert sample using only eligible account',()=>{
   const f=fixture();f.account.value='active_2';f.emit('change',f.account);

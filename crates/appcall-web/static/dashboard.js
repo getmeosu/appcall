@@ -451,6 +451,7 @@ if (brandingName && brandingLogo && brandingColor) {
       const selected = a === tab;
       const wrapper = a.parentElement;
       a.setAttribute('role', 'tab');
+      a.removeAttribute('aria-current');
       a.setAttribute('id', wrapper.id + '-link');
       a.setAttribute('aria-controls', 'tk-panel-' + wrapper.dataset.tab);
       a.setAttribute('aria-selected', String(selected));
