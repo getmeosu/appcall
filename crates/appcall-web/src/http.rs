@@ -20,16 +20,21 @@ impl Request<'_> {
         }
     }
 }
+/// Framework-independent response whose body is encoded by the hosting adapter.
 pub struct Response {
     pub status: u16,
     pub headers: Vec<(String, String)>,
     pub body: String,
+    /// Takes precedence over `body` when present. Hosts must send these bytes
+    /// unchanged; otherwise they encode `body` as UTF-8.
+    pub binary_body: Option<&'static [u8]>,
 }
 impl Response {
     pub(crate) fn new(status: u16, body: String) -> Self {
         Self {
             status,
             body,
+            binary_body: None,
             headers: vec![
                 ("Cache-Control".into(), "no-store".into()),
                 ("Referrer-Policy".into(), "no-referrer".into()),

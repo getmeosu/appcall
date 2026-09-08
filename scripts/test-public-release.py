@@ -12,6 +12,23 @@ SCRIPT = Path(__file__).with_name('public-release.py')
 
 
 class ReleaseGateTests(unittest.TestCase):
+    def test_only_named_signal_font_assets_are_exported(self):
+        self.legal()
+        names = ('archivo-latin-variable.woff2', 'ibm-plex-mono-regular.woff2', 'ibm-plex-mono-medium.woff2')
+        for name in names:
+            path = 'crates/appcall-web/static/fonts/' + name
+            self.put(path)
+            (self.root / path).write_bytes((SCRIPT.parent.parent / path).read_bytes())
+        self.put('crates/appcall-web/static/fonts/unreviewed.woff2', 'unknown font')
+        destination = Path(self.temp.name).resolve() / 'export'
+        result = self.run_gate('export', '--destination', str(destination))
+        self.assertEqual(result.returncode, 0, result.stdout)
+        for name in names:
+            self.assertTrue((destination / 'crates/appcall-web/static/fonts' / name).is_file())
+        self.assertFalse((destination / 'crates/appcall-web/static/fonts/unreviewed.woff2').exists())
+        (self.root / 'crates/appcall-web/static/fonts' / names[0]).write_bytes(b'wOF2\x00unreviewed')
+        self.assertIn('font-asset-hash-mismatch', self.run_gate('check').stdout)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -37,6 +54,8 @@ class ReleaseGateTests(unittest.TestCase):
         self.put('third_party/anusa-sdk-go-NOTICE', 'Upstream provenance')
         for name in ('anusa-sdk-go', 'datastar', 'tailwindcss', 'activepieces'):
             self.put('third_party/licenses/' + name + '-LICENSE', 'Upstream license text')
+        for name in ('archivo', 'ibm-plex-mono'):
+            self.put('third_party/licenses/' + name + '-LICENSE.txt', 'Upstream font license text')
 
     def test_export_omits_private_paths_and_hashes_exact_bytes(self):
         self.legal()

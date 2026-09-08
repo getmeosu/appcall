@@ -163,8 +163,15 @@ async fn main() {
                 None
             };
             let (status, headers, body) = response
-                .map(|r| (r.status, r.headers, r.body))
-                .unwrap_or((404, vec![], "Not found".into()));
+                .map(|r| {
+                    (
+                        r.status,
+                        r.headers,
+                        r.binary_body
+                            .map_or_else(|| r.body.into_bytes(), |b| b.to_vec()),
+                    )
+                })
+                .unwrap_or((404, vec![], b"Not found".to_vec()));
             let mut output = format!(
                 "HTTP/1.1 {status} Response\r\nContent-Length: {}\r\nConnection: close\r\n",
                 body.len()
@@ -173,8 +180,8 @@ async fn main() {
                 output.push_str(&format!("{key}: {value}\r\n"));
             }
             output.push_str("\r\n");
-            output.push_str(&body);
             let _ = stream.write_all(output.as_bytes()).await;
+            let _ = stream.write_all(&body).await;
         });
     }
 }
