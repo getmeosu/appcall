@@ -82,6 +82,30 @@ fn signal_replaces_old_ramps_and_defines_accessible_base() {
     assert!(!compiled.contains("fonts.googleapis.com"));
 }
 
+#[test]
+fn signal_mono_uses_a_self_hosted_variable_weight_axis() {
+    use sha2::{Digest, Sha256};
+
+    let css = include_str!("../styles/app.css");
+    assert!(css.contains("font-family: \"IBM Plex Mono\""));
+    assert!(css.contains("font-weight: 100 700"));
+    assert!(css.contains("ibm-plex-mono-variable.woff2"));
+    assert!(!css.contains("ibm-plex-mono-regular.woff2"));
+    assert!(!css.contains("ibm-plex-mono-medium.woff2"));
+
+    let bytes = std::fs::read(format!(
+        "{}/static/fonts/ibm-plex-mono-variable.woff2",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
+    let hash = Sha256::digest(bytes);
+    let hash: String = hash.iter().map(|byte| format!("{byte:02x}")).collect();
+    assert_eq!(
+        hash,
+        "ef55d69e81baa6523a9b6e015d746e707bc7e9579f18703a169cb18c36dd567b"
+    );
+}
+
 #[tokio::test]
 async fn shell_preloads_local_fonts_and_embeds_assets() {
     let dashboard = DevelopmentDashboard {
@@ -92,14 +116,13 @@ async fn shell_preloads_local_fonts_and_embeds_assets() {
     assert_eq!(page.status, 200);
     for name in [
         "archivo-latin-variable.woff2",
-        "ibm-plex-mono-regular.woff2",
+        "ibm-plex-mono-variable.woff2",
     ] {
         assert!(page.body.contains(&format!("rel=\"preload\" href=\"/static/fonts/{name}\" as=\"font\" type=\"font/woff2\" crossorigin")), "missing preload {name}");
     }
     for name in [
         "archivo-latin-variable.woff2",
-        "ibm-plex-mono-regular.woff2",
-        "ibm-plex-mono-medium.woff2",
+        "ibm-plex-mono-variable.woff2",
     ] {
         let path = format!("/static/fonts/{name}");
         let response = dashboard.handle(&request(&path)).await.unwrap();
@@ -113,6 +136,14 @@ async fn shell_preloads_local_fonts_and_embeds_assets() {
         ))
         .unwrap();
         assert_eq!(response.binary_body.unwrap(), expected);
+    }
+    for name in ["ibm-plex-mono-regular.woff2", "ibm-plex-mono-medium.woff2"] {
+        let path = format!("/static/fonts/{name}");
+        assert_eq!(
+            dashboard.handle(&request(&path)).await.unwrap().status,
+            404,
+            "retired {path}"
+        );
     }
 }
 

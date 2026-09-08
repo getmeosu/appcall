@@ -30,6 +30,7 @@ EXACT_FILES = {
     'scripts/smoke-prod.sh', 'scripts/measure-api.py',
     '.github/workflows/ci.yml', '.github/workflows/public-release.yml',
     '.github/public-release-policy.json', 'deploy/sandbox/Caddyfile',
+    'crates/appcall-web/CONTRACT.md',
     'third_party/anusa-sdk-go', 'third_party/anusa-sdk-go-NOTICE',
 }
 REQUIRED_THIRD_PARTY = {
@@ -42,8 +43,7 @@ REQUIRED_THIRD_PARTY = {
 EXACT_FILES |= REQUIRED_THIRD_PARTY
 SIGNAL_FONTS = {
     'crates/appcall-web/static/fonts/archivo-latin-variable.woff2': '8f704806dbedeaaeca334b11ec348bc3ac3a439d6431544b3afb54f534ee4967',
-    'crates/appcall-web/static/fonts/ibm-plex-mono-regular.woff2': 'ba204497f16b6d334cee9d1e963a831b73e3a56e1d6300a8489d18df7214b350',
-    'crates/appcall-web/static/fonts/ibm-plex-mono-medium.woff2': '33faf307fa6031fb4062276d7320a6d632de890cbb347576fd80cfa01077bc25',
+    'crates/appcall-web/static/fonts/ibm-plex-mono-variable.woff2': 'ef55d69e81baa6523a9b6e015d746e707bc7e9579f18703a169cb18c36dd567b',
 }
 EXACT_FILES |= SIGNAL_FONTS.keys()
 
@@ -81,10 +81,10 @@ def allowed(path):
         return False
     if any(x.startswith('.env') for x in parts) and path not in {'.env.example', '.env.production.example'}:
         return False
-    if p.suffix.lower() in {'.md', '.markdown', '.mdown'}:
-        return path == 'README.md'
     if path in ROOT_FILES or path in EXACT_FILES:
         return True
+    if p.suffix.lower() in {'.md', '.markdown', '.mdown'}:
+        return path == 'README.md'
     if any(x.startswith('.') for x in p.parts):
         return False
     if path.startswith('scripts/connector-gen/'):
