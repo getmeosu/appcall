@@ -450,6 +450,7 @@ fn failure_href(row: &FailureRow) -> String {
 fn dead_run_href(run_id: &str) -> Option<String> {
     if run_id.is_empty()
         || run_id.len() > MAX_RUN_ID_BYTES
+        || matches!(run_id, "." | "..")
         || !run_id
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
@@ -672,7 +673,15 @@ mod tests {
     #[test]
     fn dead_run_href_uses_bounded_detail_route_and_rejects_unsafe_ids() {
         assert_eq!(dead_run_href("run_42"), Some("/app/runs/run_42".to_owned()));
-        for run_id in ["", "run/42", "run?cursor=1", "<script>", "run\\42"] {
+        for run_id in [
+            "",
+            ".",
+            "..",
+            "run/42",
+            "run?cursor=1",
+            "<script>",
+            "run\\42",
+        ] {
             assert_eq!(
                 dead_run_href(run_id),
                 None,

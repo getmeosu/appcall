@@ -257,6 +257,59 @@ fn concurrent_deduplicated_enqueue_writes_one_job_and_one_schedule() {
 
 #[test]
 #[ignore = "requires explicit local PostgreSQL"]
+fn claim_skips_an_externally_locked_job_then_claims_after_release() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.enqueue(&request("claim-lock")).unwrap();
+    let mut observer = repo.into_client();
+
+    let mut holder = connect();
+    holder
+        .batch_execute(&format!("SET search_path TO {schema}"))
+        .unwrap();
+    let mut held = holder.transaction().unwrap();
+    held.query_one(
+        "SELECT id FROM sync_jobs WHERE id='claim-lock' FOR UPDATE",
+        &[],
+    )
+    .unwrap();
+
+    let mut claimant_client = connect();
+    claimant_client
+        .batch_execute(&format!(
+            "SET search_path TO {schema}; SET statement_timeout='250ms'"
+        ))
+        .unwrap();
+    let mut claimant = Repository::new(claimant_client);
+    assert!(claimant
+        .claim("locked-worker", Duration::from_secs(30))
+        .unwrap()
+        .is_none());
+
+    held.commit().unwrap();
+    let claimed = claimant
+        .claim("released-worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    assert_eq!(claimed.id, "claim-lock");
+    assert_eq!(claimed.status, "running");
+
+    let mut claimant_client = claimant.into_client();
+    let kinds: Vec<String> = claimant_client
+        .query(
+            "SELECT kind FROM sync_job_events WHERE job_id='claim-lock' ORDER BY seq",
+            &[],
+        )
+        .unwrap()
+        .into_iter()
+        .map(|row| row.get(0))
+        .collect();
+    assert_eq!(kinds, vec!["scheduled".to_owned(), "claimed".to_owned()]);
+    drop_schema(&mut observer, &schema);
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
 fn sequence_overflow_rolls_back_the_control_mutation() {
     let (db, schema) = fixture();
     let mut repo = Repository::new(db);

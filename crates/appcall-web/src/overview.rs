@@ -266,6 +266,7 @@ fn attention_item(item: &Value) -> Result<Option<String>, Error> {
 fn run_detail_href(run_id: &str) -> Option<String> {
     if run_id.is_empty()
         || run_id.len() > MAX_RUN_ID_BYTES
+        || matches!(run_id, "." | "..")
         || !run_id
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
@@ -587,6 +588,13 @@ mod tests {
         assert!(!html.contains("/app/runs?status=dead"));
         assert!(!html.to_ascii_lowercase().contains("latency"));
         assert!(!html.to_ascii_lowercase().contains("p95"));
+    }
+
+    #[test]
+    fn dead_run_detail_href_rejects_dot_segments() {
+        for run_id in [".", ".."] {
+            assert_eq!(run_detail_href(run_id), None);
+        }
     }
 
     #[test]

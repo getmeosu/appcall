@@ -21,6 +21,43 @@ fn query(raw: &str) -> RunHistoryQuery {
 }
 
 #[test]
+fn run_history_id_uses_the_browser_run_bound() {
+    assert!(RunHistoryQuery::validate_run_id(&"r".repeat(256)).is_ok());
+    assert!(RunHistoryQuery::validate_run_id(&"r".repeat(257)).is_err());
+
+    for id in [".", "..", "run/42", "run?cursor=1", "run\\42", "run\n42"] {
+        assert!(
+            RunHistoryQuery::validate_run_id(id).is_err(),
+            "unsafe run ID must be rejected: {id:?}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn history_reader_rechecks_run_id_bound_before_sql() {
+    let (mut client, schema) = fixture();
+    let identity = identity("p", "brand-a");
+    for id in [
+        "r".repeat(257),
+        ".".into(),
+        "..".into(),
+        "run/42".into(),
+        "run?cursor=1".into(),
+        "run\\42".into(),
+    ] {
+        assert_eq!(
+            run_history_read(&mut client, &identity, &id, &query(""))
+                .unwrap_err()
+                .code,
+            "INVALID_REQUEST",
+            "invalid run ID must be rejected before SQL: {id:?}"
+        );
+    }
+    cleanup(client, schema);
+}
+
+#[test]
 fn history_query_has_bounded_limit_and_sequence_cursor() {
     let cursor = URL_SAFE_NO_PAD.encode("3");
     let parsed = query(&format!("?limit=7&cursor={cursor}"));

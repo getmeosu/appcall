@@ -15,6 +15,7 @@ use serde_json::{json, Map, Value};
 const DEFAULT_LIMIT: i64 = 50;
 const MAX_LIMIT: i64 = 100;
 const MAX_ID_BYTES: usize = 512;
+const MAX_RUN_ID_BYTES: usize = 256;
 const MAX_REASON_BYTES: usize = 96;
 const MAX_CODE_BYTES: usize = 96;
 const MAX_LEASE_DURATION_MS: u64 = 3_600_000;
@@ -30,6 +31,21 @@ pub struct RunHistoryQuery {
 }
 
 impl RunHistoryQuery {
+    /// History is a new surface with the same path-safe ID contract as the
+    /// console. Broader engine/list/control API identity limits are unchanged.
+    pub fn validate_run_id(id: &str) -> Result<()> {
+        if id.is_empty()
+            || id.len() > MAX_RUN_ID_BYTES
+            || matches!(id, "." | "..")
+            || !id
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+        {
+            return Err(ApiError::new("INVALID_REQUEST"));
+        }
+        Ok(())
+    }
+
     pub fn parse(url: &url::Url) -> Result<Self> {
         let filters = first_query_values(url);
         for key in ["accountId", "externalAccountId"] {
@@ -104,9 +120,7 @@ pub fn read(
     if identity.project_id.is_empty() {
         return Err(ApiError::new("UNAUTHORIZED"));
     }
-    if id.is_empty() || id.len() > MAX_ID_BYTES || id.bytes().any(|byte| byte.is_ascii_control()) {
-        return Err(ApiError::new("INVALID_REQUEST"));
-    }
+    RunHistoryQuery::validate_run_id(id)?;
     validate_query(query)?;
     let requested_account = query.account_id.as_str();
     if !identity.account_id.is_empty()
