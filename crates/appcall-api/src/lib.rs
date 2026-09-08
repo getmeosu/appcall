@@ -10,6 +10,7 @@ pub mod event_routes;
 pub mod generation;
 pub mod provider_routes;
 pub mod rate_limit;
+pub mod run_operator;
 mod services;
 pub mod streaming;
 pub use services::*;

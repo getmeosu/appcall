@@ -125,7 +125,8 @@ impl Application {
                 setup.clone(),
                 defaults,
                 shared.dashboard.clone(),
-            );
+            )
+            .with_run_operator_grants(shared.run_operator_grants.clone());
             if let Some(local) = dev_oauth.clone() {
                 data = data.with_dev_oauth(local);
             }

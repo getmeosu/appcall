@@ -1,4 +1,5 @@
-//! Fixed synthetic queue evidence; never a worker, operator grant or memory sync store.
+//! Fixed synthetic queue evidence; never a worker, persisted operator grant,
+//! or memory sync store.
 use super::*;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 
@@ -23,11 +24,12 @@ pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Va
     }
     if !matches!(
         scenario,
-        Scenario::Runs | Scenario::RunsEmpty | Scenario::Empty
+        Scenario::Runs | Scenario::RunsOperator | Scenario::RunsEmpty | Scenario::Empty
     ) {
         return Ok(json!({"synthetic":true,"unavailable":true}));
     }
     let empty = matches!(scenario, Scenario::RunsEmpty | Scenario::Empty);
+    let operator_controls_available = scenario == Scenario::RunsOperator;
     let mut rows = Vec::new();
     if !empty {
         for (index, health) in ["pending", "running", "backingoff", "dead", "succeeded"]
@@ -35,6 +37,9 @@ pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Va
             .enumerate()
         {
             let spent = if health == "dead" { 10 } else { index as u64 };
+            let run_now_eligible = matches!(health, "pending" | "backingoff");
+            let reset_eligible = matches!(health, "pending" | "backingoff" | "dead");
+            let cancel_eligible = matches!(health, "pending" | "running" | "backingoff");
             let status = match health {
                 "backingoff" => "pending",
                 "dead" => "failed",
@@ -49,10 +54,12 @@ pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Va
                 "createdAt":"2026-09-08T09:00:00Z", "updatedAt":format!("2026-09-08T10:00:0{}Z", 4-index),
                 "currentCursor":format!("synthetic-cursor-{}", "opaque-page-token-".repeat(12)),
                 "lastError":if health == "dead" { "Synthetic terminal failure; no provider request was made." } else { "" },
-                "runNowEligible":matches!(health,"pending"|"backingoff"),
-                "resetEligible":matches!(health,"pending"|"backingoff"|"dead"),
-                "cancelEligible":matches!(health,"pending"|"running"|"backingoff"),
-                "runNowAllowed":false,"resetAllowed":false,"cancelAllowed":false
+                "runNowEligible":run_now_eligible,
+                "resetEligible":reset_eligible,
+                "cancelEligible":cancel_eligible,
+                "runNowAllowed":operator_controls_available && run_now_eligible,
+                "resetAllowed":operator_controls_available && reset_eligible,
+                "cancelAllowed":operator_controls_available && cancel_eligible
             }));
         }
     }
@@ -135,7 +142,9 @@ pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Va
     if more {
         pagination["nextCursor"] = cursor(selected.last().ok_or(Error::Invalid)?).into();
     }
-    Ok(
-        json!({"synthetic":true,"runs":selected,"pagination":pagination,"pendingRuns":pending_runs,"runningRuns":running_runs,"backingoffRuns":backingoff_runs,"deadRuns":dead_runs,"records24h":records_24h,"workerHeartbeatUnavailable":true,"operatorControlsUnavailable":true}),
-    )
+    let mut result = json!({"synthetic":true,"runs":selected,"pagination":pagination,"pendingRuns":pending_runs,"runningRuns":running_runs,"backingoffRuns":backingoff_runs,"deadRuns":dead_runs,"records24h":records_24h,"workerHeartbeatUnavailable":true,"operatorControlsUnavailable":!operator_controls_available});
+    if operator_controls_available {
+        result["operatorAuthorized"] = true.into();
+    }
+    Ok(result)
 }

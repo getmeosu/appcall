@@ -226,15 +226,43 @@ fn optional_text(value: &Value, key: &str, label: &str, empty: &str) -> String {
     }
 }
 fn run_control(
-    _action: &str,
-    _id: &str,
-    _value: &Value,
-    _operator_controls_unavailable: bool,
+    action: &str,
+    id: &str,
+    value: &Value,
+    operator_controls_unavailable: bool,
 ) -> Result<String, Error> {
-    // No trusted operator capability exists in the current auth contract.
-    // Queue eligibility is still rendered as read-only state evidence, but no
-    // request payload may turn it into a write confirmation.
-    Ok(String::new())
+    if operator_controls_unavailable {
+        return Ok(String::new());
+    }
+    let (allowed_key, label, heading, body) = match action {
+        "run-now" => (
+            "runNowAllowed",
+            "Run now",
+            format!("Run {id} now?"),
+            format!("Run {id} now? This queues the run immediately."),
+        ),
+        "reset" => (
+            "resetAllowed",
+            "Reset attempts",
+            format!("Reset {id} attempts?"),
+            format!(
+                "This resets run {id} attempts to zero, preserves the current cursor and queues the run from that checkpoint."
+            ),
+        ),
+        "cancel" => (
+            "cancelAllowed",
+            "Cancel",
+            format!("Cancel {id}?"),
+            format!("Cancelling run {id} stops future work. An in-flight provider request or external side effect cannot be recalled."),
+        ),
+        _ => return Err(Error::Invalid),
+    };
+    if !value_bool(value, allowed_key) {
+        return Ok(String::new());
+    }
+    let destination = format!("/app/runs/{id}/{action}");
+    let confirmation = confirmation(&destination, label, &heading, &body)?;
+    Ok(format!("<span data-runs-control>{confirmation}</span>"))
 }
 fn runs_header() -> String {
     "<header class=\"runs-header\"><h2 id=\"runs-heading\">Runs</h2><p>Monitor durable message sync work and recover queue state.</p></header>".to_owned()
@@ -366,7 +394,15 @@ fn runs(v: &Value) -> Result<String, Error> {
     body.push_str(&format!(
         "<div id=\"runs-recovery\" class=\"runs-card runs-recovery\" hidden><p id=\"runs-recovery-message\">Run control outcome is unknown. Reload Runs status before trying again.</p>{reload}</div>"
     ));
-    body.push_str("<div id=\"runs-operator-controls-unavailable\" role=\"note\" class=\"runs-card runs-operator-notice\"><h3>Operator controls unavailable</h3><p>Run, reset, and cancel require a trusted operator principal. Queue state remains available as read-only evidence.</p></div>");
+    let operator_controls_available = v.get("operatorAuthorized").and_then(Value::as_bool)
+        == Some(true)
+        && v.get("operatorControlsUnavailable")
+            .and_then(Value::as_bool)
+            == Some(false);
+    let operator_controls_unavailable = !operator_controls_available;
+    if operator_controls_unavailable {
+        body.push_str("<div id=\"runs-operator-controls-unavailable\" role=\"note\" class=\"runs-card runs-operator-notice\"><h3>Operator controls unavailable</h3><p>Run, reset, and cancel require a trusted operator principal. Queue state remains available as read-only evidence.</p></div>");
+    }
     body.push_str(
         "<form id=\"runs-filters\" class=\"runs-card runs-filters\" method=\"get\" action=\"/app/runs\" role=\"search\" aria-label=\"Filter runs\"><div class=\"runs-filter-grid\">",
     );
@@ -400,11 +436,6 @@ fn runs(v: &Value) -> Result<String, Error> {
         runs_submit_button()
     ));
     let mut stats = String::new();
-    // Keep the presentation fail-closed even if an older or malformed data
-    // producer omits the explicit flag or supplies stale `*Allowed` values.
-    // The API emits this same fact; the renderer must not trust payload flags
-    // as a substitute for the unresolved trusted-operator authorization.
-    let operator_controls_unavailable = true;
     stats.push_str(&runs_stat("Pending", &pending_runs));
     stats.push_str(&runs_stat("Running", &running_runs));
     stats.push_str(&runs_stat("Backing off", &backingoff_runs));
@@ -654,6 +685,10 @@ pub(crate) fn static_page(path: &str) -> String {
     }
     content
 }
+#[cfg(test)]
+#[path = "pages/operator_tests.rs"]
+mod operator_tests;
+
 #[cfg(test)]
 mod rendering_contract_tests {
     use super::*;

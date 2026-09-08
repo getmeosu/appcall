@@ -11,6 +11,8 @@ use std::{
     time::{Duration, Instant},
 };
 const SESSION_SECRET: &str = "application-browser-synthetic-session";
+#[path = "application_browser/run_operator_cases.rs"]
+mod run_operator_cases;
 #[path = "application_browser/trace_cases.rs"]
 mod trace_cases;
 struct Schemas {
@@ -60,6 +62,17 @@ impl Schemas {
     fn revoke(&mut self) {
         self.admin
             .batch_execute(&format!("DELETE FROM {}.tenant_memberships", self.anusa))
+            .unwrap();
+    }
+    fn revoke_token(&mut self, token_hash: &str) {
+        self.admin
+            .execute(
+                &format!(
+                    "INSERT INTO {}.revoked_tokens(token_hash) VALUES($1)",
+                    self.anusa
+                ),
+                &[&token_hash],
+            )
             .unwrap();
     }
 }
@@ -205,30 +218,76 @@ fn start_host(
     broker: &Broker,
     fixture: &Value,
 ) -> Process {
+    start_host_inner(address, app_url, anusa_url, broker, fixture, None)
+}
+const OPERATOR_GRANTS: &str =
+    r#"[{"projectId":"proj_tenant-a","userId":"11111111-1111-1111-1111-111111111111"}]"#;
+
+fn start_host_with_operator_grants(
+    address: SocketAddr,
+    app_url: &str,
+    anusa_url: &str,
+    broker: &Broker,
+    fixture: &Value,
+) -> Process {
+    start_host_inner(
+        address,
+        app_url,
+        anusa_url,
+        broker,
+        fixture,
+        Some(OPERATOR_GRANTS),
+    )
+}
+
+fn start_host_with_grants(
+    address: SocketAddr,
+    app_url: &str,
+    anusa_url: &str,
+    broker: &Broker,
+    fixture: &Value,
+    grants: &str,
+) -> Process {
+    start_host_inner(address, app_url, anusa_url, broker, fixture, Some(grants))
+}
+
+fn start_host_inner(
+    address: SocketAddr,
+    app_url: &str,
+    anusa_url: &str,
+    broker: &Broker,
+    fixture: &Value,
+    operator_grants: Option<&str>,
+) -> Process {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_appcall-api"));
+    command
+        .env_clear()
+        .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|value| ("LLVM_PROFILE_FILE", value)))
+        .env("APPCALL_RUST_QUALIFICATION", "0")
+        .env("APPCALL_ENV", "development")
+        .env("APPCALL_SECRET_KEY", "01".repeat(32))
+        .env("APPCALL_DATABASE_URL", app_url)
+        .env("ANUSA_DATABASE_URL", anusa_url)
+        .env("APPCALL_OAUTH_STATE_SECRET", "01".repeat(32))
+        .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
+        .env("APPCALL_RUNNER_TOKEN", "synthetic-runner-token")
+        .env("APPCALL_SESSION_SECRET", SESSION_SECRET)
+        .env(
+            "ANUSA_JWT_ACCESS_SECRET",
+            fixture["jwt_secret"].as_str().unwrap(),
+        )
+        .env("ANUSA_API_URL", format!("http://{}", broker.address))
+        .env("APPCALL_PUBLIC_BASE_URL", format!("http://{address}"))
+        .env("APPCALL_RUST_LISTEN", address.to_string())
+        .env(
+            "APPCALL_CONNECTOR_DIR",
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../runner/connectors"),
+        );
+    if let Some(operator_grants) = operator_grants {
+        command.env("APPCALL_RUN_OPERATOR_GRANTS", operator_grants);
+    }
     let mut process = Process(
-        Command::new(env!("CARGO_BIN_EXE_appcall-api"))
-            .env_clear()
-            .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|value| ("LLVM_PROFILE_FILE", value)))
-            .env("APPCALL_RUST_QUALIFICATION", "0")
-            .env("APPCALL_ENV", "development")
-            .env("APPCALL_SECRET_KEY", "01".repeat(32))
-            .env("APPCALL_DATABASE_URL", app_url)
-            .env("ANUSA_DATABASE_URL", anusa_url)
-            .env("APPCALL_OAUTH_STATE_SECRET", "01".repeat(32))
-            .env("APPCALL_RUNNER_URL", "http://127.0.0.1:1")
-            .env("APPCALL_RUNNER_TOKEN", "synthetic-runner-token")
-            .env("APPCALL_SESSION_SECRET", SESSION_SECRET)
-            .env(
-                "ANUSA_JWT_ACCESS_SECRET",
-                fixture["jwt_secret"].as_str().unwrap(),
-            )
-            .env("ANUSA_API_URL", format!("http://{}", broker.address))
-            .env("APPCALL_PUBLIC_BASE_URL", format!("http://{address}"))
-            .env("APPCALL_RUST_LISTEN", address.to_string())
-            .env(
-                "APPCALL_CONNECTOR_DIR",
-                concat!(env!("CARGO_MANIFEST_DIR"), "/../../runner/connectors"),
-            )
+        command
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .spawn()
@@ -256,11 +315,71 @@ fn start_host(
     process
 }
 fn request(address: SocketAddr, method: &str, path: &str, cookie: &str, body: &str) -> String {
+    request_with_origin_and_headers(
+        address,
+        method,
+        path,
+        cookie,
+        body,
+        &format!("http://{address}"),
+        &[],
+    )
+}
+fn request_with_origin(
+    address: SocketAddr,
+    method: &str,
+    path: &str,
+    cookie: &str,
+    body: &str,
+    origin: &str,
+) -> String {
+    request_with_origin_and_headers(address, method, path, cookie, body, origin, &[])
+}
+fn request_with_headers(
+    address: SocketAddr,
+    method: &str,
+    path: &str,
+    cookie: &str,
+    body: &str,
+    headers: &[(&str, &str)],
+) -> String {
+    request_with_origin_and_headers(
+        address,
+        method,
+        path,
+        cookie,
+        body,
+        &format!("http://{address}"),
+        headers,
+    )
+}
+fn request_with_origin_and_headers(
+    address: SocketAddr,
+    method: &str,
+    path: &str,
+    cookie: &str,
+    body: &str,
+    origin: &str,
+    headers: &[(&str, &str)],
+) -> String {
     let mut socket = TcpStream::connect(address).unwrap();
     socket
         .set_read_timeout(Some(Duration::from_secs(5)))
         .unwrap();
-    write!(socket,"{method} {path} HTTP/1.1\r\nHost: {address}\r\nOrigin: http://{address}\r\nCookie: {cookie}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();
+    write!(
+        socket,
+        "{method} {path} HTTP/1.1\r\nHost: {address}\r\nOrigin: {origin}\r\nCookie: {cookie}\r\nContent-Type: application/x-www-form-urlencoded\r\n"
+    )
+    .unwrap();
+    for (key, value) in headers {
+        write!(socket, "{key}: {value}\r\n").unwrap();
+    }
+    write!(
+        socket,
+        "Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    )
+    .unwrap();
     let mut wire = String::new();
     socket.read_to_string(&mut wire).unwrap_or_else(|error| {
         panic!("{method} {path} response read failed: {error}; received: {wire}")
