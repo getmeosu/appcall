@@ -21,10 +21,34 @@ pub(crate) fn render(v: &Value) -> String {
         })
         .unwrap_or("#67e8f9");
     let input = |id: &str, key: &str, label: &str, kind: &str, value: &str| {
-        format!("<label class=\"block\"><span class=\"mb-1.5 block text-sm font-medium text-dusk-blue-200\">{label}</span><input id=\"{id}\" name=\"{key}\" type=\"{kind}\" value=\"{}\" class=\"w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 text-sm text-dusk-blue-100\"></label>",escape(value))
+        let kind = match kind {
+            "url" => crate::ui::InputType::Url,
+            "color" => crate::ui::InputType::Color,
+            _ => crate::ui::InputType::Text,
+        };
+        crate::ui::Field {
+            value,
+            ..crate::ui::Field::new(id, key, label, crate::ui::Control::Input(kind))
+        }
+        .render()
     };
+    let save = crate::ui::Button {
+        target: crate::ui::ButtonTarget::Button {
+            kind: crate::ui::ButtonType::Submit,
+            form: None,
+            action: None,
+        },
+        ..crate::ui::Button::new("Save")
+    }
+    .render();
+    let continue_button = crate::ui::Button {
+        disabled: true,
+        variant: crate::ui::ButtonVariant::Secondary,
+        ..crate::ui::Button::new("Continue")
+    }
+    .render();
     format!(
-        r##"<div class="mb-2"><a href="/app/settings" class="text-sm text-dusk-blue-400">← Back to Settings</a></div><h2 class="text-xl font-semibold text-dusk-blue-50">White Labeling</h2><p class="mt-1 mb-6 text-sm text-dusk-blue-400">Customize how your app appears on the OAuth consent screen when end-users connect their accounts.</p><div class="grid grid-cols-1 gap-6 lg:grid-cols-2"><section class="rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5"><h3 class="text-sm font-semibold">Branding</h3><p class="mt-1 text-sm text-dusk-blue-500">Your app name and logo shown to end-users during the OAuth connection flow.</p><form method="post" action="/app/settings/white-labeling" class="mt-5 space-y-4">{}{}{}<p class="text-xs text-dusk-blue-500">Square JPEG or PNG, 256×256 to 1024×1024 pixels.</p><div class="rounded-lg border border-space-indigo-800 bg-prussian-blue-950/60 px-3 py-2 text-xs text-dusk-blue-500">Preview only. To apply custom branding and remove the &quot;Secured by appcall&quot; badge, configure your own OAuth app credentials.</div><button class="rounded-lg bg-neon-ice-500 px-4 py-2 text-sm font-semibold text-prussian-blue-950">Save</button></form></section><section><p class="mb-3 text-xs font-medium uppercase tracking-wider text-dusk-blue-500">Preview</p><div class="rounded-2xl border border-space-indigo-800 bg-space-indigo-950 p-6"><div class="mx-auto max-w-xs rounded-xl border border-space-indigo-800 bg-prussian-blue-950 p-6 text-center"><div class="mx-auto flex size-14 items-center justify-center"><div id="wl-logo-initial" style="background:{};display:{}" class="flex size-14 items-center justify-center rounded-xl text-xl font-semibold text-prussian-blue-950">{}</div><img id="wl-logo-img" {} alt="App logo" referrerpolicy="no-referrer" style="display:{}" class="size-14 rounded-xl object-cover"></div><p class="mt-4 text-sm font-semibold text-dusk-blue-50"><span id="wl-preview-name">{}</span> wants to connect</p><p class="mt-0.5 text-sm text-dusk-blue-400">to your Intercom</p><p class="mt-3 text-xs text-dusk-blue-500">Only connect your account to apps you have verified. By linking your account, you allow <span id="wl-badge-name">{}</span> to interact with your data.</p><button type="button" class="mt-5 w-full rounded-lg bg-neon-ice-500 px-3.5 py-2 text-sm font-semibold text-prussian-blue-950">Continue</button><p class="mt-4 text-xs text-dusk-blue-600">Secured by appcall</p></div></div></section></div>"##,
+        r##"<div class="mb-2"><a href="/app/settings" class="ui-back-link">← Back to Settings</a></div><h2 class="text-xl font-semibold text-ink-50">White Labeling</h2><p class="mt-1 mb-6 text-sm text-ink-300">Customize how your app appears on the OAuth consent screen when end-users connect their accounts.</p><div class="remaining-grid"><section class="rounded-panel border border-line bg-panel p-5"><h3 class="text-sm font-semibold">Branding</h3><p class="mt-1 text-sm text-ink-300">Your app name and logo shown to end-users during the OAuth connection flow.</p><form method="post" action="/app/settings/white-labeling" class="remaining-form">{}{}{}<p class="text-xs text-ink-300">Square JPEG or PNG, 256×256 to 1024×1024 pixels.</p><div class="rounded-ctl border border-line bg-ground/60 px-3 py-2 text-xs text-ink-300">Preview only. To apply custom branding and remove the &quot;Secured by appcall&quot; badge, configure your own OAuth app credentials.</div>{save}</form></section><section><p class="mb-3 text-xs font-medium uppercase tracking-wider text-ink-300">Preview</p><div class="rounded-panel border border-line bg-panel p-6"><div class="mx-auto max-w-xs rounded-panel border border-line bg-ground p-6 text-center"><div class="mx-auto flex size-14 items-center justify-center"><div id="wl-logo-initial" style="background:{};display:{}" class="flex size-14 items-center justify-center rounded-panel text-xl font-semibold text-ink-950">{}</div><img id="wl-logo-img" {} alt="App logo" referrerpolicy="no-referrer" style="display:{}" class="size-14 rounded-panel object-cover"></div><p class="mt-4 text-sm font-semibold text-ink-50"><span id="wl-preview-name">{}</span> wants to connect</p><p class="mt-0.5 text-sm text-ink-300">to your Intercom</p><p class="mt-3 text-xs text-ink-300">Only connect your account to apps you have verified. By linking your account, you allow <span id="wl-badge-name">{}</span> to interact with your data.</p>{continue_button}<p class="mt-4 text-xs text-ink-300">Secured by appcall</p></div></div></section></div>"##,
         input("wl-name", "appName", "App name", "text", name),
         input("wl-logo", "logoURL", "Logo URL", "url", logo),
         input("wl-color", "tagColor", "Tag color", "color", color),

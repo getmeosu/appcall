@@ -97,6 +97,15 @@ impl ScenarioData {
             Op::Options | Op::RunInputFields => fixture_dynamic(&r)?,
             Op::Branding => json!({"appName":"Sample App","tagColor":"#67e8f9"}),
             Op::Overview => json!({"toolkitCount":24,"connectionCount":3,"toolCalls":1205}),
+            Op::Usage => match self.scenario {
+                Scenario::Unavailable => return Err(Error::Unavailable.into()),
+                Scenario::Empty => {
+                    json!({"synthetic":true,"month":"2026-09 (synthetic preview)","toolCalls":0,"syncedRecords":0,"webhookEvents":0})
+                }
+                _ => {
+                    json!({"synthetic":true,"month":"2026-09 (synthetic preview)","toolCalls":1205,"syncedRecords":340,"webhookEvents":27})
+                }
+            },
             Op::Setup if r.resource.as_deref() == Some("connector-0") => json!({"synthetic":true}),
             Op::TestConnection | Op::DisconnectConnection
                 if r.resource.as_deref() == Some("preview_connection") =>

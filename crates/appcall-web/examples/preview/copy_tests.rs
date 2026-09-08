@@ -1,6 +1,33 @@
 use super::*;
 use crate::tests::dashboard_request;
 
+#[tokio::test]
+async fn usage_preview_has_explicit_synthetic_metrics_and_distinct_empty_failure_states() {
+    for scenario in [Scenario::Preview, Scenario::Populated, Scenario::Empty] {
+        let value = ScenarioData::new(scenario)
+            .execute(dashboard_request(DashboardOperation::Usage))
+            .await
+            .unwrap();
+        assert_eq!(value["synthetic"], true);
+        assert_eq!(value["month"], "2026-09 (synthetic preview)");
+        for key in ["toolCalls", "syncedRecords", "webhookEvents"] {
+            let count = value[key].as_u64().expect("actual Usage numeric field");
+            if scenario == Scenario::Empty {
+                assert_eq!(count, 0);
+            } else {
+                assert!(count > 0);
+            }
+        }
+    }
+    assert_eq!(
+        ScenarioData::new(Scenario::Unavailable)
+            .execute(dashboard_request(DashboardOperation::Usage))
+            .await
+            .unwrap_err(),
+        Error::Unavailable
+    );
+}
+
 #[test]
 fn startup_scenarios_are_fixed_and_unknown_values_are_rejected() {
     for (name, expected) in [

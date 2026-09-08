@@ -5,7 +5,7 @@ pub(crate) fn title(op: Op) -> &'static str {
         Op::Overview => "Getting Started",
         Op::Catalog | Op::Toolkit | Op::Setup => "Toolkits",
         Op::AuthConfigs => "Auth Configs",
-        Op::Triggers => "Triggers",
+        Op::Triggers => "Events",
         Op::Logs | Op::Trace => "Logs",
         Op::Qa => "QA",
         Op::Usage => "Usage",
@@ -261,19 +261,10 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
    header("Auth Configs","Connections authorize accounts for use with connectors.")+&if items.is_empty(){empty("No connections to show.","Browse connectors to configure a connection.","Browse connectors","/app/toolkits")}else{table(items,&[("Connector","connector"),("Auth Type","authType"),("Status","status"),("Last Test","lastTest")],Some(("/app/auth-configs","id",&["test","disconnect"])))?}
   },
   Op::Logs=>crate::logs::render(v, &crate::logs::Filters::default(), v.get("hasFilters").and_then(Value::as_bool)==Some(true))?,
-  Op::Triggers=>{
-   let items=rows(v,&["events","items","rows"])?;
-   let mut events=table(items,&[("Connector","connector"),("Operation","operation"),("Connection","connectionId"),("Received","createdAt")],Some(("/app/triggers","id",&["replay"])))?.replace("<tbody class=", "<tbody id=\"trigger-rows\" aria-live=\"polite\" class=").replace("<table class=", "<table data-init=\"@get('/app/triggers/stream')\" class=");
-   if items.is_empty(){events=events.replace("</tbody>",&format!("<tr id=\"trigger-empty-state\"><td colspan=\"5\">{}</td></tr></tbody>",empty("No webhook events to show.","Browse connectors to inspect their declared events.","Browse connectors","/app/toolkits")));}
-   header("Triggers","Receive and replay provider webhook events.")+&events
-  },
+  Op::Triggers=>crate::remaining_pages::events(v)?,
   Op::Trace=>crate::trace::standalone(v, resource.ok_or(Error::Invalid)?)?,
-  Op::Qa if v.get("unavailable").and_then(Value::as_bool)==Some(true)=>header("QA","Connector certification and manifest fingerprint drift.")+&card("<p>QA status unavailable</p><p class=\"text-sm text-dusk-blue-400\">Configure PostgreSQL and run connector QA to view certification results.</p>"),
-  Op::Qa=>{
-   let items=rows(v,&["certifications","rows","items"])?;
-   header("QA","Connector certification and manifest fingerprint drift.")+&if items.is_empty(){"<section class=\"ui-empty-state\" aria-labelledby=\"qa-empty-heading\"><h3 id=\"qa-empty-heading\">No connector QA results to show.</h3><p>Connector QA results are not available in this list.</p></section>".into()}else{table(items,&[("Connector","connector"),("Status","status"),("Total","total"),("Passed","passed"),("Failed","failed"),("Not certified","notCertified"),("Manifest drift","drifted"),("Manifest fingerprint","manifestFingerprint"),("Last run","certifiedAt")],None)?}
-  },
-  Op::Usage=>{let mut body=header("Usage",string(v,&["month"]));body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");for (label,key) in [("Tool calls","toolCalls"),("Synced records","syncedRecords"),("Webhook events","webhookEvents")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?));}body.push_str("</div>");body},
+  Op::Qa=>return Err(Error::Forbidden),
+  Op::Usage=>crate::remaining_pages::usage(v)?,
   Op::Branding=>crate::branding::render(v),
   Op::Test=>crate::toolkit::result(Some(v)),
   Op::Setup=>json(v),
@@ -348,9 +339,9 @@ fn table(
 }
 pub(crate) fn static_page(path: &str) -> String {
     if path == "/app/support" {
-        return header("Support","Contact the team for help with connectors, the API, or your account.")+&card("<p class=\"text-sm font-medium text-dusk-blue-100\">Email support</p><a href=\"mailto:info@manavritti.com\" class=\"mt-3 inline-flex items-center gap-2 rounded-lg bg-neon-ice-500 px-3.5 py-2 text-sm font-semibold text-prussian-blue-950\">info@manavritti.com</a>");
+        return crate::remaining_pages::heading("Help","Contact the team for help with connectors, the API, or your account.")+&crate::remaining_pages::panel("<p class=\"text-sm font-medium text-ink-100\">Email support</p><a href=\"mailto:info@manavritti.com\" class=\"remaining-contact-link\">info@manavritti.com</a>");
     }
-    let mut content = header(
+    let mut content = crate::remaining_pages::heading(
         "Documentation",
         "Guides and API reference for building on appcall.",
     );
@@ -376,7 +367,7 @@ pub(crate) fn static_page(path: &str) -> String {
             "/app/logs",
         ),
     ] {
-        content.push_str(&format!("<a href=\"{href}\" class=\"flex items-center justify-between rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-4 transition hover:border-space-indigo-700\"><span><span class=\"block text-sm font-medium text-dusk-blue-100\">{title}</span><span class=\"mt-0.5 block text-sm text-dusk-blue-500\">{body}</span></span><span class=\"text-dusk-blue-500\">→</span></a>"));
+        content.push_str(&format!("<a href=\"{href}\" class=\"flex items-center justify-between rounded-panel border border-line bg-panel p-4 transition hover:border-iris-400\"><span><span class=\"block text-sm font-medium text-ink-100\">{title}</span><span class=\"mt-0.5 block text-sm text-ink-300\">{body}</span></span><span class=\"text-ink-300\">→</span></a>"));
     }
     content
 }
@@ -471,13 +462,6 @@ mod rendering_contract_tests {
                 "Browse connectors to inspect their declared events.",
                 "Browse connectors",
             ),
-            (
-                Op::Qa,
-                vec!["certifications", "rows", "items"],
-                "No connector QA results to show.",
-                "Connector QA results are not available in this list.",
-                "",
-            ),
         ] {
             let mut values = vec![json!([])];
             for key in &keys {
@@ -506,14 +490,6 @@ mod rendering_contract_tests {
                 );
             }
         }
-        let unavailable = render(
-            Op::Qa,
-            &json!({"unavailable":true,"certifications":[]}),
-            None,
-        )
-        .unwrap();
-        assert!(unavailable.contains("QA status unavailable"));
-        assert!(!unavailable.contains("No connector QA results to show."));
     }
 
     #[test]
@@ -734,11 +710,6 @@ mod rendering_contract_tests {
                 json!({"events":[{"id":"evt_1","connector":"<evil>"}]}),
                 "/app/triggers/evt_1/replay",
             ),
-            (
-                Op::Qa,
-                json!({"certifications":[{"connector":"<evil>","passed":4,"drifted":false}]}),
-                "false",
-            ),
         ] {
             let html = render(op, &data, None).unwrap();
             assert!(html.contains(expected), "{expected}");
@@ -820,21 +791,18 @@ mod memory_qa_tests {
             .contains("data-on:submit=\"@post('/app/toolkits/request', {contentType: 'form', retry:'never', retryMaxCount:1, openWhenHidden:true, requestCancellation:new AbortController()})\""));
     }
     #[test]
-    fn missing_qa_storage_is_unavailable_not_empty_certification() {
-        let html = super::render(
-            super::Op::Qa,
-            &serde_json::json!({"unavailable":true,"certifications":[]}),
-            None,
-        )
-        .unwrap();
-        assert!(html.contains("QA status unavailable"));
-        assert!(!html.contains("<table"));
-        let persisted = super::render(
-            super::Op::Qa,
-            &serde_json::json!({"certifications":[]}),
-            None,
-        )
-        .unwrap();
-        assert!(!persisted.contains("QA status unavailable"));
+    fn direct_qa_page_is_forbidden_for_every_payload() {
+        for payload in [
+            serde_json::json!({"unavailable": true}),
+            serde_json::json!({"certifications": []}),
+            serde_json::json!({
+                "certifications": [{"connector": "mail", "status": "passed"}]
+            }),
+        ] {
+            assert_eq!(
+                super::render(super::Op::Qa, &payload, None),
+                Err(super::Error::Forbidden)
+            );
+        }
     }
 }
