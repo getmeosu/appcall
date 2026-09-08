@@ -253,6 +253,17 @@ pub(crate) fn settings(project_id: &str, project_name: &str, organization: &str)
     ] {
         body.push_str(&format!("<a href=\"/app/settings/{path}\" class=\"rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-neon-ice-500\"><h3 class=\"text-sm font-semibold\">{title} →</h3><p class=\"mt-2 text-sm text-dusk-blue-400\">{description}</p>{}</a>",if path=="organization" {format!("<p class=\"mt-3 text-xs text-dusk-blue-500\">{}</p>",escape(organization))} else {String::new()}));
     }
+    for (href, label, description) in [
+        ("/app/users", "Team", "Manage team members and invitations."),
+        (
+            "/app/sessions",
+            "Sessions",
+            "Review and revoke account sessions.",
+        ),
+        ("/app/support", "Help", "Find support for your project."),
+    ] {
+        body.push_str(&format!("<a class=\"shell-settings-link\" href=\"{href}\"><h3>{label}</h3><p>{description}</p></a>"));
+    }
     body.push_str("</div>");
     body
 }
@@ -273,6 +284,9 @@ mod tests {
             assert!(html.contains(&format!("href=\"/app/settings/{path}\"")));
         }
         assert!(html.contains("proj_verified"));
+        for path in ["/app/users", "/app/sessions", "/app/support"] {
+            assert!(html.contains(&format!("href=\"{path}\"")), "missing {path}");
+        }
     }
     #[test]
     fn billing_preserves_partial_failures_and_only_active_portal() {

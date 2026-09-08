@@ -136,6 +136,7 @@ impl DashboardRenderer<'_> {
                     },
                     session,
                     &crate::pages::static_page(r.path),
+                    r.path,
                 ),
             ));
         }
@@ -359,7 +360,7 @@ impl DashboardRenderer<'_> {
         }
         Ok(Response::new(
             200,
-            crate::shell::layout(crate::pages::title(operation), session, &content),
+            crate::shell::layout(crate::pages::title(operation), session, &content, r.path),
         ))
     }
 }
@@ -440,6 +441,10 @@ fn valid_local_setup_redirect(raw: &str, connector: &str) -> bool {
                     .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
         })
 }
+
+#[cfg(test)]
+#[path = "dashboard/tests.rs"]
+mod renderer_contract_tests;
 
 #[cfg(test)]
 mod redirect_tests {

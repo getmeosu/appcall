@@ -1,19 +1,28 @@
 (() => {
   const toggle = document.getElementById('nav-toggle');
-  const backdrop = document.getElementById('nav-backdrop');
   const sidebar = document.getElementById('dashboard-sidebar');
-  if (!toggle || !backdrop || !sidebar) return;
-  const close = () => { delete document.body.dataset.navigation; toggle.setAttribute('aria-expanded', 'false'); toggle.focus(); };
+  const drawer = document.getElementById('nav-drawer');
+  if (!toggle || !drawer || !sidebar) return;
+  const home = sidebar.parentNode;
+  const sibling = sidebar.nextSibling;
+  const mobile = window.matchMedia('(max-width: 767px)');
+  const close = () => { if (drawer.open) drawer.close(); };
+  drawer.addEventListener('close', () => {
+    home.insertBefore(sidebar, sibling);
+    toggle.setAttribute('aria-expanded', 'false');
+    if (mobile.matches) toggle.focus();
+    else sidebar.querySelector('a[aria-current="page"], a')?.focus();
+  });
   toggle.addEventListener('click', () => {
-    if (document.body.dataset.navigation === 'open') { close(); return; }
-    document.body.dataset.navigation = 'open';
+    if (!mobile.matches) return;
+    if (drawer.open) { close(); return; }
+    drawer.append(sidebar);
+    drawer.showModal();
     toggle.setAttribute('aria-expanded', 'true');
     sidebar.querySelector('a')?.focus();
   });
-  backdrop.addEventListener('click', close);
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && document.body.dataset.navigation === 'open') close();
-  });
+  document.getElementById('nav-close').addEventListener('click', close);
+  mobile.addEventListener('change', () => { if (!mobile.matches) close(); });
 })();
 
 // Delegation survives Datastar replacements. Native dialog supplies the focus

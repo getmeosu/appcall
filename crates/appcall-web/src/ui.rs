@@ -38,6 +38,13 @@ pub enum ButtonType {
     Reset,
 }
 #[derive(Clone, Copy)]
+pub enum ShellAction {
+    Navigation,
+    CloseNavigation,
+    Search,
+    CloseSearch,
+}
+#[derive(Clone, Copy)]
 pub enum ButtonTarget<'a> {
     Button {
         kind: ButtonType,
@@ -47,6 +54,7 @@ pub enum ButtonTarget<'a> {
     Link(LocalPath<'a>),
 }
 pub struct Button<'a> {
+    pub shell_action: Option<ShellAction>,
     pub label: &'a str,
     pub variant: ButtonVariant,
     pub size: ButtonSize,
@@ -63,6 +71,7 @@ impl<'a> Button<'a> {
     /// Select `ButtonType::Submit` explicitly to submit a form.
     pub fn new(label: &'a str) -> Self {
         Self {
+            shell_action: None,
             label,
             variant: ButtonVariant::Primary,
             size: ButtonSize::Md,
@@ -82,7 +91,15 @@ impl<'a> Button<'a> {
     /// Unavailable links omit `href`. Progress appears only while busy and only
     /// for percentages at most 100.
     pub fn render(&self) -> String {
-        self.render_with("")
+        self.render_with(match self.shell_action {
+            Some(ShellAction::Navigation) => {
+                " id=\"nav-toggle\" aria-controls=\"dashboard-sidebar\" aria-expanded=\"false\""
+            }
+            Some(ShellAction::CloseNavigation) => " id=\"nav-close\"",
+            Some(ShellAction::Search) => " data-cmdk-open",
+            Some(ShellAction::CloseSearch) => " id=\"cmdk-close\"",
+            None => "",
+        })
     }
     fn render_with(&self, owned_attributes: &str) -> String {
         let variant = match self.variant {

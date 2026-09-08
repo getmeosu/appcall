@@ -293,6 +293,191 @@ pub(crate) fn static_page(path: &str) -> String {
     content
 }
 #[cfg(test)]
+mod rendering_contract_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn catalog_escapes_provider_names_and_encodes_category_links() {
+        let html = render(
+            Op::Catalog,
+            &json!({"data": {"categories": ["a&b <script>"], "connectors": [
+                {"key":"one","name":"<script>alert(1)</script>","operations":[{},{}]},
+                {"key":"two","name":"Second","actionCount":3},
+                {"key":"three","name":"Third"}
+            ]}}),
+            None,
+        )
+        .unwrap();
+        assert!(html.contains("&lt;script&gt;alert(1)&lt;/script&gt;"));
+        assert!(!html.contains("<script>alert"));
+        assert!(html.contains("category=a%26b+%3Cscript%3E"));
+        for expected in [
+            "2 tools",
+            "3 tools",
+            "0 tools",
+            "/app/toolkits/one",
+            "name=\"email\"",
+        ] {
+            assert!(html.contains(expected), "{expected}");
+        }
+    }
+
+    #[test]
+    fn toolkit_preserves_setup_routes_secrets_selection_and_action_only_picker() {
+        let html = render(Op::Toolkit, &json!({
+            "name":"<Provider>","description":"Use <token>",
+            "setup":{"help":"Keep <secret>","fields":[{"key":"api_key","label":"API <key>","secret":true,"required":true}],
+                "routes":[{"id":"oauth","label":"Use OAuth","fields":[{"name":"region","label":"Region"}]}]},
+            "connections":[{"id":"conn_1","displayName":"<Admin>"},{"id":"conn_2","name":"Other"}],"connectionId":"conn_1",
+            "operations":[{"name":"send","title":"Send <message>","kind":"action"},{"name":"received","kind":"trigger"}],
+            "action":"send","inputSchema":{"type":"object","properties":{"message":{"type":"string"}}}
+        }), Some("provider")).unwrap();
+        for expected in [
+            "&lt;Provider&gt;",
+            "Keep &lt;secret&gt;",
+            "<input required name=\"api_key\" type=\"password\"",
+            "name=\"route\" type=\"hidden\" value=\"oauth\"",
+            "name=\"region\"",
+            "value=\"conn_1\" selected",
+            "&lt;Admin&gt;",
+            "value=\"send\" selected",
+            "/app/toolkits/provider/setup",
+            "/app/toolkits/provider/test",
+            "name=\"input_raw\"",
+            "name=\"callerToken\"",
+        ] {
+            assert!(html.contains(expected), "{expected}");
+        }
+        assert!(!html.contains("<option value=\"received\""));
+        let fallback = render(
+            Op::Toolkit,
+            &json!({"operations":[],"setup":{"fields":[]},"connectionId":"manual"}),
+            Some("provider"),
+        )
+        .unwrap();
+        assert!(fallback
+            .contains("id=\"tk-connection\" name=\"connectionId\" type=\"text\" value=\"manual\""));
+        assert!(fallback.contains("/app/toolkits/provider/setup"));
+        let no_auth = render(
+            Op::Toolkit,
+            &json!({"operations":[],"setup":{"mode":"none"}}),
+            Some("provider"),
+        )
+        .unwrap();
+        assert!(!no_auth.contains("/app/toolkits/provider/setup"));
+    }
+
+    #[test]
+    fn option_fragments_escape_every_provider_attribute_and_reject_invalid_field_ids() {
+        let html = render(Op::Options, &json!({"fieldName":"f.actor","key":"<key>","detailSource":"\"<detail>","options":[{"id":"\" onclick=\"bad","name":"<img src=x>"}]}), None).unwrap();
+        for expected in [
+            "id=\"tk-opts-f.actor\"",
+            "&lt;key&gt;",
+            "&lt;detail&gt;",
+            "&lt;img src=x&gt;",
+        ] {
+            assert!(html.contains(expected), "{expected}");
+        }
+        assert!(!html.contains("<img src=x>"));
+        assert!(!html.contains("data-value=\"\" onclick="));
+        for field in ["", "f.x\"", "f/x"] {
+            assert_eq!(
+                render(Op::Options, &json!({"fieldName":field,"options":[]}), None),
+                Err(Error::Invalid)
+            );
+        }
+    }
+
+    #[test]
+    fn tables_link_only_valid_ids_and_render_non_string_cells_without_html() {
+        for (op, data, expected) in [
+            (
+                Op::AuthConfigs,
+                json!({"connections":[{"id":"conn_1","connector":"<evil>","lastTest":null}]}),
+                "/app/auth-configs/conn_1/disconnect",
+            ),
+            (
+                Op::Logs,
+                json!({"logs":[{"requestId":"req_1","connector":"<evil>","errorCode":42}]}),
+                "/app/logs/req_1\"",
+            ),
+            (
+                Op::Triggers,
+                json!({"events":[{"id":"evt_1","connector":"<evil>"}]}),
+                "/app/triggers/evt_1/replay",
+            ),
+            (
+                Op::Qa,
+                json!({"certifications":[{"connector":"<evil>","passed":4,"drifted":false}]}),
+                "false",
+            ),
+        ] {
+            let html = render(op, &data, None).unwrap();
+            assert!(html.contains(expected), "{expected}");
+            assert!(html.contains("&lt;evil&gt;"));
+            assert!(!html.contains("<evil>"));
+        }
+        for bad in ["", "../escape", "a\"onclick", "a/b"] {
+            assert_eq!(
+                render(Op::Logs, &json!({"logs":[{"requestId":bad}]}), None),
+                Err(Error::Unavailable)
+            );
+        }
+        assert_eq!(
+            render(Op::Catalog, &json!({}), None),
+            Err(Error::Unavailable)
+        );
+        assert_eq!(
+            render(Op::Toolkit, &json!({"operations":[]}), None),
+            Err(Error::Invalid)
+        );
+    }
+
+    #[test]
+    fn overview_usage_trace_and_fragments_require_data_and_escape_results() {
+        for (op, data, expected) in [
+            (
+                Op::Overview,
+                json!({"toolkitCount":2,"connectionCount":3,"toolCalls":4}),
+                ">4</p>",
+            ),
+            (
+                Op::Usage,
+                json!({"month":"<September>","toolCalls":2,"syncedRecords":3,"webhookEvents":4}),
+                "&lt;September&gt;",
+            ),
+            (Op::Trace, json!({"input":"<script>"}), "&lt;script&gt;"),
+            (
+                Op::Test,
+                json!({"result":"<script>"}),
+                "id=\"tk-test-result\"",
+            ),
+            (Op::Setup, json!({"result":"<script>"}), "&lt;script&gt;"),
+            (Op::RequestToolkit, json!({}), "Toolkit request received."),
+            (
+                Op::RunInputFields,
+                json!({"schema":{"type":"object","properties":{"x":{"type":"string"}}}}),
+                "name=\"runInputSchema\"",
+            ),
+        ] {
+            let html = render(op, &data, Some("req_1")).unwrap();
+            assert!(html.contains(expected), "{expected}");
+            assert!(!html.contains("<script>"));
+        }
+        for op in [Op::Overview, Op::Usage] {
+            assert_eq!(render(op, &json!({}), None), Err(Error::Unavailable));
+        }
+        assert_eq!(render(Op::Stream, &json!({}), None), Err(Error::Invalid));
+        let docs = static_page("/app/docs");
+        for target in ["/app/toolkits", "/app/triggers", "/app/logs"] {
+            assert!(docs.contains(&format!("href=\"{target}\"")));
+        }
+        assert!(static_page("/app/support").contains("mailto:info@manavritti.com"));
+    }
+}
+
+#[cfg(test)]
 mod memory_qa_tests {
     #[test]
     fn form_uses_shared_submit_without_losing_native_or_datastar_action() {
