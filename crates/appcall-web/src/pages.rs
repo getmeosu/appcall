@@ -89,21 +89,8 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
    for item in rows(v,&["connectors","items","cards"])?{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(Vec::len).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/toolkits/{key}\" class=\"group flex flex-col gap-3 rounded-xl border border-space-indigo-800 bg-space-indigo-950 p-5 transition hover:border-space-indigo-700\"><div class=\"flex items-center gap-3\"><span class=\"truncate text-sm font-semibold text-dusk-blue-50 group-hover:text-neon-ice-400\">{}</span></div><p class=\"text-xs text-dusk-blue-500\">{count} tools</p></a>",escape(name)));}
    body.push_str("</div><div id=\"toolkit-request-result\"></div>");body.push_str(&card(&format!("<h3 class=\"text-base font-semibold text-dusk-blue-50\">Request a toolkit</h3><p class=\"mt-1 text-sm text-dusk-blue-400\">Tell us which integration you need and we'll prioritise it.</p>{}",form("/app/toolkits/request",&format!("{}{}{}",input("name","Toolkit name","","text"),input("email","Your email","","email"),input("notes","Notes (optional)","","text")),"Request toolkit"))));body
   },
-  Op::Toolkit=>{
-   let key=resource.ok_or(Error::Invalid)?;let mut body=header(string(v,&["name"]),string(v,&["description"]));
-   let operations=rows(v,&["operations"])?;body.push_str(&table(operations,&[("Title","title"),("Name","name"),("Kind","kind"),("Description","description")],None)?);
-   if let Some(setup)=v.get("setup") {
-    body.push_str(&format!("<p class=\"mt-4 text-sm text-dusk-blue-400\">{}</p>",escape(string(setup,&["help"]))));
-    if string(setup,&["mode"])!="none" {
-     let base=setup_controls(setup.get("fields").and_then(Value::as_array).map(Vec::as_slice).unwrap_or(&[]))?;
-     if let Some(routes)=setup.get("routes").and_then(Value::as_array).filter(|r|!r.is_empty()) {
-      for route in routes {let route_id=id(route,&["id"])?;let controls=format!("{base}{}{}",input("route","",&route_id,"hidden"),setup_controls(route.get("fields").and_then(Value::as_array).map(Vec::as_slice).unwrap_or(&[]))?);body.push_str(&form(&format!("/app/toolkits/{key}/setup"),&controls,string(route,&["label"])));}
-     }else{body.push_str(&form(&format!("/app/toolkits/{key}/setup"),&base,"Connect"));}
-    }
-   }
-   body.push_str(&test_form(key,v)?);body
-  },
-  Op::TestForm=>test_fields(v,resource.unwrap_or(""))?,
+  Op::Toolkit=>crate::toolkit::render(v,resource.ok_or(Error::Invalid)?)?,
+  Op::TestForm=>crate::toolkit::test_fields(v,resource.unwrap_or(""))?,
   Op::Options=>{
     let field=string(v,&["fieldName"]);if field.is_empty() || field.len()>256 || !field.bytes().all(|b|b.is_ascii_alphanumeric() || matches!(b,b'.'|b'_'|b'-')){return Err(Error::Invalid)}
     let mut body=format!("<div id=\"tk-opts-{}\" class=\"tk-opts\">",escape(field));
@@ -119,98 +106,12 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::Qa=>header("QA","Connector certification and manifest fingerprint drift.")+&table(rows(v,&["certifications","rows","items"] )?,&[("Connector","connector"),("Status","status"),("Total","total"),("Passed","passed"),("Failed","failed"),("Not certified","notCertified"),("Manifest drift","drifted"),("Manifest fingerprint","manifestFingerprint"),("Last run","certifiedAt")],None)?,
   Op::Usage=>{let mut body=header("Usage",string(v,&["month"]));body.push_str("<div class=\"grid grid-cols-1 gap-4 sm:grid-cols-3\">");for (label,key) in [("Tool calls","toolCalls"),("Synced records","syncedRecords"),("Webhook events","webhookEvents")]{body.push_str(&stat(label,v.get(key).ok_or(Error::Unavailable)?));}body.push_str("</div>");body},
   Op::Branding=>crate::branding::render(v),
-  Op::Test=>format!("<div id=\"tk-test-result\">{}</div>",json(v)),
+  Op::Test=>crate::toolkit::result(Some(v)),
   Op::Setup=>json(v),
   Op::RequestToolkit=>"<div id=\"toolkit-request-result\" class=\"rounded-lg border border-space-indigo-800 p-4\">Toolkit request received.</div>".into(),
   _=>return Err(Error::Invalid)
  };
     Ok(body)
-}
-fn setup_controls(fields: &[Value]) -> Result<String, Error> {
-    let mut controls = String::new();
-    for field in fields {
-        let mut control = input(
-            &id(field, &["key", "name"])?,
-            string(field, &["label", "name"]),
-            "",
-            if field.get("secret").and_then(Value::as_bool) == Some(true) {
-                "password"
-            } else {
-                "text"
-            },
-        );
-        if field.get("required").and_then(Value::as_bool) == Some(true) {
-            control = control.replace("<input ", "<input required ");
-        }
-        controls.push_str(&control);
-    }
-    Ok(controls)
-}
-fn test_fields(v: &Value, key: &str) -> Result<String, Error> {
-    let schema = v
-        .get("inputSchema")
-        .or_else(|| v.get("schema"))
-        .unwrap_or(v);
-    let guided = crate::forms::render_guided_fields(
-        schema,
-        v.get("sample").unwrap_or(&Value::Null),
-        "f",
-        Some(key),
-    )?;
-    Ok(format!("<div id=\"tk-test-fields\" class=\"flex flex-col gap-4\">{guided}{}<details class=\"rounded-lg border border-space-indigo-800 bg-prussian-blue-950/40\"><summary class=\"cursor-pointer px-3 py-2 text-xs font-medium text-dusk-blue-400\">Advanced (raw JSON)</summary><p class=\"px-3 text-xs text-dusk-blue-500\">Optional. JSON here overrides the fields above.</p><textarea name=\"input_raw\" rows=\"6\" spellcheck=\"false\" class=\"w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 font-mono text-xs\"></textarea></details><div id=\"tk-runinput\"></div></div>",input("callerToken","Caller credential (if required)","","password")))
-}
-fn test_form(key: &str, v: &Value) -> Result<String, Error> {
-    let class="w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 text-sm text-dusk-blue-100";
-    let mut controls = if let Some(connections) = v.get("connections").and_then(Value::as_array) {
-        let mut options = String::new();
-        for connection in connections {
-            let connection_id = id(connection, &["id"])?;
-            let label = string(connection, &["displayName", "name", "id"]);
-            options.push_str(&format!(
-                "<option value=\"{connection_id}\" {}>{}</option>",
-                if connection_id == string(v, &["connectionId"]) {
-                    "selected"
-                } else {
-                    ""
-                },
-                escape(label)
-            ));
-        }
-        format!("<label class=\"block text-sm\">Connected account<select id=\"tk-connection\" name=\"connectionId\" class=\"{class}\">{options}</select></label>")
-    } else {
-        input(
-            "connectionId",
-            "Connected account",
-            string(v, &["connectionId"]),
-            "text",
-        )
-        .replace(
-            "name=\"connectionId\"",
-            "id=\"tk-connection\" name=\"connectionId\"",
-        )
-    };
-    let mut options = String::new();
-    for operation in rows(v, &["operations"]).unwrap_or(&Vec::new()) {
-        if string(operation, &["kind"]) != "action" {
-            continue;
-        }
-        let name = id(operation, &["name", "key"])?;
-        options.push_str(&format!(
-            "<option value=\"{name}\" {}>{}</option>",
-            if name == string(v, &["action"]) {
-                "selected"
-            } else {
-                ""
-            },
-            escape(string(operation, &["title", "name"]))
-        ));
-    }
-    controls.push_str(&format!("<label class=\"block text-sm\">Action<select id=\"tk-action\" name=\"action\" class=\"{class}\" data-on:change=\"@get('/app/toolkits/{key}/test-form?action=' + encodeURIComponent(evt.target.value))\">{options}</select></label>"));
-    controls.push_str(&test_fields(v, key)?);
-    Ok(format!(
-        "{}<div id=\"tk-test-result\"></div>",
-        form(&format!("/app/toolkits/{key}/test"), &controls, "Run tool")
-    ))
 }
 fn table(
     items: &[Value],
@@ -327,20 +228,20 @@ mod rendering_contract_tests {
     fn toolkit_preserves_setup_routes_secrets_selection_and_action_only_picker() {
         let html = render(Op::Toolkit, &json!({
             "name":"<Provider>","description":"Use <token>",
-            "setup":{"help":"Keep <secret>","fields":[{"key":"api_key","label":"API <key>","secret":true,"required":true}],
+            "setup":{"mode":"api_key","help":"Keep <secret>","fields":[{"key":"api_key","label":"API <key>","secret":true,"required":true}],
                 "routes":[{"id":"oauth","label":"Use OAuth","fields":[{"name":"region","label":"Region"}]}]},
-            "connections":[{"id":"conn_1","displayName":"<Admin>"},{"id":"conn_2","name":"Other"}],"connectionId":"conn_1",
+            "connections":[{"id":"conn_1","connector":"provider","status":"active","displayName":"<Admin>"},{"id":"conn_2","connector":"provider","status":"inactive","name":"Other"}],"connectionId":"conn_1",
             "operations":[{"name":"send","title":"Send <message>","kind":"action"},{"name":"received","kind":"trigger"}],
             "action":"send","inputSchema":{"type":"object","properties":{"message":{"type":"string"}}}
         }), Some("provider")).unwrap();
         for expected in [
             "&lt;Provider&gt;",
             "Keep &lt;secret&gt;",
-            "<input required name=\"api_key\" type=\"password\"",
+            "name=\"api_key\" type=\"password\" value=\"\" autocomplete=\"off\" required",
             "name=\"route\" type=\"hidden\" value=\"oauth\"",
             "name=\"region\"",
             "value=\"conn_1\" selected",
-            "&lt;Admin&gt;",
+            ">conn_1</option>",
             "value=\"send\" selected",
             "/app/toolkits/provider/setup",
             "/app/toolkits/provider/test",
@@ -352,12 +253,12 @@ mod rendering_contract_tests {
         assert!(!html.contains("<option value=\"received\""));
         let fallback = render(
             Op::Toolkit,
-            &json!({"operations":[],"setup":{"fields":[]},"connectionId":"manual"}),
+            &json!({"operations":[],"setup":{"mode":"api_key","fields":[]},"connectionId":"manual"}),
             Some("provider"),
         )
         .unwrap();
-        assert!(fallback
-            .contains("id=\"tk-connection\" name=\"connectionId\" type=\"text\" value=\"manual\""));
+        assert!(fallback.contains("id=\"tk-connection\" name=\"connectionId\""));
+        assert!(!fallback.contains("value=\"manual\""));
         assert!(fallback.contains("/app/toolkits/provider/setup"));
         let no_auth = render(
             Op::Toolkit,

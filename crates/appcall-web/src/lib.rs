@@ -11,6 +11,10 @@ mod admin;
 mod dashboard;
 mod pages;
 mod shell;
+mod toolkit;
+#[cfg(test)]
+#[path = "toolkit/tests.rs"]
+mod toolkit_tests;
 pub use dashboard::*;
 
 mod refresh;

@@ -164,60 +164,305 @@ fn render_fields(
     depth: usize,
     connector: Option<&str>,
 ) -> Result<String, Error> {
-    use crate::http::escape;
     if depth > 16 {
         return Err(Error::Invalid);
     }
-    let mut html = String::new();
     let Some(properties) = schema.get("properties").and_then(Value::as_object) else {
-        return Ok(html);
+        return Ok(String::new());
     };
-    for (key, node) in properties {
+    let required = |key: &str| {
+        schema
+            .get("required")
+            .and_then(Value::as_array)
+            .is_some_and(|keys| keys.iter().any(|v| v.as_str() == Some(key)))
+    };
+    let mut fields: Vec<_> = properties.iter().collect();
+    fields.sort_by_key(|(key, node)| (!required(key), multiline(node), key.as_str()));
+    let mut main = String::new();
+    let mut optional = String::new();
+    for (key, node) in fields {
         let name = format!("{prefix}.{key}");
-        let name = escape(&name);
-        let label = escape(node.get("title").and_then(Value::as_str).unwrap_or(key));
-        let description = escape(
-            node.get("description")
-                .and_then(Value::as_str)
-                .unwrap_or(""),
-        );
-        let kind = node.get("type").and_then(Value::as_str).unwrap_or("");
-        let sample = sample.get(key).unwrap_or(&Value::Null);
-        let class="w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 text-sm text-dusk-blue-100 focus:border-neon-ice-500 focus:outline-none focus:ring-1 focus:ring-neon-ice-500";
-        if let (Some(source), Some(connector)) = (
-            node.get("x-dynamic-options")
-                .and_then(|o| o.get("source"))
-                .and_then(Value::as_str),
+        let fallback = humanize(key);
+        let title = node
+            .get("title")
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+            .unwrap_or(&fallback);
+        let label = if required(key) {
+            format!("{title} (Required)")
+        } else {
+            title.to_owned()
+        };
+        let content = render_control(
+            node,
+            sample.get(key).unwrap_or(&Value::Null),
+            &name,
+            &label,
+            depth,
             connector,
-        ) {
-            let opts = node.get("x-dynamic-options").ok_or(Error::Invalid)?;
-            let mut url = reqwest::Url::parse(&format!(
-                "https://local.invalid/app/toolkits/{connector}/options"
-            ))
-            .map_err(|_| Error::Invalid)?;
-            url.query_pairs_mut()
-                .append_pair("source", source)
-                .append_pair("fieldName", &format!("{prefix}.{key}"));
-            for key in ["valueField", "labelField", "searchParam", "detailSource"] {
-                if let Some(value) = opts.get(key).and_then(Value::as_str) {
-                    url.query_pairs_mut().append_pair(key, value);
-                }
-            }
-            let endpoint = format!("{}?{}", url.path(), url.query().unwrap_or(""));
-            html.push_str(&format!("<label class=\"block\"><span class=\"mb-1.5 block text-sm font-medium text-dusk-blue-200\">{label}</span><input id=\"{name}\" type=\"hidden\" name=\"{name}\" value=\"{}\"><input type=\"search\" aria-label=\"Search {label}\" class=\"{class}\" data-on:input__debounce.300ms=\"@get('{}' + '&amp;connectionId=' + encodeURIComponent(document.getElementById('tk-connection').value) + '&amp;q=' + encodeURIComponent(evt.target.value))\"><div id=\"tk-opts-{name}\"></div></label>",escape(sample.as_str().unwrap_or("")),escape(&endpoint)));
-            continue;
+        )?;
+        if required(key) {
+            main.push_str(&content);
+        } else {
+            optional.push_str(&content);
         }
-        let control=match kind{
-   "object" if node.get("properties").and_then(Value::as_object).is_some_and(|p|!p.is_empty())=>render_fields(node,sample,&format!("{prefix}.{key}"),depth+1,connector)?,
-   "object"=>(0..3).map(|_|format!("<div class=\"flex gap-2\"><input aria-label=\"{label} key\" name=\"{name}.key\" placeholder=\"Key\" class=\"{class}\"><input aria-label=\"{label} value\" name=\"{name}.val\" placeholder=\"Value\" class=\"{class}\"></div>")).collect::<String>(),
-   "boolean"=>format!("<input type=\"checkbox\" name=\"{name}\" value=\"true\" {}>",if sample.as_bool()==Some(true){"checked"}else{""}),
-   "string"|"number"|"integer"|"array"=>{
-    let value=if kind=="array"{sample.as_array().map(|items|items.iter().map(|v|v.as_str().map(str::to_owned).or_else(||v.get("email").and_then(Value::as_str).map(str::to_owned)).unwrap_or_else(||v.to_string())).collect::<Vec<_>>().join(", ")).unwrap_or_default()}else if sample.is_null(){String::new()}else{sample.as_str().map(str::to_owned).unwrap_or_else(||sample.to_string())};
-    if let Some(options)=node.get("enum").and_then(Value::as_array){let options=options.iter().map(|v|{let raw=v.as_str().map(str::to_owned).unwrap_or_else(||v.to_string());format!("<option value=\"{}\" {}>{}</option>",escape(&raw),if raw==value{"selected"}else{""},escape(&raw))}).collect::<String>();format!("<select name=\"{name}\" class=\"{class}\"><option value=\"\"></option>{options}</select>")}
-    else{format!("<input type=\"{}\" name=\"{name}\" value=\"{}\" class=\"{class}\">",if kind=="number" || kind=="integer"{"number"}else{"text"},escape(&value))}
-   },_=>continue
-  };
-        html.push_str(&format!("<label class=\"block\"><span class=\"mb-1.5 block text-sm font-medium text-dusk-blue-200\">{label}</span>{control}<span class=\"text-xs text-dusk-blue-500\">{description}</span></label>"));
     }
-    Ok(html)
+    if !optional.is_empty() {
+        main.push_str(&format!("<details class=\"tk-more-options\"><summary>More options</summary>{optional}</details>"));
+    }
+    Ok(main)
+}
+
+fn humanize(key: &str) -> String {
+    let chars: Vec<_> = key.chars().collect();
+    let mut label = String::new();
+    for (i, ch) in chars.iter().copied().enumerate() {
+        if matches!(ch, '_' | '-' | '.') {
+            if !label.ends_with(' ') {
+                label.push(' ');
+            }
+        } else {
+            if i > 0
+                && ch.is_uppercase()
+                && (chars[i - 1].is_lowercase()
+                    || chars[i - 1].is_uppercase()
+                        && chars.get(i + 1).is_some_and(|next| next.is_lowercase()))
+            {
+                label.push(' ');
+            }
+            if label.is_empty() {
+                label.extend(ch.to_uppercase());
+            } else {
+                label.push(ch);
+            }
+        }
+    }
+    label.trim().to_owned()
+}
+
+fn multiline(node: &Value) -> bool {
+    node.get("type").and_then(Value::as_str) == Some("object")
+        || node.get("format").and_then(Value::as_str) == Some("textarea")
+}
+
+fn text_value(value: &Value) -> String {
+    if value.is_null() {
+        String::new()
+    } else {
+        value
+            .as_str()
+            .map(str::to_owned)
+            .unwrap_or_else(|| value.to_string())
+    }
+}
+
+// Presentation IDs occupy a namespace separate from submitted f.* names and
+// dynamic hidden targets. Hex cannot contain generated help/error separators.
+fn presentation_id(kind: &str, name: &str) -> String {
+    let encoded: String = name.bytes().map(|byte| format!("{byte:02x}")).collect();
+    format!("tk-{kind}-{encoded}")
+}
+
+fn sample_value(node: &Value, sample: &Value) -> String {
+    if node.get("type").and_then(Value::as_str) == Some("array") {
+        sample
+            .as_array()
+            .map(|items| {
+                items
+                    .iter()
+                    .map(|v| {
+                        v.as_str()
+                            .map(str::to_owned)
+                            .or_else(|| v.get("email").and_then(Value::as_str).map(str::to_owned))
+                            .unwrap_or_else(|| v.to_string())
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_default()
+    } else {
+        text_value(sample)
+    }
+}
+
+fn render_control(
+    node: &Value,
+    sample: &Value,
+    name: &str,
+    label: &str,
+    depth: usize,
+    connector: Option<&str>,
+) -> Result<String, Error> {
+    use crate::ui;
+    let help = node
+        .get("description")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    if let (Some(options), Some(connector)) = (
+        node.get("x-dynamic-options")
+            .filter(|o| o.get("source").and_then(Value::as_str).is_some()),
+        connector,
+    ) {
+        return dynamic_control(options, sample, name, label, help, connector);
+    }
+    let kind = node.get("type").and_then(Value::as_str).unwrap_or("");
+    if kind == "object" {
+        let content = if node
+            .get("properties")
+            .and_then(Value::as_object)
+            .is_some_and(|p| !p.is_empty())
+        {
+            render_fields(node, sample, name, depth + 1, connector)?
+        } else {
+            map_controls(name)
+        };
+        return Ok(group(name, label, help, &content));
+    }
+    if !matches!(kind, "string" | "number" | "integer" | "array" | "boolean") {
+        return Ok(String::new());
+    }
+    let value = if kind == "boolean" {
+        "true".into()
+    } else {
+        sample_value(node, sample)
+    };
+    let example = node
+        .get("examples")
+        .and_then(Value::as_array)
+        .and_then(|a| a.first())
+        .or_else(|| node.get("example"));
+    let placeholder = example.map(text_value).unwrap_or_default();
+    let choices = node.get("enum").and_then(Value::as_array).map(|values| {
+        std::iter::once(String::new())
+            .chain(values.iter().map(|value| {
+                value
+                    .as_str()
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| value.to_string())
+            }))
+            .collect::<Vec<_>>()
+    });
+    let options = choices.as_ref().map(|values| {
+        values
+            .iter()
+            .map(|value| ui::SelectOption {
+                value,
+                label: value,
+                disabled: false,
+            })
+            .collect::<Vec<_>>()
+    });
+    let control = if kind == "boolean" {
+        ui::Control::Input(ui::InputType::Checkbox)
+    } else if let Some(options) = &options {
+        ui::Control::Select(options)
+    } else if kind == "string" && multiline(node) {
+        ui::Control::Textarea
+    } else {
+        ui::Control::Input(if matches!(kind, "number" | "integer") {
+            ui::InputType::Number
+        } else {
+            ui::InputType::Text
+        })
+    };
+    // Required labels report manifest metadata. Keep native validation unchanged:
+    // a nonempty raw JSON input still replaces all guided fields.
+    Ok(ui::Field {
+        value: &value,
+        help,
+        placeholder: &placeholder,
+        checked: sample.as_bool() == Some(true),
+        ..ui::Field::new(&presentation_id("field", name), name, label, control)
+    }
+    .render())
+}
+
+fn group(name: &str, label: &str, help: &str, content: &str) -> String {
+    use crate::http::escape;
+    let name = presentation_id("group", name);
+    let described = if help.is_empty() {
+        String::new()
+    } else {
+        format!(" aria-describedby=\"{}-help\"", escape(&name))
+    };
+    let help = if help.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "<p id=\"{}-help\" class=\"ui-field-help\">{}</p>",
+            escape(&name),
+            escape(help)
+        )
+    };
+    format!(
+        "<fieldset class=\"ui-field\"{described}><legend>{}</legend>{help}{content}</fieldset>",
+        escape(label)
+    )
+}
+
+fn map_controls(name: &str) -> String {
+    use crate::ui;
+    (0..3)
+        .map(|index| {
+            let key = ui::Field::new(
+                &format!("{}-{index}", presentation_id("map-key", name)),
+                &format!("{name}.key"),
+                &format!("Key {}", index + 1),
+                ui::Control::Input(ui::InputType::Text),
+            )
+            .render();
+            let value = ui::Field::new(
+                &format!("{}-{index}", presentation_id("map-value", name)),
+                &format!("{name}.val"),
+                &format!("Value {}", index + 1),
+                ui::Control::Input(ui::InputType::Text),
+            )
+            .render();
+            format!("<div class=\"tk-map-row\">{key}{value}</div>")
+        })
+        .collect()
+}
+
+fn dynamic_control(
+    options: &Value,
+    sample: &Value,
+    name: &str,
+    label: &str,
+    help: &str,
+    connector: &str,
+) -> Result<String, Error> {
+    use crate::{http::escape, ui};
+    let mut url = reqwest::Url::parse(&format!(
+        "https://local.invalid/app/toolkits/{connector}/options"
+    ))
+    .map_err(|_| Error::Invalid)?;
+    url.query_pairs_mut()
+        .append_pair(
+            "source",
+            options
+                .get("source")
+                .and_then(Value::as_str)
+                .ok_or(Error::Invalid)?,
+        )
+        .append_pair("fieldName", name);
+    for key in ["valueField", "labelField", "searchParam", "detailSource"] {
+        if let Some(value) = options.get(key).and_then(Value::as_str) {
+            url.query_pairs_mut().append_pair(key, value);
+        }
+    }
+    let endpoint = format!("{}?{}", url.path(), url.query().unwrap_or(""));
+    let hidden = ui::Field {
+        value: sample.as_str().unwrap_or(""),
+        ..ui::Field::new(name, name, "", ui::Control::Input(ui::InputType::Hidden))
+    }
+    .render();
+    let search = ui::Field {
+        help, options_source:Some(ui::LocalPath::new(&endpoint).ok_or(Error::Invalid)?),
+        on_input_debounced:Some("@get(evt.target.dataset.optionsSource + '&connectionId=' + encodeURIComponent(document.getElementById('tk-connection').value) + '&q=' + encodeURIComponent(evt.target.value))"),
+        ..ui::Field::new(&presentation_id("search", name),"",&format!("Search {label}"),ui::Control::Input(ui::InputType::Search))
+    }.render();
+    Ok(format!(
+        "{hidden}{search}<div id=\"tk-opts-{}\"></div>",
+        escape(name)
+    ))
 }

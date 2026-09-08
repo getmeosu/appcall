@@ -205,6 +205,8 @@ pub struct Field<'a> {
     pub aria_label: Option<&'a str>,
     /// Developer-owned Datastar expression; never interpolate user input into code.
     pub on_input_debounced: Option<&'static str>,
+    /// Validated local endpoint consumed as data by a static options binding.
+    pub options_source: Option<LocalPath<'a>>,
 }
 impl<'a> Field<'a> {
     pub fn new(id: &'a str, name: &'a str, label: &'a str, control: Control<'a>) -> Self {
@@ -224,6 +226,7 @@ impl<'a> Field<'a> {
             form: None,
             aria_label: None,
             on_input_debounced: None,
+            options_source: None,
         }
     }
     /// Renders a control with associated labels, help, and validation errors.
@@ -270,6 +273,11 @@ impl<'a> Field<'a> {
         optional_attr(&mut html, "form", self.form);
         optional_attr(&mut html, "aria-label", self.aria_label);
         optional_attr(&mut html, "autocomplete", self.autocomplete);
+        optional_attr(
+            &mut html,
+            "data-options-source",
+            self.options_source.map(|path| path.0),
+        );
         optional_attr(
             &mut html,
             "data-on:input__debounce.300ms",

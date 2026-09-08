@@ -184,7 +184,7 @@ impl DashboardRenderer<'_> {
             .get("externalAccountId")
             .filter(|id| !id.is_empty())
             .cloned();
-        let mut value = self
+        let value = self
             .data
             .execute(DashboardRequest {
                 principal,
@@ -194,7 +194,19 @@ impl DashboardRenderer<'_> {
                 fields,
                 form_values: r.fields.clone(),
             })
-            .await?;
+            .await;
+        let mut value = match value {
+            Ok(value) => value,
+            Err(error)
+                if matches!(
+                    operation,
+                    DashboardOperation::Test | DashboardOperation::TestForm
+                ) =>
+            {
+                return Ok(tool_failure(operation, error));
+            }
+            Err(error) => return Err(error),
+        };
         if operation == DashboardOperation::Catalog {
             let target = if value.get("data").is_some() {
                 value.get_mut("data").ok_or(Error::Unavailable)?
@@ -318,6 +330,17 @@ impl DashboardRenderer<'_> {
                 .push(("Content-Type".into(), "text/event-stream".into()));
             return Ok(response);
         }
+        if operation == Toolkit {
+            let tab = crate::toolkit::selected_tab(r.field("tab")?);
+            let data = if value.get("data").is_some() {
+                value.get_mut("data").ok_or(Error::Unavailable)?
+            } else {
+                &mut value
+            };
+            data.as_object_mut()
+                .ok_or(Error::Unavailable)?
+                .insert("tab".into(), tab.into());
+        }
         let mut content = crate::pages::render(operation, &value, resource.as_deref())?;
         if operation == Branding && r.field("saved")? == "1" {
             content = crate::admin_ui::banner("Branding saved.", true) + &content;
@@ -363,6 +386,42 @@ impl DashboardRenderer<'_> {
             crate::shell::layout(crate::pages::title(operation), session, &content, r.path),
         ))
     }
+}
+
+/// Only data-operation failures become inline SSE. Session refresh and CSRF
+/// rejection happen before this renderer and keep their existing HTTP behavior.
+fn tool_failure(operation: DashboardOperation, error: Error) -> Response {
+    let fields = operation == DashboardOperation::TestForm;
+    let message = match error {
+        Error::Invalid if fields => "Appcall could not load the fields for this tool. Select the tool again before running it.",
+        Error::Invalid => "Appcall could not run this tool with the submitted input. Review the required fields and any raw JSON before running it again.",
+        Error::Unauthorized => "Appcall could not authorize this request. Sign in again before running the tool.",
+        Error::Forbidden => "Appcall denied this request. Check project access and select an account available to this project.",
+        Error::Unavailable if fields => "Appcall could not load the tool fields because a required service is unavailable. Select the tool again when the service is available.",
+        Error::Unavailable => "Appcall could not complete this request because a required service is unavailable. The tool may have run; check provider activity before running it again.",
+        Error::Configuration => "Appcall could not complete this request because a required service is not configured. Ask the operator to check server configuration before running it again.",
+    };
+    let (tag, target, label, heading, marker) = if fields {
+        (
+            "div",
+            "tk-test-fields",
+            "tk-fields-label",
+            "Tool input",
+            "data-fields-valid=\"false\"",
+        )
+    } else {
+        (
+            "section",
+            "tk-test-result",
+            "tk-result-label",
+            "Result",
+            "class=\"tk-result-pane\" data-result-state=\"error\"",
+        )
+    };
+    crate::sse::response(&format!(
+        "<{tag} id=\"{target}\" {marker} aria-live=\"polite\" aria-busy=\"false\" aria-labelledby=\"{label}\"><h3 id=\"{label}\">{heading}</h3>{}<p role=\"alert\">{message}</p></{tag}>",
+        crate::ui::state(crate::ui::Tone::Dead, if fields { "Fields unavailable" } else { "Request failed" })
+    ))
 }
 pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperation>> {
     use DashboardOperation::*;

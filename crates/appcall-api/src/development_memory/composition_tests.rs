@@ -71,6 +71,9 @@ impl appcall_oauth::TokenProvider for NoTokens {
 }
 fn composition() -> (MemoryBackend, MemoryDashboard) {
     let manifest = serde_json::json!({"key":"test","name":"Test","version":"1","runtime":"bun","models":["item"],"auth":{"type":"api_key","setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"API key","required":true,"secret":true}]}},"network":{"egress":"none"},"operations":{"write":{"kind":"action","timeoutMs":1000,"maxInputBytes":1024,"maxResponseBytes":1024,"description":"Synthetic write action","sideEffect":"write","inputSchema":{"type":"object"}}}});
+    composition_with_manifest(manifest)
+}
+fn composition_with_manifest(manifest: serde_json::Value) -> (MemoryBackend, MemoryDashboard) {
     let registry =
         appcall_connectors::Registry::from_connectors([appcall_connectors::Connector::from_bytes(
             &serde_json::to_vec(&manifest).unwrap(),
@@ -105,6 +108,47 @@ fn api_request(method: &str, uri: &str, body: serde_json::Value) -> crate::Reque
         uri: uri.into(),
         headers: vec![("X-API-Key".into(), "test-platform-key".into())],
         body: serde_json::to_vec(&body).unwrap(),
+    }
+}
+#[tokio::test]
+async fn toolkit_selection_memory_routes_validate_explicit_actions() {
+    use appcall_web::{DashboardData, DashboardOperation, DashboardRequest, Error};
+    let action = |kind, effect| serde_json::json!({"kind":kind,"sideEffect":effect,"timeoutMs":1000,"maxInputBytes":1024,"maxResponseBytes":1024,"description":"Synthetic operation","inputSchema":{"type":"object"}});
+    let (_, dashboard) = composition_with_manifest(serde_json::json!({
+        "key":"test","name":"Test","version":"1","runtime":"bun","models":["item"],
+        "auth":{"type":"api_key"},"network":{"egress":"none"},
+        "operations":{"a_sync":action("sync","read"),"b_write":action("action","write"),"c_read":action("action","read")}
+    }));
+    for operation in [DashboardOperation::Toolkit, DashboardOperation::TestForm] {
+        for (action, expected) in [
+            (None, Some("b_write")),
+            (Some(""), Some("b_write")),
+            (Some("c_read"), Some("c_read")),
+            (Some("unknown"), None),
+            (Some("a_sync"), None),
+        ] {
+            let request = DashboardRequest {
+                principal: appcall_auth::Principal::project("proj_dev").unwrap(),
+                operation,
+                resource: Some("test".into()),
+                account_id: None,
+                fields: action
+                    .map(|a| std::collections::BTreeMap::from([("action".into(), a.into())]))
+                    .unwrap_or_default(),
+                form_values: Default::default(),
+            };
+            let result = dashboard.execute(request).await;
+            if let Some(expected) = expected {
+                let item = result.unwrap();
+                assert_eq!(item["action"], expected);
+                assert!(item.get("safeDefault").is_none());
+            } else {
+                assert!(
+                    matches!(result, Err(Error::Invalid)),
+                    "{operation:?} action {action:?}: {result:?}"
+                );
+            }
+        }
     }
 }
 #[tokio::test]

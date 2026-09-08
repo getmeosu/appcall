@@ -82,14 +82,7 @@ impl MemoryDashboard {
                     .filter(|c| c.connector == resource)
                     .map(crate::browser_host::connection_value)
                     .collect();
-                let selected = if field("action").is_empty() {
-                    c.manifest()
-                        .operations
-                        .iter()
-                        .find(|(_, o)| o.kind == appcall_connectors::OperationKind::Action)
-                } else {
-                    c.manifest().operations.get_key_value(field("action"))
-                };
+                let selected = crate::browser_host::selected_action(c.manifest(), field("action"))?;
                 if let Some((action, op)) = selected {
                     item["action"] = action.clone().into();
                     item["inputSchema"] = op
