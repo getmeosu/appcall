@@ -124,13 +124,43 @@ pub async fn dispatch_preview(
         fields,
         now: 1800000000,
     };
-    Ok(Dashboard {
+    let response = Dashboard {
         browser: &browser,
         data,
     }
     .handle(&request)
     .await
-    .unwrap_or_else(|| plain_response(404, "Not found".into())))
+    .unwrap_or_else(|| plain_response(404, "Not found".into()));
+    // Faults affect only successful known drawer GETs, after real route validation.
+    if method == "GET"
+        && response.status == 200
+        && is_logs_scenario(data.scenario)
+        && path.strip_prefix("/app/logs/").is_some_and(logs_trace_id)
+        && request
+            .fields
+            .get("view")
+            .is_some_and(|values| values.len() == 1 && values[0] == "drawer")
+    {
+        match data.scenario {
+            Scenario::Logs401 => {
+                return Ok(plain_response(401, "Synthetic sign-in failure.".into()))
+            }
+            Scenario::Logs403 => {
+                return Ok(plain_response(403, "Synthetic access failure.".into()))
+            }
+            Scenario::Logs503 => {
+                return Ok(plain_response(503, "Synthetic unavailable trace.".into()))
+            }
+            Scenario::LogsMalformed => {
+                return Ok(plain_response(
+                    200,
+                    "<div>Synthetic invalid trace fragment.</div>".into(),
+                ))
+            }
+            _ => {}
+        }
+    }
+    Ok(response)
 }
 pub fn request_result(
     scenario: Scenario,
