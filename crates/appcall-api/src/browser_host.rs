@@ -223,6 +223,9 @@ impl BrowserHost {
         })
         .await
     }
+    /// Handles browser routes, preserving binary asset bytes in the response.
+    /// Returns `Ok(None)` for routes outside the browser surface and propagates
+    /// request-validation errors. Admission or deadline exhaustion is `SERVICE_BUSY`.
     pub async fn handle(&self, request: &Request) -> Result<Option<RawResponse>> {
         if !public_path(&request.method, request.uri.split('?').next().unwrap_or("")) {
             return Ok(None);
@@ -420,6 +423,7 @@ pub fn parse_request(request: &Request) -> Result<ParsedRequest> {
         fields,
     })
 }
+/// Preserves status and headers, preferring binary bytes over the UTF-8 text body.
 pub(crate) fn web_response(response: appcall_web::Response) -> RawResponse {
     RawResponse {
         status: response.status,
@@ -449,6 +453,8 @@ fn browser_response_adapter_preserves_binary_and_utf8_contracts() {
     }
 }
 
+/// Tests whether a method and query-free path belong to the browser routing surface.
+/// This does not authorize access; protected handlers still validate sessions.
 pub fn public_path(method: &str, path: &str) -> bool {
     if !matches!(method, "GET" | "POST")
         || path.contains(['%', '\\'])
