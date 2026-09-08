@@ -194,6 +194,8 @@ pub enum InputType {
     Hidden,
     Checkbox,
     Search,
+    Url,
+    Color,
 }
 pub struct SelectOption<'a> {
     pub value: &'a str,
@@ -280,6 +282,8 @@ impl<'a> Field<'a> {
                     InputType::Hidden => "hidden",
                     InputType::Checkbox => "checkbox",
                     InputType::Search => "search",
+                    InputType::Url => "url",
+                    InputType::Color => "color",
                 },
             );
             attr(&mut html, "value", self.value);

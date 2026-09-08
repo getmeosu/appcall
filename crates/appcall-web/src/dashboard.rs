@@ -192,6 +192,10 @@ impl DashboardRenderer<'_> {
             ));
         }
         let operation = operation.ok_or(Error::Invalid)?;
+        // No trusted operator authority is configured; tenant grants cannot authorize QA.
+        if operation == DashboardOperation::Qa {
+            return Err(Error::Forbidden);
+        }
         let trace_drawer = crate::trace::drawer_request(r, Some(operation))?;
         let log_filters = if operation == DashboardOperation::Logs {
             crate::logs::Filters::from_request(r)?
@@ -589,7 +593,7 @@ impl DashboardRenderer<'_> {
             }
         }
         if !banner.is_empty() {
-            content=format!("<div role=\"{}\" class=\"mb-4 rounded-lg border border-space-indigo-800 p-4 text-sm\">{}</div>{content}",if recovery {"alert"} else {"status"},escape(banner));
+            content = crate::admin_ui::banner(banner, !recovery) + &content;
         }
         if matches!(
             operation,

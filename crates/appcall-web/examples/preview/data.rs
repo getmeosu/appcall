@@ -100,6 +100,15 @@ impl ScenarioData {
                 return Err(Error::Unavailable.into())
             }
             Op::Overview => overview_fixture(self.scenario),
+            Op::Usage => match self.scenario {
+                Scenario::Unavailable => return Err(Error::Unavailable.into()),
+                Scenario::Empty => {
+                    json!({"synthetic":true,"month":"2026-09 (synthetic preview)","toolCalls":0,"syncedRecords":0,"webhookEvents":0})
+                }
+                _ => {
+                    json!({"synthetic":true,"month":"2026-09 (synthetic preview)","toolCalls":1205,"syncedRecords":340,"webhookEvents":27})
+                }
+            },
             Op::Setup if r.resource.as_deref() == Some("connector-0") => json!({"synthetic":true}),
             Op::TestConnection | Op::DisconnectConnection
                 if r.resource.as_deref() == Some("preview_connection") =>

@@ -42,7 +42,7 @@ impl Browser<'_> {
                 if response.status == 200 {
                     response.body = crate::shell::layout(
                         match r.path {
-                            "/app/users" => "Users",
+                            "/app/users" => "Team",
                             "/app/sessions" => "Sessions",
                             "/app/settings/account" => "Account",
                             "/app/settings/account/mfa/setup" => "Enable MFA",
@@ -199,7 +199,7 @@ impl Browser<'_> {
                 )
                 .unwrap_or_default();
                 let content = format!(
-                    "<p class=\"mb-4 text-sm text-dusk-blue-400\">Scan this QR code with your authenticator app, or enter the secret manually.</p><div class=\"overflow-hidden rounded-lg\">{qr}</div><p class=\"mt-4\">Manual setup secret: <code>{}</code></p>{}",
+                    "<p class=\"mb-4 text-sm text-ink-300\">Scan this QR code with your authenticator app, or enter the secret manually.</p><div class=\"overflow-hidden rounded-lg\">{qr}</div><p class=\"mt-4\">Manual setup secret: <code>{}</code></p>{}",
                     text(&result, "secret"),
                     form(
                         "/app/settings/account/mfa/verify",
@@ -257,7 +257,7 @@ impl Browser<'_> {
                         Method::DELETE,
                         format!("/api/auth/sessions/{}", parts[2]),
                         Value::Null,
-                        "/app/sessions?revoked=1",
+                        "/app/settings/account?revoked=1#account-sessions",
                     ),
                     _ => return Err(Error::Invalid),
                 }
@@ -321,7 +321,7 @@ impl Browser<'_> {
                         ("role", "Role (user or admin)", "text", "user"),
                     ],
                 );
-                content.push_str("<div class=\"overflow-x-auto rounded-xl border border-space-indigo-800\"><table class=\"admin-table w-full\"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Manage</th></tr></thead><tbody>");
+                content.push_str("<div class=\"remaining-table-scroll\" role=\"region\" aria-label=\"Team members\" tabindex=\"0\"><table class=\"remaining-table\"><caption class=\"sr-only\">Team members</caption><thead><tr><th scope=\"col\">Name</th><th scope=\"col\">Email</th><th scope=\"col\">Role</th><th scope=\"col\">Joined</th><th scope=\"col\">Manage</th></tr></thead><tbody>");
                 for member in members {
                     let id = member
                         .get("userId")
@@ -364,56 +364,12 @@ impl Browser<'_> {
                 content.push_str("</tbody></table></div>");
                 content
             }
-            "/app/sessions" => {
-                let value = self
-                    .identity
+            "/app/sessions" => crate::remaining_pages::sessions(
+                self.identity
                     .broker
                     .call(Method::GET, "/api/auth/sessions", Some(s), None)
-                    .await?;
-                let sessions = value
-                    .get("sessions")
-                    .and_then(Value::as_array)
-                    .ok_or(Error::Unavailable)?;
-                let mut content = String::from("<div class=\"overflow-x-auto rounded-xl border border-space-indigo-800\"><table class=\"admin-table w-full\"><thead><tr><th>Device</th><th>IP Address</th><th>Created</th><th>Expires</th><th>Manage</th></tr></thead><tbody>");
-                for item in sessions {
-                    let id = item
-                        .get("id")
-                        .and_then(Value::as_str)
-                        .filter(|v| identifier(v))
-                        .ok_or(Error::Unavailable)?;
-                    let agent = item["userAgent"].as_str().unwrap_or("");
-                    let agent = format!(
-                        "{}{}",
-                        agent.chars().take(60).collect::<String>(),
-                        if agent.chars().count() > 60 {
-                            "…"
-                        } else {
-                            ""
-                        }
-                    );
-                    let manage = if item["current"].as_bool() == Some(true) {
-                        "<span class=\"text-xs text-neon-ice-400\">Current session</span>".into()
-                    } else {
-                        form(&format!("/app/sessions/{id}/revoke"), &[])
-                    };
-                    content.push_str(&format!(
-                        "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{manage}</td></tr>",
-                        escape(&agent),
-                        text(item, "ipAddress"),
-                        crate::admin_ui::display_date(
-                            item["createdAt"].as_str().unwrap_or(""),
-                            true
-                        ),
-                        crate::admin_ui::display_date(
-                            item["expiresAt"].as_str().unwrap_or(""),
-                            true
-                        )
-                    ));
-                }
-                content.push_str("</tbody></table></div>");
-                content.push_str(session_empty_state(sessions.is_empty()));
-                content
-            }
+                    .await,
+            ),
             "/app/settings/organization" => form(
                 "/app/settings/organization",
                 &[(
@@ -428,31 +384,19 @@ impl Browser<'_> {
                 )],
             ),
             "/app/settings/account" => {
-                let value = self
-                    .identity
-                    .broker
-                    .call(Method::GET, "/api/auth/me", Some(s), None)
-                    .await?;
-                let user = value.get("user").ok_or(Error::Unavailable)?;
-                let mfa = if user.get("totpEnabled").and_then(Value::as_bool) == Some(true) {
-                    form(
-                        "/app/settings/account/mfa/disable",
-                        &[("code", "Disable MFA with verification code", "text", "")],
+                let security = crate::remaining_pages::account_security(
+                    self.identity
+                        .broker
+                        .call(Method::GET, "/api/auth/me", Some(s), None)
+                        .await,
+                );
+                security
+                    + &crate::remaining_pages::sessions(
+                        self.identity
+                            .broker
+                            .call(Method::GET, "/api/auth/sessions", Some(s), None)
+                            .await,
                     )
-                } else {
-                    form("/app/settings/account/mfa/setup", &[])
-                };
-                format!(
-                    "<p class=\"text-lg font-semibold\">{}</p><p class=\"text-sm text-dusk-blue-400\">{}</p><h3 class=\"mt-6 text-base font-semibold\">Two-factor authentication</h3><p>{}</p>{mfa}<h3 class=\"mt-6 text-base font-semibold\">Change password</h3>{}",
-                    text(user, "displayName"), text(user, "email"),if user["totpEnabled"].as_bool()==Some(true) {"MFA is enabled."} else {"Add an extra layer of security to your account."},
-                    form(
-                        "/app/settings/account/change-password",
-                        &[
-                            ("currentPassword", "Current password", "password", ""),
-                            ("newPassword", "New password", "password", "")
-                        ]
-                    )
-                )
             }
             "/app/settings/billing" => {
                 let status = self
@@ -471,7 +415,7 @@ impl Browser<'_> {
         };
         Ok(page(
             match path {
-                "/app/users" => "Users",
+                "/app/users" => "Team",
                 "/app/sessions" => "Sessions",
                 "/app/settings/account" => "Account",
                 "/app/settings/billing" => "Billing",
@@ -492,7 +436,7 @@ fn text(v: &Value, key: &str) -> String {
 }
 pub(crate) fn session_empty_state(empty: bool) -> &'static str {
     if empty {
-        "<p class=\"mt-4 text-sm text-dusk-blue-400\">No sessions to show.</p>"
+        "<p class=\"mt-4 text-sm text-ink-300\">No sessions to show.</p>"
     } else {
         ""
     }
@@ -532,23 +476,90 @@ pub(crate) fn form(action: &str, fields: &[(&str, &str, &str, &str)]) -> String 
         path if path.ends_with("/revoke") => "Revoke session",
         _ => "Save changes",
     };
-    format!(
-        "<form class=\"mt-5 space-y-4\" method=\"post\" action=\"{}\">{}<button class=\"inline-flex items-center gap-2 rounded-lg bg-neon-ice-500 px-3.5 py-2 text-sm font-semibold text-prussian-blue-950\">{label}</button></form>",
-        escape(action),
-        fields
-            .iter()
-            .map(|(name, label, kind, value)| if *kind == "hidden" { format!("<input type=\"hidden\" name=\"{}\" value=\"{}\">",escape(name),escape(value)) } else if *name == "role" { format!("<label class=\"block text-xs text-dusk-blue-300\">{}<select name=\"role\" class=\"w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 text-sm text-dusk-blue-100\"><option value=\"user\" {}>User</option><option value=\"admin\" {}>Admin</option></select></label>",escape(label),if *value=="admin" {""} else {"selected"},if *value=="admin" {"selected"} else {""}) } else { format!(
-                "<label class=\"mb-1.5 block text-xs font-medium text-dusk-blue-300\">{}<input class=\"w-full rounded-lg border border-space-indigo-700 bg-prussian-blue-950 px-3 py-2 text-sm text-dusk-blue-100 focus:ring-1 focus:ring-neon-ice-500\" name=\"{}\" type=\"{}\" value=\"{}\"></label>",
-                escape(label),
-                escape(name),
-                escape(kind),
-                escape(value)
-            ) })
-            .collect::<String>()
-    )
+    use crate::ui::{
+        Button, ButtonTarget, ButtonType, Control, Field, InputType, LocalPath, SelectOption,
+    };
+    let Ok(prefix) = crate::ui::document_id() else {
+        return crate::admin_ui::banner("Form unavailable. Refresh this page to try again.", false);
+    };
+    let options = [
+        SelectOption {
+            value: "user",
+            label: "User",
+            disabled: false,
+        },
+        SelectOption {
+            value: "admin",
+            label: "Admin",
+            disabled: false,
+        },
+    ];
+    let controls = fields
+        .iter()
+        .enumerate()
+        .map(|(index, (name, label, kind, value))| {
+            let id = format!("{prefix}-{index}");
+            let control = if *name == "role" {
+                Control::Select(&options)
+            } else {
+                Control::Input(match *kind {
+                    "hidden" => InputType::Hidden,
+                    "email" => InputType::Email,
+                    "password" => InputType::Password,
+                    _ => InputType::Text,
+                })
+            };
+            Field {
+                value,
+                ..Field::new(&id, name, label, control)
+            }
+            .render()
+        })
+        .collect::<String>();
+    let submit = if action.ends_with("/remove") || action.ends_with("/revoke") {
+        crate::ui::ConfirmButton {
+            id: &format!("{prefix}-dialog"),
+            trigger: label,
+            heading: label,
+            body: if action.ends_with("/remove") {
+                "Remove this member from the organization?"
+            } else {
+                "Revoke this session? The device will need to sign in again."
+            },
+            confirm: label,
+            action: LocalPath::new(action).expect("internal admin route"),
+            form: Some(&prefix),
+        }
+        .render()
+    } else {
+        Button {
+            variant: match action {
+                "/app/settings/account/mfa/setup" => crate::ui::ButtonVariant::Secondary,
+                "/app/settings/account/mfa/disable" => crate::ui::ButtonVariant::Danger,
+                "/app/settings/billing/checkout" => crate::ui::ButtonVariant::Secondary,
+                path if path.ends_with("/role") => crate::ui::ButtonVariant::Secondary,
+                _ => crate::ui::ButtonVariant::Primary,
+            },
+            target: ButtonTarget::Button {
+                kind: ButtonType::Submit,
+                form: None,
+                action: None,
+            },
+            ..Button::new(label)
+        }
+        .render()
+    };
+    format!("<form id=\"{prefix}\" class=\"remaining-form\" method=\"post\" action=\"{}\">{controls}{submit}</form>",escape(action))
 }
+
 fn page(title: &str, content: String) -> Response {
-    Response::new(200, format!("<div class=\"mb-6\"><h2 class=\"text-xl font-semibold tracking-tight text-dusk-blue-50\">{}</h2></div>{content}", escape(title)))
+    Response::new(
+        200,
+        format!(
+            "<div class=\"remaining-page\">{}{content}</div>",
+            crate::remaining_pages::heading(title, "")
+        ),
+    )
 }
 
 #[cfg(test)]

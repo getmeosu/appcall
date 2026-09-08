@@ -329,6 +329,11 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
     let mut principal = appcall_auth::Principal::project("proj_copy-test").unwrap();
     principal.user_id = Some("11111111-1111-1111-1111-111111111111".into());
     let copy_data = data.clone();
+    // The global QA table is deliberately unavailable: the service must reject
+    // this operation without attempting its SELECT, even for Grant::All.
+    admin
+        .batch_execute("ALTER TABLE qa_connector_status RENAME TO qa_connector_status_unreadable")
+        .unwrap();
     let runner_calls = transport.calls.clone();
     runtime.block_on(async move {
         tokio::task::spawn_blocking(move || {
@@ -346,6 +351,22 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
             let waker = std::task::Waker::from(Arc::new(Signal(std::thread::current())));
             let mut context = std::task::Context::from_waker(&waker);
             let mut future = std::pin::pin!(async {
+                assert_eq!(
+                    appcall_web::DashboardData::execute(
+                        copy_data.as_ref(),
+                        appcall_web::DashboardRequest {
+                            principal: principal.clone(),
+                            operation: appcall_web::DashboardOperation::Qa,
+                            resource: None,
+                            account_id: None,
+                            fields: Default::default(),
+                            form_values: Default::default()
+                        }
+                    )
+                    .await
+                    .unwrap_err(),
+                    appcall_web::Error::Forbidden
+                );
                 log_filter_cases::assert_log_filters(copy_data.as_ref(), principal.clone()).await;
                 log_filter_cases::assert_invalid_filters(copy_data.as_ref(), principal.clone())
                     .await;
@@ -421,7 +442,7 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
                 .unwrap();
             assert_eq!(
                 response.status,
-                200,
+                if path == "/app/qa" { 403 } else { 200 },
                 "{path}: {}",
                 String::from_utf8_lossy(&response.body)
             );

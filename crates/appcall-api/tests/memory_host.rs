@@ -188,8 +188,8 @@ fn memory_api_dashboard_actions_and_restart_share_ephemeral_state() {
         assert_eq!(status, 200, "{path}");
     }
     let (status, qa) = host.request("GET", "/app/qa", false, "");
-    assert_eq!(status, 200);
-    assert!(qa.contains("unavailable") || qa.contains("requires"));
+    assert_eq!(status, 403);
+    assert!(!qa.contains("manifestFingerprint"));
     assert_eq!(host.request("GET", "/v1/unipile/accounts", true, "").0, 404);
     let rows = host.json("GET", "/v1/connections", 200, Value::Null);
     assert_eq!(rows["connections"].as_array().unwrap().len(), 1);
