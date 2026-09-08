@@ -183,6 +183,42 @@ fn signal_search_status_and_table_headers_have_semantic_hooks() {
 }
 
 #[test]
+fn dynamic_options_render_a_keyboard_listbox_contract() {
+    let html = page(&serde_json::json!({
+        "name": "Provider",
+        "action": "mail.read",
+        "inputSchema":{"type":"object","properties": {
+            "actor": {"type":"string","title":"Actor","x-dynamic-options":{"source":"actors.options"}}
+        }},
+        "sample": {"actor":"actor-1"},
+        "operations": [{"name":"mail.read","title":"Read","kind":"action"}],
+        "connections": [{"id":"active_1","connector":"provider","status":"active"}]
+    }));
+    assert!(html.contains("role=\"combobox\""));
+    assert!(html.contains("aria-autocomplete=\"list\""));
+    assert!(html.contains("aria-controls=\"tk-opts-f.actor\""));
+    assert!(html.contains("role=\"listbox\""));
+    assert!(html.contains("aria-live=\"polite\""));
+    assert!(!html.contains("role=\"option\""));
+    assert!(html.contains("data-input-id=\"tk-search-"));
+
+    let loaded = render(
+        Op::Options,
+        &serde_json::json!({
+            "fieldName":"f.actor",
+            "key":"provider",
+            "detailSource":"actors.options",
+            "options":[{"id":"actor-1","name":"Alice"}]
+        }),
+        None,
+    )
+    .unwrap();
+    assert!(loaded.contains("role=\"listbox\""));
+    assert!(loaded.contains("role=\"option\""));
+    assert!(loaded.contains("aria-selected=\"false\""));
+}
+
+#[test]
 fn signal_tabs_and_stable_targets_are_unique_and_accessible() {
     let html = page(&fixture());
     for tab in ["tools", "accounts", "events", "code", "settings"] {

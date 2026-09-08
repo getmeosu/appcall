@@ -17,3 +17,9 @@ test('connections collapse to full-width actions at the narrow viewport', () => 
   assert.match(css, /@media\s*\(max-width:\s*640px\)[\s\S]*?#connections-page \.connections-table td::before/);
   assert.match(css, /@media\s*\(max-width:\s*640px\)[\s\S]*?#connections-page \.connection-actions > \*/);
 });
+
+test('connections keep action labels intact across the tablet breakpoint', () => {
+  const tabletRules = /@media\s*\(min-width:\s*641px\)\s+and\s+\(max-width:\s*900px\)[\s\S]*?#connections-page \.connections-table thead th:nth-child\(5\)[^\{]*\{[^}]*width:\s*28%[\s\S]*?#connections-page \.connection-action \.ui-button[^\{]*\{[^}]*white-space:\s*nowrap/;
+  assert.match(css, tabletRules);
+  assert.match(css, /@media\s*\(min-width:\s*641px\)\s+and\s+\(max-width:\s*900px\)[\s\S]*?#connections-page \.connection-action \.ui-button-labels > span[^\{]*\{[^}]*white-space:\s*nowrap/);
+});

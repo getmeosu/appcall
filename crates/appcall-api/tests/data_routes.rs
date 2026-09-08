@@ -1,6 +1,59 @@
 use appcall_api::data_routes::{sanitize, LogQuery};
 use serde_json::json;
 #[test]
+fn action_created_bounds_validate_and_normalize_first_scalars() {
+    let mut url = url::Url::parse("http://x/v1/action-logs").unwrap();
+    url.query_pairs_mut()
+        .append_pair("createdFrom", "2026-09-07T15:30:00+05:30")
+        .append_pair("createdFrom", "invalid")
+        .append_pair("createdBefore", "2026-09-07T11:00:00Z");
+    let query = LogQuery::parse(&url).unwrap();
+    assert_eq!(query.filters["createdFrom"], "2026-09-07T10:00:00+00:00");
+    assert_eq!(query.filters["createdBefore"], "2026-09-07T11:00:00+00:00");
+    for raw in [
+        "createdFrom=bad-private-value",
+        "createdBefore=2026-09-07",
+        "createdFrom=2026-09-07T11:00:00Z&createdBefore=2026-09-07T10:00:00Z",
+        "createdFrom=2026-09-07T10:00:00Z&createdBefore=2026-09-07T10:00:00Z",
+        "createdFrom=2026-09-07T15:30:00%2B05:30&createdBefore=2026-09-07T10:00:00Z",
+        "createdFrom=2016-12-31T23:59:60Z",
+        "createdBefore=2026-09-07T10:00:00.0000000001Z",
+        "createdFrom=0000-01-01T00:00:00Z",
+        "createdFrom=0001-01-01T00:00:00%2B01:00",
+        "createdBefore=9999-12-31T23:00:00-01:00",
+        "createdBefore=9999-12-31T23:59:59.999999999Z",
+    ] {
+        let error =
+            LogQuery::parse(&url::Url::parse(&format!("http://x/?{raw}")).unwrap()).unwrap_err();
+        assert_eq!(error.code, "INVALID_TIME_RANGE");
+    }
+    let long = format!(
+        "http://x/?createdFrom=2026-09-07T10:00:00.{}Z",
+        "0".repeat(100)
+    );
+    assert_eq!(
+        LogQuery::parse(&url::Url::parse(&long).unwrap())
+            .unwrap_err()
+            .code,
+        "INVALID_TIME_RANGE"
+    );
+    assert!(LogQuery::parse(
+        &url::Url::parse("http://x/?createdFrom=&createdFrom=bad&createdBefore=").unwrap()
+    )
+    .is_ok());
+    for kind in [
+        appcall_api::data_routes::LogKind::Replay,
+        appcall_api::data_routes::LogKind::Webhook,
+    ] {
+        assert!(LogQuery::parse_for(
+            &url::Url::parse("http://x/?createdFrom=bad&createdBefore=bad").unwrap(),
+            kind
+        )
+        .is_ok());
+    }
+}
+
+#[test]
 fn filters_limits_and_redaction_are_contractual() {
     assert_eq!(
         LogQuery::parse(&url::Url::parse("http://x/?limit=0").unwrap())
@@ -84,6 +137,72 @@ fn postgres_history_is_owned_bounded_and_replay_input_is_redacted() {
     .unwrap();
     assert_eq!(second["logs"][0]["id"], "a1");
     assert_eq!(second["pagination"]["hasMore"], false);
+    client.batch_execute("INSERT INTO action_logs(id,project_id,connection_id,connector,action,status,request_id,created_at,external_account_id) VALUES('old','p','a','slack','send','failed','old','2026-09-07T09:59:59Z','brand-a'),('end','p','a','slack','send','failed','end','2026-09-07T11:00:00Z','brand-a'); UPDATE action_logs SET error_code='ACTION_TIMEOUT' WHERE id='a2'").unwrap();
+    let bounds = "createdFrom=2026-09-07T15:30:00%2B05:30&createdBefore=2026-09-07T11:00:00Z";
+    let mut bounded = |query: &str| {
+        list(
+            &mut client,
+            &identity,
+            LogKind::Action,
+            &LogQuery::parse(&url::Url::parse(&format!("http://x/?{query}")).unwrap()).unwrap(),
+        )
+        .unwrap()
+    };
+    let page = bounded(&format!("{bounds}&limit=1"));
+    assert_eq!(page["logs"][0]["id"], "a2");
+    assert_eq!(page["pagination"]["hasMore"], true);
+    let next = bounded(&format!(
+        "{bounds}&limit=1&cursor={}",
+        page["pagination"]["nextCursor"].as_str().unwrap()
+    ));
+    assert_eq!(next["logs"][0]["id"], "a1");
+    assert_eq!(next["pagination"]["hasMore"], false);
+    let filtered = bounded(&format!("{bounds}&connectionId=a&connector=slack&action=send&requestId=ra2&status=failed&errorCode=ACTION_TIMEOUT"));
+    assert_eq!(filtered["logs"].as_array().unwrap().len(), 1);
+    assert_eq!(filtered["logs"][0]["id"], "a2");
+    for filter in [
+        "connectionId=missing",
+        "connector=missing",
+        "action=missing",
+        "requestId=missing",
+        "errorCode=ACTION_FAILED",
+    ] {
+        assert_eq!(bounded(&format!("{bounds}&{filter}"))["logs"], json!([]));
+    }
+    assert_eq!(
+        bounded("createdBefore=2026-09-07T10:00:00Z")["logs"][0]["id"],
+        "old"
+    );
+    assert_eq!(
+        bounded("createdFrom=2026-09-07T11:00:00Z")["logs"][0]["id"],
+        "end"
+    );
+    let after_nano = bounded("createdFrom=2026-09-07T10:00:00.0000001Z");
+    assert_eq!(after_nano["logs"].as_array().unwrap().len(), 1);
+    assert_eq!(after_nano["logs"][0]["id"], "end");
+    assert_eq!(
+        bounded("createdBefore=2026-09-07T10:00:00.0000001Z")["logs"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    assert_eq!(
+        bounded("createdFrom=2026-09-07T09:59:59.9999999Z")["logs"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    let before_rollover = bounded("createdBefore=2026-09-07T09:59:59.9999999Z");
+    assert_eq!(before_rollover["logs"].as_array().unwrap().len(), 1);
+    assert_eq!(before_rollover["logs"][0]["id"], "old");
+    assert_eq!(
+        bounded(
+            "createdFrom=2026-09-07T10:00:00.0000001Z&createdBefore=2026-09-07T10:00:00.0000002Z"
+        )["logs"],
+        json!([])
+    );
     for request in ["rb", "rq"] {
         assert_eq!(
             detail(&mut client, &identity, LogKind::Action, request, true)

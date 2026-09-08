@@ -501,6 +501,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
                 | "/static/app.css"
                 | "/static/dashboard.css"
                 | "/static/dashboard.js"
+                | "/static/logs.js"
                 | "/static/datastar.js"
                 | "/static/palette.js"
                 | "/static/oauth-callback.js"
@@ -708,7 +709,7 @@ impl ApiDashboard {
             Op::DisconnectConnection=>{self.core.disconnect(&identity,resource).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"disconnected":true}))},
             Op::Logs|Op::Triggers|Op::Stream|Op::Trace=>{
                 let mut url=url::Url::parse(&format!("http://local.invalid{}",match r.operation{Op::Logs=>"/v1/action-logs".to_owned(),Op::Trace=>format!("/v1/requests/{resource}"),_=>"/v1/webhook-events".to_owned()})).map_err(|_|Error::Invalid)?;
-                for (k,v) in &r.fields {if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
+                for (k,v) in &r.fields {if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation"].contains(&k.as_str()) || r.operation == Op::Logs && ["createdFrom","createdBefore"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
                 self.db(|client| Ok(crate::data_routes::read(client,&identity,&url)))?.map_err(dashboard_failure::map_api_error)?.map(|r|r.body).ok_or_else(|| Error::Invalid.into())
             },
             Op::ReplayTrace=>{let command=self.db(|client| Ok(crate::data_routes::prepare_replay(client,&identity,resource,true)))?.map_err(dashboard_failure::map_api_error)?;let mut execute=command.execute;execute.admin_scope=account.is_empty();ensure_active()?;let result=self.core.execute(execute).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"requestId":command.request_id,"replayLogId":command.log_id,"output":result.output}))},
@@ -868,7 +869,9 @@ fn api_error(error: ApiError) -> appcall_web::Error {
             appcall_web::Error::Forbidden
         }
         "INVALID_REQUEST" | "INVALID_JSON" | "INVALID_LIMIT" | "INVALID_CURSOR"
-        | "UNKNOWN_ACTION" => appcall_web::Error::Invalid,
+        | "INVALID_TIME_RANGE" | "INVALID_STATUS" | "INVALID_ERROR_CODE" | "UNKNOWN_ACTION" => {
+            appcall_web::Error::Invalid
+        }
         _ => appcall_web::Error::Unavailable,
     }
 }
@@ -953,3 +956,15 @@ pub fn guided_action_input(
 mod cancellation_tests;
 #[cfg(test)]
 mod toolkit_tests;
+
+#[cfg(test)]
+#[test]
+fn logs_filter_errors_are_invalid_in_production_dashboard() {
+    for code in ["INVALID_TIME_RANGE", "INVALID_STATUS", "INVALID_ERROR_CODE"] {
+        assert_eq!(
+            api_error(ApiError::new(code)),
+            appcall_web::Error::Invalid,
+            "{code}"
+        );
+    }
+}

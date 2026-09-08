@@ -173,14 +173,22 @@ fn reconnect_link(connector: &str, id: &str) -> String {
     .render()
 }
 
-fn disconnect_button(id: &str) -> Result<String, Error> {
+fn disconnect_button(connector: &str, id: &str) -> Result<String, Error> {
     let document_id = ui::document_id()?;
     let action = format!("/app/auth-configs/{id}/disconnect");
+    let connector_name = if connector.is_empty() {
+        "Connector not recorded"
+    } else {
+        connector
+    };
+    let heading = format!("Disconnect {connector_name} connection {id}?");
+    let body =
+        format!("Tool runs for {connector_name} connection {id} will stop until you reconnect it.");
     Ok(ui::ConfirmButton {
         id: &document_id,
         trigger: "Disconnect",
-        heading: "Disconnect this connection?",
-        body: "Tool runs will stop using this connection until you reconnect it.",
+        heading: &heading,
+        body: &body,
         confirm: "Disconnect",
         action: ui::LocalPath::new(&action).expect("validated local route"),
         form: None,
@@ -196,7 +204,7 @@ fn actions(status: &str, connector: &str, id: &str) -> Result<String, Error> {
     }
     html.push_str(&reconnect_link(connector, id));
     if status != "disconnected" {
-        html.push_str(&disconnect_button(id)?);
+        html.push_str(&disconnect_button(connector, id)?);
     }
     html.push_str("</div>");
     Ok(html)
@@ -335,6 +343,23 @@ mod tests {
         assert!(!html.contains("Check connection"));
         assert!(!html.contains("data-confirm-open"));
         assert!(!html.contains("/disconnect"));
+    }
+
+    #[test]
+    fn disconnect_confirmation_names_escaped_target_and_consequence() {
+        let html = render(&json!({
+            "connections": [{
+                "id": "conn_1",
+                "connector": "slack&<team>\"primary",
+                "status": "active"
+            }]
+        }))
+        .unwrap();
+        assert!(html.contains("Disconnect slack&amp;&lt;team&gt;&quot;primary connection conn_1?"));
+        assert!(html.contains(
+            "Tool runs for slack&amp;&lt;team&gt;&quot;primary connection conn_1 will stop until you reconnect it."
+        ));
+        assert!(!html.contains("Disconnect slack&<team>\"primary connection conn_1?"));
     }
 
     #[test]

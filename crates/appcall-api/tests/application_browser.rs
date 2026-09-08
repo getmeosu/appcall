@@ -11,6 +11,8 @@ use std::{
     time::{Duration, Instant},
 };
 const SESSION_SECRET: &str = "application-browser-synthetic-session";
+#[path = "application_browser/trace_cases.rs"]
+mod trace_cases;
 struct Schemas {
     admin: postgres::Client,
     app: String,
@@ -301,6 +303,7 @@ fn wait_for(socket: &mut TcpStream, wire: &mut String, needle: &str) {
 fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
     let database = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
     let mut schemas = Schemas::new(&database);
+    trace_cases::seed(&mut schemas.admin);
     let (app_url, anusa_url) = schemas.urls(&database);
     assert_ne!(app_url, anusa_url);
     let fixture: Value =
@@ -317,6 +320,8 @@ fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
         .get::<_, bool>(0));
     let unauthenticated = request(address, "GET", "/app/auth-configs", "", "");
     assert!(unauthenticated.starts_with("HTTP/1.1 302"));
+    trace_cases::assert_assets(address);
+    trace_cases::assert_session_required(address, "");
     let login = request(
         address,
         "POST",
@@ -336,6 +341,7 @@ fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
     assert!(configs.starts_with("HTTP/1.1 200"), "{configs}");
     assert!(configs.contains("application-browser-connection"));
     assert!(!configs.contains("other-project-secret-connection"));
+    trace_cases::assert_traces(address, &original_cookie);
     // Age only this synthetic session's signed access token; exercise the real
     // browser refresh route without waiting for wall-clock token expiry.
     let codec = appcall_web::SessionCodec::new(SESSION_SECRET, false).unwrap();
@@ -398,6 +404,7 @@ fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
         request(address, "GET", "/app/auth-configs", &refreshed_cookie, "")
             .starts_with("HTTP/1.1 302")
     );
+    trace_cases::assert_session_required(address, &refreshed_cookie);
     assert!(Command::new("kill")
         .args(["-TERM", &process.0.id().to_string()])
         .status()

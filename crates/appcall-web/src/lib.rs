@@ -12,12 +12,14 @@ mod dashboard;
 mod dashboard_failure;
 pub use dashboard_failure::*;
 mod connections;
+mod logs;
 mod pages;
 mod shell;
 mod toolkit;
 #[cfg(test)]
 #[path = "toolkit/tests.rs"]
 mod toolkit_tests;
+mod trace;
 pub use dashboard::*;
 
 mod refresh;

@@ -19,6 +19,14 @@ pub(crate) fn selected_tab(value: &str) -> &'static str {
 fn text<'a>(v: &'a Value, key: &str) -> &'a str {
     v.get(key).and_then(Value::as_str).unwrap_or("")
 }
+fn operation_title(operation: &Value) -> &str {
+    let title = text(operation, "title");
+    if title.is_empty() {
+        text(operation, "name")
+    } else {
+        title
+    }
+}
 fn array<'a>(v: &'a Value, key: &str) -> &'a [Value] {
     v.get(key)
         .and_then(Value::as_array)
@@ -59,6 +67,19 @@ fn styled_submit(label: &str, disabled: bool, variant: ui::ButtonVariant) -> Str
         ..ui::Button::new(label)
     }
     .render()
+}
+fn decorate_link(mut html: String, id: Option<&str>, current: bool) -> String {
+    let mut attributes = String::new();
+    if let Some(id) = id {
+        attributes.push_str(&format!(" id=\"{}\"", escape(id)));
+    }
+    if current {
+        attributes.push_str(" aria-current=\"page\"");
+    }
+    if !attributes.is_empty() {
+        html = html.replacen("<a ", &format!("<a{attributes} "), 1);
+    }
+    html
 }
 fn hidden(id: &str, name: &str, value: &str) -> String {
     ui::Field {
@@ -180,7 +201,11 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
         html.push_str(&format!(
             "<span id=\"tk-tab-{id}\" data-tab=\"{id}\" data-selected=\"{}\">{}</span>",
             id == tab,
-            link(label, &url)
+            decorate_link(
+                link(label, &url),
+                Some(&format!("tk-tab-{id}-link")),
+                id == tab,
+            )
         ));
     }
     html.push_str("</nav>");
@@ -225,16 +250,20 @@ fn tools(
             .or_default()
             .push(op);
     }
-    let mut html=String::from("<div class=\"tk-tools-layout\"><aside class=\"tk-tool-list\" aria-label=\"Available tools\">");
-    html.push_str(
-        &ui::Field::new(
-            "tk-tool-filter",
-            "toolFilter",
-            "Filter tools",
-            ui::Control::Input(ui::InputType::Search),
-        )
-        .render(),
+    let filter = ui::Field::new(
+        "tk-tool-filter",
+        "toolFilter",
+        "Filter tools",
+        ui::Control::Input(ui::InputType::Search),
+    )
+    .render()
+    .replacen(
+        "<input class=\"ui-control\"",
+        "<input aria-controls=\"tk-tool-list\" class=\"ui-control\"",
+        1,
     );
+    let mut html=String::from("<div class=\"tk-tools-layout\"><aside id=\"tk-tool-list\" class=\"tk-tool-list\" aria-label=\"Available tools\">");
+    html.push_str(&filter);
     for (group, mut ops) in groups {
         ops.sort_by_key(|o| text(o, "name"));
         html.push_str(&format!(
@@ -243,17 +272,17 @@ fn tools(
         ));
         for op in ops {
             let name = text(op, "name");
-            let title = if text(op, "title").is_empty() {
-                name
-            } else {
-                text(op, "title")
-            };
+            let title = operation_title(op);
             html.push_str(&format!(
                 "<div class=\"tk-tool-item\" data-selected=\"{}\">{}<code>{}</code>{}</div>",
                 name == action_name,
-                link(
-                    title,
-                    &destination(key, &[("action", name), ("connectionId", connection)])
+                decorate_link(
+                    link(
+                        title,
+                        &destination(key, &[("action", name), ("connectionId", connection)]),
+                    ),
+                    None,
+                    name == action_name,
                 ),
                 escape(name),
                 if op.get("readOnly").and_then(Value::as_bool) == Some(true) {
@@ -270,11 +299,7 @@ fn tools(
         .iter()
         .map(|o| ui::SelectOption {
             value: text(o, "name"),
-            label: if text(o, "title").is_empty() {
-                text(o, "name")
-            } else {
-                text(o, "title")
-            },
+            label: operation_title(o),
             disabled: false,
         })
         .collect();
@@ -286,7 +311,7 @@ fn tools(
     .render();
     html.push_str(&format!("<form id=\"tk-tool-selector\" method=\"get\" action=\"/app/toolkits/{key}\" class=\"tk-mobile-selector\">{selector}{}{}</form>",hidden("tk-selection-connection","connectionId",connection),styled_submit("Select tool",actions.is_empty(),ui::ButtonVariant::Quiet)));
     if let Some(op) = action {
-        html.push_str(&format!("<header class=\"tk-selected-tool\"><h2>{}</h2><code>{}</code><p>{}</p></header><details class=\"tk-schema\"><summary>Schema</summary><h3>Input schema</h3><pre aria-live=\"off\">{}</pre><h3>Output schema</h3><pre aria-live=\"off\">{}</pre></details>",escape(text(op,"title")),escape(action_name),escape(text(op,"description")),pretty(op.get("inputSchema").unwrap_or(&Value::Null)),pretty(op.get("outputSchema").unwrap_or(&Value::Null))));
+        html.push_str(&format!("<header class=\"tk-selected-tool\"><h2>{}</h2><code>{}</code><p>{}</p></header><details class=\"tk-schema\"><summary>Schema</summary><h3>Input schema</h3><pre aria-live=\"off\">{}</pre><h3>Output schema</h3><pre aria-live=\"off\">{}</pre></details>",escape(operation_title(op)),escape(action_name),escape(text(op,"description")),pretty(op.get("inputSchema").unwrap_or(&Value::Null)),pretty(op.get("outputSchema").unwrap_or(&Value::Null))));
     } else {
         html.push_str(
             &ui::EmptyState {
@@ -446,7 +471,7 @@ fn events(key: &str, operations: &[Value]) -> String {
     for op in webhooks {
         html.push_str(&format!(
             "<article class=\"tk-event\"><h3>{}</h3><code>{}</code><p>{}</p></article>",
-            escape(text(op, "title")),
+            escape(operation_title(op)),
             escape(text(op, "name")),
             escape(text(op, "description"))
         ));
