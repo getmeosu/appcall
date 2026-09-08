@@ -54,6 +54,7 @@ test-web: ## Test delegated dashboard interactions
 .PHONY: test-rust
 test-rust: ## Test Rust core, hosts and adapters
 	$(CARGO) test --workspace --all-features --locked
+	$(CARGO) test --locked -p appcall-web --example preview
 
 .PHONY: test-integration
 test-integration: ## Run explicit PostgreSQL/socket/process suites (requires both test DB URLs)

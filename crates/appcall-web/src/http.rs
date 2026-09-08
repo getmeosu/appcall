@@ -20,11 +20,13 @@ impl Request<'_> {
         }
     }
 }
+/// Framework-independent response whose body is encoded by the hosting adapter.
 pub struct Response {
     pub status: u16,
     pub headers: Vec<(String, String)>,
     pub body: String,
-    /// Embedded binary assets bypass UTF-8 conversion. Text responses retain body.
+    /// Takes precedence over `body` when present. Hosts must send these bytes
+    /// unchanged; otherwise they encode `body` as UTF-8.
     pub binary_body: Option<&'static [u8]>,
 }
 impl Response {

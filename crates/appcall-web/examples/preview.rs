@@ -22,6 +22,36 @@ impl appcall_auth::MembershipVerifier for Members {
     }
 }
 struct Data;
+fn preview_response(method: &str, path: &str) -> Option<Response> {
+    // This synthetic fixture only acknowledges the dialog; it never deletes data.
+    if method == "POST" && path == "/preview/delete" {
+        return Some(Response {
+            status: 200,
+            headers: vec![("Content-Type".into(), "text/html; charset=utf-8".into())],
+            body: concat!(
+                "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">",
+                "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+                "<title>Preview confirmation</title>",
+                "<link rel=\"stylesheet\" href=\"/static/app.css\"></head><body><main>",
+                "<h1>Preview confirmation received</h1>",
+                "<p>This is a synthetic component preview. No data was deleted.</p>",
+                "<a href=\"/preview/components\">Back to component sheet</a>",
+                "</main></body></html>"
+            )
+            .into(),
+            binary_body: None,
+        });
+    }
+    if method != "GET" || path != "/preview/components" {
+        return None;
+    }
+    let revision = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    Some(Response { status: 200, headers: vec![("Content-Type".into(), "text/html; charset=utf-8".into())], body: format!("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Signal component sheet</title><link rel=\"stylesheet\" href=\"/static/app.css?preview={revision}\"><script defer src=\"/static/dashboard.js?preview={revision}\"></script></head><body>{}</body></html>",ui::component_sheet()), binary_body: None })
+}
+
 impl DashboardData for Data {
     fn execute(
         &self,
@@ -157,12 +187,8 @@ async fn main() {
                 fields,
                 now: 1800000000,
             };
-            let response = if method == "GET" && parsed.path() == "/preview/components" {
-                let revision = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_nanos();
-                Some(Response { status: 200, headers: vec![("Content-Type".into(), "text/html; charset=utf-8".into())], body: format!("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Signal component sheet</title><link rel=\"stylesheet\" href=\"/static/app.css?preview={revision}\"><script defer src=\"/static/dashboard.js?preview={revision}\"></script></head><body>{}</body></html>",ui::component_sheet()), binary_body: None })
+            let response = if let Some(response) = preview_response(method, parsed.path()) {
+                Some(response)
             } else if method == "GET" {
                 dashboard.handle(&request).await
             } else {
@@ -189,5 +215,40 @@ async fn main() {
             let _ = stream.write_all(output.as_bytes()).await;
             let _ = stream.write_all(&body).await;
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn native_delete_form_receives_an_honest_preview_confirmation() {
+        let sheet = preview_response("GET", "/preview/components").unwrap();
+        assert!(sheet
+            .body
+            .contains("method=\"post\" action=\"/preview/delete\""));
+        let response = preview_response("POST", "/preview/delete")
+            .expect("the component sheet's native form action must resolve");
+        assert_eq!(response.status, 200);
+        assert!(response.body.contains("Preview confirmation received"));
+        assert!(response.body.contains("No data was deleted"));
+        assert!(response.body.contains("href=\"/preview/components\""));
+        assert!(response
+            .headers
+            .iter()
+            .any(|(key, value)| key == "Content-Type" && value == "text/html; charset=utf-8"));
+    }
+
+    #[test]
+    fn fixture_routes_require_their_exact_method_and_path() {
+        for (method, path) in [
+            ("GET", "/preview/delete"),
+            ("DELETE", "/preview/delete"),
+            ("POST", "/preview/components"),
+            ("POST", "/app/connections/delete"),
+        ] {
+            assert!(preview_response(method, path).is_none());
+        }
     }
 }
