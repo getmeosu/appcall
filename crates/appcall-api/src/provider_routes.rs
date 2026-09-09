@@ -736,4 +736,221 @@ mod database_tests {
             .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
             .unwrap();
     }
+
+    #[test]
+    #[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+    fn selected_smtp_setup_routes_persist_without_reflection() {
+        let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+        let mut db = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+        let schema = format!("provider_smtp_{}", std::process::id());
+        db.batch_execute(&format!(
+            "CREATE SCHEMA {schema};SET search_path TO {schema}"
+        ))
+        .unwrap();
+        for sql in [
+            include_str!("../../../migrations/202605140001_init.sql"),
+            include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+            include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+            include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+        ] {
+            db.batch_execute(sql).unwrap();
+        }
+        db.batch_execute("INSERT INTO projects(id,name)VALUES('p','test')")
+            .unwrap();
+        let store = Arc::new(Mutex::new(Store::new(
+            db,
+            LocalProvider::new(&[7; 32]).unwrap(),
+        )));
+        let registry = Arc::new(
+            Registry::from_connectors([
+                Connector::from_bytes(include_bytes!(
+                    "../../../runner/connectors/brevo/manifest.json"
+                ))
+                .unwrap(),
+                Connector::from_bytes(include_bytes!(
+                    "../../../runner/connectors/resend/manifest.json"
+                ))
+                .unwrap(),
+                Connector::from_bytes(include_bytes!(
+                    "../../../runner/connectors/sendgrid/manifest.json"
+                ))
+                .unwrap(),
+            ])
+            .unwrap(),
+        );
+        let oauth = Arc::new(Lifecycle::new(
+            store.clone(),
+            registry.clone(),
+            BTreeMap::new(),
+            StateSigner::new(&[1; 32]).unwrap(),
+            Arc::new(LocalTokens {
+                client: TokenClient::new(
+                    std::time::Duration::from_secs(2),
+                    EndpointPolicy::LoopbackDevelopment,
+                )
+                .unwrap(),
+                url: "http://127.0.0.1:1/token".into(),
+            }),
+        ));
+        let routes = ProviderRoutes::new(
+            Arc::new(appcall_setup::Service::new(
+                store.clone(),
+                registry,
+                oauth,
+                Arc::new(Accept),
+            )),
+            None,
+        );
+        let identity = Identity {
+            project_id: "p".into(),
+            account_id: "brand".into(),
+            admin_scope: false,
+        };
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            for connector in ["brevo", "resend", "sendgrid"] {
+                let description = routes
+                    .handle(
+                        Some(&identity),
+                        &request(
+                            "GET",
+                            &format!("/v1/connectors/{connector}/setup"),
+                            Value::Null,
+                        ),
+                    )
+                    .await
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(description.status, 200, "{connector}: {description:?}");
+                assert_eq!(description.body["routes"].as_array().unwrap().len(), 2);
+                assert_eq!(description.body["routes"][1]["id"], "smtp");
+
+                let unknown = routes
+                    .handle(
+                        Some(&identity),
+                        &request(
+                            "POST",
+                            &format!("/v1/connectors/{connector}/setup/api-key"),
+                            json!({
+                                "route":"unknown",
+                                "fields":{"smtpPassword":"unknown-route-secret"}
+                            }),
+                        ),
+                    )
+                    .await
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(unknown.status, 400, "{connector}: {unknown:?}");
+                assert_eq!(unknown.body["error"]["code"], "INVALID_INPUT");
+                assert!(!unknown.body.to_string().contains("unknown-route-secret"));
+                assert!(store
+                    .lock()
+                    .unwrap()
+                    .list(&Scope::new("p", Some("brand")).unwrap())
+                    .unwrap()
+                    .iter()
+                    .all(|connection| connection.connector != connector));
+
+                let missing = routes
+                    .handle(
+                        Some(&identity),
+                        &request(
+                            "POST",
+                            &format!("/v1/connectors/{connector}/setup/api-key"),
+                            json!({
+                                "route":"smtp",
+                                "fields":{
+                                    "smtpHost":format!("smtp.{connector}.example"),
+                                    "smtpPort":"587",
+                                    "smtpUser":"smtp-user",
+                                }
+                            }),
+                        ),
+                    )
+                    .await
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(missing.status, 400, "{connector}: {missing:?}");
+                assert_eq!(missing.body["error"]["code"], "MISSING_SETUP_FIELD");
+                assert_eq!(missing.body["error"]["field"], "smtpPassword");
+                assert!(!missing.body.to_string().contains("smtpPassword-secret"));
+                assert!(store
+                    .lock()
+                    .unwrap()
+                    .list(&Scope::new("p", Some("brand")).unwrap())
+                    .unwrap()
+                    .iter()
+                    .all(|connection| connection.connector != connector));
+
+                let wrong_type = routes
+                    .handle(
+                        Some(&identity),
+                        &request(
+                            "POST",
+                            &format!("/v1/connectors/{connector}/setup/api-key"),
+                            json!({"route":42,"fields":{"apiKey":"wrong-type-secret"}}),
+                        ),
+                    )
+                    .await
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(wrong_type.status, 400, "{connector}: {wrong_type:?}");
+                assert_eq!(wrong_type.body["error"]["code"], "INVALID_JSON");
+                assert!(!wrong_type.body.to_string().contains("wrong-type-secret"));
+
+                let default = routes
+                    .handle(
+                        Some(&identity),
+                        &request(
+                            "POST",
+                            &format!("/v1/connectors/{connector}/setup/api-key"),
+                            json!({"fields":{"apiKey":format!("{connector}-api-secret")}}),
+                        ),
+                    )
+                    .await
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(default.status, 201, "{connector}: {default:?}");
+                assert!(!default.body.to_string().contains(&format!("{connector}-api-secret")));
+
+                let smtp_secret = format!("{connector}-smtp-secret");
+                let selected = routes
+                    .handle(
+                        Some(&identity),
+                        &request(
+                            "POST",
+                            &format!("/v1/connectors/{connector}/setup/api-key"),
+                            json!({
+                                "route":"smtp",
+                                "fields":{
+                                    "smtpHost":format!("smtp.{connector}.example"),
+                                    "smtpPort":"587",
+                                    "smtpUser":"smtp-user",
+                                    "smtpPassword":smtp_secret,
+                                }
+                            }),
+                        ),
+                    )
+                    .await
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(selected.status, 201, "{connector}: {selected:?}");
+                assert_eq!(selected.body["connection"]["connector"], connector);
+                assert!(!selected.body.to_string().contains(&smtp_secret));
+            }
+        });
+        let scope = Scope::new("p", Some("brand")).unwrap();
+        let connections = store.lock().unwrap().list(&scope).unwrap();
+        assert_eq!(connections.len(), 3);
+        assert!(connections
+            .iter()
+            .all(|connection| connection.status == Status::Active));
+        drop(routes);
+        drop(runtime);
+        drop(store);
+        let mut admin = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+        admin
+            .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+            .unwrap();
+    }
 }
