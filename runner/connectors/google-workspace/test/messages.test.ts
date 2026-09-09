@@ -3,6 +3,7 @@ import messagesListFixture from "../fixtures/messages_list.json";
 import messagesNoPageFixture from "../fixtures/messages_list_no_page.json";
 import sendMessageFixture from "../fixtures/send_message.json";
 import rateLimitedFixture from "../fixtures/rate_limited.json";
+import draftCreateFixture from "../fixtures/draft_create.json";
 import {
   createGmailClient,
   normalizeGmailMessage,
@@ -10,6 +11,38 @@ import {
   validateSendMessageInput,
 } from "../src/messages";
 import { parseGoogleError, parseGoogleRateLimitMetadata, parseNextPageToken } from "../src/http";
+
+type HeaderField = "to" | "subject";
+type GmailWriteOperation = "messages.send" | "drafts.create";
+type HeaderPosition = "leading" | "middle" | "trailing";
+
+const invalidHeaderCases: Array<{
+  operation: GmailWriteOperation;
+  field: HeaderField;
+  newline: "\r" | "\n" | "\r\n";
+  position: HeaderPosition;
+}> = [
+  ...(["messages.send", "drafts.create"] as const).flatMap((operation) =>
+    (["to", "subject"] as const).flatMap((field) =>
+      (["\r", "\n", "\r\n"] as const).flatMap((newline) =>
+        (["leading", "middle", "trailing"] as const).map((position) => ({ operation, field, newline, position })),
+      ),
+    ),
+  ),
+];
+
+function addNewline(value: string, newline: string, position: HeaderPosition): string {
+  if (position === "leading") return `${newline}${value}`;
+  if (position === "trailing") return `${value}${newline}`;
+  const midpoint = Math.floor(value.length / 2);
+  return `${value.slice(0, midpoint)}${newline}${value.slice(midpoint)}`;
+}
+
+async function decodeRawMime(request: Request): Promise<string> {
+  const payload = await request.clone().json() as { raw?: unknown };
+  if (typeof payload.raw !== "string") throw new Error("raw MIME payload is missing");
+  return Buffer.from(payload.raw, "base64url").toString("utf8");
+}
 
 describe("google-workspace messages", () => {
   test("normalizes Gmail message from fixture", () => {
@@ -112,6 +145,81 @@ describe("google-workspace messages", () => {
       expect(result.message.id).toBe("18e4a3c29a8d7a80");
       expect(result.message.threadId).toBe("18e4a3c29a8d7a80");
     }
+  });
+
+  test("send message encodes headers and preserves multiline body", async () => {
+    const requests: Request[] = [];
+    const body = "first line\nsecond line\r\nthird line";
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        return Response.json(sendMessageFixture);
+      },
+    });
+
+    await client.send({ to: "recipient@example.com", subject: "Test", body });
+
+    expect(requests).toHaveLength(1);
+    expect(await decodeRawMime(requests[0])).toBe(
+      `To: recipient@example.com\r\nSubject: Test\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`,
+    );
+  });
+
+  for (const testCase of invalidHeaderCases) {
+    test(`${testCase.operation} rejects ${testCase.field} ${JSON.stringify(testCase.newline)} in ${testCase.position} position before dispatch`, async () => {
+      let fetchCalls = 0;
+      const client = createGmailClient({
+        accessToken: "ya29.test-token",
+        fetch: async () => {
+          fetchCalls += 1;
+          return Response.json(sendMessageFixture);
+        },
+      });
+      const invalidValue = testCase.field === "to" ? "recipient@example.com" : "Test subject";
+      const input = {
+        to: testCase.field === "to"
+          ? addNewline(invalidValue, testCase.newline, testCase.position)
+          : "recipient@example.com",
+        subject: testCase.field === "subject"
+          ? addNewline(invalidValue, testCase.newline, testCase.position)
+          : "Test subject",
+        body: "Body",
+      };
+
+      const result = testCase.operation === "messages.send"
+        ? client.send(input)
+        : client.createDraft(input);
+
+      const error = await result.then(() => null, (reason) => reason);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(`${testCase.field} must not contain CR or LF`);
+      expect((error as Error).message).not.toContain(invalidValue);
+      expect(fetchCalls).toBe(0);
+    });
+  }
+
+  test("drafts.create encodes headers and preserves multiline body", async () => {
+    const requests: Request[] = [];
+    const body = "first line\nsecond line\r\nthird line";
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        return Response.json(draftCreateFixture);
+      },
+    });
+
+    await client.createDraft({ to: "recipient@example.com", subject: "Draft subject", body });
+
+    expect(requests).toHaveLength(1);
+    const payload = await requests[0].clone().json() as { message?: { raw?: unknown } };
+    expect(typeof payload.message?.raw).toBe("string");
+    expect(Buffer.from(payload.message!.raw as string, "base64url").toString("utf8")).toBe(
+      `To: recipient@example.com\r\nSubject: Draft subject\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`,
+    );
   });
 
   test("send message maps Gmail rate limits to safe connector error", async () => {
