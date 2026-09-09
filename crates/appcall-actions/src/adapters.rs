@@ -229,6 +229,24 @@ mod metadata_tests {
             }
         }
     }
+    #[test]
+    fn connector_rate_limit_stays_transient_with_provider_retry_hint() {
+        let error = runner_failure(
+            appcall_runner_client::Error {
+                kind: ErrorKind::Runner,
+                outcome: DispatchOutcome::ResponseReceived,
+                code: Some("CONNECTOR_RATE_LIMITED".into()),
+                retry_after_seconds: Some(30),
+                message: "Too Many Requests".into(),
+            },
+            &json!({"chatId": "1001", "text": "hello"}),
+        );
+
+        assert_eq!(error.code, "CONNECTOR_RATE_LIMITED");
+        assert!(error.transient);
+        assert_eq!(error.retry_after_seconds, Some(30));
+        assert_eq!(error.retry_after_ms, 30_000);
+    }
     fn failure(kind: ErrorKind, message: &str) -> appcall_runner_client::Error {
         appcall_runner_client::Error {
             kind,
