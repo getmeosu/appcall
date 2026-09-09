@@ -61,13 +61,12 @@ fn field(
             .ok()
             .and_then(Number::from_f64)
             .map(Value::Number),
-        "boolean" => {
-            if raw.is_empty() {
-                None
-            } else {
-                Some(Value::Bool(true))
-            }
-        }
+        "boolean" => match raw {
+            "" => None,
+            "true" => Some(Value::Bool(true)),
+            "false" => Some(Value::Bool(false)),
+            _ => return Err(Error::Invalid),
+        },
         "array" => {
             let items = schema.get("items").unwrap_or(&Value::Null);
             let kind = items
@@ -321,40 +320,45 @@ fn render_control(
     if !matches!(kind, "string" | "number" | "integer" | "array" | "boolean") {
         return Ok(String::new());
     }
-    let value = if kind == "boolean" {
-        "true".into()
-    } else {
-        sample_value(node, sample)
-    };
+    let value = sample_value(node, sample);
     let example = node
         .get("examples")
         .and_then(Value::as_array)
         .and_then(|a| a.first())
         .or_else(|| node.get("example"));
     let placeholder = example.map(text_value).unwrap_or_default();
-    let choices = node.get("enum").and_then(Value::as_array).map(|values| {
-        std::iter::once(String::new())
-            .chain(values.iter().map(|value| {
-                value
-                    .as_str()
-                    .map(str::to_owned)
-                    .unwrap_or_else(|| value.to_string())
-            }))
-            .collect::<Vec<_>>()
-    });
+    // A boolean needs three browser states: omit an optional patch field, or
+    // submit an explicit true/false value. A select carries all three states
+    // through native form submission without duplicate field names.
+    let choices = if kind == "boolean" {
+        Some(vec![String::new(), "true".into(), "false".into()])
+    } else {
+        node.get("enum").and_then(Value::as_array).map(|values| {
+            std::iter::once(String::new())
+                .chain(values.iter().map(|value| {
+                    value
+                        .as_str()
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| value.to_string())
+                }))
+                .collect::<Vec<_>>()
+        })
+    };
     let options = choices.as_ref().map(|values| {
         values
             .iter()
             .map(|value| ui::SelectOption {
                 value,
-                label: value,
+                label: if kind == "boolean" && value.is_empty() {
+                    "Omit"
+                } else {
+                    value
+                },
                 disabled: false,
             })
             .collect::<Vec<_>>()
     });
-    let control = if kind == "boolean" {
-        ui::Control::Input(ui::InputType::Checkbox)
-    } else if let Some(options) = &options {
+    let control = if let Some(options) = &options {
         ui::Control::Select(options)
     } else if kind == "string" && multiline(node) {
         ui::Control::Textarea
