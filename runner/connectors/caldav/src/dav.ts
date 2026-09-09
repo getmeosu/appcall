@@ -103,6 +103,28 @@ function extractTag(xml: string, localName: string): string | undefined {
   return m ? m[1].trim() : undefined;
 }
 
+/** Decode standard XML entities in ETag text without recursively decoding values. */
+function decodeXmlText(value: string): string {
+  return value.replace(/&(#x[0-9a-f]+|#\d+|quot|apos|amp|lt|gt);/gi, (entity, name: string) => {
+    const normalized = name.toLowerCase();
+    if (normalized === "quot") return '"';
+    if (normalized === "apos") return "'";
+    if (normalized === "amp") return "&";
+    if (normalized === "lt") return "<";
+    if (normalized === "gt") return ">";
+
+    const codePoint = normalized.startsWith("#x")
+      ? Number.parseInt(normalized.slice(2), 16)
+      : Number.parseInt(normalized.slice(1), 10);
+    if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return entity;
+    try {
+      return String.fromCodePoint(codePoint);
+    } catch {
+      return entity;
+    }
+  });
+}
+
 /** Extract all occurrences of a tag value */
 function extractAllTags(xml: string, localName: string): string[] {
   const re = new RegExp(`<[^:>]*:?${localName}[^>]*>([\\s\\S]*?)<\/[^:>]*:?${localName}>`, "gi");
@@ -172,7 +194,7 @@ export function parseMultiStatus(xml: string): ParsedResponse {
     responses.push({
       href,
       displayName,
-      etag: etag ? etag.replace(/"/g, "") : undefined,
+      etag: etag ? decodeXmlText(etag) : undefined,
       calendarData,
       calendarColor,
       components: components.length > 0 ? components : undefined,

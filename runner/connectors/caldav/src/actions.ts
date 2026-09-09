@@ -252,7 +252,7 @@ export async function runEventsGet(input: Record<string, unknown>): Promise<{ ok
   const response = await client.get(payload.eventHref);
   if (response.status === 200) {
     const vevent = parseVEvent(response.body);
-    const etag = (response.headers["etag"] ?? response.headers["ETag"] ?? "").replace(/"/g, "");
+    const etag = response.headers["etag"] ?? response.headers["ETag"] ?? "";
     return {
       ok: true,
       uid: vevent.uid ?? "",
@@ -315,7 +315,7 @@ export async function runEventsCreate(input: Record<string, unknown>): Promise<{
   const href = `${payload.calendarHref.replace(/\/$/, "")}/${uid}.ics`;
   const response = await client.putCreate(href, calendarData);
   if (response.status === 201 || response.status === 200 || response.status === 204) {
-    const etag = (response.headers["etag"] ?? response.headers["ETag"] ?? "").replace(/"/g, "");
+    const etag = response.headers["etag"] ?? response.headers["ETag"] ?? "";
     return { ok: true, href, uid, etag };
   }
   return handleError(response.status, response.headers, "CalDAV events.create failed.");
@@ -364,7 +364,7 @@ export async function runEventsUpdate(input: Record<string, unknown>): Promise<{
   const calendarData = buildVEvent({ uid: payload.uid, summary: payload.summary, start: payload.start, end: payload.end, description: payload.description, location: payload.location, timezone: payload.timezone, attendees: payload.attendees });
   const response = await client.putUpdate(payload.eventHref, payload.etag, calendarData);
   if (response.status === 201 || response.status === 200 || response.status === 204) {
-    const newEtag = (response.headers["etag"] ?? response.headers["ETag"] ?? "").replace(/"/g, "");
+    const newEtag = response.headers["etag"] ?? response.headers["ETag"] ?? "";
     return { ok: true, href: payload.eventHref, etag: newEtag };
   }
   if (response.status === 412) {
@@ -407,6 +407,9 @@ export async function runEventsDelete(input: Record<string, unknown>): Promise<{
   }
   if (response.status === 404) {
     return { ok: true, deleted: true, alreadyGone: true };
+  }
+  if (response.status === 412) {
+    return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "CalDAV conflict: event was modified by another client (ETag mismatch)." } };
   }
   return handleError(response.status, response.headers, "CalDAV events.delete failed.");
 }

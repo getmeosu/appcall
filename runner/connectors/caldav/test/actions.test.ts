@@ -214,7 +214,18 @@ describe("listEvents", () => {
     const ev = (events as Array<Record<string, unknown>>)[0];
     expect(ev.uid).toBe("meeting-uid-001");
     expect(ev.summary).toBe("Team Meeting");
-    expect(ev.etag).toBe("etag-abc123");
+    expect(ev.etag).toBe('"etag-abc123"');
+  });
+
+  test("decodes XML-escaped list ETag while preserving its quotes", async () => {
+    const escapedEventsReportXml = eventsReportXml.replace('>"etag-abc123"<', '>&quot;etag-abc123&quot;<');
+    const result = await listEvents({
+      ...CREDS,
+      calendarHref: "/1234567890/calendars/home/",
+      fetch: async () => new Response(escapedEventsReportXml, { status: 207 }),
+    }) as Record<string, unknown>;
+    const events = result.events as Array<Record<string, unknown>>;
+    expect(events[0]?.etag).toBe('"etag-abc123"');
   });
 
   test("sends time-range in REPORT body when start/end provided", async () => {
@@ -250,6 +261,83 @@ describe("listEvents", () => {
   });
 });
 
+describe("ETag action round trips", () => {
+  test("passes each produced ETag unchanged into one update and one delete", async () => {
+    const scenarios = [
+      {
+        name: "get",
+        expected: 'W/"get-etag-001"',
+        read: async () => getEvent({
+          ...CREDS,
+          eventHref: "/1234567890/calendars/home/get-001.ics",
+          fetch: async () => new Response(eventIcs, { status: 200, headers: { etag: 'W/"get-etag-001"' } }),
+        }) as Promise<Record<string, unknown>>,
+        etagFrom: (output: Record<string, unknown>) => output.etag as string,
+      },
+      {
+        name: "list",
+        expected: '"list-etag-001"',
+        read: async () => listEvents({
+          ...CREDS,
+          calendarHref: "/1234567890/calendars/home/",
+          fetch: async () => new Response(eventsReportXml.replace('>"etag-abc123"<', '>&quot;list-etag-001&quot;<'), { status: 207 }),
+        }) as Promise<Record<string, unknown>>,
+        etagFrom: (output: Record<string, unknown>) => ((output.events as Array<Record<string, unknown>>)[0]?.etag) as string,
+      },
+      {
+        name: "create",
+        expected: 'W/"create-etag-001"',
+        read: async () => createEvent({
+          ...CREDS,
+          calendarHref: "/1234567890/calendars/home/",
+          summary: "Created Event",
+          start: "2024-06-15T10:00:00Z",
+          end: "2024-06-15T11:00:00Z",
+          uid: "create-001",
+          fetch: async () => new Response("", { status: 201, headers: { etag: 'W/"create-etag-001"' } }),
+        }) as Promise<Record<string, unknown>>,
+        etagFrom: (output: Record<string, unknown>) => output.etag as string,
+      },
+    ];
+
+    for (const scenario of scenarios) {
+      const produced = await scenario.read();
+      const etag = scenario.etagFrom(produced);
+      expect(etag).toBe(scenario.expected);
+
+      const updateRequests: Request[] = [];
+      await updateEvent({
+        ...CREDS,
+        eventHref: `/1234567890/calendars/home/${scenario.name}-001.ics`,
+        etag,
+        uid: `${scenario.name}-001`,
+        summary: "Updated Event",
+        start: "2024-06-15T12:00:00Z",
+        end: "2024-06-15T13:00:00Z",
+        fetch: async (input, init) => {
+          updateRequests.push(new Request(input, init));
+          return new Response("", { status: 204 });
+        },
+      });
+      expect(updateRequests).toHaveLength(1);
+      expect(updateRequests[0].headers.get("If-Match")).toBe(etag);
+
+      const deleteRequests: Request[] = [];
+      await deleteEvent({
+        ...CREDS,
+        eventHref: `/1234567890/calendars/home/${scenario.name}-001.ics`,
+        etag,
+        fetch: async (input, init) => {
+          deleteRequests.push(new Request(input, init));
+          return new Response("", { status: 204 });
+        },
+      });
+      expect(deleteRequests).toHaveLength(1);
+      expect(deleteRequests[0].headers.get("If-Match")).toBe(etag);
+    }
+  });
+});
+
 // ─── events.get ───────────────────────────────────────────────────────────────
 
 describe("getEvent", () => {
@@ -276,8 +364,17 @@ describe("getEvent", () => {
     expect(requests[0].method).toBe("GET");
     expect(result.uid).toBe("meeting-uid-001");
     expect(result.summary).toBe("Team Meeting");
-    expect(result.etag).toBe("etag-abc123");
+    expect(result.etag).toBe('"etag-abc123"');
     expect(result.calendarData).toContain("BEGIN:VCALENDAR");
+  });
+
+  test("preserves weak ETag marker and quotes from GET", async () => {
+    const result = await getEvent({
+      ...CREDS,
+      eventHref: "/1234567890/calendars/home/meeting-uid-001.ics",
+      fetch: async () => new Response(eventIcs, { status: 200, headers: { "etag": 'W/"weak-etag-001"' } }),
+    }) as Record<string, unknown>;
+    expect(result.etag).toBe('W/"weak-etag-001"');
   });
 
   test("maps 404 to CONNECTOR_UPSTREAM_ERROR", async () => {
@@ -341,7 +438,7 @@ describe("createEvent", () => {
     expect(body).toContain("SUMMARY:New Meeting");
     expect(result.href).toContain("explicit-uid-001.ics");
     expect(result.uid).toBe("explicit-uid-001");
-    expect(result.etag).toBe("new-etag-001");
+    expect(result.etag).toBe('"new-etag-001"');
   });
 
   test("generates uid when not provided", async () => {
@@ -404,7 +501,7 @@ describe("updateEvent", () => {
     const result = await updateEvent({
       ...CREDS,
       eventHref: "/1234567890/calendars/home/uid-001.ics",
-      etag: "current-etag",
+      etag: '"current-etag"',
       uid: "uid-001",
       summary: "Updated Meeting",
       start: "2024-06-15T14:00:00Z",
@@ -415,20 +512,56 @@ describe("updateEvent", () => {
       },
     }) as Record<string, unknown>;
     expect(requests[0].method).toBe("PUT");
-    expect(requests[0].headers.get("If-Match")).toBe("current-etag");
+    expect(requests[0].headers.get("If-Match")).toBe('"current-etag"');
     expect(result.href).toContain("uid-001.ics");
-    expect(result.etag).toBe("updated-etag-001");
+    expect(result.etag).toBe('"updated-etag-001"');
+  });
+
+  test("round-trips the returned ETag into a later delete without rewriting it", async () => {
+    const requests: Request[] = [];
+    const result = await updateEvent({
+      ...CREDS,
+      eventHref: "/1234567890/calendars/home/uid-001.ics",
+      etag: 'W/"current-etag"',
+      uid: "uid-001",
+      summary: "Updated Meeting",
+      start: "2024-06-15T14:00:00Z",
+      end: "2024-06-15T15:00:00Z",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 204, headers: { "etag": 'W/"updated-etag-001"' } });
+      },
+    }) as Record<string, unknown>;
+    await deleteEvent({
+      ...CREDS,
+      eventHref: result.href as string,
+      etag: result.etag as string,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 204 });
+      },
+    });
+    expect(requests).toHaveLength(2);
+    expect(requests[0].headers.get("If-Match")).toBe('W/"current-etag"');
+    expect(result.etag).toBe('W/"updated-etag-001"');
+    expect(requests[1].headers.get("If-Match")).toBe('W/"updated-etag-001"');
   });
 
   test("maps 412 (conflict) to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const requests: Request[] = [];
     await expect(updateEvent({
       ...CREDS,
       eventHref: "/1234/calendars/home/ev.ics",
-      etag: "stale",
+      etag: 'W/"stale-update"',
       uid: "uid-001",
       summary: "S", start: "2024-06-15T10:00:00Z", end: "2024-06-15T11:00:00Z",
-      fetch: async () => new Response("", { status: 412 }),
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 412 });
+      },
     })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: expect.stringContaining("conflict") });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].headers.get("If-Match")).toBe('W/"stale-update"');
   });
 
   test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
@@ -460,14 +593,14 @@ describe("deleteEvent", () => {
     const result = await deleteEvent({
       ...CREDS,
       eventHref: "/1234567890/calendars/home/uid-001.ics",
-      etag: "etag-to-delete",
+      etag: '"etag-to-delete"',
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
         return new Response("", { status: 204 });
       },
     }) as Record<string, unknown>;
     expect(requests[0].method).toBe("DELETE");
-    expect(requests[0].headers.get("If-Match")).toBe("etag-to-delete");
+    expect(requests[0].headers.get("If-Match")).toBe('"etag-to-delete"');
     expect(result.deleted).toBe(true);
     expect(result.alreadyGone).toBe(false);
   });
@@ -493,6 +626,25 @@ describe("deleteEvent", () => {
       },
     });
     expect(requests[0].headers.get("If-Match")).toBeNull();
+  });
+
+  test("maps 412 to a safe conflict without retrying or deleting unconditionally", async () => {
+    const requests: Request[] = [];
+    await expect(deleteEvent({
+      ...CREDS,
+      eventHref: "/1234/calendars/home/ev.ics",
+      etag: 'W/"stale-etag"',
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 412 });
+      },
+    })).rejects.toMatchObject({
+      ok: false,
+      code: "CONNECTOR_UPSTREAM_ERROR",
+      message: expect.stringContaining("ETag mismatch"),
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].headers.get("If-Match")).toBe('W/"stale-etag"');
   });
 
   test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
