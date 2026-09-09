@@ -304,7 +304,7 @@ export function validateCreateDraftInput(input: unknown): CreateDraftInput {
   return {
     to,
     subject: requireHeaderString(input.subject, "subject"),
-    body: requireString(input.body, "body"),
+    body: requireWellFormedUnicodeString(requireString(input.body, "body"), "body"),
   };
 }
 
@@ -326,7 +326,7 @@ export function validateSendMessageInput(input: unknown): SendMessageInput {
   }
   const to = requireHeaderString(input.to, "to").trim();
   const subject = requireHeaderString(input.subject, "subject").trim();
-  const body = requireString(input.body, "body");
+  const body = requireWellFormedUnicodeString(requireString(input.body, "body"), "body");
   if (to.length === 0) {
     throw new Error("to is required");
   }
@@ -385,11 +385,68 @@ function extractEmailAddress(header: string): string {
 }
 
 function buildMimeMessage(input: SendMessageInput): string {
-  return `To: ${input.to}\r\nSubject: ${input.subject}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${input.body}`;
+  const transferEncoding = hasNonAsciiBytes(input.body)
+    ? "Content-Transfer-Encoding: 8bit\r\n"
+    : "";
+  return `To: ${input.to}\r\n${formatMimeSubjectHeader(input.subject)}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n${transferEncoding}\r\n${input.body}`;
 }
 
 function base64UrlEncode(str: string): string {
-  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return base64EncodeBytes(new TextEncoder().encode(str)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function encodeMimeSubject(subject: string): string {
+  if (/^[\x00-\x7F]*$/.test(subject)) return subject;
+
+  const encoder = new TextEncoder();
+  const encodedWords: string[] = [];
+  let word = "";
+  let byteLength = 0;
+
+  for (const codePoint of subject) {
+    const codePointBytes = encoder.encode(codePoint);
+    if (word && encodedWordLength(byteLength + codePointBytes.length) > 75) {
+      encodedWords.push(encodeMimeSubjectWord(word, encoder));
+      word = "";
+      byteLength = 0;
+    }
+    word += codePoint;
+    byteLength += codePointBytes.length;
+  }
+
+  if (word) encodedWords.push(encodeMimeSubjectWord(word, encoder));
+  return encodedWords.join("\r\n ");
+}
+
+function formatMimeSubjectHeader(subject: string): string {
+  if (/^[\x00-\x7F]*$/.test(subject)) return `Subject: ${subject}`;
+
+  const encodedSubject = encodeMimeSubject(subject);
+  const firstWord = encodedSubject.split("\r\n ", 1)[0];
+  if (firstWord.length + "Subject: ".length <= 76) {
+    return `Subject: ${encodedSubject}`;
+  }
+  return `Subject:\r\n ${encodedSubject}`;
+}
+
+function encodedWordLength(byteLength: number): number {
+  return 12 + 4 * Math.ceil(byteLength / 3);
+}
+
+function encodeMimeSubjectWord(word: string, encoder: TextEncoder): string {
+  return `=?UTF-8?B?${base64EncodeBytes(encoder.encode(word))}?=`;
+}
+
+function hasNonAsciiBytes(value: string): boolean {
+  return new TextEncoder().encode(value).some((byte) => byte > 0x7F);
+}
+
+function base64EncodeBytes(bytes: Uint8Array): string {
+  const binaryChunks: string[] = [];
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binaryChunks.push(String.fromCharCode(...bytes.subarray(offset, offset + 0x8000)));
+  }
+  return btoa(binaryChunks.join(""));
 }
 
 function readJsonObject(bodyText: string): Record<string, unknown> {
@@ -412,7 +469,30 @@ function requireHeaderString(value: unknown, field: string): string {
   if (/[\r\n]/.test(header)) {
     throw new Error(`${field} must not contain CR or LF`);
   }
-  return header;
+  return requireWellFormedUnicodeString(header, field);
+}
+
+function requireWellFormedUnicodeString(value: string, field: string): string {
+  if (!isWellFormedUnicode(value)) {
+    throw new Error(`${field} must contain well-formed Unicode`);
+  }
+  return value;
+}
+
+function isWellFormedUnicode(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
+      const nextCodeUnit = value.charCodeAt(index + 1);
+      if (!(nextCodeUnit >= 0xDC00 && nextCodeUnit <= 0xDFFF)) {
+        return false;
+      }
+      index += 1;
+    } else if (codeUnit >= 0xDC00 && codeUnit <= 0xDFFF) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function requireRecord(value: unknown, field: string): Record<string, unknown> {
