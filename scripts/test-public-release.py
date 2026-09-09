@@ -318,6 +318,27 @@ class ReleaseGateTests(unittest.TestCase):
                  'Previously released AGPL-3.0-only versions retain their original grants.\n')
         self.assertEqual(self.run_gate('check').returncode, 0)
 
+    def test_non_object_license_metadata_returns_structured_diagnostic(self):
+        for path, content in (
+            ('Cargo.toml', 'workspace = []'),
+            ('Cargo.toml', '[workspace]\npackage = "invalid"'),
+            ('crates/demo/Cargo.toml', 'package = false'),
+            ('package.json', '[]'),
+            ('package.json', 'null'),
+            ('package.json', '"invalid"'),
+        ):
+            with self.subTest(path=path, content=content):
+                self.legal()
+                self.put(path, content)
+                result = self.run_gate('check')
+                if path.startswith('crates/'):
+                    (self.root / path).unlink()
+                self.assertEqual(result.returncode, 1)
+                self.assertNotIn('Traceback', result.stderr)
+                self.assertIn('invalid-license-metadata', {
+                    error['rule'] for error in json.loads(result.stdout)['errors']
+                })
+
     def test_ci_standard_and_pinned_community_atlas_blocked(self):
         self.legal()
         self.put('.github/workflows/ci.yml', 'run: docker create arigaio/atlas:1.3.2@sha256:' + 'a' * 64)

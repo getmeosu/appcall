@@ -158,6 +158,12 @@ def inventory(files):
     return {path: hashlib.sha256(data).hexdigest() for path, data in sorted(files.items()) if path != MANIFEST}
 
 
+def metadata_object(value):
+    if not isinstance(value, dict):
+        raise ValueError('license metadata must be an object')
+    return value
+
+
 def audit(files):
     """Return release-policy violations for a mapping of paths to file bytes.
 
@@ -233,14 +239,15 @@ def audit(files):
         errors.append(issue('NOTICE', 'required-attribution-missing'))
     try:
         cargo = tomllib.loads(files.get('Cargo.toml', b'').decode())
-        if cargo.get('workspace', {}).get('package', {}).get('license') != 'Elastic-2.0':
+        workspace = metadata_object(cargo.get('workspace', {}))
+        if metadata_object(workspace.get('package', {})).get('license') != 'Elastic-2.0':
             errors.append(issue('Cargo.toml', 'license-metadata-missing'))
         for path, data in files.items():
             if path.startswith('crates/') and path.endswith('/Cargo.toml'):
-                package = tomllib.loads(data.decode()).get('package', {})
+                package = metadata_object(tomllib.loads(data.decode()).get('package', {}))
                 if package.get('license') not in ('Elastic-2.0', {'workspace': True}):
                     errors.append(issue(path, 'license-metadata-missing'))
-        if json.loads(files.get('package.json', b'{}')).get('license') != 'Elastic-2.0':
+        if metadata_object(json.loads(files.get('package.json', b'{}'))).get('license') != 'Elastic-2.0':
             errors.append(issue('package.json', 'license-metadata-missing'))
     except (ValueError, UnicodeError):
         errors.append(issue('Cargo.toml/package.json', 'invalid-license-metadata'))
