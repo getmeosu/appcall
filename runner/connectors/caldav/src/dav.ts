@@ -70,6 +70,7 @@ export function buildFreeBusyReport(start: string, end: string): string {
 }
 
 const STRICT_ISO_DATE_TIME = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})T(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?<fraction>\.\d{1,9})?(?<offset>Z|[+-]\d{2}:\d{2})?$/;
+const NUMERIC_TIMEZONE_IDENTIFIER = /^[+-]\d{2}(?::?\d{2})?$/;
 
 function invalidCalDavDateTime(): never {
   throw new Error("Invalid CalDAV date-time.");
@@ -82,6 +83,7 @@ function invalidCalDavTimezone(): never {
 /** Validate a Temporal timezone without allowing it to reinterpret an offset timestamp. */
 function validateCalDavTimezone(timezone: string): void {
   if (timezone.length === 0) invalidCalDavTimezone();
+  if (NUMERIC_TIMEZONE_IDENTIFIER.test(timezone)) invalidCalDavTimezone();
   try {
     Temporal.Instant.from("2000-01-01T00:00:00Z").toZonedDateTimeISO(timezone);
   } catch {

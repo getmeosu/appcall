@@ -58,6 +58,13 @@ describe("toCalDAVDateTime", () => {
     expect(() => toCalDAVDateTime("2024-06-15T10:00:00", "Not/AZone")).toThrow("Invalid CalDAV timezone.");
   });
 
+  test("rejects numeric fixed-offset timezones while accepting IANA fixed-offset zones", () => {
+    expect(() => toCalDAVDateTime("2024-06-15T10:00:00", "+05:30")).toThrow("Invalid CalDAV timezone.");
+    expect(() => toCalDAVDateTime("2024-06-15T10:00:00", "-04:00")).toThrow("Invalid CalDAV timezone.");
+    expect(toCalDAVDateTime("2024-06-15T10:00:00", "UTC")).toBe("20240615T100000Z");
+    expect(toCalDAVDateTime("2024-06-15T10:00:00", "Etc/GMT+5")).toBe("20240615T150000Z");
+  });
+
   test("rejects a 2026 New York daylight-saving gap", () => {
     expect(() => toCalDAVDateTime("2026-03-08T02:30:00", "America/New_York")).toThrow("Invalid CalDAV date-time.");
   });
