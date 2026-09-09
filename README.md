@@ -115,11 +115,17 @@ live provider behavior.
 
 ## Licensing and releases
 
-The current core is AGPL-3.0-only. See [LICENSE](LICENSE), [NOTICE](NOTICE) for
-Meosu attribution, and [LICENSING](LICENSING) for component boundaries. Future
-source-available enterprise modules require their own commercial terms. No
-enterprise implementation is included today. Third-party terms are retained
-in [third_party/NOTICE](third_party/NOTICE).
+AppCall's first-party platform, workflow engine, and connector runtime are
+source-available under **Elastic License 2.0 (ELv2)**. You may use, modify, and
+self-host them subject to the license. Providing a substantial set of their
+features to third parties as a hosted or managed service requires a separate
+grant. ELv2 is not an OSI-approved open-source license.
+
+See [LICENSE](LICENSE) for the unmodified terms, [NOTICE](NOTICE) for Meosu
+attribution, and [LICENSING](LICENSING) for scope, usage guidance, and historical
+grants. Previously published AGPL-3.0-only versions retain their original
+license grants. Third-party terms remain in [third_party/NOTICE](third_party/NOTICE).
+No enterprise implementation or license-key requirement is introduced by this change.
 
 Public releases use `scripts/public-release.py export --source . --destination
 /absolute/new-directory` to construct an allowlisted snapshot without private

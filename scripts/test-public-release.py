@@ -59,11 +59,11 @@ class ReleaseGateTests(unittest.TestCase):
 
     def legal(self):
         self.put('LICENSE', (SCRIPT.parent.parent / 'LICENSE').read_text())
-        self.put('NOTICE', 'AppCall by Meosu\nCopyright 2026 Example Corporation\nUnder section 7(b), preserve attribution.\n')
-        self.put('LICENSING', 'AGPL-3.0-only\n')
+        self.put('NOTICE', 'AppCall by Meosu\nCopyright 2026 Example Corporation\nLicensed under Elastic License 2.0 (ELv2); see LICENSE.\n')
+        self.put('LICENSING', 'Elastic License 2.0 (ELv2)\n')
         self.put('README.md', 'AppCall\n')
-        self.put('Cargo.toml', '[workspace.package]\nlicense = "AGPL-3.0-only"\n')
-        self.put('package.json', '{"license":"AGPL-3.0-only"}')
+        self.put('Cargo.toml', '[workspace.package]\nlicense = "Elastic-2.0"\n')
+        self.put('package.json', '{"license":"Elastic-2.0"}')
         self.put('third_party/NOTICE', 'Third party provenance')
         self.put('third_party/anusa-sdk-go-NOTICE', 'Upstream provenance')
         for name in ('anusa-sdk-go', 'datastar', 'tailwindcss', 'activepieces'):
@@ -281,11 +281,42 @@ class ReleaseGateTests(unittest.TestCase):
 
     def test_truncated_license_and_missing_attribution_fail(self):
         self.legal()
-        self.put('LICENSE', 'GNU AFFERO GENERAL PUBLIC LICENSE')
+        self.put('LICENSE', 'Elastic License 2.0')
         self.put('NOTICE', 'Copyright 2026 Example Corporation')
         result = self.run_gate('check')
-        self.assertIn('agpl-license-hash-mismatch', result.stdout)
+        self.assertIn('elastic-license-hash-mismatch', result.stdout)
         self.assertIn('required-attribution-missing', result.stdout)
+
+    def test_elv2_metadata_accepts_workspace_inheritance_and_rejects_stale_metadata(self):
+        self.legal()
+        self.put('crates/demo/Cargo.toml', '[package]\nname = "demo"\nlicense.workspace = true\n')
+        self.assertEqual(self.run_gate('check').returncode, 0)
+        for path, content in (
+            ('Cargo.toml', '[workspace.package]\nlicense = "AGPL-3.0-only"\n'),
+            ('package.json', '{"license":"AGPL-3.0-only"}'),
+            ('crates/demo/Cargo.toml', '[package]\nname = "demo"\nlicense = "AGPL-3.0-only"\n'),
+        ):
+            with self.subTest(path=path):
+                original = (self.root / path).read_text()
+                self.put(path, content)
+                result = self.run_gate('check')
+                self.assertEqual(result.returncode, 1)
+                self.assertIn('license-metadata-missing', result.stdout)
+                self.put(path, original)
+
+    def test_license_appendix_cannot_change_the_pinned_elv2_terms(self):
+        self.legal()
+        with (self.root / 'LICENSE').open('a') as license_file:
+            license_file.write('\nAdditional restriction on deployment templates.\n')
+        result = self.run_gate('check')
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('elastic-license-hash-mismatch', result.stdout)
+
+    def test_historical_agpl_explanation_is_allowed(self):
+        self.legal()
+        self.put('LICENSING', 'Current license: Elastic License 2.0.\n'
+                 'Previously released AGPL-3.0-only versions retain their original grants.\n')
+        self.assertEqual(self.run_gate('check').returncode, 0)
 
     def test_ci_standard_and_pinned_community_atlas_blocked(self):
         self.legal()
