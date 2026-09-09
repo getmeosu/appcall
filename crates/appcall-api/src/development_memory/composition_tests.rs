@@ -670,7 +670,12 @@ fn setup_missing_declared_field_keeps_internal_evidence_and_public_contract() {
         matches!(api.evidence.as_deref(), Some(crate::ApiFailureEvidence::Setup(crate::SetupFailureEvidence::MissingField(Some(key)))) if key.as_str() == "apiKey")
     );
     let actual = crate::error_response(api);
-    let expected = crate::provider_routes::setup_error(appcall_setup::Error::MissingField, false);
+    let expected = crate::provider_routes::setup_error(
+        appcall_setup::Error::MissingDeclaredField(
+            appcall_setup::DeclaredFieldKey::new("apiKey").unwrap(),
+        ),
+        false,
+    );
     assert_eq!(actual.status, 400);
     assert_eq!(actual.body, expected.body);
 }

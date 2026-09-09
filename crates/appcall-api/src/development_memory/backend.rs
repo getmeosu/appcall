@@ -248,7 +248,7 @@ impl MemoryBackend {
         let i = identity.ok_or_else(|| ApiError::new("UNAUTHORIZED"))?;
         if operation == "describe" {
             let d = setup.describe(&connector).map_err(setup_error)?;
-            let mut value = json!({"connector":d.connector,"authType":d.auth_type,"mode":d.setup.mode,"fields":d.setup.fields});
+            let mut value = json!({"connector":d.connector,"authType":d.auth_type,"mode":d.setup.mode,"fields":d.setup.fields,"routes":d.setup.routes});
             if !d.setup.help.is_empty() {
                 value["help"] = d.setup.help.into();
             }
@@ -274,6 +274,11 @@ impl MemoryBackend {
             }
             return memory_work(move||setup.start_checked(&i.project_id,account(&i),&connector,None,&active).map(|s|Some(response(201,json!({"connection":crate::connection_json(&s.connection),"authorizationUrl":s.authorization_url})))).map_err(setup_error)).await;
         }
+        let route = match body.get("route") {
+            None | Some(Value::Null) => String::new(),
+            Some(Value::String(route)) => route.clone(),
+            Some(_) => return Err(ApiError::new("INVALID_JSON")),
+        };
         let fields: BTreeMap<String, String> = match body.get("fields") {
             None | Some(Value::Null) => BTreeMap::new(),
             Some(v) => {
@@ -282,7 +287,14 @@ impl MemoryBackend {
         };
         memory_work(move || {
             setup
-                .submit_checked(&i.project_id, account(&i), &connector, "", &fields, &active)
+                .submit_checked(
+                    &i.project_id,
+                    account(&i),
+                    &connector,
+                    &route,
+                    &fields,
+                    &active,
+                )
                 .map(|c| {
                     Some(response(
                         201,

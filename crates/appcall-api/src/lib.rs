@@ -297,7 +297,7 @@ impl<B: Backend> Api<B> {
                     .map_err(|_| ApiError::new("CONNECTOR_NOT_FOUND"))?;
                 let m = c.manifest();
                 Ok(ok(
-                    serde_json::json!({"connector":m.key,"authType":m.auth.type_,"mode":m.auth.setup.mode,"fields":m.auth.setup.fields,"help":m.auth.setup.help,"docsUrl":m.auth.setup.docs_url}),
+                    serde_json::json!({"connector":m.key,"authType":m.auth.type_,"mode":m.auth.setup.mode,"fields":m.auth.setup.fields,"routes":m.auth.setup.routes,"help":m.auth.setup.help,"docsUrl":m.auth.setup.docs_url}),
                 ))
             }
             ("GET", ["v1", "connections"]) => Ok(ok(
@@ -397,7 +397,12 @@ impl<B: Backend> Api<B> {
 fn error_response(error: ApiError) -> Response {
     // Setup adapters share the established provider-route status and safe text.
     let setup = match error.code {
-        "MISSING_SETUP_FIELD" => Some(appcall_setup::Error::MissingField),
+        "MISSING_SETUP_FIELD" => match error.evidence.as_deref() {
+            Some(ApiFailureEvidence::Setup(SetupFailureEvidence::MissingField(Some(key)))) => {
+                Some(appcall_setup::Error::MissingDeclaredField(key.clone()))
+            }
+            _ => Some(appcall_setup::Error::MissingField),
+        },
         "UNSUPPORTED_SETUP_MODE" => Some(appcall_setup::Error::Unsupported),
         "CONNECTOR_SETUP_VALIDATION_FAILED" => Some(appcall_setup::Error::ValidationFailed),
         "INVALID_OAUTH_STATE" => Some(appcall_setup::Error::OAuth(

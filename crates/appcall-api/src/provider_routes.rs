@@ -232,7 +232,7 @@ impl ProviderRoutes {
         match route {
             Route::Description(connector) => match self.setup.describe(&connector) {
                 Ok(description) => {
-                    let mut value = json!({"connector":description.connector,"authType":description.auth_type,"mode":description.setup.mode,"fields":description.setup.fields});
+                    let mut value = json!({"connector":description.connector,"authType":description.auth_type,"mode":description.setup.mode,"fields":description.setup.fields,"routes":description.setup.routes});
                     if !description.setup.help.is_empty() {
                         value["help"] = json!(description.setup.help)
                     }
@@ -244,6 +244,13 @@ impl ProviderRoutes {
                 Err(error) => setup_error(error, false),
             },
             Route::Submit(connector) => {
+                let route = match body.get("route") {
+                    None | Some(Value::Null) => "",
+                    Some(Value::String(route)) => route.as_str(),
+                    Some(_) => {
+                        return failure(400, "INVALID_JSON", "Request body must be valid JSON.")
+                    }
+                };
                 let fields: BTreeMap<String, String> = match body.get("fields") {
                     None | Some(Value::Null) => BTreeMap::new(),
                     Some(fields) => match serde_json::from_value(fields.clone()) {
@@ -253,25 +260,9 @@ impl ProviderRoutes {
                         }
                     },
                 };
-                if let Ok(description) = self.setup.describe(&connector) {
-                    let selected = description
-                        .setup
-                        .routes
-                        .first()
-                        .map(|r| r.fields.as_slice())
-                        .unwrap_or(&description.setup.fields);
-                    if let Some(field) = selected.iter().find(|f| {
-                        f.required && fields.get(&f.key).is_none_or(|v| v.trim().is_empty())
-                    }) {
-                        return response(
-                            400,
-                            json!({"error":{"code":"MISSING_SETUP_FIELD","message":"A required connector setup field is missing.","field":field.key}}),
-                        );
-                    }
-                }
                 match self
                     .setup
-                    .submit_checked(&scope, &connector, "", &fields, active)
+                    .submit_checked(&scope, &connector, route, &fields, active)
                 {
                     Ok(connection) => response(
                         201,
@@ -343,11 +334,20 @@ pub(crate) fn setup_error(error: appcall_setup::Error, callback: bool) -> Respon
             "OAUTH_EXCHANGE_FAILED",
             "The authorization code exchange could not be completed.",
         ),
-        S::MissingField | S::MissingDeclaredField(_) => failure(
+        S::MissingField => failure(
             400,
             "MISSING_SETUP_FIELD",
             "A required connector setup field is missing.",
         ),
+        S::MissingDeclaredField(key) => {
+            let mut response = failure(
+                400,
+                "MISSING_SETUP_FIELD",
+                "A required connector setup field is missing.",
+            );
+            response.body["error"]["field"] = json!(key.as_str());
+            response
+        }
         S::Unsupported => failure(
             400,
             "UNSUPPORTED_SETUP_MODE",
@@ -806,6 +806,15 @@ mod database_tests {
             account_id: "brand".into(),
             admin_scope: false,
         };
+        let scoped_connections = || {
+            tokio::task::block_in_place(|| {
+                store
+                    .lock()
+                    .unwrap()
+                    .list(&Scope::new("p", Some("brand")).unwrap())
+                    .unwrap()
+            })
+        };
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async {
             for connector in ["brevo", "resend", "sendgrid"] {
@@ -843,11 +852,7 @@ mod database_tests {
                 assert_eq!(unknown.status, 400, "{connector}: {unknown:?}");
                 assert_eq!(unknown.body["error"]["code"], "INVALID_INPUT");
                 assert!(!unknown.body.to_string().contains("unknown-route-secret"));
-                assert!(store
-                    .lock()
-                    .unwrap()
-                    .list(&Scope::new("p", Some("brand")).unwrap())
-                    .unwrap()
+                assert!(scoped_connections()
                     .iter()
                     .all(|connection| connection.connector != connector));
 
@@ -874,11 +879,7 @@ mod database_tests {
                 assert_eq!(missing.body["error"]["code"], "MISSING_SETUP_FIELD");
                 assert_eq!(missing.body["error"]["field"], "smtpPassword");
                 assert!(!missing.body.to_string().contains("smtpPassword-secret"));
-                assert!(store
-                    .lock()
-                    .unwrap()
-                    .list(&Scope::new("p", Some("brand")).unwrap())
-                    .unwrap()
+                assert!(scoped_connections()
                     .iter()
                     .all(|connection| connection.connector != connector));
 
@@ -911,7 +912,10 @@ mod database_tests {
                     .unwrap()
                     .unwrap();
                 assert_eq!(default.status, 201, "{connector}: {default:?}");
-                assert!(!default.body.to_string().contains(&format!("{connector}-api-secret")));
+                assert!(!default
+                    .body
+                    .to_string()
+                    .contains(&format!("{connector}-api-secret")));
 
                 let smtp_secret = format!("{connector}-smtp-secret");
                 let selected = routes
