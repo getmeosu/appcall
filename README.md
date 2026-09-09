@@ -10,7 +10,7 @@ must be established through testing and operational evidence.
 
 ## Local development
 
-Install Rust 1.94, Bun 1.x, and native TLS build dependencies (CMake, pkg-config,
+Install Rust 1.94, Bun 1.4+, and native TLS build dependencies (CMake, pkg-config,
 and OpenSSL development files on Linux). From a shell without production or
 Anusa configuration:
 

@@ -29,6 +29,60 @@ describe("toCalDAVDateTime", () => {
   test("strips milliseconds", () => {
     expect(toCalDAVDateTime("2024-06-15T10:00:00.000Z")).toBe("20240615T100000Z");
   });
+
+  test("converts non-UTC offsets to UTC", () => {
+    expect(toCalDAVDateTime("2026-09-09T10:00:00+05:30")).toBe("20260909T043000Z");
+  });
+
+  test("converts a negative numeric offset to UTC", () => {
+    expect(toCalDAVDateTime("2024-06-15T10:00:00-04:00")).toBe("20240615T140000Z");
+  });
+
+  test("truncates six digit fractional seconds", () => {
+    expect(toCalDAVDateTime("2024-06-15T10:00:00.123456Z")).toBe("20240615T100000Z");
+  });
+
+  test("interprets a timezone-less timestamp in the supplied IANA timezone", () => {
+    expect(toCalDAVDateTime("2024-06-15T10:00:00", "Asia/Kolkata")).toBe("20240615T043000Z");
+  });
+
+  test("defaults a timezone-less timestamp to UTC", () => {
+    expect(toCalDAVDateTime("2024-06-15T10:00:00")).toBe("20240615T100000Z");
+  });
+
+  test("rejects an impossible calendar date", () => {
+    expect(() => toCalDAVDateTime("2024-02-30T10:00:00Z")).toThrow("Invalid CalDAV date-time.");
+  });
+
+  test("rejects an invalid timezone", () => {
+    expect(() => toCalDAVDateTime("2024-06-15T10:00:00", "Not/AZone")).toThrow("Invalid CalDAV timezone.");
+  });
+
+  test("rejects a 2026 New York daylight-saving gap", () => {
+    expect(() => toCalDAVDateTime("2026-03-08T02:30:00", "America/New_York")).toThrow("Invalid CalDAV date-time.");
+  });
+
+  test("rejects a 2026 New York daylight-saving fold", () => {
+    expect(() => toCalDAVDateTime("2026-11-01T01:30:00", "America/New_York")).toThrow("Invalid CalDAV date-time.");
+  });
+
+  test("accepts an explicit zone offset through a DST transition", () => {
+    expect(toCalDAVDateTime("2026-03-08T02:30:00-05:00", "America/New_York")).toBe("20260308T073000Z");
+  });
+
+  test("rejects leap seconds instead of normalizing them", () => {
+    expect(() => toCalDAVDateTime("2024-06-15T10:00:60Z")).toThrow("Invalid CalDAV date-time.");
+  });
+
+  test("rejects instants outside the four-digit iCalendar year range", () => {
+    expect(() => toCalDAVDateTime("0001-01-01T00:00:00+01:00")).toThrow("Invalid CalDAV date-time.");
+    expect(() => toCalDAVDateTime("9999-12-31T23:59:59-01:00")).toThrow("Invalid CalDAV date-time.");
+  });
+
+  test("rejects calendar annotations and expanded years", () => {
+    expect(() => toCalDAVDateTime("2024-06-15T10:00:00Z[u-ca=iso8601]")).toThrow("Invalid CalDAV date-time.");
+    expect(() => toCalDAVDateTime("+002024-06-15T10:00:00Z")).toThrow("Invalid CalDAV date-time.");
+  });
 });
 
 // ─── XML Builders ─────────────────────────────────────────────────────────────
@@ -65,11 +119,32 @@ describe("buildCalendarQueryReport", () => {
     expect(xml).not.toContain("time-range");
   });
 
+  test("preserves no time-range for a valid lone start or end", () => {
+    expect(buildCalendarQueryReport("2024-06-01T00:00:00Z")).not.toContain("time-range");
+    expect(buildCalendarQueryReport(undefined, "2024-06-30T23:59:59Z")).not.toContain("time-range");
+  });
+
+  test("rejects malformed lone start and end bounds", () => {
+    expect(() => buildCalendarQueryReport("not-a-date")).toThrow("Invalid CalDAV date-time.");
+    expect(() => buildCalendarQueryReport(undefined, "not-a-date")).toThrow("Invalid CalDAV date-time.");
+  });
+
+  test("rejects an empty provided start or end bound", () => {
+    expect(() => buildCalendarQueryReport("", "2024-06-30T23:59:59Z")).toThrow("Invalid CalDAV date-time.");
+    expect(() => buildCalendarQueryReport("2024-06-01T00:00:00Z", "")).toThrow("Invalid CalDAV date-time.");
+  });
+
   test("includes time-range when start and end provided", () => {
     const xml = buildCalendarQueryReport("2024-06-01T00:00:00Z", "2024-06-30T23:59:59Z");
     expect(xml).toContain("time-range");
     expect(xml).toContain("20240601T000000Z");
     expect(xml).toContain("20240630T235959Z");
+  });
+
+  test("normalizes timezone-less report filters as UTC", () => {
+    const xml = buildCalendarQueryReport("2024-06-01T10:00:00", "2024-06-01T11:00:00");
+    expect(xml).toContain('start="20240601T100000Z"');
+    expect(xml).toContain('end="20240601T110000Z"');
   });
 });
 
@@ -79,6 +154,12 @@ describe("buildFreeBusyReport", () => {
     expect(xml).toContain("free-busy-query");
     expect(xml).toContain("time-range");
     expect(xml).toContain("20240601T000000Z");
+  });
+
+  test("normalizes timezone-less free-busy filters as UTC", () => {
+    const xml = buildFreeBusyReport("2024-06-01T10:00:00", "2024-06-01T11:00:00");
+    expect(xml).toContain('start="20240601T100000Z"');
+    expect(xml).toContain('end="20240601T110000Z"');
   });
 });
 
@@ -244,6 +325,18 @@ describe("buildVEvent", () => {
     });
     expect(ics).toContain("ATTENDEE:mailto:alice@example.com");
     expect(ics).toContain("ATTENDEE:mailto:bob@example.com");
+  });
+
+  test("normalizes timezone-less event times using the supplied timezone", () => {
+    const ics = buildVEvent({
+      uid: "timezone-uid",
+      summary: "Timezone Event",
+      start: "2024-06-15T10:00:00",
+      end: "2024-06-15T11:00:00",
+      timezone: "Asia/Kolkata",
+    });
+    expect(ics).toContain("DTSTART:20240615T043000Z");
+    expect(ics).toContain("DTEND:20240615T053000Z");
   });
 
   test("built iCalendar round-trips through parseVEvent", () => {
