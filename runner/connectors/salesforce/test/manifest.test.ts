@@ -15,6 +15,8 @@ describe("salesforce connector manifest", () => {
     expect(manifest.network.allowedHosts).toContain("login.salesforce.com");
     expect(manifest.network.allowedHosts).toContain("test.salesforce.com");
     expect(manifest.network.allowedHosts).toContain("my.salesforce.com");
+    expect(manifest.network.allowedHosts).toContain("*.my.salesforce.com");
+    expect(manifest.network.allowedHosts).toContain("*.sandbox.my.salesforce.com");
   });
 
   test("manifest declares sync and action operations", () => {
