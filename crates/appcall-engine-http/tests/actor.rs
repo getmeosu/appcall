@@ -219,3 +219,104 @@ fn repeated_cancellation_retains_physical_native_capacity_until_callback_returns
     assert_eq!(peak.load(Ordering::SeqCst), 2);
     host.shutdown().unwrap();
 }
+
+#[test]
+fn workflow_panic_keeps_actor_available() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("bad", "v1", |_| {
+        panic!("workflow panic payload must not escape the actor");
+    })
+    .unwrap();
+    e.register_workflow("healthy", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.start("a_bad", "bad", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    e.start(
+        "z_good",
+        "healthy",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+
+    let host = EngineHost::spawn(
+        HttpAdapter::new(e, TOKEN).unwrap(),
+        Arc::new(MissingPayloads),
+    )
+    .unwrap();
+    let client = host.client();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let authorization = format!("Bearer {TOKEN}");
+
+    runtime.block_on(async {
+        let mut bad_body = String::new();
+        for _ in 0..100 {
+            let response = client
+                .request(
+                    "GET".into(),
+                    "/runs/a_bad".into(),
+                    authorization.clone(),
+                    vec![],
+                    Duration::from_secs(2),
+                )
+                .await;
+            assert_eq!(
+                response.status, 200,
+                "bad response status: {}",
+                response.status
+            );
+            bad_body = String::from_utf8(response.body).unwrap();
+            if bad_body.contains("\"state\":\"Failed\"")
+                && bad_body.contains("\"failure_reason\":\"InvalidCommand\"")
+            {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(bad_body.contains("\"state\":\"Failed\""), "{bad_body}");
+        assert!(
+            bad_body.contains("\"failure_reason\":\"InvalidCommand\""),
+            "{bad_body}"
+        );
+        assert!(!bad_body.contains("workflow panic payload"), "{bad_body}");
+
+        let mut healthy_body = String::new();
+        for _ in 0..100 {
+            let response = client
+                .request(
+                    "GET".into(),
+                    "/runs/z_good".into(),
+                    authorization.clone(),
+                    vec![],
+                    Duration::from_secs(2),
+                )
+                .await;
+            assert_eq!(
+                response.status, 200,
+                "healthy response status: {}",
+                response.status
+            );
+            healthy_body = String::from_utf8(response.body).unwrap();
+            if healthy_body.contains("\"state\":\"Completed\"") {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(
+            healthy_body.contains("\"state\":\"Completed\""),
+            "{healthy_body}"
+        );
+        assert!(
+            !healthy_body.contains("workflow panic payload"),
+            "{healthy_body}"
+        );
+    });
+
+    assert!(client.is_alive());
+    host.shutdown().unwrap();
+    assert!(!client.is_alive());
+}

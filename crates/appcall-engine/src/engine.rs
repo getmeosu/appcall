@@ -1,6 +1,7 @@
 use crate::*;
 use std::{
     collections::{HashMap, HashSet},
+    panic::{catch_unwind, AssertUnwindSafe},
     path::Path,
     sync::Arc,
 };
@@ -252,7 +253,13 @@ impl<S: Store> Engine<S> {
                 blocked: false,
                 faulted: false,
             };
-            let result = workflow(&mut ctx);
+            let result = match catch_unwind(AssertUnwindSafe(|| workflow(&mut ctx))) {
+                Ok(result) => result,
+                Err(_) => {
+                    self.reject_run(id, RunFailure::InvalidCommand)?;
+                    return Ok(DriveOutcome::Suspended(RunState::Failed));
+                }
+            };
             if ctx.faulted {
                 return self.suspend(&mut r, RunState::Nondeterminism);
             }
