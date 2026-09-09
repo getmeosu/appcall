@@ -16,8 +16,9 @@ import sys
 import tomllib
 
 MANIFEST = 'PUBLIC-RELEASE-MANIFEST.json'
-# Reviewed full upstream GNU AGPL v3 text, byte for byte.
-AGPL_SHA256 = '0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0'
+# Unmodified upstream Elastic License 2.0, byte for byte:
+# https://raw.githubusercontent.com/elastic/elasticsearch/main/licenses/ELASTIC-LICENSE-2.0.txt
+ELV2_SHA256 = '48255018b41fc0e965b1115af7e6779bc218bb8a6747d561da800d5022622aa2'
 ROOT_FILES = {
     'README.md', 'LICENSE', 'NOTICE', 'LICENSING', 'Cargo.toml', 'Cargo.lock',
     'package.json', 'bun.lock', 'Makefile', 'Dockerfile.api', 'Dockerfile.runner',
@@ -157,6 +158,12 @@ def inventory(files):
     return {path: hashlib.sha256(data).hexdigest() for path, data in sorted(files.items()) if path != MANIFEST}
 
 
+def metadata_object(value):
+    if not isinstance(value, dict):
+        raise ValueError('license metadata must be an object')
+    return value
+
+
 def audit(files):
     """Return release-policy violations for a mapping of paths to file bytes.
 
@@ -203,8 +210,7 @@ def audit(files):
                 exception = exceptions.get(path, {})
                 if not (rule in exception.get('rules', []) and exception.get('sha256') == hashlib.sha256(data).hexdigest()):
                     errors.append(issue(path, rule))
-        legal_content = content.split('How to Apply These Terms', 1)[0] if path == 'LICENSE' else content
-        if path in {'LICENSE', 'NOTICE', 'LICENSING'} and LEGAL_PLACEHOLDER.search(legal_content):
+        if path in {'LICENSE', 'NOTICE', 'LICENSING'} and LEGAL_PLACEHOLDER.search(content):
             errors.append(issue(path, 'legal-placeholder'))
     for required in sorted(REQUIRED_THIRD_PARTY):
         if required not in files or not files[required].strip():
@@ -226,21 +232,22 @@ def audit(files):
     for required in ('LICENSE', 'NOTICE', 'LICENSING', 'README.md', 'Cargo.toml', 'package.json'):
         if required not in files or not files[required].strip():
             errors.append(issue(required, 'required-file-missing'))
-    if hashlib.sha256(files.get('LICENSE', b'')).hexdigest() != AGPL_SHA256:
-        errors.append(issue('LICENSE', 'agpl-license-hash-mismatch'))
+    if hashlib.sha256(files.get('LICENSE', b'')).hexdigest() != ELV2_SHA256:
+        errors.append(issue('LICENSE', 'elastic-license-hash-mismatch'))
     notice = files.get('NOTICE', b'')
-    if b'AppCall by Meosu' not in notice or b'section 7(b)' not in notice:
+    if b'AppCall by Meosu' not in notice or b'Copyright' not in notice:
         errors.append(issue('NOTICE', 'required-attribution-missing'))
     try:
         cargo = tomllib.loads(files.get('Cargo.toml', b'').decode())
-        if cargo.get('workspace', {}).get('package', {}).get('license') != 'AGPL-3.0-only':
+        workspace = metadata_object(cargo.get('workspace', {}))
+        if metadata_object(workspace.get('package', {})).get('license') != 'Elastic-2.0':
             errors.append(issue('Cargo.toml', 'license-metadata-missing'))
         for path, data in files.items():
             if path.startswith('crates/') and path.endswith('/Cargo.toml'):
-                package = tomllib.loads(data.decode()).get('package', {})
-                if package.get('license') not in ('AGPL-3.0-only', {'workspace': True}):
+                package = metadata_object(tomllib.loads(data.decode()).get('package', {}))
+                if package.get('license') not in ('Elastic-2.0', {'workspace': True}):
                     errors.append(issue(path, 'license-metadata-missing'))
-        if json.loads(files.get('package.json', b'{}')).get('license') != 'AGPL-3.0-only':
+        if metadata_object(json.loads(files.get('package.json', b'{}'))).get('license') != 'Elastic-2.0':
             errors.append(issue('package.json', 'license-metadata-missing'))
     except (ValueError, UnicodeError):
         errors.append(issue('Cargo.toml/package.json', 'invalid-license-metadata'))
