@@ -13,6 +13,7 @@ import {
 import { parseGoogleError, parseGoogleRateLimitMetadata, parseNextPageToken } from "../src/http";
 
 type HeaderField = "to" | "subject";
+type WriteField = HeaderField | "body";
 type GmailWriteOperation = "messages.send" | "drafts.create";
 type HeaderPosition = "leading" | "middle" | "trailing";
 
@@ -30,6 +31,30 @@ const invalidHeaderCases: Array<{
     ),
   ),
 ];
+
+const malformedUnicodeCases = (["to", "subject", "body"] as const).flatMap((field) => [
+  { field, label: "a lone high surrogate", value: "\uD800" },
+  { field, label: "a lone low surrogate", value: "\uDC00" },
+  { field, label: "a high surrogate in the middle of a string", value: "before\uD800after" },
+  { field, label: "a low surrogate in the middle of a string", value: "before\uDC00after" },
+]);
+
+const validUnicodeCases: Array<{ field: WriteField; label: string; value: string }> = [
+  { field: "to", label: "a paired emoji", value: "recipient😀@example.com" },
+  { field: "to", label: "a literal replacement character", value: "recipient�@example.com" },
+  { field: "subject", label: "a paired emoji", value: "Subject 😀" },
+  { field: "subject", label: "a literal replacement character", value: "Subject �" },
+  { field: "body", label: "a paired emoji", value: "Body 😀" },
+  { field: "body", label: "a literal replacement character", value: "Body �" },
+];
+
+function writeInputWithFieldValue(field: WriteField, value: string): { to: string; subject: string; body: string } {
+  return {
+    to: field === "to" ? value : "recipient@example.com",
+    subject: field === "subject" ? value : "Test subject",
+    body: field === "body" ? value : "Body",
+  };
+}
 
 function addNewline(value: string, newline: string, position: HeaderPosition): string {
   if (position === "leading") return `${newline}${value}`;
@@ -292,6 +317,70 @@ describe("google-workspace messages", () => {
       expect((error as Error).message).not.toContain(invalidValue);
       expect(fetchCalls).toBe(0);
     });
+  }
+
+  for (const operation of ["messages.send", "drafts.create"] as const) {
+    for (const testCase of malformedUnicodeCases) {
+      test(`${operation} rejects ${testCase.label} in ${testCase.field} before dispatch`, async () => {
+        let fetchCalls = 0;
+        const client = createGmailClient({
+          accessToken: "ya29.test-token",
+          fetch: async () => {
+            fetchCalls += 1;
+            return Response.json(operation === "messages.send" ? sendMessageFixture : draftCreateFixture);
+          },
+        });
+
+        const input = writeInputWithFieldValue(testCase.field, testCase.value);
+        const result = operation === "messages.send" ? client.send(input) : client.createDraft(input);
+        const error = await result.then(() => null, (reason) => reason);
+
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toBe(`${testCase.field} must contain well-formed Unicode`);
+        expect((error as Error).message).not.toContain(testCase.value);
+        expect(fetchCalls).toBe(0);
+      });
+    }
+
+    for (const field of ["to", "subject"] as const) {
+      test(`${operation} preserves CR/LF validation precedence over malformed Unicode in ${field}`, async () => {
+        let fetchCalls = 0;
+        const client = createGmailClient({
+          accessToken: "ya29.test-token",
+          fetch: async () => {
+            fetchCalls += 1;
+            return Response.json(operation === "messages.send" ? sendMessageFixture : draftCreateFixture);
+          },
+        });
+
+        const input = writeInputWithFieldValue(field, "before\r\uD800after");
+        const result = operation === "messages.send" ? client.send(input) : client.createDraft(input);
+        const error = await result.then(() => null, (reason) => reason);
+
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toBe(`${field} must not contain CR or LF`);
+        expect(fetchCalls).toBe(0);
+      });
+    }
+
+    for (const testCase of validUnicodeCases) {
+      test(`${operation} accepts ${testCase.label} in ${testCase.field}`, async () => {
+        let fetchCalls = 0;
+        const client = createGmailClient({
+          accessToken: "ya29.test-token",
+          fetch: async () => {
+            fetchCalls += 1;
+            return Response.json(operation === "messages.send" ? sendMessageFixture : draftCreateFixture);
+          },
+        });
+
+        const input = writeInputWithFieldValue(testCase.field, testCase.value);
+        const result = operation === "messages.send" ? await client.send(input) : await client.createDraft(input);
+
+        expect(result.ok).toBe(true);
+        expect(fetchCalls).toBe(1);
+      });
+    }
   }
 
   test("drafts.create encodes headers and preserves multiline body", async () => {

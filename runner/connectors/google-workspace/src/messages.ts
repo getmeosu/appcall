@@ -304,7 +304,7 @@ export function validateCreateDraftInput(input: unknown): CreateDraftInput {
   return {
     to,
     subject: requireHeaderString(input.subject, "subject"),
-    body: requireString(input.body, "body"),
+    body: requireWellFormedUnicodeString(requireString(input.body, "body"), "body"),
   };
 }
 
@@ -326,7 +326,7 @@ export function validateSendMessageInput(input: unknown): SendMessageInput {
   }
   const to = requireHeaderString(input.to, "to").trim();
   const subject = requireHeaderString(input.subject, "subject").trim();
-  const body = requireString(input.body, "body");
+  const body = requireWellFormedUnicodeString(requireString(input.body, "body"), "body");
   if (to.length === 0) {
     throw new Error("to is required");
   }
@@ -469,7 +469,30 @@ function requireHeaderString(value: unknown, field: string): string {
   if (/[\r\n]/.test(header)) {
     throw new Error(`${field} must not contain CR or LF`);
   }
-  return header;
+  return requireWellFormedUnicodeString(header, field);
+}
+
+function requireWellFormedUnicodeString(value: string, field: string): string {
+  if (!isWellFormedUnicode(value)) {
+    throw new Error(`${field} must contain well-formed Unicode`);
+  }
+  return value;
+}
+
+function isWellFormedUnicode(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF) {
+      const nextCodeUnit = value.charCodeAt(index + 1);
+      if (!(nextCodeUnit >= 0xDC00 && nextCodeUnit <= 0xDFFF)) {
+        return false;
+      }
+      index += 1;
+    } else if (codeUnit >= 0xDC00 && codeUnit <= 0xDFFF) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function requireRecord(value: unknown, field: string): Record<string, unknown> {
