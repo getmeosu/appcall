@@ -227,13 +227,13 @@
       "maxInputBytes": 8192,
       "maxResponseBytes": 5242880,
       "title": "List Events",
-      "description": "Perform a REPORT (calendar-query) with Depth:1 on a calendar href to retrieve VEVENT objects. Optionally filter by time range (start and end in ISO 8601 format). Returns event href, etag, uid, summary, start/end times, location, description, and raw iCalendar data.",
+      "description": "Perform a REPORT (calendar-query) with Depth:1 on a calendar href to retrieve VEVENT objects. Optionally filter by time range using strict ISO 8601 date-times; explicit Z or numeric offsets identify the instant, while timezone-less values default to UTC. Every supplied bound is validated, while a time-range is emitted only when both start and end are provided; paired bounds use canonical UTC CalDAV date-times with subseconds truncated.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "calendarHref": { "type": "string", "description": "The full path to the calendar collection (e.g. /1234567890/calendars/home/)." },
-          "start": { "type": "string", "description": "Optional. ISO 8601 start of time range filter (e.g. 2024-01-01T00:00:00Z)." },
-          "end": { "type": "string", "description": "Optional. ISO 8601 end of time range filter (e.g. 2024-12-31T23:59:59Z)." }
+          "start": { "type": "string", "description": "Optional strict ISO 8601 start date-time (YYYY-MM-DDTHH:mm:ss with optional fraction and Z or numeric offset). Explicit offsets win; timezone-less values default to UTC. Every supplied bound is validated; when paired with end, it is emitted as canonical UTC with subseconds truncated." },
+          "end": { "type": "string", "description": "Optional strict ISO 8601 end date-time (YYYY-MM-DDTHH:mm:ss with optional fraction and Z or numeric offset). Explicit offsets win; timezone-less values default to UTC. Every supplied bound is validated; when paired with start, it is emitted as canonical UTC with subseconds truncated." }
         },
         "required": ["calendarHref"],
         "additionalProperties": false
@@ -289,18 +289,18 @@
       "maxInputBytes": 32768,
       "maxResponseBytes": 65536,
       "title": "Create Event",
-      "description": "PUT a new VEVENT iCalendar resource to the CalDAV server with If-None-Match:* to ensure it is a new creation. Generates a new UID if not provided. Returns the event href, uid, and server-assigned ETag.",
+      "description": "PUT a new VEVENT iCalendar resource to the CalDAV server with If-None-Match:* to ensure it is a new creation. Strict ISO 8601 event date-times are emitted as canonical UTC with subseconds truncated; explicit offsets win, while timezone-less values use the supplied IANA timezone or UTC by default. Generates a new UID if not provided. Returns the event href, uid, and server-assigned ETag.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "calendarHref": { "type": "string", "description": "The path to the calendar collection where the event will be created." },
           "summary": { "type": "string", "description": "The event title / summary." },
-          "start": { "type": "string", "description": "Event start time in ISO 8601 format (e.g. 2024-06-15T10:00:00Z)." },
-          "end": { "type": "string", "description": "Event end time in ISO 8601 format (e.g. 2024-06-15T11:00:00Z)." },
+          "start": { "type": "string", "description": "Strict ISO 8601 event start date-time (YYYY-MM-DDTHH:mm:ss with optional fraction and Z or numeric offset). Explicit offsets win; timezone-less values use the supplied IANA timezone or UTC by default. Emitted as canonical UTC with subseconds truncated." },
+          "end": { "type": "string", "description": "Strict ISO 8601 event end date-time (YYYY-MM-DDTHH:mm:ss with optional fraction and Z or numeric offset). Explicit offsets win; timezone-less values use the supplied IANA timezone or UTC by default. Emitted as canonical UTC with subseconds truncated." },
           "uid": { "type": "string", "description": "Optional. A unique identifier for the event. Generated as a UUID if omitted." },
           "description": { "type": "string", "description": "Optional. Event description / notes." },
           "location": { "type": "string", "description": "Optional. Event location." },
-          "timezone": { "type": "string", "description": "Optional. IANA timezone name (e.g. America/New_York). Defaults to UTC." },
+          "timezone": { "type": "string", "description": "Optional IANA timezone for timezone-less start/end values (e.g. America/New_York). Explicit Z or numeric offsets remain authoritative; omitted timezone defaults to UTC. DST gaps and folds are rejected." },
           "attendees": {
             "type": "array",
             "description": "Optional. List of attendee email addresses.",
@@ -328,7 +328,7 @@
       "maxInputBytes": 32768,
       "maxResponseBytes": 65536,
       "title": "Update Event",
-      "description": "PUT updated iCalendar data to an existing event href using If-Match with the current ETag to prevent overwriting concurrent changes. Returns the updated href and new ETag.",
+      "description": "PUT updated iCalendar data to an existing event href using If-Match with the current ETag to prevent overwriting concurrent changes. Strict ISO 8601 event date-times are emitted as canonical UTC with subseconds truncated; explicit offsets win, while timezone-less values use the supplied IANA timezone or UTC by default. Returns the updated href and new ETag.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -336,11 +336,11 @@
           "etag": { "type": "string", "description": "The current ETag of the event (from events.get or events.list). Used with If-Match to detect conflicts." },
           "uid": { "type": "string", "description": "The event UID (must match the existing event)." },
           "summary": { "type": "string", "description": "Event title / summary." },
-          "start": { "type": "string", "description": "Event start time in ISO 8601 format." },
-          "end": { "type": "string", "description": "Event end time in ISO 8601 format." },
+          "start": { "type": "string", "description": "Strict ISO 8601 event start date-time (YYYY-MM-DDTHH:mm:ss with optional fraction and Z or numeric offset). Explicit offsets win; timezone-less values use the supplied IANA timezone or UTC by default. Emitted as canonical UTC with subseconds truncated." },
+          "end": { "type": "string", "description": "Strict ISO 8601 event end date-time (YYYY-MM-DDTHH:mm:ss with optional fraction and Z or numeric offset). Explicit offsets win; timezone-less values use the supplied IANA timezone or UTC by default. Emitted as canonical UTC with subseconds truncated." },
           "description": { "type": "string", "description": "Optional. Updated event description." },
           "location": { "type": "string", "description": "Optional. Updated event location." },
-          "timezone": { "type": "string", "description": "Optional. IANA timezone name. Defaults to UTC." },
+          "timezone": { "type": "string", "description": "Optional IANA timezone for timezone-less start/end values. Explicit Z or numeric offsets remain authoritative; omitted timezone defaults to UTC. DST gaps and folds are rejected." },
           "attendees": {
             "type": "array",
             "description": "Optional. Updated list of attendee email addresses.",
@@ -394,13 +394,13 @@
       "maxInputBytes": 8192,
       "maxResponseBytes": 1048576,
       "title": "Query Free/Busy",
-      "description": "Perform a REPORT (free-busy-query) on a calendar or calendar home to retrieve free/busy time information for a given time range. Returns the raw VFREEBUSY iCalendar data.",
+      "description": "Perform a REPORT (free-busy-query) on a calendar or calendar home to retrieve free/busy time information for a given time range. Strict ISO 8601 date-times use explicit offsets as authoritative and default timezone-less values to UTC; emitted filters are canonical UTC with subseconds truncated. Returns the raw VFREEBUSY iCalendar data.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "href": { "type": "string", "description": "The path to the calendar or calendar home to query for free/busy information." },
-          "start": { "type": "string", "description": "Start of the time range in ISO 8601 format (e.g. 2024-06-01T00:00:00Z)." },
-          "end": { "type": "string", "description": "End of the time range in ISO 8601 format (e.g. 2024-06-30T23:59:59Z)." }
+          "start": { "type": "string", "description": "Strict ISO 8601 start date-time (YYYY-MM-DDTHH:mm:ss with optional fraction and Z or numeric offset). Explicit offsets win; timezone-less values default to UTC. Emitted as canonical UTC with subseconds truncated." },
+          "end": { "type": "string", "description": "Strict ISO 8601 end date-time (YYYY-MM-DDTHH:mm:ss with optional fraction and Z or numeric offset). Explicit offsets win; timezone-less values default to UTC. Emitted as canonical UTC with subseconds truncated." }
         },
         "required": ["href", "start", "end"],
         "additionalProperties": false

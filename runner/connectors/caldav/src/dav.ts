@@ -41,8 +41,10 @@ export function buildCalendarListPropfind(): string {
 
 /** Build a REPORT XML body for calendar-query (list events, optionally time-filtered). */
 export function buildCalendarQueryReport(start?: string, end?: string): string {
-  const timeRange = (start && end)
-    ? `\n      <C:time-range start="${toCalDAVDateTime(start)}" end="${toCalDAVDateTime(end)}"/>`
+  const normalizedStart = start === undefined ? undefined : toCalDAVDateTime(start);
+  const normalizedEnd = end === undefined ? undefined : toCalDAVDateTime(end);
+  const timeRange = (normalizedStart !== undefined && normalizedEnd !== undefined)
+    ? `\n      <C:time-range start="${normalizedStart}" end="${normalizedEnd}"/>`
     : "";
   return `<?xml version="1.0" encoding="UTF-8"?>
 <C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
@@ -67,10 +69,75 @@ export function buildFreeBusyReport(start: string, end: string): string {
 </C:free-busy-query>`;
 }
 
-/** Convert ISO 8601 to CalDAV datetime format: 20240615T100000Z */
-export function toCalDAVDateTime(iso: string): string {
-  // Remove dashes, colons; ensure trailing Z
-  return iso.replace(/[-:]/g, "").replace(/\.\d{3}/, "").toUpperCase();
+const STRICT_ISO_DATE_TIME = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})T(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?<fraction>\.\d{1,9})?(?<offset>Z|[+-]\d{2}:\d{2})?$/;
+const NUMERIC_TIMEZONE_IDENTIFIER = /^[+-]\d{2}(?::?\d{2})?$/;
+
+function invalidCalDavDateTime(): never {
+  throw new Error("Invalid CalDAV date-time.");
+}
+
+function invalidCalDavTimezone(): never {
+  throw new Error("Invalid CalDAV timezone.");
+}
+
+/** Validate a Temporal timezone without allowing it to reinterpret an offset timestamp. */
+function validateCalDavTimezone(timezone: string): void {
+  if (timezone.length === 0) invalidCalDavTimezone();
+  if (NUMERIC_TIMEZONE_IDENTIFIER.test(timezone)) invalidCalDavTimezone();
+  try {
+    Temporal.Instant.from("2000-01-01T00:00:00Z").toZonedDateTimeISO(timezone);
+  } catch {
+    invalidCalDavTimezone();
+  }
+}
+
+function padCalDavPart(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function formatCalDavInstant(instant: Temporal.Instant): string {
+  const utc = instant.toZonedDateTimeISO("UTC");
+  if (utc.year < 1 || utc.year > 9999) invalidCalDavDateTime();
+  return `${String(utc.year).padStart(4, "0")}${padCalDavPart(utc.month)}${padCalDavPart(utc.day)}T${padCalDavPart(utc.hour)}${padCalDavPart(utc.minute)}${padCalDavPart(utc.second)}Z`;
+}
+
+/** Convert a strict ISO date-time to a canonical UTC CalDAV date-time. */
+export function toCalDAVDateTime(iso: string, timezone?: string): string {
+  if (typeof iso !== "string") invalidCalDavDateTime();
+  const match = STRICT_ISO_DATE_TIME.exec(iso);
+  if (!match?.groups) invalidCalDavDateTime();
+
+  const year = Number(match.groups.year);
+  if (year < 1 || year > 9999) invalidCalDavDateTime();
+  if (Number(match.groups.second) > 59) invalidCalDavDateTime();
+
+  if (timezone !== undefined) {
+    if (typeof timezone !== "string") invalidCalDavTimezone();
+    validateCalDavTimezone(timezone);
+  }
+
+  try {
+    const instant = match.groups.offset
+      ? Temporal.Instant.from(iso)
+      : Temporal.ZonedDateTime.from(
+        {
+          year,
+          month: Number(match.groups.month),
+          day: Number(match.groups.day),
+          hour: Number(match.groups.hour),
+          minute: Number(match.groups.minute),
+          second: Number(match.groups.second),
+          millisecond: 0,
+          microsecond: 0,
+          nanosecond: 0,
+          timeZone: timezone ?? "UTC",
+        },
+        { overflow: "reject", disambiguation: "reject" },
+      ).toInstant();
+    return formatCalDavInstant(instant);
+  } catch {
+    invalidCalDavDateTime();
+  }
 }
 
 // ─── Tolerant XML Response Parser ─────────────────────────────────────────────
@@ -235,9 +302,9 @@ export type ParsedVEvent = {
 
 /** Build a full VCALENDAR/VEVENT iCalendar string */
 export function buildVEvent(input: VEventInput): string {
-  const now = toCalDAVDateTime(new Date().toISOString());
-  const dtstart = toCalDAVDateTime(input.start);
-  const dtend = toCalDAVDateTime(input.end);
+  const now = toCalDAVDateTime(Temporal.Now.instant().toString());
+  const dtstart = toCalDAVDateTime(input.start, input.timezone);
+  const dtend = toCalDAVDateTime(input.end, input.timezone);
 
   const lines: string[] = [
     "BEGIN:VCALENDAR",
