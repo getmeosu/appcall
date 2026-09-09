@@ -40,6 +40,38 @@ describe("salesforce connector actions", () => {
     expect(result.action).toBe("contacts.create");
   });
 
+  test("createContact dispatches to an ordinary production My Domain", async () => {
+    const requests: Request[] = [];
+    await createContact({
+      accessToken: "00D.test-token",
+      instanceUrl: "https://acme.my.salesforce.com",
+      lastName: "Smith",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(createContactFixture), { status: 201 });
+      },
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.url).toBe("https://acme.my.salesforce.com/services/data/v60.0/sobjects/Contact");
+  });
+
+  test("createContact dispatches to a sandbox My Domain", async () => {
+    const requests: Request[] = [];
+    await createContact({
+      accessToken: "00D.test-token",
+      instanceUrl: "https://acme--uat.sandbox.my.salesforce.com",
+      lastName: "Smith",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(createContactFixture), { status: 201 });
+      },
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.url).toBe("https://acme--uat.sandbox.my.salesforce.com/services/data/v60.0/sobjects/Contact");
+  });
+
   test("createLead validates input without token", () => {
     const result = createLead({ lastName: "Smith", company: "Acme" });
 
