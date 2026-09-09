@@ -44,6 +44,28 @@ async function decodeRawMime(request: Request): Promise<string> {
   return Buffer.from(payload.raw, "base64url").toString("utf8");
 }
 
+function readSubjectValue(rawMime: string): string {
+  const lines = rawMime.split("\r\n");
+  const subjectIndex = lines.findIndex((line) => line.startsWith("Subject:"));
+  if (subjectIndex < 0) throw new Error("Subject header is missing");
+  const firstLineValue = lines[subjectIndex].slice("Subject:".length);
+  const subjectLines = [firstLineValue.startsWith(" ") ? firstLineValue.slice(1) : firstLineValue];
+  for (let index = subjectIndex + 1; index < lines.length && lines[index].startsWith(" "); index += 1) {
+    subjectLines.push(lines[index].slice(1));
+  }
+  return subjectLines.join("");
+}
+
+function decodeSubject(rawMime: string): string {
+  return readSubjectValue(rawMime).replace(/=\?UTF-8\?B\?([A-Za-z0-9+/=]+)\?=/g, (_word, encoded: string) => {
+    return Buffer.from(encoded, "base64").toString("utf8");
+  });
+}
+
+function readEncodedSubjectWords(rawMime: string): string[] {
+  return readSubjectValue(rawMime).split(/(?==\?UTF-8\?B\?)/);
+}
+
 describe("google-workspace messages", () => {
   test("normalizes Gmail message from fixture", () => {
     const message = normalizeGmailMessage(messagesListFixture.messages[0]);
@@ -163,8 +185,80 @@ describe("google-workspace messages", () => {
 
     expect(requests).toHaveLength(1);
     expect(await decodeRawMime(requests[0])).toBe(
-      `To: recipient@example.com\r\nSubject: Test\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`,
+      `To: recipient@example.com\r\nSubject: Test\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`,
     );
+  });
+
+  test("send message preserves Unicode body and RFC 2047 subject encoding", async () => {
+    const requests: Request[] = [];
+    const subject = "Résumé 日本語 🚀";
+    const body = "Café 世界 🚀\nsecond line\r\nthird line";
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        return Response.json(sendMessageFixture);
+      },
+    });
+
+    await client.send({ to: "recipient@example.com", subject, body });
+
+    const rawMime = await decodeRawMime(requests[0]);
+    expect(decodeSubject(rawMime)).toBe(subject);
+    expect(rawMime).toContain("MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n");
+    expect(rawMime.endsWith(body)).toBe(true);
+  });
+
+  test("drafts.create preserves Unicode body and RFC 2047 subject encoding", async () => {
+    const requests: Request[] = [];
+    const subject = "下書き café 🚀";
+    const body = "こんにちは, café 🚀\nsecond line\r\nthird line";
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        return Response.json(draftCreateFixture);
+      },
+    });
+
+    await client.createDraft({ to: "recipient@example.com", subject, body });
+
+    const payload = await requests[0].clone().json() as { message?: { raw?: unknown } };
+    expect(typeof payload.message?.raw).toBe("string");
+    const rawMime = Buffer.from(payload.message!.raw as string, "base64url").toString("utf8");
+    expect(decodeSubject(rawMime)).toBe(subject);
+    expect(rawMime).toContain("MIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n");
+    expect(rawMime.endsWith(body)).toBe(true);
+  });
+
+  test("splits long non-BMP subjects at codepoint boundaries into padded encoded words", async () => {
+    const requests: Request[] = [];
+    const subject = "🚀".repeat(20);
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        return Response.json(sendMessageFixture);
+      },
+    });
+
+    await client.send({ to: "recipient@example.com", subject, body: "Body" });
+
+    const rawMime = await decodeRawMime(requests[0]);
+    const words = readEncodedSubjectWords(rawMime);
+    expect(words.length).toBeGreaterThan(1);
+    expect(rawMime).toContain("Subject:\r\n =?UTF-8?B?");
+    expect(rawMime).toContain("\r\n =?UTF-8?B?");
+    expect(rawMime.split("\r\n").filter((line) => line.includes("=?UTF-8?B?")).every((line) => line.length <= 76)).toBe(true);
+    expect(words.every((word) => word.length <= 75)).toBe(true);
+    expect(words.every((word) => /^=\?UTF-8\?B\?[A-Za-z0-9+/]+={0,2}\?=$/.test(word))).toBe(true);
+    const encodedPayloads = words.map((word) => word.slice("=?UTF-8?B?".length, -"?=".length));
+    expect(encodedPayloads.some((payload) => /=+$/.test(payload))).toBe(true);
+    expect(encodedPayloads.some((payload) => /[-_]/.test(payload))).toBe(false);
+    expect(decodeSubject(rawMime)).toBe(subject);
   });
 
   for (const testCase of invalidHeaderCases) {
@@ -218,7 +312,7 @@ describe("google-workspace messages", () => {
     const payload = await requests[0].clone().json() as { message?: { raw?: unknown } };
     expect(typeof payload.message?.raw).toBe("string");
     expect(Buffer.from(payload.message!.raw as string, "base64url").toString("utf8")).toBe(
-      `To: recipient@example.com\r\nSubject: Draft subject\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`,
+      `To: recipient@example.com\r\nSubject: Draft subject\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`,
     );
   });
 
