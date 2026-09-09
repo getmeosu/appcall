@@ -299,11 +299,11 @@ export type CreateDraftResult =
 
 export function validateCreateDraftInput(input: unknown): CreateDraftInput {
   if (!isRecord(input)) throw new Error("create draft input must be an object");
-  const to = requireString(input.to, "to").trim();
+  const to = requireHeaderString(input.to, "to").trim();
   if (to.length === 0) throw new Error("to is required");
   return {
     to,
-    subject: requireString(input.subject, "subject"),
+    subject: requireHeaderString(input.subject, "subject"),
     body: requireString(input.body, "body"),
   };
 }
@@ -324,8 +324,8 @@ export function validateSendMessageInput(input: unknown): SendMessageInput {
   if (!isRecord(input)) {
     throw new Error("send message input must be an object");
   }
-  const to = requireString(input.to, "to").trim();
-  const subject = requireString(input.subject, "subject").trim();
+  const to = requireHeaderString(input.to, "to").trim();
+  const subject = requireHeaderString(input.subject, "subject").trim();
   const body = requireString(input.body, "body");
   if (to.length === 0) {
     throw new Error("to is required");
@@ -405,6 +405,14 @@ function requireString(value: unknown, field: string): string {
     throw new Error(`${field} is required`);
   }
   return value;
+}
+
+function requireHeaderString(value: unknown, field: string): string {
+  const header = requireString(value, field);
+  if (/[\r\n]/.test(header)) {
+    throw new Error(`${field} must not contain CR or LF`);
+  }
+  return header;
 }
 
 function requireRecord(value: unknown, field: string): Record<string, unknown> {
