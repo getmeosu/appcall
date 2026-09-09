@@ -133,10 +133,44 @@ describe("parseMultiStatus - events_report.xml", () => {
     expect(withData).toHaveLength(2);
   });
 
-  test("extracts etag without quotes", () => {
+  test("preserves quoted etag", () => {
     const result = parseMultiStatus(eventsReportXml);
     const event1 = result.responses.find((r) => r.href.includes("meeting-uid-001"));
-    expect(event1?.etag).toBe("etag-abc123");
+    expect(event1?.etag).toBe('"etag-abc123"');
+  });
+
+  test("preserves weak etag marker and quotes", () => {
+    const result = parseMultiStatus(`
+      <D:multistatus xmlns:D="DAV:">
+        <D:response>
+          <D:href>/calendars/home/weak.ics</D:href>
+          <D:propstat><D:prop><D:getetag>W/"weak-123"</D:getetag></D:prop></D:propstat>
+        </D:response>
+      </D:multistatus>
+    `);
+    expect(result.responses[0]?.etag).toBe('W/"weak-123"');
+  });
+
+  test("decodes ETag XML entities once, including numeric quote entities", () => {
+    const result = parseMultiStatus(`
+      <D:multistatus xmlns:D="DAV:">
+        <D:response>
+          <D:href>/calendars/home/entity.ics</D:href>
+          <D:propstat><D:prop><D:getetag>&quot;entity-123&quot;</D:getetag></D:prop></D:propstat>
+        </D:response>
+        <D:response>
+          <D:href>/calendars/home/numeric.ics</D:href>
+          <D:propstat><D:prop><D:getetag>&#x57;/&#34;numeric-123&#34;</D:getetag></D:prop></D:propstat>
+        </D:response>
+        <D:response>
+          <D:href>/calendars/home/literal.ics</D:href>
+          <D:propstat><D:prop><D:getetag>&amp;quot;literal-123&amp;quot;</D:getetag></D:prop></D:propstat>
+        </D:response>
+      </D:multistatus>
+    `);
+    expect(result.responses[0]?.etag).toBe('"entity-123"');
+    expect(result.responses[1]?.etag).toBe('W/"numeric-123"');
+    expect(result.responses[2]?.etag).toBe('&quot;literal-123&quot;');
   });
 
   test("calendarData contains VEVENT", () => {
