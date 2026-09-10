@@ -557,6 +557,7 @@ fn usage_uses_plan_rollups_and_validates_public_queries() {
         include_str!("../../../migrations/202609070005_action_history_ownership.sql"),
         include_str!("../../../migrations/202605290003_usage_brand_dim.sql"),
         include_str!("../../../migrations/202606100002_project_plans.sql"),
+        include_str!("../../../migrations/202609100001_action_usage_reservations.sql"),
     ] {
         client.batch_execute(sql).unwrap()
     }
@@ -621,6 +622,138 @@ fn usage_uses_plan_rollups_and_validates_public_queries() {
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
 }
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn usage_decision_denies_when_dispatched_reservation_consumes_final_slot() {
+    use appcall_actions::PolicyGate;
+    use appcall_api::{data_routes::*, Identity};
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL")
+        .expect("APPCALL_ENGINE_POSTGRES_URL is required for PostgreSQL usage tests");
+    let mut client = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+    let schema = format!(
+        "usage_decision_reservation_{}",
+        uuid::Uuid::new_v4().simple()
+    );
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290003_usage_brand_dim.sql"),
+        include_str!("../../../migrations/202606100002_project_plans.sql"),
+        include_str!("../../../migrations/202609100001_action_usage_reservations.sql"),
+    ] {
+        client.batch_execute(sql).unwrap();
+    }
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','p');
+             INSERT INTO project_plans(project_id,plan_key,status,overrides)
+             VALUES('p','starter','active','{\"action_calls_hard\":1,\"action_calls_soft\":1}');
+             INSERT INTO action_usage_reservations(
+                 id,project_id,month,connection_id,connector,action,state,expires_at,dispatched_at
+             ) VALUES(
+                 'reservation-1','p',to_char(now() AT TIME ZONE 'UTC','YYYY-MM'),
+                 'c','test','send','dispatched',now()+interval '1 hour',now()
+             );",
+        )
+        .unwrap();
+    let identity = Identity {
+        project_id: "p".into(),
+        account_id: "a".into(),
+        admin_scope: false,
+    };
+    let response = usage_read(
+        &mut client,
+        &identity,
+        &url::Url::parse("http://x/v1/usage/action-calls/decision?quantity=1").unwrap(),
+        &UsageDefaults::default(),
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(response.body["allowed"], false);
+    assert_eq!(response.body["reason"], "USAGE_LIMIT_EXCEEDED");
+    assert_eq!(response.body["current"], 0);
+    assert_eq!(response.body["projected"], 2);
+    assert_eq!(
+        client
+            .query_one(
+                "SELECT count(*)::bigint
+                   FROM action_usage_reservations
+                  WHERE project_id=$1
+                    AND month=to_char(now() AT TIME ZONE 'UTC','YYYY-MM')",
+                &[&identity.project_id],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        1,
+        "advisory usage decisions must not create reservations"
+    );
+
+    let mut admission_client = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+    admission_client
+        .batch_execute(&format!("SET search_path TO {schema}"))
+        .unwrap();
+    let policy = appcall_actions::PgPolicy::new(
+        appcall_actions::PgActionRepository::new(admission_client),
+        appcall_actions::PolicyConfig::default(),
+    )
+    .unwrap();
+    let request = appcall_actions::ExecuteRequest {
+        project_id: "p".into(),
+        connection_id: "c".into(),
+        external_account_id: "".into(),
+        admin_scope: false,
+        action: "send".into(),
+        idempotency_key: "admission-1".into(),
+        input: json!({}),
+        caller_credential: String::new(),
+    };
+    let connection = appcall_actions::Connection {
+        id: "c".into(),
+        project_id: "p".into(),
+        external_account_id: String::new(),
+        connector: "test".into(),
+        status: "active".into(),
+        auth_type: "none".into(),
+        secret_ref_id: None,
+    };
+    let operation = appcall_actions::Operation {
+        read_only: true,
+        timeout_ms: 1_000,
+        max_input_bytes: 1_024,
+        max_response_bytes: 1_024,
+        credential_fields: vec![],
+    };
+    let admission_error = match tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(policy.reserve(&request, &connection, &operation, &json!({})))
+    {
+        Ok(_) => panic!("authoritative admission unexpectedly allowed the reserved slot"),
+        Err(error) => error,
+    };
+    assert_eq!(admission_error.code, "USAGE_LIMIT_EXCEEDED");
+    let admission_usage = admission_error.usage.unwrap();
+    assert_eq!(
+        admission_usage,
+        appcall_actions::UsageSnapshot {
+            month: response.body["month"].as_str().unwrap().to_owned(),
+            current: 0,
+            projected: 2,
+            soft_limit: 1,
+            hard_limit: 1,
+        }
+    );
+    assert_eq!(response.body["current"], admission_usage.current);
+    assert_eq!(response.body["projected"], admission_usage.projected);
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
 #[test]
 fn sse_uses_durable_cursor_and_go_account_projection() {
     use appcall_api::data_routes::*;

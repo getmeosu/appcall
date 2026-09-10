@@ -1,7 +1,7 @@
 use crate::policy::{channel, linkedin_class};
 use crate::*;
 use chrono::{Datelike, Utc};
-use postgres::Transaction;
+use postgres::{GenericClient, Transaction};
 
 #[derive(Clone)]
 pub struct PgPolicy {
@@ -156,43 +156,40 @@ fn recover_expired_dispatched_quota(
     Ok(())
 }
 
-fn usage(
-    tx: &mut Transaction<'_>,
+/// Read the completed usage and active action reservations for one project
+/// month. The requested quantity is only a projection: callers must perform
+/// authoritative admission separately because this snapshot does not reserve
+/// capacity and may become stale immediately. `current` is completed usage;
+/// `projected` adds active reservations and the requested quantity.
+pub fn usage_snapshot<C: GenericClient>(
+    client: &mut C,
     project: &str,
     month: &str,
+    quantity: i64,
     e: &Entitlements,
-) -> Result<UsageSnapshot> {
-    let row = tx
-        .query_one(
-            "SELECT COALESCE(sum(quantity),0)::bigint
+) -> std::result::Result<UsageSnapshot, postgres::Error> {
+    let row = client.query_one(
+        "SELECT COALESCE(sum(quantity),0)::bigint
                FROM usage_monthly_rollups
               WHERE project_id=$1 AND month=$2 AND kind='action_call'",
-            &[&project, &month],
-        )
-        .map_err(|_| unavailable())?;
+        &[&project, &month],
+    )?;
     let used: i64 = row.get(0);
-    let active = tx
+    let active = client
         .query_one(
             "SELECT count(*)::bigint
                FROM action_usage_reservations
               WHERE project_id=$1 AND month=$2 AND state IN ('pending','dispatched')",
             &[&project, &month],
-        )
-        .map_err(|_| unavailable())?
+        )?
         .get::<_, i64>(0);
-    let snapshot = UsageSnapshot {
+    Ok(UsageSnapshot {
         month: month.to_owned(),
         current: used,
-        projected: used.saturating_add(active).saturating_add(1),
+        projected: used.saturating_add(active).saturating_add(quantity),
         soft_limit: e.action_calls_soft,
         hard_limit: e.action_calls_hard,
-    };
-    if e.action_calls_hard > 0 && snapshot.projected > e.action_calls_hard {
-        let mut error = ActionError::new("USAGE_LIMIT_EXCEEDED");
-        error.usage = Some(snapshot);
-        return Err(error);
-    }
-    Ok(snapshot)
+    })
 }
 impl PolicyGate for PgPolicy {
     async fn authorize(&self, r: &ExecuteRequest, _: &Connection, _: &Operation) -> Result<()> {
@@ -275,16 +272,16 @@ impl PolicyGate for PgPolicy {
                 recover_expired_dispatched_quota(&mut tx, &project, &quota_month)?;
             }
             let quota_id = uuid::Uuid::new_v4().simple().to_string();
-            let usage = match usage(&mut tx, &project, &month, &e) {
-                Ok(snapshot) => snapshot,
-                Err(error) if error.code == "USAGE_LIMIT_EXCEEDED" => {
-                    // Recovery is durable cleanup even when this admission is
-                    // denied; storage and other policy errors still roll back.
-                    tx.commit().map_err(|_| unavailable())?;
-                    return Err(error);
-                }
-                Err(error) => return Err(error),
-            };
+            let usage = usage_snapshot(&mut tx, &project, &month, 1, &e)
+                .map_err(|_| unavailable())?;
+            if e.action_calls_hard > 0 && usage.projected > e.action_calls_hard {
+                // Recovery is durable cleanup even when this admission is
+                // denied; storage or policy errors still roll back.
+                let mut error = ActionError::new("USAGE_LIMIT_EXCEEDED");
+                error.usage = Some(usage);
+                tx.commit().map_err(|_| unavailable())?;
+                return Err(error);
+            }
             let mut reservation=PolicyReservation {usage, quota_id: quota_id.clone(), quota_month: month.clone(), ..Default::default()};
             tx.execute("INSERT INTO action_usage_reservations(id,project_id,month,connection_id,connector,action,external_account_id,state,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,'pending',now()+($8::bigint * interval '1 millisecond'))",&[&quota_id,&project,&month,&connection_id,&connector,&action,&brand,&reservation_lease_ms]).map_err(|_|unavailable())?;
             if connector=="unipile" {

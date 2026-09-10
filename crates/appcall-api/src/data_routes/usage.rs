@@ -1,11 +1,15 @@
 use super::*;
-use appcall_actions::{resolve_entitlements, Entitlements};
+use appcall_actions::{resolve_entitlements, usage_snapshot, Entitlements};
 /// Defaults must be the same instance of host policy configuration used by actions.
 #[derive(Clone, Default)]
 pub struct UsageDefaults {
     pub limits: Entitlements,
     pub unipile_max_accounts: i64,
 }
+/// Read current project usage and entitlements. The action-call decision reads
+/// completed rollups plus active pending/dispatched reservations; it is
+/// advisory, does not reserve capacity, and may become stale before
+/// authoritative admission.
 pub fn usage_read(
     client: &mut impl GenericClient,
     identity: &Identity,
@@ -141,10 +145,17 @@ pub fn usage_read(
                 .map_err(db_error)?
                 .ok_or_else(|| ApiError::new("UNAUTHORIZED"))?
                 .get(0);
-            let current = if disabled { 0 } else { current };
-            let projected = current
-                .checked_add(quantity)
-                .ok_or_else(|| ApiError::new("USAGE_DECISION_FAILED"))?;
+            let (current, projected) = if disabled {
+                let projected = 0_i64
+                    .checked_add(quantity)
+                    .ok_or_else(|| ApiError::new("USAGE_DECISION_FAILED"))?;
+                (0, projected)
+            } else {
+                let snapshot =
+                    usage_snapshot(client, &identity.project_id, month, quantity, &limits)
+                        .map_err(db_error)?;
+                (snapshot.current, snapshot.projected)
+            };
             let exceeded = limits.action_calls_hard > 0 && projected > limits.action_calls_hard;
             let mut value = json!({"kind":"action_call","quantity":quantity,"allowed":!disabled&&!exceeded,"warning":!disabled&&!exceeded&&limits.action_calls_soft>0&&projected>limits.action_calls_soft,"month":month,"current":current,"projected":projected,"softLimit":limits.action_calls_soft,"hardLimit":limits.action_calls_hard});
             if disabled {

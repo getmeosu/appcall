@@ -78,6 +78,88 @@ fn create_project_plans(client: &mut Client) {
         )
         .unwrap();
 }
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn usage_snapshot_counts_only_active_reservations() {
+    let Some(mut client) = database() else { return };
+    let month: String = client
+        .query_one("SELECT to_char(now() AT TIME ZONE 'UTC','YYYY-MM')", &[])
+        .unwrap()
+        .get(0);
+    client
+        .execute(
+            "INSERT INTO usage_monthly_rollups(project_id,external_account_id,month,kind,quantity)
+             VALUES('p','brand',$1,'action_call',3)",
+            &[&month],
+        )
+        .unwrap();
+    for (id, state) in [
+        ("pending-active", "pending"),
+        ("dispatched-active", "dispatched"),
+    ] {
+        client
+            .execute(
+                "INSERT INTO action_usage_reservations(
+                     id,project_id,month,connection_id,connector,action,state,expires_at
+                 ) VALUES($1,'p',$2,'c','test','send',$3,now()+interval '1 hour')",
+                &[&id, &month, &state],
+            )
+            .unwrap();
+    }
+    let prior_month: String = client
+        .query_one(
+            "SELECT to_char((now() AT TIME ZONE 'UTC' - interval '1 month'),'YYYY-MM')",
+            &[],
+        )
+        .unwrap()
+        .get(0);
+    for (id, project, reservation_month) in [
+        ("other-project-active", "other", month.as_str()),
+        ("prior-month-active", "p", prior_month.as_str()),
+    ] {
+        client
+            .execute(
+                "INSERT INTO action_usage_reservations(
+                     id,project_id,month,connection_id,connector,action,state,expires_at
+                 ) VALUES($1,$2,$3,'c','test','send','pending',now()+interval '1 hour')",
+                &[&id, &project, &reservation_month],
+            )
+            .unwrap();
+    }
+    for (id, state) in [("settled", "settled"), ("released", "released")] {
+        client
+            .execute(
+                "INSERT INTO action_usage_reservations(
+                     id,project_id,month,connection_id,connector,action,state,expires_at
+                 ) VALUES($1,'p',$2,'c','test','send',$3,now()+interval '1 hour')",
+                &[&id, &month, &state],
+            )
+            .unwrap();
+    }
+    let entitlements = Entitlements {
+        action_calls_soft: 10,
+        action_calls_hard: 10,
+        ..Default::default()
+    };
+    let active = usage_snapshot(&mut client, "p", &month, 1, &entitlements).unwrap();
+    assert_eq!((active.current, active.projected), (3, 6));
+
+    client
+        .batch_execute(
+            "UPDATE action_usage_reservations
+                SET state=CASE state
+                    WHEN 'pending' THEN 'settled'
+                    WHEN 'dispatched' THEN 'released'
+                    ELSE state
+                END
+              WHERE id IN ('pending-active','dispatched-active')",
+        )
+        .unwrap();
+    let settled = usage_snapshot(&mut client, "p", &month, 1, &entitlements).unwrap();
+    assert_eq!((settled.current, settled.projected), (3, 4));
+}
+
 #[test]
 fn postgres_claim_dispatch_fence_and_atomic_finish() {
     let Some(client) = database() else { return };
@@ -824,6 +906,24 @@ fn concurrent_quota_reservation_admits_only_one_final_slot() {
             .collect::<Vec<_>>(),
         vec!["USAGE_LIMIT_EXCEEDED"]
     );
+
+    let month: String = owner
+        .query_one("SELECT to_char(now() AT TIME ZONE 'UTC','YYYY-MM')", &[])
+        .unwrap()
+        .get(0);
+    let snapshot = usage_snapshot(
+        &mut owner,
+        "p",
+        &month,
+        1,
+        &Entitlements {
+            action_calls_soft: 1,
+            action_calls_hard: 1,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!((snapshot.current, snapshot.projected), (0, 2));
 
     let active = owner
         .query_one(
