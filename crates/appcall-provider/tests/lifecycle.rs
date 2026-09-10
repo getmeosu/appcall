@@ -2,6 +2,7 @@ use appcall_provider::*;
 use postgres::{Client as Pg, NoTls};
 use serde_json::{json, Value};
 use std::{
+    collections::BTreeSet,
     io::{Read, Write},
     net::TcpListener,
     sync::{Arc, Barrier, Mutex},
@@ -289,6 +290,143 @@ fn callback_ownership_replay_and_disconnect_contract() {
     )
     .unwrap();
     assert_eq!(notify(&s, &a, "a").unwrap_err().status, 401);
+}
+
+#[test]
+#[ignore = "requires isolated local PostgreSQL"]
+fn accepted_cursor_keeps_tied_rows_after_page_boundary() {
+    let mut f = Fixture::new();
+    let s = f.service(5);
+    f.db
+        .execute(
+            "INSERT INTO linkedin_accepted_relations(project_id,external_account_id,provider_member_id,accepted_at) SELECT 'p','brand-a',format('member_%s',lpad(n::text,3,'0')),'2026-09-09T10:00:00Z'::timestamptz FROM generate_series(0,200) n",
+            &[],
+        )
+        .unwrap();
+
+    // Timestamp-only cursors remain accepted. Because they carry no tie-breaker,
+    // the timestamp boundary is inclusive so rows sharing it cannot be lost.
+    let legacy = s
+        .handle(
+            "p",
+            None,
+            "accepted",
+            &json!({"brandId":"brand-a","sinceCursor":"2026-09-09T10:00:00Z"}),
+            None,
+        )
+        .unwrap();
+    assert_eq!(legacy["accepted"].as_array().unwrap().len(), 200);
+
+    let first = s
+        .handle("p", None, "accepted", &json!({"brandId":"brand-a"}), None)
+        .unwrap();
+    let first_rows = first["accepted"].as_array().unwrap();
+    assert_eq!(first_rows.len(), 200);
+    assert_eq!(first_rows.first().unwrap()["memberId"], "member_000");
+    assert_eq!(first_rows.last().unwrap()["memberId"], "member_199");
+    assert_eq!(first_rows.first().unwrap()["brandId"], "brand-a");
+    assert_eq!(first_rows.last().unwrap()["brandId"], "brand-a");
+    assert_eq!(
+        first_rows.last().unwrap()["acceptedAt"],
+        "2026-09-09T10:00:00Z"
+    );
+    let first_cursor = first["nextCursor"].as_str().unwrap();
+    assert_ne!(first_cursor, "2026-09-09T10:00:00Z");
+
+    let second = s
+        .handle(
+            "p",
+            None,
+            "accepted",
+            &json!({"brandId":"brand-a","sinceCursor":first_cursor}),
+            None,
+        )
+        .unwrap();
+    assert_eq!(second["accepted"].as_array().unwrap().len(), 1);
+    assert_eq!(second["accepted"][0]["memberId"], "member_200");
+    assert_eq!(second["accepted"][0]["brandId"], "brand-a");
+    assert_eq!(second["accepted"][0]["acceptedAt"], "2026-09-09T10:00:00Z");
+
+    let second_cursor = second["nextCursor"].as_str().unwrap();
+    let empty = s
+        .handle(
+            "p",
+            None,
+            "accepted",
+            &json!({"brandId":"brand-a","sinceCursor":second_cursor}),
+            None,
+        )
+        .unwrap();
+    assert!(empty["accepted"].as_array().unwrap().is_empty());
+    assert_eq!(empty["nextCursor"], second_cursor);
+}
+
+#[test]
+#[ignore = "requires isolated local PostgreSQL"]
+fn accepted_project_cursor_orders_account_scope_with_overlapping_members() {
+    let mut f = Fixture::new();
+    let s = f.service(5);
+    f.db
+        .execute(
+            "INSERT INTO linkedin_accepted_relations(project_id,external_account_id,provider_member_id,accepted_at) SELECT 'p','brand-a',format('member_%s',lpad(n::text,3,'0')),'2026-09-09T10:00:00Z'::timestamptz FROM generate_series(0,100) n UNION ALL SELECT 'p','brand-b',format('member_%s',lpad(n::text,3,'0')),'2026-09-09T10:00:00Z'::timestamptz FROM generate_series(0,100) n",
+            &[],
+        )
+        .unwrap();
+
+    let first = s
+        .handle("p", None, "accepted", &json!({"brandId":""}), None)
+        .unwrap();
+    let first_rows = first["accepted"].as_array().unwrap();
+    assert_eq!(first_rows.len(), 200);
+    let cursor = first["nextCursor"].as_str().unwrap();
+
+    let second = s
+        .handle(
+            "p",
+            None,
+            "accepted",
+            &json!({"brandId":"","sinceCursor":cursor}),
+            None,
+        )
+        .unwrap();
+    let second_rows = second["accepted"].as_array().unwrap();
+    assert_eq!(second_rows.len(), 2);
+
+    let mut pairs: Vec<(&str, &str)> = first_rows
+        .iter()
+        .chain(second_rows.iter())
+        .map(|row| {
+            (
+                row["brandId"].as_str().unwrap(),
+                row["memberId"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    let mut expected = (0..=100)
+        .map(|n| ("brand-a", format!("member_{n:03}")))
+        .chain((0..=100).map(|n| ("brand-b", format!("member_{n:03}"))))
+        .collect::<Vec<_>>();
+    // Each brand/member pair is part of the cursor identity. The response
+    // carries the account scope so project-wide consumers can retain it.
+    let unique_pairs: BTreeSet<_> = pairs.iter().copied().collect();
+    assert_eq!(unique_pairs.len(), 202);
+    assert_eq!(pairs.len(), expected.len());
+    assert_eq!(
+        pairs,
+        expected
+            .iter()
+            .map(|(brand, member)| (*brand, member.as_str()))
+            .collect::<Vec<_>>()
+    );
+    pairs.sort_unstable();
+    expected.sort_unstable();
+    assert_eq!(
+        pairs,
+        expected
+            .iter()
+            .map(|(brand, member)| (*brand, member.as_str()))
+            .collect::<Vec<_>>()
+    );
 }
 #[test]
 #[ignore = "requires isolated local PostgreSQL"]

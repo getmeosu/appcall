@@ -1,8 +1,120 @@
 use crate::*;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use chrono::{DateTime, SecondsFormat, Utc};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::time::{Duration, SystemTime};
+
+const ACCEPTED_CURSOR_PREFIX: &str = "v1.";
+const ACCEPTED_RELATIONS_LIMIT: i64 = 200;
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct EncodedAcceptedCursor {
+    v: u8,
+    all_brands: bool,
+    accepted_at: String,
+    account_id: String,
+    member_id: String,
+}
+
+struct AcceptedCursor {
+    accepted_at: SystemTime,
+    account_id: String,
+    member_id: String,
+    legacy_timestamp: bool,
+}
+
+fn invalid_accepted_cursor() -> Error {
+    Error::new(
+        400,
+        "INVALID_CURSOR",
+        "sinceCursor must be a valid accepted-relations cursor.",
+    )
+}
+
+fn parse_accepted_cursor(value: &str, scope: &str) -> Result<AcceptedCursor> {
+    if value.is_empty() {
+        return Ok(AcceptedCursor {
+            accepted_at: SystemTime::UNIX_EPOCH,
+            account_id: String::new(),
+            member_id: String::new(),
+            legacy_timestamp: true,
+        });
+    }
+    if value.len() > ACCEPTED_CURSOR_MAX_LEN {
+        return Err(invalid_accepted_cursor());
+    }
+    let Some(encoded) = value.strip_prefix(ACCEPTED_CURSOR_PREFIX) else {
+        // Legacy timestamp cursors have no tie-breaker. Treating the timestamp
+        // as an inclusive lower bound may replay that boundary once, but keeps
+        // rows from the same timestamp visible during the cursor migration.
+        let accepted_at = DateTime::parse_from_rfc3339(value)
+            .map_err(|_| invalid_accepted_cursor())?
+            .into();
+        return Ok(AcceptedCursor {
+            accepted_at,
+            account_id: String::new(),
+            member_id: String::new(),
+            legacy_timestamp: true,
+        });
+    };
+    let bytes = URL_SAFE_NO_PAD
+        .decode(encoded)
+        .map_err(|_| invalid_accepted_cursor())?;
+    let parsed: EncodedAcceptedCursor =
+        serde_json::from_slice(&bytes).map_err(|_| invalid_accepted_cursor())?;
+    if parsed.v != 1
+        || parsed.all_brands != scope.is_empty()
+        || !valid_cursor_identifier(&parsed.account_id, scope.is_empty())
+        || !valid_cursor_identifier(&parsed.member_id, false)
+        || (!scope.is_empty() && parsed.account_id != scope)
+    {
+        return Err(invalid_accepted_cursor());
+    }
+    let accepted_at = DateTime::parse_from_rfc3339(&parsed.accepted_at)
+        .map_err(|_| invalid_accepted_cursor())?
+        .into();
+    Ok(AcceptedCursor {
+        accepted_at,
+        account_id: parsed.account_id,
+        member_id: parsed.member_id,
+        legacy_timestamp: false,
+    })
+}
+
+fn valid_cursor_identifier(value: &str, allow_empty: bool) -> bool {
+    (allow_empty || !value.is_empty())
+        && value.len() <= INPUT_STRING_MAX_BYTES
+        && !value.contains('\0')
+}
+
+fn encode_accepted_cursor(
+    scope: &str,
+    account_id: &str,
+    member_id: &str,
+    accepted_at: SystemTime,
+) -> String {
+    let accepted_at =
+        DateTime::<Utc>::from(accepted_at).to_rfc3339_opts(SecondsFormat::AutoSi, true);
+    let payload = json!({
+        "v": 1,
+        "all_brands": scope.is_empty(),
+        "accepted_at": accepted_at,
+        "account_id": account_id,
+        "member_id": member_id,
+    });
+    format!(
+        "{ACCEPTED_CURSOR_PREFIX}{}",
+        URL_SAFE_NO_PAD.encode(payload.to_string())
+    )
+}
+
+fn format_accepted_at(accepted_at: SystemTime) -> String {
+    DateTime::<Utc>::from(accepted_at).to_rfc3339_opts(SecondsFormat::AutoSi, true)
+}
+
 pub(crate) struct Flow {
     pub id: String,
     pub project: String,
@@ -188,27 +300,36 @@ impl Service {
         Ok(json!({"bound":bound}))
     }
     pub(crate) fn accepted(&self, project: &str, brand: &str, cursor: &str) -> Result<Value> {
-        let since: SystemTime = if cursor.is_empty() {
-            SystemTime::UNIX_EPOCH
+        let parsed = parse_accepted_cursor(cursor, brand)?;
+        let mut db = self.db.lock().map_err(|_| Error::database())?;
+        let rows = if parsed.legacy_timestamp {
+            db.query(
+                "SELECT external_account_id,provider_member_id,accepted_at FROM linkedin_accepted_relations WHERE project_id=$1 AND ($2::text='' OR external_account_id=$2) AND accepted_at >= $3 ORDER BY accepted_at ASC,external_account_id ASC,provider_member_id ASC LIMIT $4",
+                &[&project, &brand, &parsed.accepted_at, &ACCEPTED_RELATIONS_LIMIT],
+            )?
         } else {
-            DateTime::parse_from_rfc3339(cursor)
-                .map_err(|_| {
-                    Error::new(
-                        400,
-                        "INVALID_CURSOR",
-                        "sinceCursor must be an RFC3339 timestamp.",
-                    )
-                })?
-                .into()
+            db.query(
+                "SELECT external_account_id,provider_member_id,accepted_at FROM linkedin_accepted_relations WHERE project_id=$1 AND ($2::text='' OR external_account_id=$2) AND (accepted_at,external_account_id,provider_member_id) > ($3,$4::text,$5::text) ORDER BY accepted_at ASC,external_account_id ASC,provider_member_id ASC LIMIT $6",
+                &[
+                    &project,
+                    &brand,
+                    &parsed.accepted_at,
+                    &parsed.account_id,
+                    &parsed.member_id,
+                    &ACCEPTED_RELATIONS_LIMIT,
+                ],
+            )?
         };
-        let rows=self.db.lock().map_err(|_|Error::database())?.query("SELECT provider_member_id,accepted_at FROM linkedin_accepted_relations WHERE project_id=$1 AND ($2='' OR external_account_id=$2) AND accepted_at>$3 ORDER BY accepted_at ASC,provider_member_id ASC LIMIT 200",&[&project,&brand,&since])?;
         let mut next = cursor.to_owned();
         let accepted: Vec<Value> = rows
             .iter()
             .map(|r| {
-                let time: SystemTime = r.get(1);
-                next = DateTime::<Utc>::from(time).to_rfc3339_opts(SecondsFormat::AutoSi, true);
-                json!({"memberId":r.get::<_,String>(0),"acceptedAt":next})
+                let account_id = r.get::<_, String>(0);
+                let member_id = r.get::<_, String>(1);
+                let time: SystemTime = r.get(2);
+                let accepted_at = format_accepted_at(time);
+                next = encode_accepted_cursor(brand, &account_id, &member_id, time);
+                json!({"brandId":account_id,"memberId":member_id,"acceptedAt":accepted_at})
             })
             .collect();
         Ok(json!({"accepted":accepted,"nextCursor":next}))
@@ -240,4 +361,76 @@ fn audit_gate(project: &str, brand: &str, channel: &str, limit: i64, used: i64) 
         "{}",
         json!({"event":"account_link_gate_decision","project_id":project,"external_account_id":brand,"connector":"unipile","channel":channel,"limit":limit,"used":used,"allowed":allowed,"reason":if allowed{""}else if limit>0{"QUOTA_EXCEEDED"}else{"NOT_ENTITLED"}})
     );
+}
+
+#[cfg(test)]
+mod cursor_tests {
+    use super::*;
+
+    #[test]
+    fn accepted_cursor_round_trips_long_and_escaped_identifiers() {
+        let accepted_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_800_000_000);
+        let long_account = "a".repeat(4096);
+        let long_member = "m".repeat(4096);
+        let encoded =
+            encode_accepted_cursor(&long_account, &long_account, &long_member, accepted_at);
+        assert!(encoded.len() <= ACCEPTED_CURSOR_MAX_LEN);
+        let parsed = parse_accepted_cursor(&encoded, &long_account).unwrap();
+        assert_eq!(parsed.account_id, long_account);
+        assert_eq!(parsed.member_id, long_member);
+        assert_eq!(parsed.accepted_at, accepted_at);
+
+        // The ingestion boundary permits control characters other than NUL.
+        // They use six bytes each in JSON's \uXXXX form, so exercise the
+        // largest cursor produced by the accepted input contract.
+        let escaped_account = "\u{0001}".repeat(4096);
+        let escaped_member = "\u{0002}".repeat(4096);
+        let encoded = encode_accepted_cursor(
+            &escaped_account,
+            &escaped_account,
+            &escaped_member,
+            accepted_at,
+        );
+        assert!(encoded.len() <= ACCEPTED_CURSOR_MAX_LEN);
+        let parsed = parse_accepted_cursor(&encoded, &escaped_account).unwrap();
+        assert_eq!(parsed.account_id, escaped_account);
+        assert_eq!(parsed.member_id, escaped_member);
+        assert_eq!(parsed.accepted_at, accepted_at);
+
+        let unicode_account = "brand/with spaces/Δ/\"quoted\"/\\";
+        let unicode_member = "member/with:escaped/é/\n";
+        let encoded = encode_accepted_cursor("", unicode_account, unicode_member, accepted_at);
+        let parsed = parse_accepted_cursor(&encoded, "").unwrap();
+        assert_eq!(parsed.account_id, unicode_account);
+        assert_eq!(parsed.member_id, unicode_member);
+        assert_eq!(parsed.accepted_at, accepted_at);
+    }
+
+    #[test]
+    fn accepted_cursor_rejects_scope_changes_and_oversized_input() {
+        let accepted_at = SystemTime::UNIX_EPOCH + Duration::from_secs(1_800_000_000);
+        let encoded = encode_accepted_cursor("brand-a", "brand-a", "member", accepted_at);
+        assert!(parse_accepted_cursor(&encoded, "brand-b").is_err());
+        assert!(parse_accepted_cursor(&encoded, "").is_err());
+        assert!(parse_accepted_cursor(
+            &format!(
+                "{ACCEPTED_CURSOR_PREFIX}{}",
+                "A".repeat(ACCEPTED_CURSOR_MAX_LEN)
+            ),
+            ""
+        )
+        .is_err());
+
+        let encoded = encode_accepted_cursor("", "brand\0", "member", accepted_at);
+        assert!(parse_accepted_cursor(&encoded, "").is_err());
+        let encoded = encode_accepted_cursor("", "brand", "member\0", accepted_at);
+        assert!(parse_accepted_cursor(&encoded, "").is_err());
+        let encoded = encode_accepted_cursor(
+            "",
+            &"a".repeat(INPUT_STRING_MAX_BYTES + 1),
+            "member",
+            accepted_at,
+        );
+        assert!(parse_accepted_cursor(&encoded, "").is_err());
+    }
 }

@@ -68,6 +68,17 @@ impl From<postgres::Error> for Error {
     }
 }
 pub type Result<T> = std::result::Result<T, Error>;
+
+// `string` accepts identifiers up to 4096 UTF-8 bytes. A cursor contains two
+// such identifiers; JSON can expand each control byte to six bytes. Account
+// for the fixed JSON fields, then apply the URL-safe base64 upper bound. Keep
+// this derived limit shared by request validation and cursor decoding so a
+// server-generated cursor is always accepted by the request path.
+pub(crate) const INPUT_STRING_MAX_BYTES: usize = 4096;
+const ACCEPTED_CURSOR_JSON_OVERHEAD: usize = 512;
+pub(crate) const ACCEPTED_CURSOR_MAX_LEN: usize =
+    3 + 4 * (2 * INPUT_STRING_MAX_BYTES * 6 + ACCEPTED_CURSOR_JSON_OVERHEAD).div_ceil(3);
+
 pub(crate) fn random_id() -> Result<String> {
     use base64::Engine;
     let mut bytes = [0u8; 32];
