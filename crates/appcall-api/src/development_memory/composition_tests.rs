@@ -868,6 +868,28 @@ async fn rest_setup_routes_describe_and_submit_selected_smtp_credentials() {
             .await;
         assert_eq!(default.status, 201, "{connector}: {default:?}");
 
+        for route in [Value::Null, Value::String(String::new())] {
+            let explicit_default = api
+                .handle(api_request(
+                    "POST",
+                    &format!("/v1/connectors/{connector}/setup/api-key"),
+                    serde_json::json!({
+                        "route":route,
+                        "fields":{"apiKey":format!("{connector}-explicit-default-secret")}
+                    }),
+                ))
+                .await;
+            assert_eq!(
+                explicit_default.status, 201,
+                "{connector}: {explicit_default:?}"
+            );
+            assert_eq!(explicit_default.body["connection"]["connector"], connector);
+            assert!(!explicit_default
+                .body
+                .to_string()
+                .contains("explicit-default-secret"));
+        }
+
         let smtp_secret = format!("{connector}-smtp-secret");
         let selected = api
             .handle(api_request(
