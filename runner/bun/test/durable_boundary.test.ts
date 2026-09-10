@@ -1,6 +1,7 @@
 import {test, expect} from 'bun:test';
 import {handleRPC} from '../src/server';
 import {createConnectorHttpClient} from '../src/http';
+import {executionContext} from '../src/execution';
 test('RPC rejects null envelopes without throwing', async()=> {
  const r=await handleRPC(new Request('http://local/rpc',{method:'POST',body:'null'})); expect(r.status).toBe(400);
 });
@@ -10,6 +11,17 @@ test('pre-aborted outbound signal never dispatches',async()=>{
 });
 test('RPC honors expired caller deadline',async()=>{
  const r=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'expired',method:'runner.describe',deadlineUnixMs:1})})); expect(r.status).toBe(504);
+});
+
+test('RPC permits a simulated action deadline beyond the legacy 60 second cap',async()=>{
+ const original=defaultConnectorRegistry.executeAction; let observedDeadline=0;
+ defaultConnectorRegistry.executeAction=()=>{observedDeadline=executionContext()?.deadlineUnixMs??0;return {ok:true,output:{ok:true}}};
+ const admittedAt=Date.now(); const deadline=admittedAt+61_000;
+ try{
+  const request=new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'long-action',deadlineUnixMs:deadline,method:'connector.action.execute',params:{connectorKey:'apify',action:'actor.run_sync_get_dataset_items'}})});
+  const response=await handleRPC(request,admittedAt);
+  expect(response.status).toBe(200); expect(observedDeadline).toBeGreaterThanOrEqual(deadline-250);
+ }finally{defaultConnectorRegistry.executeAction=original;}
 });
 import {defaultConnectorRegistry} from '../src/registry';
 import {createFetchHandler} from '../src/serve';
@@ -132,8 +144,35 @@ test('handwritten RPC errors redact exact known credentials',async()=>{
 });
 test('RPC wire bounds reject oversized input and output',async()=>{
  const request=()=>new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'big',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
- const input=await handleRPC(new Request('http://local/rpc',{method:'POST',body:' '.repeat(8*1024*1024+1)}));expect(input.status).toBe(413);
+ const input=await handleRPC(new Request('http://local/rpc',{method:'POST',body:' '.repeat(25*1024*1024+256*1024+1)}));expect(input.status).toBe(413);
  const original=defaultConnectorRegistry.executeAction;
  defaultConnectorRegistry.executeAction=()=>({ok:true,output:{data:'x'.repeat(8*1024*1024)}});
- try{const output=await handleRPC(request());expect(output.status).toBe(502);expect((await output.json()).error.code).toBe('OUTPUT_TOO_LARGE');}finally{defaultConnectorRegistry.executeAction=original;}
+ try{const output=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'big',method:'connector.action.execute',params:{connectorKey:'apify',action:'actor.run_sync_get_dataset_items'}})}));expect(output.status).toBe(200);expect((await output.json()).result.output.data.length).toBe(8*1024*1024);}finally{defaultConnectorRegistry.executeAction=original;}
+});
+
+test('RPC counts operation output separately from envelope overhead',async()=>{
+ const original=defaultConnectorRegistry.executeAction;
+ const action='actor.run_sync_get_dataset_items'; const maxResponseBytes=50*1024*1024;
+ const emptyOutput={connector:'apify',action,data:''};
+ const outputPrefix=new TextEncoder().encode(JSON.stringify(emptyOutput)).byteLength;
+ const data='x'.repeat(maxResponseBytes-outputPrefix);
+ defaultConnectorRegistry.executeAction=()=>({ok:true,output:{data}});
+ try{
+  const response=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'envelope',method:'connector.action.execute',params:{connectorKey:'apify',action}})}));
+  const body=await response.text();
+  expect(response.status).toBe(200);
+  expect(new TextEncoder().encode(body).byteLength).toBeGreaterThan(maxResponseBytes);
+  expect(new TextEncoder().encode(body).byteLength).toBeLessThanOrEqual(maxResponseBytes+256*1024);
+ }finally{defaultConnectorRegistry.executeAction=original;}
+});
+
+test('RPC rejects an operation result over its declared response budget',async()=>{
+ const original=defaultConnectorRegistry.executeAction;
+ const action='actor.run_sync_get_dataset_items'; const maxResponseBytes=50*1024*1024;
+ const outputPrefix=new TextEncoder().encode(JSON.stringify({connector:'apify',action,data:''})).byteLength;
+ defaultConnectorRegistry.executeAction=()=>({ok:true,output:{data:'x'.repeat(maxResponseBytes-outputPrefix+1)}});
+ try{
+  const response=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'over-budget',method:'connector.action.execute',params:{connectorKey:'apify',action}})}));
+  expect(response.status).toBe(502); expect((await response.json()).error.code).toBe('OUTPUT_TOO_LARGE');
+ }finally{defaultConnectorRegistry.executeAction=original;}
 });
