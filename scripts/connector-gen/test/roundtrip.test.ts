@@ -292,7 +292,7 @@ describe("generated manifest round-trip", () => {
       filter: { status: "open", owner: "A&B" },
       coords: { R: 100, G: 200 },
       trace: { region: "us", shard: 2 },
-      colorsHeader: ["red", "green"],
+      colorsheader: ["red", "green"],
       fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
         seenUrl = String(url);
         seenHeaders = Object.fromEntries(new Headers(init?.headers).entries());

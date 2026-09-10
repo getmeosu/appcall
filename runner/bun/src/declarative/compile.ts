@@ -22,6 +22,7 @@ import type {
   DeclarativeHttp,
   DeclarativeManifest,
   DeclarativeOperation,
+  DeclarativeParameter,
   DeclarativeRequest,
   DeclarativeSetupField,
 } from "./types";
@@ -274,11 +275,12 @@ function buildURL(http: DeclarativeHttp, request: DeclarativeRequest, input: Rec
   if (baseUrl === "") {
     throw new Error("baseUrl is required");
   }
-  const path = renderPath(request.path ?? "", input);
+  const path = renderRequestPath(request.path ?? "", request.parameters, input);
   const url = new URL(`${trimTrailingSlash(baseUrl)}${path}`);
 
   appendQuery(url, http.query, input);
-  appendQuery(url, request.query, input);
+  const queryParameters = request.parameters?.filter((parameter) => parameter.in === "query") ?? [];
+  appendQuery(url, request.query, input, new Set(queryParameters.flatMap((parameter) => [parameter.wireName, parameter.inputName])));
 
   if (http.auth?.in === "query" && http.auth.name) {
     const value = renderTemplate(http.auth.value ?? `{{${http.auth.field}}}`, input);
@@ -287,10 +289,20 @@ function buildURL(http: DeclarativeHttp, request: DeclarativeRequest, input: Rec
     }
   }
 
+  // Append structured OpenAPI parameters last. Mutating searchParams after
+  // this point would normalize the already-serialized separators (for example
+  // turning `%20` into `+` or encoding deepObject brackets).
+  appendSerializedQueryParameters(url, queryParameters, input);
+
   return url;
 }
 
-function appendQuery(url: URL, template: Record<string, unknown> | undefined, input: Record<string, unknown>): void {
+function appendQuery(
+  url: URL,
+  template: Record<string, unknown> | undefined,
+  input: Record<string, unknown>,
+  skipKeys: Set<string> = new Set(),
+): void {
   if (!template) {
     return;
   }
@@ -299,6 +311,9 @@ function appendQuery(url: URL, template: Record<string, unknown> | undefined, in
     return;
   }
   for (const [key, value] of Object.entries(rendered)) {
+    if (skipKeys.has(key)) {
+      continue;
+    }
     if (Array.isArray(value)) {
       for (const item of value) {
         url.searchParams.append(key, String(item));
@@ -311,7 +326,8 @@ function appendQuery(url: URL, template: Record<string, unknown> | undefined, in
 
 function buildHeaders(http: DeclarativeHttp, request: DeclarativeRequest, input: Record<string, unknown>): Record<string, string> {
   const headers: Record<string, string> = {};
-  for (const template of [http.headers, request.headers]) {
+  const headerParameters = request.parameters?.filter((parameter) => parameter.in === "header") ?? [];
+  for (const template of [http.headers]) {
     const rendered = renderTemplate(template ?? {}, input);
     if (!isRecord(rendered)) {
       continue;
@@ -319,6 +335,24 @@ function buildHeaders(http: DeclarativeHttp, request: DeclarativeRequest, input:
     for (const [key, value] of Object.entries(rendered)) {
       headers[key] = typeof value === "object" ? JSON.stringify(value) : String(value);
     }
+  }
+
+  const renderedRequestHeaders = renderTemplate(request.headers ?? {}, input);
+  if (isRecord(renderedRequestHeaders)) {
+    for (const [key, value] of Object.entries(renderedRequestHeaders)) {
+      if (headerParameters.some((parameter) => headerTemplateKeyMatches(key, parameter))) {
+        continue;
+      }
+      headers[key] = typeof value === "object" ? JSON.stringify(value) : String(value);
+    }
+  }
+
+  for (const parameter of headerParameters) {
+    const value = parameterInput(parameter, input);
+    if (value === undefined || value === null) {
+      continue;
+    }
+    headers[parameter.wireName] = serializeHeaderParameter(parameter, value);
   }
 
   const auth = http.auth;
@@ -330,6 +364,191 @@ function buildHeaders(http: DeclarativeHttp, request: DeclarativeRequest, input:
   }
 
   return headers;
+}
+
+const parameterPlaceholderPattern = /\{\{\s*([A-Za-z0-9_.$-]+)\s*\}\}/g;
+
+function renderRequestPath(
+  path: string,
+  parameters: DeclarativeParameter[] | undefined,
+  input: Record<string, unknown>,
+): string {
+  const pathParameters = parameters?.filter((parameter) => parameter.in === "path") ?? [];
+  if (pathParameters.length === 0) {
+    return renderPath(path, input);
+  }
+
+  return path.replace(parameterPlaceholderPattern, (_match, expression: string) => {
+    const parameter = pathParameters.find(
+      (candidate) => candidate.inputName === expression || candidate.wireName === expression,
+    );
+    const value = parameter ? parameterInput(parameter, input) : resolvePath(expression, input);
+    if (value === undefined || value === null || value === "") {
+      throw new Error(`${lastParameterSegment(parameter?.inputName ?? expression)} is required`);
+    }
+    return parameter ? serializePathParameter(parameter, value) : encodeURIComponent(String(value));
+  });
+}
+
+function parameterInput(parameter: DeclarativeParameter, input: Record<string, unknown>): unknown {
+  if (Object.hasOwn(input, parameter.inputName)) {
+    return input[parameter.inputName];
+  }
+  return resolvePath(parameter.inputName, input);
+}
+
+function serializePathParameter(parameter: DeclarativeParameter, value: unknown): string {
+  const encode = (part: unknown) => encodeURIComponent(parameterPart(part));
+  const name = encode(parameter.wireName);
+  const items = Array.isArray(value) ? value : undefined;
+  const object = isRecord(value) ? Object.entries(value) : undefined;
+
+  if (items) {
+    const encodedItems = items.map(encode);
+    if (parameter.style === "matrix") {
+      return parameter.explode
+        ? encodedItems.map((item) => `;${name}=${item}`).join("")
+        : `;${name}=${encodedItems.join(",")}`;
+    }
+    if (parameter.style === "label") {
+      return `.${encodedItems.join(".")}`;
+    }
+    return encodedItems.join(",");
+  }
+
+  if (object) {
+    const encodedPairs = object.flatMap(([key, item]) => [encode(key), encode(item)]);
+    if (parameter.style === "matrix") {
+      return parameter.explode
+        ? object.map(([key, item]) => `;${encode(key)}=${encode(item)}`).join("")
+        : `;${name}=${encodedPairs.join(",")}`;
+    }
+    if (parameter.style === "label") {
+      return parameter.explode
+        ? `.${object.map(([key, item]) => `${encode(key)}=${encode(item)}`).join(".")}`
+        : `.${encodedPairs.join(".")}`;
+    }
+    return parameter.explode
+      ? object.map(([key, item]) => `${encode(key)}=${encode(item)}`).join(",")
+      : encodedPairs.join(",");
+  }
+
+  if (parameter.style === "matrix") {
+    return `;${name}=${encode(value)}`;
+  }
+  if (parameter.style === "label") {
+    return `.${encode(value)}`;
+  }
+  return encode(value);
+}
+
+type SerializedQuery = { key: string; value: string; keyAlreadyEncoded?: boolean };
+
+function appendSerializedQueryParameters(
+  url: URL,
+  parameters: DeclarativeParameter[],
+  input: Record<string, unknown>,
+): void {
+  const serialized = parameters.flatMap((parameter) => {
+    const value = parameterInput(parameter, input);
+    return value === undefined || value === null ? [] : serializeQueryParameter(parameter, value);
+  });
+  if (serialized.length === 0) {
+    return;
+  }
+
+  const query = serialized
+    .map((entry) => {
+      const key = entry.keyAlreadyEncoded ? entry.key : encodeQueryComponent(entry.key, false);
+      return `${key}=${entry.value}`;
+    })
+    .join("&");
+  url.search = url.search.length > 0 ? `${url.search}&${query}` : `?${query}`;
+}
+
+function serializeQueryParameter(parameter: DeclarativeParameter, value: unknown): SerializedQuery[] {
+  const encode = (part: unknown) => encodeQueryComponent(parameterPart(part), parameter.allowReserved);
+  const key = parameter.wireName;
+  const items = Array.isArray(value) ? value : undefined;
+  const object = isRecord(value) ? Object.entries(value) : undefined;
+
+  if (items) {
+    const encodedItems = items.map(encode);
+    if (parameter.style === "spaceDelimited") {
+      return [{ key, value: encodedItems.join("%20") }];
+    }
+    if (parameter.style === "pipeDelimited") {
+      return [{ key, value: encodedItems.join("|") }];
+    }
+    if (parameter.explode) {
+      return encodedItems.map((item) => ({ key, value: item }));
+    }
+    return [{ key, value: encodedItems.join(",") }];
+  }
+
+  if (object) {
+    if (parameter.style === "deepObject") {
+      const encodedKey = encodeQueryComponent(key, false);
+      return object.map(([property, item]) => ({
+        key: `${encodedKey}[${encodeQueryComponent(property, false)}]`,
+        value: encode(item),
+        keyAlreadyEncoded: true,
+      }));
+    }
+    if (parameter.explode) {
+      return object.map(([property, item]) => ({ key: property, value: encode(item) }));
+    }
+    const encodedPairs = object.flatMap(([property, item]) => [encode(property), encode(item)]);
+    return [{ key, value: encodedPairs.join(",") }];
+  }
+
+  return [{ key, value: encode(value) }];
+}
+
+function serializeHeaderParameter(parameter: DeclarativeParameter, value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(parameterPart).join(",");
+  }
+  if (isRecord(value)) {
+    const entries = Object.entries(value);
+    return parameter.explode
+      ? entries.map(([key, item]) => `${key}=${parameterPart(item)}`).join(",")
+      : entries.flatMap(([key, item]) => [key, parameterPart(item)]).join(",");
+  }
+  return parameterPart(value);
+}
+
+function parameterPart(value: unknown): string {
+  if (isRecord(value)) {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function encodeQueryComponent(value: string, allowReserved: boolean): string {
+  const encoded = encodeURIComponent(value);
+  if (!allowReserved) {
+    return encoded;
+  }
+  return encoded.replace(/%3A/gi, ":")
+    .replace(/%2F/gi, "/")
+    .replace(/%3F/gi, "?")
+    .replace(/%40/gi, "@")
+    .replace(/%24/gi, "$")
+    .replace(/%2B/gi, "+")
+    .replace(/%2C/gi, ",")
+    .replace(/%3B/gi, ";")
+    .replace(/%3D/gi, "=");
+}
+
+function headerTemplateKeyMatches(key: string, parameter: DeclarativeParameter): boolean {
+  const normalized = key.toLowerCase();
+  return normalized === parameter.inputName.toLowerCase() || normalized === parameter.wireName.toLowerCase();
+}
+
+function lastParameterSegment(expression: string): string {
+  const segments = expression.split(".");
+  return segments[segments.length - 1] ?? expression;
 }
 
 function buildBody(request: DeclarativeRequest, input: Record<string, unknown>): string | undefined {

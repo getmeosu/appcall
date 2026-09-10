@@ -41,17 +41,17 @@ export type GenerateOptions = {
 
 type JSONObject = Record<string, any>;
 
-type OpenAPIErrorCode = "OPENAPI_AMBIGUOUS_PARAMETER";
+type ParameterLocation = "path" | "query" | "header";
+type ParameterStyle = "simple" | "label" | "matrix" | "form" | "spaceDelimited" | "pipeDelimited" | "deepObject";
 
-class OpenAPIError extends Error {
-  readonly code: OpenAPIErrorCode;
-
-  constructor(code: OpenAPIErrorCode, message: string) {
-    super(message);
-    this.name = "OpenAPIError";
-    this.code = code;
-  }
-}
+type GeneratedParameter = {
+  wireName: string;
+  inputName: string;
+  in: ParameterLocation;
+  style: ParameterStyle;
+  explode: boolean;
+  allowReserved: boolean;
+};
 
 const methodVerbs: Record<string, string> = {
   post: "create",
@@ -65,7 +65,8 @@ export function generateManifest(spec: JSONObject, options: GenerateOptions): JS
   const operations: JSONObject = {};
   const taken = new Set<string>();
 
-  for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
+  for (const [path, rawPathItem] of Object.entries(spec.paths ?? {})) {
+    const pathItem = resolveRef(spec, rawPathItem);
     if (!isRecord(pathItem)) {
       continue;
     }
@@ -137,36 +138,51 @@ function buildOperation(
   const parameters = [...parametersByIdentity.values()];
   const properties: JSONObject = {};
   const required: string[] = [];
-  const parameterLocationsByInputName = new Map<string, string>();
+  const inputNames = generatedParameterNames(parameters);
 
   const query: JSONObject = {};
   const headers: JSONObject = {};
+  const requestParameters: GeneratedParameter[] = [];
+  const pathAliases = new Map<string, string>();
 
   for (const parameter of parameters) {
-    const name = generatedParameterName(parameter);
-    if (name.length === 0 || parameter.in === "cookie") {
+    const wireName = String(parameter.name ?? "");
+    if (wireName.length === 0 || parameter.in === "cookie") {
       continue;
     }
 
     const location = parameterLocation(parameter);
-    const previousLocation = parameterLocationsByInputName.get(name);
-    if (previousLocation !== undefined && previousLocation !== location) {
-      throw new OpenAPIError(
-        "OPENAPI_AMBIGUOUS_PARAMETER",
-        `OpenAPI parameter ${JSON.stringify(name)} has conflicting ${displayParameterLocation(previousLocation)} and ${displayParameterLocation(location)} locations.`,
-      );
+    if (location === undefined) {
+      continue;
     }
-    parameterLocationsByInputName.set(name, location);
+    const inputName = inputNames.get(parameter) ?? wireName;
 
-    properties[name] = describeSchema(spec, parameterSchema(spec, parameter), parameter.description);
+    properties[inputName] = describeSchema(spec, parameterSchema(spec, parameter), parameter.description);
     if (parameter.required || parameter.in === "path") {
-      required.push(name);
+      required.push(inputName);
     }
     if (parameter.in === "query") {
-      query[name] = `{{${name}}}`;
+      query[wireName] = `{{${inputName}}}`;
     }
     if (parameter.in === "header") {
-      headers[name] = `{{${name}}}`;
+      // Keep the existing lower-case template key for manifests that inspect
+      // the legacy field. The metadata below retains the exact OpenAPI wire
+      // name and is authoritative at runtime.
+      headers[generatedParameterName(parameter)] = `{{${inputName}}}`;
+    }
+    if (!isRecord(parameter.content)) {
+      const generated: GeneratedParameter = {
+        wireName,
+        inputName,
+        in: location,
+        style: parameterStyle(parameter, location),
+        explode: parameterExplode(parameter, parameterStyle(parameter, location)),
+        allowReserved: parameter.allowReserved === true,
+      };
+      requestParameters.push(generated);
+      if (location === "path") {
+        pathAliases.set(wireName, inputName);
+      }
     }
   }
 
@@ -193,9 +209,10 @@ function buildOperation(
     },
     request: {
       method: method.toUpperCase(),
-      path: templatePath(path),
+      path: templatePath(path, pathAliases),
       ...(Object.keys(query).length > 0 ? { query } : {}),
       ...(Object.keys(headers).length > 0 ? { headers } : {}),
+      ...(requestParameters.length > 0 ? { parameters: requestParameters } : {}),
       ...(body ? { body } : {}),
       success,
     },
@@ -223,12 +240,62 @@ function parameterIdentity(parameter: JSONObject): string {
   return JSON.stringify([generatedParameterName(parameter), parameter.in]);
 }
 
-function parameterLocation(parameter: JSONObject): string {
-  return typeof parameter.in === "string" ? parameter.in : "unknown";
+function parameterLocation(parameter: JSONObject): ParameterLocation | undefined {
+  return parameter.in === "path" || parameter.in === "query" || parameter.in === "header" ? parameter.in : undefined;
 }
 
-function displayParameterLocation(location: string): string {
-  return ["path", "query", "header", "cookie"].includes(location) ? location : "other";
+function generatedParameterNames(parameters: JSONObject[]): Map<JSONObject, string> {
+  const byBaseName = new Map<string, JSONObject[]>();
+  const baseNames = new Set<string>();
+  for (const parameter of parameters) {
+    if (parameter.in === "cookie") {
+      continue;
+    }
+    const baseName = generatedParameterName(parameter);
+    if (baseName.length === 0 || parameterLocation(parameter) === undefined) {
+      continue;
+    }
+    baseNames.add(baseName);
+    const group = byBaseName.get(baseName) ?? [];
+    group.push(parameter);
+    byBaseName.set(baseName, group);
+  }
+
+  const used = new Set(baseNames);
+  const generated = new Map<JSONObject, string>();
+  for (const parameter of parameters) {
+    const baseName = generatedParameterName(parameter);
+    const group = byBaseName.get(baseName) ?? [];
+    if (group.length <= 1) {
+      generated.set(parameter, baseName);
+      continue;
+    }
+
+    const location = parameterLocation(parameter) ?? "query";
+    const suffix = location[0].toUpperCase() + location.slice(1);
+    let candidate = `${baseName}${suffix}`;
+    let counter = 2;
+    while (used.has(candidate)) {
+      candidate = `${baseName}${suffix}${counter}`;
+      counter += 1;
+    }
+    used.add(candidate);
+    generated.set(parameter, candidate);
+  }
+  return generated;
+}
+
+function parameterStyle(parameter: JSONObject, location: ParameterLocation): ParameterStyle {
+  const styles: ParameterStyle[] = ["simple", "label", "matrix", "form", "spaceDelimited", "pipeDelimited", "deepObject"];
+  return styles.includes(parameter.style) ? parameter.style : defaultParameterStyle(location);
+}
+
+function defaultParameterStyle(location: ParameterLocation): ParameterStyle {
+  return location === "query" ? "form" : "simple";
+}
+
+function parameterExplode(parameter: JSONObject, style: ParameterStyle): boolean {
+  return typeof parameter.explode === "boolean" ? parameter.explode : style === "form";
 }
 
 function buildBody(spec: JSONObject, operation: JSONObject, properties: JSONObject, required: string[]): JSONObject | undefined {
@@ -402,11 +469,17 @@ function resolveSchema(spec: JSONObject, schema: unknown, seen: Set<string> = ne
   return schema;
 }
 
-function resolveRef(spec: JSONObject, value: unknown): unknown {
-  if (isRecord(value) && typeof value.$ref === "string") {
-    return derefPointer(spec, value.$ref);
+function resolveRef(spec: JSONObject, value: unknown, seen: Set<string> = new Set()): unknown {
+  let current = value;
+  while (isRecord(current) && typeof current.$ref === "string") {
+    const reference = current.$ref;
+    if (seen.has(reference)) {
+      return undefined;
+    }
+    seen.add(reference);
+    current = derefPointer(spec, reference);
   }
-  return value;
+  return current;
 }
 
 function derefPointer(spec: JSONObject, pointer: string): unknown {
@@ -423,8 +496,8 @@ function derefPointer(spec: JSONObject, pointer: string): unknown {
   return current;
 }
 
-function templatePath(path: string): string {
-  return path.replace(/\{([^}]+)\}/g, (_match, name: string) => `{{${name}}}`);
+function templatePath(path: string, aliases: Map<string, string> = new Map()): string {
+  return path.replace(/\{([^}]+)\}/g, (_match, name: string) => `{{${aliases.get(name) ?? name}}}`);
 }
 
 function title(operation: JSONObject, method: string, path: string): string {
