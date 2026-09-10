@@ -123,7 +123,7 @@ export type ListConferenceRecordsInput = {
 // ─── validators ──────────────────────────────────────────────────────────────
 
 const MEET_SPACE_PREFIX = "spaces/";
-const MEET_SPACE_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+const MEET_SPACE_IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{1,128}(?![\s\S])/;
 
 function requireMeetSpaceName(value: unknown): string {
   const name = requireString(value, "name");

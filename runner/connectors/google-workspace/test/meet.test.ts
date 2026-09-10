@@ -429,6 +429,11 @@ describe("google-workspace Meet: meet.spaces.get", () => {
     expect(r.name).toBe("spaces/abc123xyz");
   });
 
+  test("validateGetMeetSpaceInput accepts server-generated leading-hyphen IDs", () => {
+    const r = validateGetMeetSpaceInput({ name: "spaces/-yy3uKlef_QB" });
+    expect(r.name).toBe("spaces/-yy3uKlef_QB");
+  });
+
   test("validateGetMeetSpaceInput throws when name is missing", () => {
     expect(() => validateGetMeetSpaceInput({})).toThrow();
     expect(() => validateGetMeetSpaceInput({ name: "" })).toThrow();
@@ -496,6 +501,20 @@ describe("google-workspace Meet: meet.spaces.get", () => {
       await expect(client.getSpace({ name })).rejects.toThrow();
     }
 
+    expect(requests).toHaveLength(0);
+  });
+
+  test("getSpace rejects a trailing newline without dispatching a request", async () => {
+    const requests: Request[] = [];
+    const client = createMeetClient({
+      accessToken: "ya29.test",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(meetSpaceFixture);
+      },
+    });
+
+    await expect(client.getSpace({ name: "spaces/abc\n" })).rejects.toThrow();
     expect(requests).toHaveLength(0);
   });
 
