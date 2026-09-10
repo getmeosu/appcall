@@ -122,6 +122,7 @@ impl From<appcall_actions::ActionError> for ApiError {
             "MISSING_CREDENTIAL",
             "MISSING_SUBACCOUNT",
             "USAGE_LIMIT_EXCEEDED",
+            "USAGE_DECISION_FAILED",
             "SEND_CAP_EXCEEDED",
             "SPEND_CAP_EXCEEDED",
             "LINKEDIN_INVITE_CAP_EXCEEDED",

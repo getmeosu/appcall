@@ -1,11 +1,37 @@
 use super::*;
-use appcall_actions::{resolve_entitlements, Entitlements};
+use appcall_actions::{resolve_entitlements, usage_snapshot, utc_month, Entitlements};
 /// Defaults must be the same instance of host policy configuration used by actions.
 #[derive(Clone, Default)]
 pub struct UsageDefaults {
     pub limits: Entitlements,
     pub unipile_max_accounts: i64,
 }
+
+fn select_month(
+    path: &str,
+    requested_month: Option<&str>,
+    local_month: &str,
+    database_month: Option<&str>,
+) -> Result<String> {
+    if path == "/v1/usage/action-calls/decision" {
+        return database_month
+            .map(str::to_owned)
+            .ok_or_else(|| ApiError::new("USAGE_DECISION_FAILED"));
+    }
+    Ok(if path == "/v1/usage/monthly" {
+        requested_month
+            .filter(|month| !month.is_empty())
+            .unwrap_or(local_month)
+    } else {
+        local_month
+    }
+    .to_owned())
+}
+
+/// Read current project usage and entitlements. The action-call decision reads
+/// completed rollups plus active pending/dispatched reservations; it is
+/// advisory, does not reserve capacity, and may become stale before
+/// authoritative admission.
 pub fn usage_read(
     client: &mut impl GenericClient,
     identity: &Identity,
@@ -27,13 +53,16 @@ pub fn usage_read(
     }
     let query = first_query_values(url);
     let now = chrono::Utc::now().format("%Y-%m").to_string();
-    let month = if path == "/v1/usage/monthly" {
-        query.get("month").filter(|s| !s.is_empty()).unwrap_or(&now)
+    let requested_month = query.get("month").map(String::as_str);
+    let local_month = if path == "/v1/usage/monthly" {
+        requested_month
+            .filter(|month| !month.is_empty())
+            .unwrap_or(&now)
     } else {
         &now
     };
-    if month.len() != 7
-        || chrono::NaiveDate::parse_from_str(&format!("{month}-01"), "%Y-%m-%d").is_err()
+    if local_month.len() != 7
+        || chrono::NaiveDate::parse_from_str(&format!("{local_month}-01"), "%Y-%m-%d").is_err()
     {
         return Err(ApiError::new("INVALID_MONTH"));
     }
@@ -48,6 +77,17 @@ pub fn usage_read(
             .filter(|n| *n > 0 && *n <= 1000)
             .ok_or_else(|| ApiError::new("INVALID_QUANTITY"))?,
     };
+    let database_month = if path == "/v1/usage/action-calls/decision" {
+        Some(utc_month(client).map_err(db_error)?)
+    } else {
+        None
+    };
+    let month = select_month(path, requested_month, &now, database_month.as_deref())?;
+    if month.len() != 7
+        || chrono::NaiveDate::parse_from_str(&format!("{month}-01"), "%Y-%m-%d").is_err()
+    {
+        return Err(ApiError::new("INVALID_MONTH"));
+    }
     let row = client
         .query_opt(
             "SELECT plan_key,status,overrides::text FROM project_plans WHERE project_id=$1",
@@ -141,10 +181,17 @@ pub fn usage_read(
                 .map_err(db_error)?
                 .ok_or_else(|| ApiError::new("UNAUTHORIZED"))?
                 .get(0);
-            let current = if disabled { 0 } else { current };
-            let projected = current
-                .checked_add(quantity)
-                .ok_or_else(|| ApiError::new("USAGE_DECISION_FAILED"))?;
+            let (current, projected) = if disabled {
+                let projected = 0_i64
+                    .checked_add(quantity)
+                    .ok_or_else(|| ApiError::new("USAGE_DECISION_FAILED"))?;
+                (0, projected)
+            } else {
+                let snapshot =
+                    usage_snapshot(client, &identity.project_id, &month, quantity, &limits)
+                        .map_err(ApiError::from)?;
+                (snapshot.current, snapshot.projected)
+            };
             let exceeded = limits.action_calls_hard > 0 && projected > limits.action_calls_hard;
             let mut value = json!({"kind":"action_call","quantity":quantity,"allowed":!disabled&&!exceeded,"warning":!disabled&&!exceeded&&limits.action_calls_soft>0&&projected>limits.action_calls_soft,"month":month,"current":current,"projected":projected,"softLimit":limits.action_calls_soft,"hardLimit":limits.action_calls_hard});
             if disabled {
@@ -165,6 +212,18 @@ pub fn usage_read(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn usage_decision_uses_database_month_at_utc_rollover() {
+        let month = select_month(
+            "/v1/usage/action-calls/decision",
+            None,
+            "2026-09",
+            Some("2026-10"),
+        )
+        .unwrap();
+        assert_eq!(month, "2026-10");
+    }
+
     #[test]
     #[ignore = "requires isolated local PostgreSQL"]
     fn entitlements_rollup_failure_preserves_limits_and_outer_transaction() {
