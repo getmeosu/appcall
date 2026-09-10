@@ -291,6 +291,13 @@ impl<S: Store> Engine<S> {
                 Err(WorkflowError::Nondeterminism | WorkflowError::Invalid) => {
                     return self.suspend(&mut r, RunState::Nondeterminism)
                 }
+                Err(WorkflowError::Blocked)
+                    if ctx.pending.is_none()
+                        && !r.history.iter().any(|event| event.value.is_none()) =>
+                {
+                    self.reject_run(id, RunFailure::InvalidCommand)?;
+                    return Ok(DriveOutcome::Suspended(RunState::Failed));
+                }
                 Err(WorkflowError::Blocked) => {}
             }
             if let Some(command) = ctx.pending {
