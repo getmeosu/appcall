@@ -30,6 +30,15 @@ fn failure(
         ..Default::default()
     })
 }
+fn busy_failure() -> std::result::Result<Value, RunnerFailure> {
+    Err(RunnerFailure {
+        code: "RUNNER_BUSY".into(),
+        outcome: NotDispatched,
+        transient: true,
+        retry_after_ms: 0,
+        ..Default::default()
+    })
+}
 async fn run(steps: Vec<std::result::Result<Value, RunnerFailure>>, state: State) -> ActionError {
     Service::new(
         Repo {
@@ -112,9 +121,39 @@ async fn evidence_all_attempts_and_only_final_retry_hint_survive() {
             .await;
             assert_eq!(error.evidence.outcome, expected);
             assert_eq!(error.evidence.origin, ActionFailureOrigin::Runner);
-            assert_eq!(error.evidence.retry_after_seconds, final_hint);
+    assert_eq!(error.evidence.retry_after_seconds, final_hint);
         }
     }
+}
+
+#[tokio::test]
+async fn runner_busy_retries_read_only_within_bound_and_releases_claim() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let steps = (0..6).map(|_| busy_failure()).collect();
+    let service = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        Catalog { read: true },
+        Credentials,
+        Scripted(Mutex::new(steps)),
+        Allow,
+    );
+
+    for _ in 0..2 {
+        let error = service.execute(request("owner")).await.unwrap_err();
+        assert_eq!(error.code, "RUNNER_BUSY");
+        assert_eq!(error.evidence.outcome, NotDispatched);
+        assert_eq!(error.evidence.origin, ActionFailureOrigin::Runner);
+        assert_eq!(error.evidence.retry_after_seconds, None);
+    }
+
+    let state = state.lock().unwrap();
+    assert_eq!(state.claims, 2, "released idempotency claim can be acquired again");
+    assert_eq!(state.releases, 2);
+    assert_eq!(state.not_dispatched_releases, 2);
+    assert!(!state.marked, "known pre-dispatch failure clears the dispatched marker");
 }
 
 #[tokio::test]

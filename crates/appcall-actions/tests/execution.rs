@@ -7,6 +7,7 @@ mod evidence;
 struct State {
     claims: usize,
     releases: usize,
+    not_dispatched_releases: usize,
     revision: Option<Connection>,
     marked: bool,
     cached: Option<Value>,
@@ -58,6 +59,17 @@ impl ActionRepository for Repo {
     }
     async fn release_pending(&self, _: &Attempt) -> Result<()> {
         self.state.lock().unwrap().releases += 1;
+        Ok(())
+    }
+    async fn release_not_dispatched_with_reservation(
+        &self,
+        _: &Attempt,
+        _: &PolicyReservation,
+    ) -> Result<()> {
+        let mut state = self.state.lock().unwrap();
+        state.releases += 1;
+        state.not_dispatched_releases += 1;
+        state.marked = false;
         Ok(())
     }
     async fn finish(&self, _: &Attempt, v: Option<&Value>, _: Option<&str>) -> Result<()> {

@@ -34,6 +34,60 @@ test('admission limits reject overflow and recycle only after accepted work drai
  const request=()=>new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'a',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
  try{const pending=handler(request());await new Promise(r=>setTimeout(r,1));expect((await handler(request())).status).toBe(503);expect(recycled).toBe(0);resolve();await pending;expect(recycled).toBe(1);expect((await handler(request())).status).toBe(503);}finally{defaultConnectorRegistry.executeAction=original;}
 });
+function admissionRequest(bodyID: string, headerID?: string): Request {
+ const headers = headerID === undefined ? undefined : {'x-appcall-request-id': headerID};
+ return new Request('http://local/rpc',{method:'POST',...(headers ? {headers} : {}),body:JSON.stringify({id:bodyID,method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
+}
+function describeAdmissionRequest(bodyID: string, headerID?: string): Request {
+ const headers = headerID === undefined ? undefined : {'x-appcall-request-id': headerID};
+ return new Request('http://local/rpc',{method:'POST',...(headers ? {headers} : {}),body:JSON.stringify({id:bodyID,method:'runner.describe'})});
+}
+test('saturated admission returns a correlated RUNNER_BUSY envelope',async()=>{
+ const original=defaultConnectorRegistry.executeAction;
+ let release: (()=>void)|undefined;
+ let started!:()=>void;
+ const admitted=new Promise<void>(resolve=>{started=resolve;});
+ defaultConnectorRegistry.executeAction=()=>({ok:true,output:new Promise<void>(resolve=>{release=resolve;started();})});
+ const handler=createFetchHandler({maxConcurrent:1,maxQueued:0});
+ const pending=handler(admissionRequest('body-held','held-id'));
+ try{
+  await admitted;
+  const response=await handler(admissionRequest('body-rejected','rejected-id'));
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({id:'rejected-id',ok:false,error:{code:'RUNNER_BUSY',message:'Runner admission limit reached.'}});
+ }finally{
+  release?.();
+  await pending;
+  defaultConnectorRegistry.executeAction=original;
+ }
+});
+test('draining admission returns a correlated RUNNER_BUSY envelope',async()=>{
+ const handler=createFetchHandler({maxConcurrent:1,maxQueued:0,maxJobs:1});
+ expect((await handler(describeAdmissionRequest('body-accepted','accepted-id'))).status).toBe(200);
+ const response=await handler(describeAdmissionRequest('body-drained','drained-id'));
+ expect(response.status).toBe(503);
+ expect(await response.json()).toEqual({id:'drained-id',ok:false,error:{code:'RUNNER_BUSY',message:'Runner admission limit reached.'}});
+});
+test('early admission omits missing and unsafe correlation headers',async()=>{
+ const original=defaultConnectorRegistry.executeAction;
+ let release: (()=>void)|undefined;
+ let started!:()=>void;
+ const admitted=new Promise<void>(resolve=>{started=resolve;});
+ defaultConnectorRegistry.executeAction=()=>({ok:true,output:new Promise<void>(resolve=>{release=resolve;started();})});
+ const handler=createFetchHandler({maxConcurrent:1,maxQueued:0});
+ const pending=handler(admissionRequest('body-held','held-id'));
+ try{
+  await admitted;
+  for(const headerID of [undefined,'unsafe id','x'.repeat(257)]){
+   const body=await (await handler(admissionRequest('body-unread',headerID))).json();
+   expect(body).toEqual({ok:false,error:{code:'RUNNER_BUSY',message:'Runner admission limit reached.'}});
+  }
+ }finally{
+  release?.();
+  await pending;
+  defaultConnectorRegistry.executeAction=original;
+ }
+});
 test('caller deadline aborts the dispatched provider request at RPC boundary',async()=>{
  const original=globalThis.fetch;let aborted=false;
  globalThis.fetch=(async(_url:any,init:any)=>new Promise((_resolve,reject)=>{init.signal.addEventListener('abort',()=>{aborted=true;reject(init.signal.reason)},{once:true})})) as typeof fetch;

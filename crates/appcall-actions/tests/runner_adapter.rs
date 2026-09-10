@@ -27,7 +27,7 @@ fn deadline() -> u64 {
 fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_responses() {
     use std::io::{Read, Write};
     let rt = tokio::runtime::Runtime::new().unwrap();
-    for mode in ["success", "rate", "malformed", "oversized"] {
+    for mode in ["success", "rate", "busy", "malformed", "oversized"] {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let thread = std::thread::spawn(move || {
@@ -58,8 +58,14 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
             }
             let request: Value = serde_json::from_slice(&bytes[split..split + length]).unwrap();
             assert_eq!(request["method"], "connector.action.execute");
-            let body=match mode {"success"=>json!({"id":request["id"],"ok":true,"result":{"output":{"sent":true}}}).to_string(),"rate"=>json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_RATE_LIMITED","message":"provider detail runtime/key runtime%2Fkey","retryAfterSeconds":7}}).to_string(),"oversized"=>"x".repeat(4000),_=>"not json".into()};
-            let _=write!(socket,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body);
+            let (status, body)=match mode {
+                "success"=>(200,json!({"id":request["id"],"ok":true,"result":{"output":{"sent":true}}}).to_string()),
+                "rate"=>(200,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_RATE_LIMITED","message":"provider detail runtime/key runtime%2Fkey","retryAfterSeconds":7}}).to_string()),
+                "busy"=>(503,json!({"id":request["id"],"ok":false,"error":{"code":"RUNNER_BUSY","message":"Runner admission limit reached."}}).to_string()),
+                "oversized"=>(200,"x".repeat(4000)),
+                _=>(200,"not json".into()),
+            };
+            let _=write!(socket,"HTTP/1.1 {status} Test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body);
         });
         let runner = RunnerClient::new(
             &url,
@@ -88,8 +94,18 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
                 assert!(message.contains("provider detail"));
                 assert!(!message.contains("runtime"));
             }
+            "busy" => {
+                let e = result.unwrap_err();
+                assert_eq!(e.code, "RUNNER_BUSY");
+                assert!(e.transient);
+                assert_eq!(e.outcome, ActionDispatchOutcome::NotDispatched);
+            }
             "oversized" => assert_eq!(result.unwrap_err().code, "ACTION_RESPONSE_TOO_LARGE"),
-            _ => assert_eq!(result.unwrap_err().code, "ACTION_FAILED"),
+            _ => {
+                let e = result.unwrap_err();
+                assert_eq!(e.code, "ACTION_FAILED");
+                assert_eq!(e.outcome, ActionDispatchOutcome::Unknown);
+            }
         }
     }
     let closed = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
