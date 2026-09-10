@@ -251,6 +251,50 @@ fn stream_cursor_pages_and_scope_are_durable() {
 
 #[test]
 #[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn history_snapshot_cursor_covers_the_stream_gap_and_filters_delivery() {
+    let mut db = Db::new();
+    let mut store = PgEvents::new(&mut db.client);
+    store.accept(&claims("a"), &parsed("before")).unwrap();
+    let history = store
+        .list(
+            &brand("brand-a"),
+            &ListRequest {
+                connector: "slack".into(),
+                connection_id: "a".into(),
+                operation: "messages.list".into(),
+                limit: 1,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(history.events.len(), 1);
+    assert!(!history.snapshot_cursor.is_empty());
+    store.accept(&claims("a"), &parsed("between")).unwrap();
+    store.accept(&claims("b"), &parsed("other-brand")).unwrap();
+    let streamed = store
+        .stream(
+            &brand("brand-a"),
+            &ListRequest {
+                cursor: history.snapshot_cursor,
+                connection_id: "a".into(),
+                connector: "slack".into(),
+                operation: "messages.list".into(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        streamed
+            .events
+            .iter()
+            .map(|event| event.id.as_str())
+            .collect::<Vec<_>>(),
+        ["between"]
+    );
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
 fn parser_signature_and_token_scope_precede_persistence() {
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
     use hmac::{Hmac, KeyInit, Mac};

@@ -502,10 +502,12 @@ impl Backend for Application {
                 Box::pin(async move { browser.verify_session(&request).await })
             });
             let cursor = appcall_api::data_routes::sse_cursor(&url, &r.headers);
-            let receiver = appcall_api::streaming::open_dashboard(
+            let filters = appcall_api::data_routes::sse_filters(&url)?;
+            let receiver = appcall_api::streaming::open_dashboard_with_filters(
                 self.events.clone(),
                 principal,
                 cursor,
+                filters,
                 self.shutdown.subscribe(),
                 verifier,
             )
@@ -524,6 +526,7 @@ impl Backend for Application {
         }
         let principal = self.principal(&r.headers).await?;
         let cursor = appcall_api::data_routes::sse_cursor(&url, &r.headers);
+        let filters = appcall_api::data_routes::sse_filters(&url)?;
         let browser = self.browser.clone();
         let keys = self.keys.clone();
         let admission = self.admission.clone();
@@ -565,10 +568,11 @@ impl Backend for Application {
                     .map_err(|_| ApiError::new("STORAGE_UNAVAILABLE"))?
             })
         });
-        let receiver = appcall_api::streaming::open_verified(
+        let receiver = appcall_api::streaming::open_verified_with_filters(
             self.events.clone(),
             principal,
             cursor,
+            filters,
             self.shutdown.subscribe(),
             verify,
         )

@@ -36,8 +36,24 @@ pub fn sse_frame(event: &Value) -> Result<String> {
     ))
 }
 pub fn sse_cursor(url: &url::Url, headers: &[(String, String)]) -> String {
+    if let Some((_, value)) = headers
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case("Last-Event-ID"))
+    {
+        return value.clone();
+    }
     url.query_pairs()
         .find(|(k, v)| k == "since" && !v.is_empty())
         .map(|(_, v)| v.into_owned())
-        .unwrap_or_else(|| crate::header(headers, "Last-Event-ID").into())
+        .unwrap_or_default()
+}
+pub fn sse_filters(url: &url::Url) -> Result<crate::streaming::EventFilters> {
+    let values = first_query_values(url);
+    let filters = crate::streaming::EventFilters {
+        connector: values.get("connector").cloned().unwrap_or_default(),
+        connection_id: values.get("connectionId").cloned().unwrap_or_default(),
+        operation: values.get("operation").cloned().unwrap_or_default(),
+    };
+    filters.validate()?;
+    Ok(filters)
 }

@@ -600,6 +600,10 @@ impl DashboardRenderer<'_> {
         }
         let mut content = if operation == Logs {
             crate::logs::render(&value, &log_filters, has_filters)?
+        } else if operation == DashboardOperation::Events {
+            let data = value.get("data").unwrap_or(&value);
+            let stream_url = event_stream_url(r, data)?;
+            crate::remaining_pages::events_with_stream(data, &stream_url)?
         } else {
             match crate::pages::render(operation, &value, resource.as_deref()) {
                 Ok(content) => content,
@@ -667,7 +671,7 @@ impl DashboardRenderer<'_> {
                 } else if operation == Logs {
                     crate::logs::FILTER_KEYS
                 } else {
-                    &["status", "connector", "action", "connectionId"]
+                    &["connector", "connectionId", "operation"]
                 };
                 for key in filter_keys {
                     let value = if operation == Runs && *key == "accountId" {
@@ -707,6 +711,34 @@ impl DashboardRenderer<'_> {
             crate::shell::layout(crate::pages::title(operation), session, &content, r.path),
         ))
     }
+}
+
+fn event_stream_url(r: &Request<'_>, data: &Value) -> Result<String, Error> {
+    let mut url = reqwest::Url::parse("https://local.invalid/app/events/stream")
+        .map_err(|_| Error::Invalid)?;
+    for key in ["connector", "connectionId", "operation"] {
+        let value = r.field(key)?;
+        if !value.is_empty() {
+            url.query_pairs_mut().append_pair(key, value);
+        }
+    }
+    if let Some(cursor) = data.get("streamCursor") {
+        let cursor = cursor.as_str().ok_or(Error::Unavailable)?;
+        if cursor.len() > 4096 || cursor.chars().any(char::is_control) {
+            return Err(Error::Invalid);
+        }
+        if !cursor.is_empty() {
+            url.query_pairs_mut().append_pair("since", cursor);
+        }
+    }
+    let stream_url = match url.query() {
+        Some(query) if !query.is_empty() => format!("{}?{query}", url.path()),
+        _ => url.path().to_owned(),
+    };
+    if stream_url.len() > 4096 {
+        return Err(Error::Invalid);
+    }
+    Ok(stream_url)
 }
 
 /// Only data-operation failures become inline SSE. Session refresh and CSRF

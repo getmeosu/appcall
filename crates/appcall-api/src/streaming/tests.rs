@@ -26,6 +26,7 @@ impl Poller for Source {
     fn poll<'a>(
         &'a self,
         cursor: &'a str,
+        filters: &'a EventFilters,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<Event>>> + Send + 'a>> {
         Box::pin(async move {
             self.polls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -41,7 +42,13 @@ impl Poller for Source {
             };
             Ok(events
                 .iter()
-                .filter(|e| e.stream_position > position)
+                .filter(|e| {
+                    e.stream_position > position
+                        && (filters.connection_id.is_empty()
+                            || filters.connection_id == e.connection_id)
+                        && (filters.connector.is_empty() || filters.connector == e.connector)
+                        && (filters.operation.is_empty() || filters.operation == e.operation)
+                })
                 .take(crate::event_routes::STREAM_PAGE_SIZE)
                 .cloned()
                 .collect())

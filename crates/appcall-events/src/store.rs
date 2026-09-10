@@ -153,7 +153,7 @@ impl<'a> PgEvents<'a> {
         let sql = if forward {
             "SELECT * FROM webhook_events WHERE project_id=$1 AND ($2::text IS NULL OR external_account_id=$2) AND ($3::text='' OR connection_id=$3) AND ($4::text='' OR connector=$4) AND ($5::text='' OR operation=$5) AND stream_position>$6 AND ($7::timestamptz IS NULL OR (created_at,id)>($7,$8::text)) ORDER BY stream_position LIMIT $9"
         } else {
-            "SELECT * FROM webhook_events WHERE project_id=$1 AND ($2::text IS NULL OR external_account_id=$2) AND ($3::text='' OR connection_id=$3) AND ($4::text='' OR connector=$4) AND ($5::text='' OR operation=$5) AND stream_position>$6 AND ($7::timestamptz IS NULL OR (created_at,id)<($7,$8::text)) ORDER BY created_at DESC,id DESC LIMIT $9"
+            "WITH snapshot AS (SELECT l.stream_position AS snapshot_position,l.id AS snapshot_id FROM webhook_events l WHERE l.project_id=$1 AND ($2::text IS NULL OR l.external_account_id=$2) AND l.stream_position IS NOT NULL ORDER BY l.stream_position DESC LIMIT 1) SELECT page.*,snapshot.snapshot_position,snapshot.snapshot_id FROM snapshot LEFT JOIN LATERAL (SELECT l.* FROM webhook_events l WHERE l.project_id=$1 AND ($2::text IS NULL OR l.external_account_id=$2) AND ($3::text='' OR l.connection_id=$3) AND ($4::text='' OR l.connector=$4) AND ($5::text='' OR l.operation=$5) AND l.stream_position>$6 AND ($7::timestamptz IS NULL OR (l.created_at,l.id)<($7,$8::text)) ORDER BY l.created_at DESC,l.id DESC LIMIT $9) page ON TRUE"
         };
         let rows = self
             .client
@@ -172,7 +172,41 @@ impl<'a> PgEvents<'a> {
                 ],
             )
             .map_err(|_| Error::Storage)?;
-        let mut events = rows.into_iter().map(event).collect::<Result<Vec<_>>>()?;
+        let snapshot_cursor = if forward {
+            String::new()
+        } else {
+            match rows.first() {
+                None => String::new(),
+                Some(row) => {
+                    let position: Option<i64> = row
+                        .try_get("snapshot_position")
+                        .map_err(|_| Error::Storage)?;
+                    let id: Option<String> =
+                        row.try_get("snapshot_id").map_err(|_| Error::Storage)?;
+                    match (position, id) {
+                        (Some(position), Some(id))
+                            if position > 0
+                                && !id.is_empty()
+                                && id.len() <= 1024
+                                && !id.chars().any(char::is_control) =>
+                        {
+                            stream_cursor_at(position, &id)
+                        }
+                        _ => return Err(Error::Storage),
+                    }
+                }
+            }
+        };
+        let mut events = Vec::new();
+        for row in rows {
+            if row
+                .try_get::<_, Option<String>>("id")
+                .map_err(|_| Error::Storage)?
+                .is_some()
+            {
+                events.push(event(row)?);
+            }
+        }
         let has_more = events.len() > limit;
         events.truncate(limit);
         let next_cursor = if forward || has_more {
@@ -193,6 +227,7 @@ impl<'a> PgEvents<'a> {
             events,
             next_cursor,
             has_more,
+            snapshot_cursor,
         })
     }
     pub fn replay(

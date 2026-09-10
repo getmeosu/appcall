@@ -71,9 +71,7 @@ fn event_rows_use_a_deterministic_escaped_identity() {
     let second = remaining_pages::event_row(&event).unwrap();
 
     assert_eq!(first, second);
-    assert!(first.starts_with(
-        "<tr id=\"trigger-row-event&lt;&amp;&quot;&#39;\"><td>"
-    ));
+    assert!(first.starts_with("<tr id=\"trigger-row-event&lt;&amp;&quot;&#39;\"><td>"));
 }
 
 #[test]

@@ -174,8 +174,12 @@ impl MemoryEvents {
         q: Option<&LogQuery>,
         cursor: &str,
         forward: bool,
+        filters: Option<&crate::streaming::EventFilters>,
     ) -> Result<EventPage> {
         authorize(p)?;
+        if let Some(filters) = filters {
+            filters.validate()?
+        }
         let boundary = if cursor.is_empty() {
             None
         } else {
@@ -188,6 +192,22 @@ impl MemoryEvents {
             .repo
             .lock()
             .map_err(|_| ApiError::new("WEBHOOK_EVENTS_FAILED"))?;
+        let snapshot_cursor = if forward {
+            String::new()
+        } else {
+            data.events
+                .values()
+                .filter(|e| {
+                    e.project_id == p.project_id
+                        && p.brand_id
+                            .as_ref()
+                            .is_none_or(|b| *b == e.external_account_id)
+                        && e.stream_position > 0
+                })
+                .max_by_key(|e| e.stream_position)
+                .map(appcall_events::stream_cursor)
+                .unwrap_or_default()
+        };
         let mut events: Vec<_> = data
             .events
             .values()
@@ -204,6 +224,12 @@ impl MemoryEvents {
                         ]
                         .into_iter()
                         .all(|(key, value)| q.get(key).is_empty() || q.get(key) == value)
+                    })
+                    && filters.is_none_or(|filters| {
+                        (filters.connection_id.is_empty()
+                            || filters.connection_id == e.connection_id)
+                            && (filters.connector.is_empty() || filters.connector == e.connector)
+                            && (filters.operation.is_empty() || filters.operation == e.operation)
                     })
                     && match &boundary {
                         None => true,
@@ -248,10 +274,21 @@ impl MemoryEvents {
             events: events.into_iter().cloned().collect(),
             next_cursor,
             has_more,
+            snapshot_cursor,
         })
     }
     pub async fn poll(&self, p: &Principal, cursor: &str) -> Result<Vec<Event>> {
-        self.page(p, None, cursor, true).map(|p| p.events)
+        self.poll_filtered(p, cursor, &crate::streaming::EventFilters::default())
+            .await
+    }
+    pub async fn poll_filtered(
+        &self,
+        p: &Principal,
+        cursor: &str,
+        filters: &crate::streaming::EventFilters,
+    ) -> Result<Vec<Event>> {
+        self.page(p, None, cursor, true, Some(filters))
+            .map(|p| p.events)
     }
     pub async fn open(
         &self,
@@ -261,13 +298,33 @@ impl MemoryEvents {
         verify: crate::streaming::SessionVerifier,
         dashboard: bool,
     ) -> Result<crate::streaming::EventReceiver> {
-        crate::streaming::open_source(
+        self.open_filtered(
+            p,
+            cursor,
+            crate::streaming::EventFilters::default(),
+            shutdown,
+            verify,
+            dashboard,
+        )
+        .await
+    }
+    pub async fn open_filtered(
+        &self,
+        p: Principal,
+        cursor: String,
+        filters: crate::streaming::EventFilters,
+        shutdown: tokio::sync::watch::Receiver<bool>,
+        verify: crate::streaming::SessionVerifier,
+        dashboard: bool,
+    ) -> Result<crate::streaming::EventReceiver> {
+        crate::streaming::open_source_with_filters(
             Arc::new(MemoryPoller {
                 events: self.clone(),
                 principal: p.clone(),
             }),
             p,
             cursor,
+            filters,
             shutdown,
             verify,
             dashboard,
@@ -302,7 +359,7 @@ impl MemoryEvents {
         let value = if request.method == "GET" && path == "/v1/webhook-events" {
             let p = principal.ok_or_else(|| ApiError::new("UNAUTHORIZED"))?;
             let q = LogQuery::parse_for(&url, LogKind::Webhook)?;
-            event_page(self.page(p, Some(&q), q.get("cursor"), false)?)
+            event_page(self.page(p, Some(&q), q.get("cursor"), false, None)?)
         } else if let Some(tail) = path.strip_prefix("/v1/webhook-events/") {
             let p = principal.ok_or_else(|| ApiError::new("UNAUTHORIZED"))?;
             let (id, replay) = if request.method == "POST" {
@@ -513,7 +570,8 @@ impl crate::streaming::Poller for MemoryPoller {
     fn poll<'a>(
         &'a self,
         cursor: &'a str,
+        filters: &'a crate::streaming::EventFilters,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<Event>>> + Send + 'a>> {
-        Box::pin(self.events.poll(&self.principal, cursor))
+        Box::pin(self.events.poll_filtered(&self.principal, cursor, filters))
     }
 }

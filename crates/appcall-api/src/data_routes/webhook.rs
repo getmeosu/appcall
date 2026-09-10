@@ -73,7 +73,11 @@ pub fn event_page(page: EventPage) -> Value {
     if !page.next_cursor.is_empty() {
         pagination["nextCursor"] = page.next_cursor.into()
     }
-    json!({"events":page.events.iter().map(event_response).collect::<Vec<_>>(),"pagination":pagination})
+    let mut body = json!({"events":page.events.iter().map(event_response).collect::<Vec<_>>(),"pagination":pagination});
+    if !page.snapshot_cursor.is_empty() {
+        body["streamCursor"] = page.snapshot_cursor.into();
+    }
+    body
 }
 pub fn event_error(error: appcall_events::Error) -> ApiError {
     use appcall_events::Error;

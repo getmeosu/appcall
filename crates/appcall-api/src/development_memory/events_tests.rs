@@ -98,7 +98,13 @@ async fn history_snapshot_cursor_delivers_only_events_after_the_snapshot() {
         .accept(&expected, revision, &parsed("after-snapshot", ""))
         .unwrap();
     let delivered = events.poll(&principal, &cursor).await.unwrap();
-    assert_eq!(delivered.iter().map(|event| event.id.as_str()).collect::<Vec<_>>(), ["after-snapshot"]);
+    assert_eq!(
+        delivered
+            .iter()
+            .map(|event| event.id.as_str())
+            .collect::<Vec<_>>(),
+        ["after-snapshot"]
+    );
 }
 
 #[tokio::test]
@@ -151,7 +157,10 @@ async fn filtered_stream_delivers_matching_new_events_only() {
         .await
         .unwrap();
     assert_eq!(
-        delivered.iter().map(|event| event.id.as_str()).collect::<Vec<_>>(),
+        delivered
+            .iter()
+            .map(|event| event.id.as_str())
+            .collect::<Vec<_>>(),
         ["matching-after"]
     );
     for filters in [
@@ -164,7 +173,7 @@ async fn filtered_stream_delivers_matching_new_events_only() {
             ..matching.clone()
         },
         crate::streaming::EventFilters {
-            operation: "messages.send".into(),
+            operation: "messages.delete".into(),
             ..matching.clone()
         },
     ] {
@@ -200,7 +209,11 @@ async fn event_inserted_between_snapshot_and_stream_open_is_delivered() {
         .unwrap();
     let cursor = history.body["streamCursor"].as_str().unwrap().to_owned();
     events
-        .accept(&expected, revision, &parsed("between-snapshot-and-open", ""))
+        .accept(
+            &expected,
+            revision,
+            &parsed("between-snapshot-and-open", ""),
+        )
         .unwrap();
     let expected_principal = principal.clone();
     let verify: crate::streaming::SessionVerifier = std::sync::Arc::new(move || {
@@ -224,9 +237,9 @@ async fn event_inserted_between_snapshot_and_stream_open_is_delivered() {
         .await
         .unwrap()
         .unwrap();
-    assert!(String::from_utf8(frame)
-        .unwrap()
-        .contains("between-snapshot-and-open"));
+    let frame = String::from_utf8(frame).unwrap();
+    assert!(frame.contains("between-snapshot-and-open"));
+    assert!(!frame.contains("before-open"));
 }
 
 #[tokio::test]

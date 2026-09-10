@@ -29,7 +29,8 @@ pub(crate) fn event_row(event: &Value) -> Result<String, Error> {
     };
     let text = |key| escape(event.get(key).and_then(Value::as_str).unwrap_or(""));
     Ok(format!(
-        "<tr><td>{}</td><td>{}</td><td><code>{}</code></td><td>{}</td><td class=\"remaining-table-actions\">{}</td></tr>",
+        "<tr id=\"trigger-row-{}\"><td>{}</td><td>{}</td><td><code>{}</code></td><td>{}</td><td class=\"remaining-table-actions\">{}</td></tr>",
+        escape(id),
         text("connector"),
         text("operation"),
         text("connectionId"),
@@ -39,6 +40,10 @@ pub(crate) fn event_row(event: &Value) -> Result<String, Error> {
 }
 
 pub(crate) fn events(value: &Value) -> Result<String, Error> {
+    events_with_stream(value, "/app/events/stream")
+}
+
+pub(crate) fn events_with_stream(value: &Value, stream_url: &str) -> Result<String, Error> {
     let rows = value
         .as_array()
         .or_else(|| {
@@ -48,7 +53,7 @@ pub(crate) fn events(value: &Value) -> Result<String, Error> {
         })
         .ok_or(Error::Unavailable)?;
     let mut body = heading("Events", "Receive and replay provider webhook events.");
-    body.push_str("<div class=\"remaining-table-scroll\" role=\"region\" aria-label=\"Webhook events\" tabindex=\"0\"><table class=\"remaining-table remaining-events-table\" data-init=\"@get('/app/events/stream')\"><caption class=\"sr-only\">Webhook events</caption><thead><tr><th scope=\"col\">Connector</th><th scope=\"col\">Tool</th><th scope=\"col\">Connection</th><th scope=\"col\">Received</th><th scope=\"col\">Actions</th></tr></thead><tbody id=\"trigger-rows\" aria-live=\"polite\">");
+    body.push_str(&format!("<div class=\"remaining-table-scroll\" role=\"region\" aria-label=\"Webhook events\" tabindex=\"0\"><table class=\"remaining-table remaining-events-table\" data-init=\"@get('{}')\"><caption class=\"sr-only\">Webhook events</caption><thead><tr><th scope=\"col\">Connector</th><th scope=\"col\">Tool</th><th scope=\"col\">Connection</th><th scope=\"col\">Received</th><th scope=\"col\">Actions</th></tr></thead><tbody id=\"trigger-rows\" aria-live=\"polite\">", escape(stream_url)));
     for row in rows {
         body.push_str(&event_row(row)?);
     }

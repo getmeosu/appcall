@@ -239,7 +239,12 @@ pub fn list(
     } else {
         "action"
     };
-    let sql=format!("SELECT ({})::text FROM {} l WHERE {OWNERSHIP} AND ($3='' OR l.connection_id=$3) AND ($4='' OR l.connector=$4) AND ($5='' OR l.{operation}=$5) AND ($6='' OR (l.created_at,l.id)<(NULLIF($6,'')::timestamptz,$7)){specific} AND ($12='' OR l.created_at>=NULLIF($12,'')::timestamptz) AND ($13='' OR l.created_at<NULLIF($13,'')::timestamptz) ORDER BY l.created_at DESC,l.id DESC LIMIT $11",kind.fields(false),kind.table());
+    let page_sql=format!("SELECT ({})::text AS event FROM {} l WHERE {OWNERSHIP} AND ($3='' OR l.connection_id=$3) AND ($4='' OR l.connector=$4) AND ($5='' OR l.{operation}=$5) AND ($6='' OR (l.created_at,l.id)<(NULLIF($6,'')::timestamptz,$7)){specific} AND ($12='' OR l.created_at>=NULLIF($12,'')::timestamptz) AND ($13='' OR l.created_at<NULLIF($13,'')::timestamptz) ORDER BY l.created_at DESC,l.id DESC LIMIT $11",kind.fields(false),kind.table());
+    let sql = if matches!(kind, LogKind::Webhook) {
+        format!("WITH snapshot AS (SELECT l.stream_position AS snapshot_position,l.id AS snapshot_id FROM webhook_events l WHERE {OWNERSHIP} AND l.stream_position IS NOT NULL ORDER BY l.stream_position DESC LIMIT 1) SELECT page.event,snapshot.snapshot_position,snapshot.snapshot_id FROM snapshot LEFT JOIN LATERAL ({page_sql}) page ON TRUE")
+    } else {
+        page_sql
+    };
     let (created_from, created_before) = if matches!(kind, LogKind::Action) {
         (
             q.postgres_created_bounds.0.as_str(),
@@ -283,11 +288,20 @@ pub fn list(
             ],
         )
         .map_err(db_error)?;
+    let snapshot_cursor = if matches!(kind, LogKind::Webhook) {
+        snapshot_cursor(&rows)?
+    } else {
+        String::new()
+    };
     let mut logs = rows
         .iter()
-        .map(|r| {
-            serde_json::from_str::<Value>(&r.get::<_, String>(0))
-                .map_err(|_| ApiError::new("STORAGE_UNAVAILABLE"))
+        .filter_map(|r| match r.try_get::<_, Option<String>>(0) {
+            Ok(Some(raw)) => Some(
+                serde_json::from_str::<Value>(&raw)
+                    .map_err(|_| ApiError::new("STORAGE_UNAVAILABLE")),
+            ),
+            Ok(None) => None,
+            Err(_) => Some(Err(ApiError::new("STORAGE_UNAVAILABLE"))),
         })
         .collect::<Result<Vec<_>>>()?;
     let more = logs.len() > q.limit as usize;
@@ -304,10 +318,37 @@ pub fn list(
             .into()
     }
     Ok(if matches!(kind, LogKind::Webhook) {
-        json!({"events":logs,"pagination":pagination})
+        let mut body = json!({"events":logs,"pagination":pagination});
+        if !snapshot_cursor.is_empty() {
+            body["streamCursor"] = snapshot_cursor.into();
+        }
+        body
     } else {
         json!({"logs":logs,"pagination":pagination})
     })
+}
+
+fn snapshot_cursor(rows: &[postgres::Row]) -> Result<String> {
+    let Some(row) = rows.first() else {
+        return Ok(String::new());
+    };
+    let position: Option<i64> = row
+        .try_get("snapshot_position")
+        .map_err(|_| ApiError::new("STORAGE_UNAVAILABLE"))?;
+    let id: Option<String> = row
+        .try_get("snapshot_id")
+        .map_err(|_| ApiError::new("STORAGE_UNAVAILABLE"))?;
+    match (position, id) {
+        (Some(position), Some(id))
+            if position > 0
+                && !id.is_empty()
+                && id.len() <= 1024
+                && !id.chars().any(char::is_control) =>
+        {
+            Ok(appcall_events::stream_cursor_at(position, &id))
+        }
+        _ => Err(ApiError::new("STORAGE_UNAVAILABLE")),
+    }
 }
 pub fn detail(
     client: &mut impl GenericClient,

@@ -657,11 +657,17 @@ fn sse_filters_use_the_first_bounded_query_values() {
         ),
         ""
     );
+    assert_eq!(
+        sse_filters(&url::Url::parse("http://x/v1/events?operation=%0A").unwrap())
+            .unwrap_err()
+            .code,
+        "INVALID_REQUEST"
+    );
 }
 #[test]
 #[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
 fn webhook_replay_preserves_scope_and_rolls_back_failed_scheduling() {
-    use appcall_api::data_routes::*;
+    use appcall_api::{data_routes::*, Identity};
     struct Sink(bool);
     impl appcall_events::DispatchSink for Sink {
         fn schedule(
@@ -742,6 +748,48 @@ fn webhook_replay_preserves_scope_and_rolls_back_failed_scheduling() {
     assert_eq!(page.body["events"].as_array().unwrap().len(), 1);
     assert!(page.body["events"][0].get("externalAccountId").is_none());
     assert!(page.body["events"][0].get("projectId").is_none());
+    let stream_cursor = page.body["streamCursor"].as_str().unwrap().to_owned();
+    let generic = list(
+        &mut client,
+        &Identity {
+            project_id: "p".into(),
+            account_id: "brand-a".into(),
+            admin_scope: false,
+        },
+        LogKind::Webhook,
+        &LogQuery::parse_for(
+            &url::Url::parse("http://x/v1/webhook-events?connector=slack").unwrap(),
+            LogKind::Webhook,
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert!(generic["streamCursor"]
+        .as_str()
+        .is_some_and(|cursor| !cursor.is_empty()));
+    client
+        .batch_execute("INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id) VALUES('e2','p','a','slack','messages.list','{}','brand-a'),('e3','p','a','slack','messages.send','{}','brand-a')")
+        .unwrap();
+    let streamed = appcall_events::PgEvents::new(&mut client)
+        .stream(
+            &principal,
+            &appcall_events::ListRequest {
+                cursor: stream_cursor,
+                limit: 16,
+                connection_id: "a".into(),
+                connector: "slack".into(),
+                operation: "messages.list".into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        streamed
+            .events
+            .iter()
+            .map(|event| event.id.as_str())
+            .collect::<Vec<_>>(),
+        ["e2"]
+    );
     client
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
