@@ -190,6 +190,34 @@ test('whitespace raw JSON is treated as a nonempty override until cleared',()=>{
   assert.equal(guided.disabled,false);
   assert.equal(f.inputs.filter(control=>control.name?.startsWith('f.')).every(control=>!control.disabled),true);
 });
+test('guided JSON rows textarea remains submittable until raw JSON takes precedence',()=>{
+  const f=fixture();
+  const values=f.node('f.values',{name:'f.values',type:'textarea',value:'[["A, B",42,true,""]]' });
+  const raw=f.node('tk-input-raw',{name:'input_raw',value:''});
+  f.inputs.push(values,raw);
+  const queryAll=f.root.querySelectorAll;
+  f.root.querySelectorAll=selector=>selector==='[name^="f."]'
+    ? f.inputs.filter(control=>control.name?.startsWith('f.'))
+    : queryAll(selector);
+
+  assert.equal(values.disabled,false);
+  assert.equal(f.emit('submit',f.form,{submitter:f.run}).stopped,undefined);
+  f.fetch('started');
+  f.flush();
+  assert.equal(values.disabled,true);
+  f.fetch('datastar-patch-elements',{selector:'#tk-test-result'});
+  f.nodes.get('tk-test-result').setAttribute('data-result-state','success');
+  f.fetch('finished');
+  assert.equal(values.disabled,false);
+
+  raw.value='{"values":[["raw"]]}';
+  f.emit('input',raw);
+  assert.equal(values.disabled,true);
+  assert.equal(raw.disabled,false);
+  raw.value='';
+  f.emit('input',raw);
+  assert.equal(values.disabled,false);
+});
 test('destructive submit requires an explicit confirmation click, updates current account, cancel does not execute',()=>{
   const f=fixture();
   const confirm=f.node('confirm');
