@@ -111,7 +111,9 @@ impl EventRoutes {
         .map_err(|_| ApiError::new("WEBHOOK_EVENTS_FAILED"))?
         .map_err(|_| ApiError::new("WEBHOOK_EVENTS_FAILED"))?;
         let db = self.database.clone();
+        let stream_guard = self.streams.acquire();
         let work = tokio::task::spawn_blocking(move || {
+            let _stream_guard = stream_guard;
             let _permit = permit;
             let _capacity = capacity;
             let mut db = db
@@ -327,11 +329,26 @@ impl EventRoutes {
     /// Poll durable stream positions using the authenticated principal unchanged.
     /// The host owns SSE framing, repeated authorization, cancellation and pacing.
     pub async fn poll(&self, principal: &Principal, cursor: &str) -> Result<Vec<Event>> {
+        self.poll_filtered(
+            principal,
+            cursor,
+            &crate::streaming::EventFilters::default(),
+        )
+        .await
+    }
+    pub async fn poll_filtered(
+        &self,
+        principal: &Principal,
+        cursor: &str,
+        filters: &crate::streaming::EventFilters,
+    ) -> Result<Vec<Event>> {
         if cursor.len() > 4096 {
             return Err(ApiError::new("INVALID_CURSOR"));
         }
+        filters.validate()?;
         let p = principal.clone();
         let cursor = cursor.to_owned();
+        let filters = filters.clone();
         self.database(move |db| {
             PgEvents::new(&mut db.events)
                 .stream(
@@ -339,7 +356,9 @@ impl EventRoutes {
                     &ListRequest {
                         cursor,
                         limit: STREAM_PAGE_SIZE,
-                        ..Default::default()
+                        connection_id: filters.connection_id,
+                        connector: filters.connector,
+                        operation: filters.operation,
                     },
                 )
                 .map(|page| page.events)

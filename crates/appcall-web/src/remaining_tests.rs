@@ -59,6 +59,22 @@ fn remaining_events_usage_help_and_branding_use_signal() {
 }
 
 #[test]
+fn event_rows_use_a_deterministic_escaped_identity() {
+    let event = json!({
+        "id": "event<&\"'",
+        "connector": "mail",
+        "operation": "messages.list",
+        "connectionId": "connection-1",
+        "createdAt": "2026-09-08T10:00:00Z"
+    });
+    let first = remaining_pages::event_row(&event).unwrap();
+    let second = remaining_pages::event_row(&event).unwrap();
+
+    assert_eq!(first, second);
+    assert!(first.starts_with("<tr id=\"trigger-row-event&lt;&amp;&quot;&#39;\"><td>"));
+}
+
+#[test]
 fn remaining_admin_forms_and_settings_use_shared_controls() {
     let form = admin::form(
         "/app/settings/team/invite",

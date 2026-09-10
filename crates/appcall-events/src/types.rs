@@ -45,6 +45,8 @@ pub struct EventPage {
     pub events: Vec<Event>,
     pub next_cursor: String,
     pub has_more: bool,
+    #[serde(rename = "streamCursor", skip_serializing_if = "String::is_empty")]
+    pub snapshot_cursor: String,
 }
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct DispatchReport {

@@ -121,6 +121,7 @@ impl Dashboard<'_> {
             Err(e) => Response::new(
                 match e {
                     Error::Invalid => 400,
+                    Error::RequestTooLarge => 413,
                     Error::Unauthorized => 401,
                     Error::Forbidden => 403,
                     Error::NotFound => 404,
@@ -600,6 +601,10 @@ impl DashboardRenderer<'_> {
         }
         let mut content = if operation == Logs {
             crate::logs::render(&value, &log_filters, has_filters)?
+        } else if operation == DashboardOperation::Events {
+            let data = value.get("data").unwrap_or(&value);
+            let stream_url = event_stream_url(r, data)?;
+            crate::remaining_pages::events_with_stream(data, &stream_url)?
         } else {
             match crate::pages::render(operation, &value, resource.as_deref()) {
                 Ok(content) => content,
@@ -667,7 +672,7 @@ impl DashboardRenderer<'_> {
                 } else if operation == Logs {
                     crate::logs::FILTER_KEYS
                 } else {
-                    &["status", "connector", "action", "connectionId"]
+                    &["connector", "connectionId", "operation"]
                 };
                 for key in filter_keys {
                     let value = if operation == Runs && *key == "accountId" {
@@ -707,6 +712,34 @@ impl DashboardRenderer<'_> {
             crate::shell::layout(crate::pages::title(operation), session, &content, r.path),
         ))
     }
+}
+
+fn event_stream_url(r: &Request<'_>, data: &Value) -> Result<String, Error> {
+    let mut url = reqwest::Url::parse("https://local.invalid/app/events/stream")
+        .map_err(|_| Error::Invalid)?;
+    for key in ["connector", "connectionId", "operation"] {
+        let value = r.field(key)?;
+        if !value.is_empty() {
+            url.query_pairs_mut().append_pair(key, value);
+        }
+    }
+    if let Some(cursor) = data.get("streamCursor") {
+        let cursor = cursor.as_str().ok_or(Error::Unavailable)?;
+        if cursor.len() > 4096 || cursor.chars().any(char::is_control) {
+            return Err(Error::Invalid);
+        }
+        if !cursor.is_empty() {
+            url.query_pairs_mut().append_pair("since", cursor);
+        }
+    }
+    let stream_url = match url.query() {
+        Some(query) if !query.is_empty() => format!("{}?{query}", url.path()),
+        _ => url.path().to_owned(),
+    };
+    if stream_url.len() > 4096 {
+        return Err(Error::RequestTooLarge);
+    }
+    Ok(stream_url)
 }
 
 /// Only data-operation failures become inline SSE. Session refresh and CSRF
@@ -901,6 +934,123 @@ mod run_detail_route_tests {
                 .map(String::as_str),
             Some("acct-alias")
         );
+    }
+
+    #[tokio::test]
+    async fn events_page_builds_an_encoded_filtered_stream_url_from_snapshot_cursor() {
+        let data = Capture {
+            value: json!({
+                "events": [{
+                    "id": "event-1",
+                    "connector": "mail",
+                    "operation": "messages.list",
+                    "connectionId": "connection-1",
+                    "createdAt": "2026-09-08T00:00:00Z"
+                }],
+                "streamCursor": "cursor<&"
+            }),
+            requests: Mutex::new(Vec::new()),
+        };
+        let mut fields = BTreeMap::new();
+        fields.insert("connector".into(), vec!["mail".into()]);
+        fields.insert("connectionId".into(), vec!["connection<&".into()]);
+        fields.insert("operation".into(), vec!["messages.list".into()]);
+        let response = DashboardRenderer { data: &data }
+            .render(
+                &Request {
+                    method: "GET",
+                    path: "/app/events",
+                    cookies: "",
+                    origin: None,
+                    referer: None,
+                    fields,
+                    now: 100,
+                },
+                Some(DashboardOperation::Events),
+                &Session {
+                    access_token: String::new(),
+                    refresh_token: String::new(),
+                    user_id: "user".into(),
+                    email: "user@example.test".into(),
+                    tenant_id: "tenant".into(),
+                    tenant_name: "Tenant".into(),
+                },
+                Principal::project("project").unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert!(response.body.contains(
+            "data-init=\"@get('/app/events/stream?connector=mail&amp;connectionId=connection%3C%26&amp;operation=messages.list&amp;since=cursor%3C%26')\""
+        ));
+    }
+
+    #[test]
+    fn event_stream_url_classifies_combined_encoded_filter_overflow_as_request_too_large() {
+        let filter = "<&".repeat(700);
+        assert!(filter.len() <= 4096);
+        let request = Request {
+            method: "GET",
+            path: "/app/events",
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields: [
+                ("connector".into(), vec![filter.clone()]),
+                ("connectionId".into(), vec![filter.clone()]),
+                ("operation".into(), vec![filter]),
+            ]
+            .into(),
+            now: 100,
+        };
+
+        let error = event_stream_url(&request, &json!({})).unwrap_err();
+        assert_eq!(error, Error::RequestTooLarge);
+    }
+
+    #[tokio::test]
+    async fn events_pagination_preserves_connector_connection_and_operation_filters() {
+        let data = Capture {
+            value: json!({
+                "events": [],
+                "pagination": {"hasMore": true, "nextCursor": "next+cursor="}
+            }),
+            requests: Mutex::new(Vec::new()),
+        };
+        let mut fields = BTreeMap::new();
+        fields.insert("connector".into(), vec!["mail".into()]);
+        fields.insert("connectionId".into(), vec!["connection<&".into()]);
+        fields.insert("operation".into(), vec!["messages.list".into()]);
+        let response = DashboardRenderer { data: &data }
+            .render(
+                &Request {
+                    method: "GET",
+                    path: "/app/events",
+                    cookies: "",
+                    origin: None,
+                    referer: None,
+                    fields,
+                    now: 100,
+                },
+                Some(DashboardOperation::Events),
+                &Session {
+                    access_token: String::new(),
+                    refresh_token: String::new(),
+                    user_id: "user".into(),
+                    email: "user@example.test".into(),
+                    tenant_id: "tenant".into(),
+                    tenant_name: "Tenant".into(),
+                },
+                Principal::project("project").unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert!(response.body.contains(
+            "href=\"/app/events?connector=mail&amp;connectionId=connection%3C%26&amp;operation=messages.list&amp;cursor=next%2Bcursor%3D\""
+        ));
+        assert!(!response.body.contains("status="));
+        assert!(!response.body.contains("action="));
     }
 }
 

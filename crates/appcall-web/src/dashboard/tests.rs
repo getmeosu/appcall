@@ -1036,7 +1036,12 @@ async fn pagination_retains_supported_filters_and_encodes_cursor() {
             r.fields.insert(key.into(), vec![value.into()]);
         }
         let response = render(&data, &r, Some(op)).await.unwrap();
-        assert!(response.body.contains("status=failed&amp;connector=mail&amp;action=send&amp;connectionId=c&amp;cursor=a%2Bb%26c"));
+        let expected = if op == DashboardOperation::Logs {
+            "status=failed&amp;connector=mail&amp;action=send&amp;connectionId=c&amp;cursor=a%2Bb%26c"
+        } else {
+            "connector=mail&amp;connectionId=c&amp;cursor=a%2Bb%26c"
+        };
+        assert!(response.body.contains(expected));
         assert!(response.body.contains("Next page"));
     }
 }

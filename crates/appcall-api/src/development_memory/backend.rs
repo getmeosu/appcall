@@ -379,12 +379,14 @@ impl Backend for MemoryBackend {
                 (principal, String::new(), verify)
             };
         let cursor = crate::data_routes::sse_cursor(&url, &r.headers);
+        let filters = crate::data_routes::sse_filters(&url)?;
         let receiver = self
             .core
             .events
-            .open(
+            .open_filtered(
                 principal,
                 cursor,
+                filters,
                 self.shutdown.subscribe(),
                 verify,
                 dashboard,

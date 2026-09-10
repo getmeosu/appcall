@@ -3,7 +3,9 @@ mod cursor;
 mod input;
 mod store;
 mod types;
-pub use cursor::{decode as decode_cursor, history_cursor, stream_cursor, Cursor};
+pub use cursor::{
+    decode as decode_cursor, history_cursor, stream_cursor, stream_cursor_at, Cursor,
+};
 pub use input::{sync_input, validate_parsed};
 pub use store::*;
 pub use types::*;

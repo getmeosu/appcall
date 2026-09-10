@@ -20,6 +20,27 @@ pub struct StreamResponse {
     pub receiver: EventReceiver,
     pub headers: Vec<(String, String)>,
 }
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct EventFilters {
+    pub connector: String,
+    pub connection_id: String,
+    pub operation: String,
+}
+impl EventFilters {
+    pub fn validate(&self) -> Result<()> {
+        if [
+            self.connector.as_str(),
+            self.connection_id.as_str(),
+            self.operation.as_str(),
+        ]
+        .iter()
+        .any(|value| value.len() > 4096 || value.chars().any(char::is_control))
+        {
+            return Err(ApiError::new("INVALID_REQUEST"));
+        }
+        Ok(())
+    }
+}
 pub struct EventBody {
     receiver: EventReceiver,
 }
@@ -100,12 +121,12 @@ impl StreamActivity {
     pub(crate) fn idle(&self) -> bool {
         self.0.load(std::sync::atomic::Ordering::Acquire) == 0
     }
-    fn acquire(self: &Arc<Self>) -> StreamGuard {
+    pub(crate) fn acquire(self: &Arc<Self>) -> StreamGuard {
         self.0.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
         StreamGuard(self.clone())
     }
 }
-struct StreamGuard(Arc<StreamActivity>);
+pub(crate) struct StreamGuard(Arc<StreamActivity>);
 impl Drop for StreamGuard {
     fn drop(&mut self) {
         self.0 .0.fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
@@ -120,8 +141,9 @@ impl Poller for TrackedPoller {
     fn poll<'a>(
         &'a self,
         cursor: &'a str,
+        filters: &'a EventFilters,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<Event>>> + Send + 'a>> {
-        self.source.poll(cursor)
+        self.source.poll(cursor, filters)
     }
 }
 pub(crate) trait Poller: Send + Sync {
@@ -131,6 +153,7 @@ pub(crate) trait Poller: Send + Sync {
     fn poll<'a>(
         &'a self,
         cursor: &'a str,
+        filters: &'a EventFilters,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<Event>>> + Send + 'a>>;
 }
 struct ScopedPoller {
@@ -144,8 +167,9 @@ impl Poller for ScopedPoller {
     fn poll<'a>(
         &'a self,
         cursor: &'a str,
+        filters: &'a EventFilters,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<Event>>> + Send + 'a>> {
-        Box::pin(self.routes.poll(&self.principal, cursor))
+        Box::pin(self.routes.poll_filtered(&self.principal, cursor, filters))
     }
 }
 /// Revalidate the existing session without rotating credentials after headers.
@@ -163,13 +187,14 @@ impl Poller for VerifiedPoller {
     fn poll<'a>(
         &'a self,
         cursor: &'a str,
+        filters: &'a EventFilters,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<Event>>> + Send + 'a>> {
         Box::pin(async move {
             let principal = (self.verify)().await?;
             if principal != self.expected {
                 return Err(ApiError::new("UNAUTHORIZED"));
             }
-            self.source.poll(cursor).await
+            self.source.poll(cursor, filters).await
         })
     }
 }
@@ -177,6 +202,14 @@ impl Poller for VerifiedPoller {
 enum Format {
     Api,
     Dashboard,
+}
+struct OpenOptions {
+    cursor: String,
+    filters: EventFilters,
+    shutdown: watch::Receiver<bool>,
+    verify: SessionVerifier,
+    timing: Timing,
+    format: Format,
 }
 /// Render durable events as Datastar patches; recheck identity before every poll.
 pub async fn open_dashboard(
@@ -186,17 +219,38 @@ pub async fn open_dashboard(
     shutdown: watch::Receiver<bool>,
     verify: SessionVerifier,
 ) -> Result<EventReceiver> {
-    open_verified_with(
+    open_dashboard_with_filters(
+        routes,
+        principal,
+        cursor,
+        EventFilters::default(),
+        shutdown,
+        verify,
+    )
+    .await
+}
+pub async fn open_dashboard_with_filters(
+    routes: crate::event_routes::EventRoutes,
+    principal: Principal,
+    cursor: String,
+    filters: EventFilters,
+    shutdown: watch::Receiver<bool>,
+    verify: SessionVerifier,
+) -> Result<EventReceiver> {
+    open_verified_source_with_filters(
         Arc::new(ScopedPoller {
             routes,
             principal: principal.clone(),
         }),
         principal,
-        cursor,
-        shutdown,
-        verify,
-        Timing::default(),
-        Format::Dashboard,
+        OpenOptions {
+            cursor,
+            filters,
+            shutdown,
+            verify,
+            timing: Timing::default(),
+            format: Format::Dashboard,
+        },
     )
     .await
 }
@@ -208,44 +262,77 @@ pub async fn open_verified(
     shutdown: watch::Receiver<bool>,
     verify: SessionVerifier,
 ) -> Result<EventReceiver> {
-    open_verified_with(
+    open_verified_source_with_filters(
         Arc::new(ScopedPoller {
             routes,
             principal: principal.clone(),
         }),
         principal,
-        cursor,
-        shutdown,
-        verify,
-        Timing::default(),
-        Format::Api,
-    )
-    .await
-}
-/// Reuse authentication, capacity, framing and drain semantics for process-local stores.
-pub(crate) async fn open_source(
-    source: Arc<dyn Poller>,
-    principal: Principal,
-    cursor: String,
-    shutdown: watch::Receiver<bool>,
-    verify: SessionVerifier,
-    dashboard: bool,
-) -> Result<EventReceiver> {
-    open_verified_with(
-        source,
-        principal,
-        cursor,
-        shutdown,
-        verify,
-        Timing::default(),
-        if dashboard {
-            Format::Dashboard
-        } else {
-            Format::Api
+        OpenOptions {
+            cursor,
+            filters: EventFilters::default(),
+            shutdown,
+            verify,
+            timing: Timing::default(),
+            format: Format::Api,
         },
     )
     .await
 }
+pub async fn open_verified_with_filters(
+    routes: crate::event_routes::EventRoutes,
+    principal: Principal,
+    cursor: String,
+    filters: EventFilters,
+    shutdown: watch::Receiver<bool>,
+    verify: SessionVerifier,
+) -> Result<EventReceiver> {
+    open_verified_source_with_filters(
+        Arc::new(ScopedPoller {
+            routes,
+            principal: principal.clone(),
+        }),
+        principal,
+        OpenOptions {
+            cursor,
+            filters,
+            shutdown,
+            verify,
+            timing: Timing::default(),
+            format: Format::Api,
+        },
+    )
+    .await
+}
+/// Reuse authentication, capacity, framing and drain semantics for process-local stores.
+pub(crate) async fn open_source_with_filters(
+    source: Arc<dyn Poller>,
+    principal: Principal,
+    cursor: String,
+    filters: EventFilters,
+    shutdown: watch::Receiver<bool>,
+    verify: SessionVerifier,
+    dashboard: bool,
+) -> Result<EventReceiver> {
+    open_verified_source_with_filters(
+        source,
+        principal,
+        OpenOptions {
+            cursor,
+            filters,
+            shutdown,
+            verify,
+            timing: Timing::default(),
+            format: if dashboard {
+                Format::Dashboard
+            } else {
+                Format::Api
+            },
+        },
+    )
+    .await
+}
+#[cfg(test)]
 async fn open_verified_with(
     source: Arc<dyn Poller>,
     expected: Principal,
@@ -255,13 +342,41 @@ async fn open_verified_with(
     timing: Timing,
     format: Format,
 ) -> Result<EventReceiver> {
-    open_mode(
+    open_verified_source_with_filters(
+        source,
+        expected,
+        OpenOptions {
+            cursor,
+            filters: EventFilters::default(),
+            shutdown,
+            verify,
+            timing,
+            format,
+        },
+    )
+    .await
+}
+async fn open_verified_source_with_filters(
+    source: Arc<dyn Poller>,
+    expected: Principal,
+    options: OpenOptions,
+) -> Result<EventReceiver> {
+    let OpenOptions {
+        cursor,
+        filters,
+        shutdown,
+        verify,
+        timing,
+        format,
+    } = options;
+    open_mode_with_filters(
         Arc::new(VerifiedPoller {
             source,
             expected,
             verify,
         }),
         cursor,
+        filters,
         shutdown,
         timing,
         format,
@@ -292,25 +407,55 @@ pub async fn open(
     cursor: String,
     shutdown: watch::Receiver<bool>,
 ) -> Result<EventReceiver> {
-    open_with(
+    open_with_filters(
         Arc::new(ScopedPoller { routes, principal }),
         cursor,
+        EventFilters::default(),
         shutdown,
         Timing::default(),
     )
     .await
 }
+#[cfg(test)]
 async fn open_with(
     source: Arc<dyn Poller>,
     cursor: String,
     shutdown: watch::Receiver<bool>,
     timing: Timing,
 ) -> Result<EventReceiver> {
-    open_mode(source, cursor, shutdown, timing, Format::Api).await
+    open_with_filters(source, cursor, EventFilters::default(), shutdown, timing).await
 }
+async fn open_with_filters(
+    source: Arc<dyn Poller>,
+    cursor: String,
+    filters: EventFilters,
+    shutdown: watch::Receiver<bool>,
+    timing: Timing,
+) -> Result<EventReceiver> {
+    open_mode_with_filters(source, cursor, filters, shutdown, timing, Format::Api).await
+}
+#[cfg(test)]
 async fn open_mode(
     source: Arc<dyn Poller>,
     cursor: String,
+    shutdown: watch::Receiver<bool>,
+    timing: Timing,
+    format: Format,
+) -> Result<EventReceiver> {
+    open_mode_with_filters(
+        source,
+        cursor,
+        EventFilters::default(),
+        shutdown,
+        timing,
+        format,
+    )
+    .await
+}
+async fn open_mode_with_filters(
+    source: Arc<dyn Poller>,
+    cursor: String,
+    filters: EventFilters,
     mut shutdown: watch::Receiver<bool>,
     timing: Timing,
     format: Format,
@@ -322,11 +467,24 @@ async fn open_mode(
         }),
         None => source,
     };
-    let first = tokio::select! {_ = stop(&mut shutdown)=>return Err(ApiError::new("SERVICE_BUSY")), result=source.poll(&cursor)=>result?};
+    filters.validate()?;
+    let first = tokio::select! {_ = stop(&mut shutdown)=>return Err(ApiError::new("SERVICE_BUSY")), result=source.poll(&cursor, &filters)=>result?};
     let first = encode_page(first, &cursor, format)?;
     let (tx, rx) = mpsc::channel(16);
     tokio::spawn(async move {
-        run(source, tx, cursor, first, shutdown, timing, format).await;
+        run(
+            RunContext {
+                source,
+                cursor,
+                filters,
+                shutdown,
+                timing,
+                format,
+            },
+            tx,
+            first,
+        )
+        .await;
     });
     Ok(rx)
 }
@@ -415,15 +573,23 @@ async fn send(
     };
     tokio::select! {_ = stop(shutdown)=>false,_ = tx.closed()=>false,result=tokio::time::timeout(timeout,sending)=>result.unwrap_or(false)}
 }
-async fn run(
+struct RunContext {
     source: Arc<dyn Poller>,
-    tx: mpsc::Sender<Vec<u8>>,
-    mut cursor: String,
-    mut page: Page,
-    mut shutdown: watch::Receiver<bool>,
+    cursor: String,
+    filters: EventFilters,
+    shutdown: watch::Receiver<bool>,
     timing: Timing,
     format: Format,
-) {
+}
+async fn run(context: RunContext, tx: mpsc::Sender<Vec<u8>>, mut page: Page) {
+    let RunContext {
+        source,
+        mut cursor,
+        filters,
+        mut shutdown,
+        timing,
+        format,
+    } = context;
     let mut heartbeat = tokio::time::interval_at(
         tokio::time::Instant::now() + timing.heartbeat,
         timing.heartbeat,
@@ -447,7 +613,7 @@ async fn run(
              _=tokio::time::sleep(timing.poll)=>{},
             }
         }
-        let result = tokio::select! {_=stop(&mut shutdown)=>return,_=tx.closed()=>return,result=source.poll(&cursor)=>result};
+        let result = tokio::select! {_=stop(&mut shutdown)=>return,_=tx.closed()=>return,result=source.poll(&cursor, &filters)=>result};
         match result.and_then(|events| encode_page(events, &cursor, format)) {
             Ok(next) => page = next,
             Err(_) => {

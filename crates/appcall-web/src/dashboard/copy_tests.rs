@@ -272,9 +272,12 @@ async fn copy_request_receipt_and_navigation_are_truthful() {
         let (result, _) =
             response(value, path, &[("status", "failed"), ("connector", "a&b")]).await;
         assert!(result.body.contains("Next page</span>"));
-        assert!(result
-            .body
-            .contains("status=failed&amp;connector=a%26b&amp;cursor=a%2Fb+%26%3F"));
+        let expected = if path.ends_with("logs") {
+            "status=failed&amp;connector=a%26b&amp;cursor=a%2Fb+%26%3F"
+        } else {
+            "connector=a%26b&amp;cursor=a%2Fb+%26%3F"
+        };
+        assert!(result.body.contains(expected));
         assert!(!result.body.contains("Load more"));
     }
 }

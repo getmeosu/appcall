@@ -5,8 +5,11 @@ pub enum Cursor {
     Position(i64),
     Time(DateTime<Utc>, String),
 }
+pub fn stream_cursor_at(position: i64, id: &str) -> String {
+    URL_SAFE_NO_PAD.encode(format!("v2|{position}|{id}"))
+}
 pub fn stream_cursor(event: &Event) -> String {
-    URL_SAFE_NO_PAD.encode(format!("v2|{}|{}", event.stream_position, event.id))
+    stream_cursor_at(event.stream_position, &event.id)
 }
 pub fn history_cursor(event: &Event) -> String {
     URL_SAFE_NO_PAD.encode(format!(
