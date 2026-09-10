@@ -81,4 +81,13 @@ describe("google-workspace connector manifest", () => {
       expect(typeof s.maxResponseBytes).toBe("number");
     }
   });
+
+  test("docs.get output schema declares the additive tab hierarchy", () => {
+    const outputSchema = manifest.operations["docs.get"].outputSchema as Record<string, unknown>;
+    const properties = outputSchema.properties as Record<string, unknown>;
+    const tabs = properties.tabs as Record<string, unknown>;
+
+    expect(tabs.type).toBe("array");
+    expect((tabs.items as Record<string, unknown>).type).toBe("object");
+  });
 });

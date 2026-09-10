@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 
-function fixture(destructive = false) {
+function fixture(destructive = false, setupConnection = 'setup_degraded') {
   const nodes = new Map(), listeners = {}, microtasks = [];
   const document = { getElementById: id => nodes.get(id), activeElement: null,
     addEventListener(type, fn) { (listeners[type] ??= []).push(fn); } };
@@ -21,9 +21,14 @@ function fixture(destructive = false) {
   let elementSequence=0;document.createElement=()=>node('created-'+elementSequence++);
   const tabs=['tools','accounts','events','code','settings'].map((name,i)=>{
     const wrap=node('tk-tab-'+name,{dataset:{tab:name,selected:String(!i)}});
-    const a=node('tab-'+name,{parentElement:wrap,attrs:{href:'/app/connectors/provider?tab='+name+'&action=mail.read&callerToken=SECRET',...(i===0?{'aria-current':'page'}:{})},matches:s=>s==='#tk-tabs a'});
+    const originalConnection = name === 'settings' ? setupConnection : 'execution_original';
+    const params = new URLSearchParams({tab:name,action:'mail.read',callerToken:'SECRET'});
+    if (originalConnection) params.set('connectionId', originalConnection);
+    const a=node('tab-'+name,{parentElement:wrap,attrs:{href:'/app/connectors/provider?'+params,...(i===0?{'aria-current':'page'}:{})},matches:s=>s==='#tk-tabs a'});
     wrap.querySelector=()=>a; node('tk-panel-'+name,{hidden:!!i}); return a;
   });
+  const settingsConnection = setupConnection ? node('tk-setup-connection',{name:'connectionId',value:setupConnection}) : null;
+  const settingsForm = node('tk-setup-form',{querySelector:s=>s==='[name="connectionId"]'?settingsConnection:null});
   const rail=['mail.read','mail.write'].map(action=>node(action,{attrs:{href:'/app/connectors/provider?action='+action},matches:s=>s==='.tk-tool-item a'}));
   node('tk-tabs',{querySelectorAll:()=>tabs});
   const account=node('tk-connection',{value:'active_1',options:[{value:'active_1',disabled:false},{value:'active_2',disabled:false}]});
@@ -47,7 +52,7 @@ function fixture(destructive = false) {
   vm.runInNewContext(fs.readFileSync(new URL('../static/dashboard.js',import.meta.url),'utf8'),{document,window:{location:{href:'https://local.invalid/app/connectors/provider'},history:{replaceState(){}}},navigator:{clipboard},URL,URLSearchParams,WeakMap,Map,setTimeout,queueMicrotask:fn=>microtasks.push(fn)});
   const emit=(type,target,extra={})=>{const event={target,button:0,preventDefault(){this.prevented=true;},stopImmediatePropagation(){this.stopped=true;},...extra};for(const fn of listeners[type]??[]){fn(event);if(event.stopped)break;}return event;};
   const fetch=(type,argsRaw={})=>emit('datastar-fetch',document,{detail:{type,el:form,argsRaw}});
-  return {nodes,node,root,tabs,rail,account,selection,inputs,form,run,clipboard,emit,fetch,document,flush(){while(microtasks.length)microtasks.shift()();}};
+  return {nodes,node,root,tabs,settings:tabs[4],rail,account,selection,settingsForm,settingsConnection,inputs,form,run,clipboard,emit,fetch,document,flush(){while(microtasks.length)microtasks.shift()();}};
 }
 test('tabs enhance real links with roving keyboard focus and Tab exits',()=>{
   const f=fixture();assert.equal(f.tabs[0].attrs.role,'tab');assert.equal(f.tabs[1].attrs.tabindex,'-1');
@@ -68,10 +73,32 @@ test('tab enhancement replaces native page-current semantics with tab selection'
 test('Run as refreshes navigation and inert sample using only eligible account',()=>{
   const f=fixture();f.account.value='active_2';f.emit('change',f.account);
   assert.equal(f.selection.value,'active_2');
-  for(const a of [...f.tabs,...f.rail]) {assert.match(a.attrs.href,/connectionId=active_2/);assert.doesNotMatch(a.attrs.href,/SECRET|callerToken/);}
+  for(const a of [...f.tabs.filter(a=>a!==f.settings),...f.rail]) {assert.match(a.attrs.href,/connectionId=active_2/);assert.doesNotMatch(a.attrs.href,/SECRET|callerToken/);}
+  assert.equal(new URL(f.settings.attrs.href,'https://local.invalid').searchParams.get('connectionId'),'setup_degraded');
+  assert.doesNotMatch(f.settings.attrs.href,/SECRET|callerToken/);
+  assert.equal(f.settingsForm.querySelector('[name="connectionId"]').value,'setup_degraded');
+  const samePage = f.emit('click',f.settings);
+  assert.equal(samePage.prevented,true);
+  assert.equal(f.nodes.get('tk-panel-settings').hidden,false);
+  assert.equal(f.settingsForm.querySelector('[name="connectionId"]').value,'setup_degraded');
   const code=f.nodes.get('tk-code-example').textContent;
   assert.match(code,/connections\/active_2/);assert.match(code,/X-External-Account-Id: YOUR_EXTERNAL_ACCOUNT_ID/);assert.ok(code.includes("O'\"'\"'Brien"));
   f.account.value='foreign';f.emit('change',f.account);assert.equal(f.selection.value,'');
+  assert.equal(new URL(f.settings.attrs.href,'https://local.invalid').searchParams.get('connectionId'),'setup_degraded');
+});
+test('new setup keeps its Settings connection ID omitted while execution follows the active account',()=>{
+  const f=fixture(false,null);f.account.value='active_2';f.emit('change',f.account);
+  assert.equal(new URL(f.settings.attrs.href,'https://local.invalid').searchParams.has('connectionId'),false);
+  assert.equal(f.settingsForm.querySelector('[name="connectionId"]'),null);
+  for(const a of [...f.tabs.filter(a=>a!==f.settings),...f.rail]) assert.match(a.attrs.href,/connectionId=active_2/);
+});
+test('opening Settings in a new tab keeps the requested setup ID',()=>{
+  const f=fixture();f.account.value='active_2';f.emit('change',f.account);
+  const event=f.emit('click',f.settings,{ctrlKey:true});
+  assert.equal(event.prevented,undefined);
+  const settingsUrl=new URL(f.settings.attrs.href,'https://local.invalid');
+  assert.equal(settingsUrl.searchParams.get('connectionId'),'setup_degraded');
+  assert.notEqual(settingsUrl.searchParams.get('connectionId'),f.account.value);
 });
 test('copy output only and report clipboard rejection',async()=>{
   const f=fixture();f.node('tk-output-json',{textContent:'{"ok":true}'});

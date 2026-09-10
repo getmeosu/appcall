@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import docFixture from "../fixtures/doc.json";
+import docTabsSingleFixture from "../fixtures/doc_tabs_single.json";
+import docTabsMultipleNestedFixture from "../fixtures/doc_tabs_multiple_nested.json";
 import { validateGetDocumentInput, parseDocumentResponse, createDocsClient } from "../src/docs";
 import { getDocument } from "../src/actions";
 
@@ -16,7 +18,43 @@ describe("google-workspace docs", () => {
     expect(result.documentId).toBe("1aBcDeFgHiJkLmNoPqRsTuVwXyZ");
     expect(result.title).toBe("Project Requirements");
     expect(result.revisionId).toBe("1");
-    expect(result.body).toBeDefined();
+    expect(result.body).toEqual(docFixture.body);
+    expect(result.tabs).toBeUndefined();
+  });
+
+  test("parses the first document tab body from a modern single-tab response", () => {
+    const result = parseDocumentResponse(docTabsSingleFixture);
+
+    expect(result.body).toEqual(docTabsSingleFixture.tabs[0].documentTab.body);
+    expect(result.tabs).toEqual(docTabsSingleFixture.tabs);
+  });
+
+  test("preserves multiple root tabs and recursively nested child tabs", () => {
+    const result = parseDocumentResponse(docTabsMultipleNestedFixture);
+
+    expect(result.body).toEqual(docTabsMultipleNestedFixture.tabs[0].documentTab.body);
+    expect(result.tabs).toEqual(docTabsMultipleNestedFixture.tabs);
+    expect(result.tabs?.[0].childTabs?.[0].childTabs?.[0].documentTab.body).toEqual(
+      docTabsMultipleNestedFixture.tabs[0].childTabs[0].childTabs[0].documentTab.body,
+    );
+    expect(result.tabs?.[1].documentTab.body).toEqual(
+      docTabsMultipleNestedFixture.tabs[1].documentTab.body,
+    );
+  });
+
+  test("serializes the complete tab hierarchy through the public docs.get action", async () => {
+    const result = await getDocument({
+      accessToken: "ya29.test-token",
+      documentId: docTabsMultipleNestedFixture.documentId,
+      fetch: async () => Response.json(docTabsMultipleNestedFixture),
+    });
+    const serialized = JSON.parse(JSON.stringify(result));
+
+    expect(serialized.body).toEqual(docTabsMultipleNestedFixture.tabs[0].documentTab.body);
+    expect(serialized.tabs).toEqual(docTabsMultipleNestedFixture.tabs);
+    expect(serialized.tabs[0].childTabs[0].childTabs[0].documentTab.body).toEqual(
+      docTabsMultipleNestedFixture.tabs[0].childTabs[0].childTabs[0].documentTab.body,
+    );
   });
 
   test("get document validates without access token", () => {

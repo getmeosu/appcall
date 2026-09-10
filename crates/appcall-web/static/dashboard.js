@@ -502,7 +502,10 @@ if (brandingName && brandingLogo && brandingColor) {
       if (url.pathname !== '/app/connectors/' + root.dataset.toolkitKey) continue;
       const clean = new URLSearchParams();
       for (const key of ['action', 'tab']) if (url.searchParams.get(key)) clean.set(key, url.searchParams.get(key));
-      if (connection) clean.set('connectionId', connection);
+      const setupConnection = url.searchParams.get('connectionId');
+      const isSettings = url.searchParams.get('tab') === 'settings' || url.hash === '#tk-setup';
+      const navigationConnection = isSettings ? setupConnection : connection;
+      if (navigationConnection) clean.set('connectionId', navigationConnection);
       a.setAttribute('href', url.pathname + '?' + clean + url.hash);
     }
     const data = get('tk-code-data');

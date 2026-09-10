@@ -378,6 +378,7 @@ export function getDocument(input: unknown): Record<string, unknown> | Promise<R
       title: result.title,
       revisionId: result.revisionId,
       body: result.body,
+      ...(result.tabs === undefined ? {} : { tabs: result.tabs }),
     }));
   }
 
