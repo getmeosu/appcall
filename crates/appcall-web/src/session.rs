@@ -8,6 +8,7 @@ use sha2::{Digest, Sha256};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
     Invalid,
+    RequestTooLarge,
     Unauthorized,
     Forbidden,
     NotFound,
@@ -19,6 +20,9 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::Invalid => "Appcall could not accept this request. Review the submitted details.",
+            Self::RequestTooLarge => {
+                "Appcall could not accept this request because the generated URL is too large."
+            }
             Self::Unauthorized => "Sign in to continue.",
             Self::Forbidden => "Appcall denied this request. Check that you have access to this action.",
             Self::NotFound => "Appcall could not find that resource.",
@@ -38,6 +42,7 @@ mod copy_tests {
         fn require_copy<T: Copy>(_: T) {}
         for (error, expected) in [
             (Error::Invalid, "Appcall could not accept this request. Review the submitted details."),
+            (Error::RequestTooLarge, "Appcall could not accept this request because the generated URL is too large."),
             (Error::Unauthorized, "Sign in to continue."),
             (Error::Forbidden, "Appcall denied this request. Check that you have access to this action."),
             (Error::NotFound, "Appcall could not find that resource."),

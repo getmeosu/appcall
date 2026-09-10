@@ -121,6 +121,7 @@ impl Dashboard<'_> {
             Err(e) => Response::new(
                 match e {
                     Error::Invalid => 400,
+                    Error::RequestTooLarge => 413,
                     Error::Unauthorized => 401,
                     Error::Forbidden => 403,
                     Error::NotFound => 404,
@@ -736,7 +737,7 @@ fn event_stream_url(r: &Request<'_>, data: &Value) -> Result<String, Error> {
         _ => url.path().to_owned(),
     };
     if stream_url.len() > 4096 {
-        return Err(Error::Invalid);
+        return Err(Error::RequestTooLarge);
     }
     Ok(stream_url)
 }
@@ -982,6 +983,29 @@ mod run_detail_route_tests {
         assert!(response.body.contains(
             "data-init=\"@get('/app/events/stream?connector=mail&amp;connectionId=connection%3C%26&amp;operation=messages.list&amp;since=cursor%3C%26')\""
         ));
+    }
+
+    #[test]
+    fn event_stream_url_classifies_combined_encoded_filter_overflow_as_request_too_large() {
+        let filter = "<&".repeat(700);
+        assert!(filter.len() <= 4096);
+        let request = Request {
+            method: "GET",
+            path: "/app/events",
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields: [
+                ("connector".into(), vec![filter.clone()]),
+                ("connectionId".into(), vec![filter.clone()]),
+                ("operation".into(), vec![filter]),
+            ]
+            .into(),
+            now: 100,
+        };
+
+        let error = event_stream_url(&request, &json!({})).unwrap_err();
+        assert_eq!(error, Error::RequestTooLarge);
     }
 
     #[tokio::test]

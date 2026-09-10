@@ -612,6 +612,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
 fn web_error(error: appcall_web::Error) -> ApiError {
     ApiError::new(match error {
         appcall_web::Error::Invalid => "INVALID_REQUEST",
+        appcall_web::Error::RequestTooLarge => "REQUEST_TOO_LARGE",
         appcall_web::Error::Unauthorized => "UNAUTHORIZED",
         appcall_web::Error::Forbidden => "FORBIDDEN",
         appcall_web::Error::NotFound => "RUN_NOT_FOUND",
@@ -1074,6 +1075,7 @@ fn api_error(error: ApiError) -> appcall_web::Error {
         }
         "RUN_NOT_FOUND" => appcall_web::Error::NotFound,
         "RUN_STATE_CONFLICT" => appcall_web::Error::Conflict,
+        "REQUEST_TOO_LARGE" => appcall_web::Error::RequestTooLarge,
         "INVALID_REQUEST" | "INVALID_JSON" | "INVALID_LIMIT" | "INVALID_CURSOR"
         | "INVALID_RUN_STATUS" | "INVALID_RUN_FILTER" | "INVALID_TIME_RANGE" | "INVALID_STATUS"
         | "INVALID_ERROR_CODE" | "UNKNOWN_ACTION" => appcall_web::Error::Invalid,
@@ -1180,4 +1182,16 @@ fn logs_filter_errors_are_invalid_in_production_dashboard() {
             "{code}"
         );
     }
+}
+
+#[test]
+fn browser_request_too_large_error_preserves_public_code() {
+    assert_eq!(
+        web_error(appcall_web::Error::RequestTooLarge).code,
+        "REQUEST_TOO_LARGE"
+    );
+    assert_eq!(
+        api_error(ApiError::new("REQUEST_TOO_LARGE")),
+        appcall_web::Error::RequestTooLarge
+    );
 }
