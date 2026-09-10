@@ -116,7 +116,7 @@ fn runner_failure(e: appcall_runner_client::Error, input: &Value) -> RunnerFailu
         }
         .into()
     });
-    if !bounded
+    if (!bounded && !known_safe_runner_code(&code))
         || secrets.iter().any(|value| code.contains(*value))
         || code.is_empty()
         || code.len() > 96
@@ -128,7 +128,7 @@ fn runner_failure(e: appcall_runner_client::Error, input: &Value) -> RunnerFailu
     }
     let transient = matches!(
         code.as_str(),
-        "CONNECTOR_RATE_LIMITED" | "CONNECTOR_UNAVAILABLE" | "RUNNER_UNAVAILABLE"
+        "CONNECTOR_RATE_LIMITED" | "CONNECTOR_UNAVAILABLE" | "RUNNER_BUSY" | "RUNNER_UNAVAILABLE"
     );
     let detail = (e.kind == ErrorKind::Runner).then(|| FailureDetail {
         safe_message: Some(scrub_detail(&e.message, &secrets, bounded)),
@@ -152,6 +152,22 @@ fn runner_failure(e: appcall_runner_client::Error, input: &Value) -> RunnerFailu
             }
         },
     }
+}
+fn known_safe_runner_code(code: &str) -> bool {
+    matches!(
+        code,
+        "CONNECTOR_ACCOUNT_RESTRICTED"
+            | "CONNECTOR_ACTION_NOT_PERMITTED"
+            | "CONNECTOR_RATE_LIMITED"
+            | "CONNECTOR_UNAVAILABLE"
+            | "RUNNER_BUSY"
+            | "RUNNER_UNAVAILABLE"
+            | "ACTION_TIMEOUT"
+            | "INVALID_ACTION_INPUT"
+            | "NOTE_TOO_LONG"
+            | "MISSING_CREDENTIAL"
+            | "ACTION_RESPONSE_TOO_LARGE"
+    )
 }
 fn collect_input_strings<'a>(value: &'a Value, secrets: &mut Vec<&'a str>, depth: usize) -> bool {
     if depth > 32 || secrets.len() > 128 {
@@ -287,10 +303,47 @@ mod metadata_tests {
         assert!(message.len() <= 303);
         assert!(message.ends_with('…'));
         let input = json!((0..130).map(|n| format!("value-{n}")).collect::<Vec<_>>());
-        let error = runner_failure(failure(ErrorKind::Runner, "private"), &input);
+        let mut busy = failure(ErrorKind::Runner, "private");
+        busy.code = Some("RUNNER_BUSY".into());
+        busy.outcome = DispatchOutcome::NotDispatched;
+        let error = runner_failure(busy, &input);
+        assert_eq!(error.code, "RUNNER_BUSY");
+        assert!(error.transient);
+        assert_eq!(error.outcome, crate::ActionDispatchOutcome::NotDispatched);
         assert_eq!(
             error.detail.unwrap().safe_message.as_deref(),
             Some("Runner returned an error.")
         );
+    }
+
+    #[test]
+    fn unsafe_or_secret_bearing_runner_codes_are_sanitized() {
+        let input = json!({"token": "BUSY"});
+        for code in ["runner_busy", "RUNNER_BUSY"] {
+            let error = runner_failure(
+                appcall_runner_client::Error {
+                    kind: ErrorKind::Runner,
+                    outcome: DispatchOutcome::NotDispatched,
+                    code: Some(code.into()),
+                    retry_after_seconds: None,
+                    message: "private".into(),
+                },
+                &input,
+            );
+            assert_eq!(error.code, "ACTION_FAILED");
+        }
+
+        let overflow = json!((0..130).map(|n| format!("value-{n}")).collect::<Vec<_>>());
+        let error = runner_failure(
+            appcall_runner_client::Error {
+                kind: ErrorKind::Runner,
+                outcome: DispatchOutcome::NotDispatched,
+                code: Some("INTERNAL_FAILURE".into()),
+                retry_after_seconds: None,
+                message: "private".into(),
+            },
+            &overflow,
+        );
+        assert_eq!(error.code, "ACTION_FAILED");
     }
 }

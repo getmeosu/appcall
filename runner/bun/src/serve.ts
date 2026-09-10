@@ -23,10 +23,20 @@ export function createFetchHandler(
   if(!Number.isSafeInteger(maxConcurrent)||maxConcurrent<1||!Number.isSafeInteger(maxQueued)||maxQueued<0) throw new Error("Invalid runner admission limits");
   let active=0, completed=0, draining=false;
   const queue:Array<()=>void>=[];
-  const unavailable=()=>Response.json({ok:false,error:{code:"RUNNER_BUSY",message:"Runner admission limit reached."}},{status:503});
+  const unavailable = (request: Request) => {
+    const requestID = safeRequestID(request);
+    return Response.json(
+      {
+        ...(requestID ? { id: requestID } : {}),
+        ok: false,
+        error: { code: "RUNNER_BUSY", message: "Runner admission limit reached." },
+      },
+      { status: 503 },
+    );
+  };
   const dispatch=async(request:Request):Promise<Response>=>{
     const admittedAt = Date.now();
-    if(draining || (active>=maxConcurrent && queue.length>=maxQueued))return unavailable();
+    if(draining || (active>=maxConcurrent && queue.length>=maxQueued))return unavailable(request);
     if(active>=maxConcurrent) await new Promise<void>(resolve=>queue.push(resolve));
     else active++;
     try { return await handleRPC(request, admittedAt); }
@@ -58,6 +68,12 @@ export function createFetchHandler(
       { status: 404 },
     );
   };
+}
+
+function safeRequestID(request: Request): string | undefined {
+  const value = request.headers.get("x-request-id");
+  if (!value || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(value)) return undefined;
+  return value;
 }
 
 // bearerTokenMatches compares the presented bearer token in constant time.

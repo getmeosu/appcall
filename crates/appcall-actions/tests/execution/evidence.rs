@@ -30,6 +30,15 @@ fn failure(
         ..Default::default()
     })
 }
+fn busy_failure() -> std::result::Result<Value, RunnerFailure> {
+    Err(RunnerFailure {
+        code: "RUNNER_BUSY".into(),
+        outcome: NotDispatched,
+        transient: true,
+        retry_after_ms: 0,
+        ..Default::default()
+    })
+}
 async fn run(steps: Vec<std::result::Result<Value, RunnerFailure>>, state: State) -> ActionError {
     Service::new(
         Repo {
@@ -115,6 +124,70 @@ async fn evidence_all_attempts_and_only_final_retry_hint_survive() {
             assert_eq!(error.evidence.retry_after_seconds, final_hint);
         }
     }
+}
+
+#[tokio::test]
+async fn runner_busy_retries_read_only_within_bound_and_releases_claim() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let steps = (0..6).map(|_| busy_failure()).collect();
+    let service = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        Catalog { read: true },
+        Credentials,
+        Scripted(Mutex::new(steps)),
+        Allow,
+    );
+
+    for _ in 0..2 {
+        let error = service.execute(request("owner")).await.unwrap_err();
+        assert_eq!(error.code, "RUNNER_BUSY");
+        assert_eq!(error.evidence.outcome, NotDispatched);
+        assert_eq!(error.evidence.origin, ActionFailureOrigin::Runner);
+        assert_eq!(error.evidence.retry_after_seconds, None);
+    }
+
+    let state = state.lock().unwrap();
+    assert_eq!(
+        state.claims, 2,
+        "released idempotency claim can be acquired again"
+    );
+    assert_eq!(state.releases, 2);
+    assert_eq!(state.not_dispatched_releases, 2);
+    assert!(
+        !state.marked,
+        "known pre-dispatch failure clears the dispatched marker"
+    );
+}
+
+#[tokio::test]
+async fn unknown_prior_retry_keeps_dispatch_fenced_after_late_not_dispatched() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let service = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        Catalog { read: true },
+        Credentials,
+        Scripted(Mutex::new(
+            vec![
+                failure(Unknown, None, true),
+                failure(NotDispatched, None, false),
+            ]
+            .into(),
+        )),
+        Allow,
+    );
+
+    let error = service.execute(request("owner")).await.unwrap_err();
+    assert_eq!(error.code, "CONNECTOR_UNAVAILABLE");
+    assert_eq!(error.evidence.outcome, Unknown);
+    let state = state.lock().unwrap();
+    assert!(state.marked, "an earlier unknown attempt keeps the fence");
+    assert_eq!(state.not_dispatched_releases, 0);
 }
 
 #[tokio::test]
@@ -323,6 +396,33 @@ async fn evidence_observation_failure_retains_runner_context() {
     assert_eq!(error.evidence.outcome, Unknown);
     assert_eq!(error.evidence.origin, ActionFailureOrigin::Runner);
     assert_eq!(error.evidence.retry_after_seconds, Some(3));
+}
+
+#[tokio::test]
+async fn no_dispatch_cleanup_precedes_observation_failure() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let error = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        Catalog { read: true },
+        Credentials,
+        Scripted(Mutex::new(vec![failure(NotDispatched, None, false)].into())),
+        Policy {
+            reject: false,
+            fail_observation: true,
+        },
+    )
+    .execute(request("owner"))
+    .await
+    .unwrap_err();
+
+    assert_eq!(error.code, "STORAGE_UNAVAILABLE");
+    assert_eq!(error.evidence.outcome, NotDispatched);
+    let state = state.lock().unwrap();
+    assert!(!state.marked);
+    assert_eq!(state.not_dispatched_releases, 1);
 }
 
 struct ShortCatalog;

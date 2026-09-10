@@ -248,6 +248,20 @@ pub trait ActionRepository: Send + Sync {
         self.release_pending_with_reservation(attempt, reservation)
             .await
     }
+    /// Record a failure after explicit no-dispatch evidence while clearing the
+    /// claim and any dispatch reservations. Repositories with durable state
+    /// should make the cleanup and failure log one fenced transition.
+    async fn finish_not_dispatched_with_reservation(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+        error_code: &str,
+    ) -> Result<()> {
+        self.release_not_dispatched_with_reservation(attempt, reservation)
+            .await?;
+        self.finish_with_reservation(attempt, reservation, None, Some(error_code))
+            .await
+    }
     async fn finish(
         &self,
         attempt: &Attempt,

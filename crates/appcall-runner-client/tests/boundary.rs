@@ -7,13 +7,19 @@ use tokio::{
 };
 
 async fn fixture(body: String) -> (String, tokio::task::JoinHandle<Vec<u8>>) {
+    fixture_with_status(200, body).await
+}
+async fn fixture_with_status(
+    status: u16,
+    body: String,
+) -> (String, tokio::task::JoinHandle<Vec<u8>>) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let task = tokio::spawn(async move {
         let (mut stream, _) = listener.accept().await.unwrap();
         let request = read_request(&mut stream).await;
         let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            "HTTP/1.1 {status} Test\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
             body.len(),
             body
         );
@@ -72,6 +78,69 @@ async fn malformed_or_uncorrelated_response_is_unknown_outcome() {
 }
 
 #[tokio::test]
+async fn correlated_runner_busy_admission_is_typed_not_dispatched() {
+    let (url, server) = fixture_with_status(
+        503,
+        json!({
+            "id": "test-id",
+            "ok": false,
+            "error": {
+                "code": "RUNNER_BUSY",
+                "message": "Runner admission limit reached."
+            }
+        })
+        .to_string(),
+    )
+    .await;
+    let client = RunnerClient::new(&url, "", ClientOptions::default()).unwrap();
+    let error = client.describe(&context()).await.unwrap_err();
+    assert_eq!(error.kind, ErrorKind::Runner);
+    assert_eq!(error.outcome, DispatchOutcome::NotDispatched);
+    assert_eq!(error.code.as_deref(), Some("RUNNER_BUSY"));
+    let request = String::from_utf8(server.await.unwrap()).unwrap();
+    assert!(request
+        .to_ascii_lowercase()
+        .contains("x-request-id: test-id"));
+}
+
+#[tokio::test]
+async fn runner_busy_admission_requires_matching_id_and_503_status() {
+    let cases = [
+        (
+            503,
+            json!({
+                "ok": false,
+                "error": {"code": "RUNNER_BUSY", "message": "busy"}
+            }),
+        ),
+        (
+            503,
+            json!({
+                "id": "other-id",
+                "ok": false,
+                "error": {"code": "RUNNER_BUSY", "message": "busy"}
+            }),
+        ),
+        (
+            200,
+            json!({
+                "id": "test-id",
+                "ok": false,
+                "error": {"code": "RUNNER_BUSY", "message": "busy"}
+            }),
+        ),
+    ];
+    for (status, body) in cases {
+        let (url, server) = fixture_with_status(status, body.to_string()).await;
+        let client = RunnerClient::new(&url, "", ClientOptions::default()).unwrap();
+        let error = client.describe(&context()).await.unwrap_err();
+        assert_eq!(error.kind, ErrorKind::MalformedResponse);
+        assert_eq!(error.outcome, DispatchOutcome::Unknown);
+        server.await.unwrap();
+    }
+}
+
+#[tokio::test]
 async fn expired_deadline_never_dispatches() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let client = RunnerClient::new(
@@ -93,6 +162,36 @@ async fn expired_deadline_never_dispatches() {
             .await
             .is_err()
     );
+}
+
+#[tokio::test]
+async fn unsafe_request_id_is_rejected_before_network_dispatch() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let client = RunnerClient::new(
+        &format!("http://{}", listener.local_addr().unwrap()),
+        "",
+        ClientOptions {
+            timeout: Duration::from_millis(100),
+            ..ClientOptions::default()
+        },
+    )
+    .unwrap();
+    let error = client
+        .describe(&RequestContext {
+            request_id: "unsafe id".into(),
+            ..context()
+        })
+        .await
+        .unwrap_err();
+
+    assert!(
+        tokio::time::timeout(Duration::from_millis(20), listener.accept())
+            .await
+            .is_err(),
+        "unsafe request IDs must not reach the network"
+    );
+    assert_eq!(error.kind, ErrorKind::InvalidRequest);
+    assert_eq!(error.outcome, DispatchOutcome::NotDispatched);
 }
 
 #[tokio::test]

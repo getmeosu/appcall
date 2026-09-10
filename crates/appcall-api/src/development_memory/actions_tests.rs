@@ -317,6 +317,60 @@ async fn shared_action_service_local_simulation_replay_and_counters_are_consiste
     assert!(!text.contains("attacker-key"));
     assert_eq!(data.usage_monthly.values().sum::<i64>(), 1);
 }
+
+struct KnownBusyRunner;
+impl ActionRunner for KnownBusyRunner {
+    async fn execute(
+        &self,
+        _: &Attempt,
+        _: serde_json::Value,
+        _: u64,
+    ) -> std::result::Result<serde_json::Value, appcall_actions::RunnerFailure> {
+        Err(appcall_actions::RunnerFailure {
+            code: "RUNNER_BUSY".into(),
+            outcome: appcall_actions::ActionDispatchOutcome::NotDispatched,
+            transient: true,
+            ..Default::default()
+        })
+    }
+}
+
+#[tokio::test]
+async fn real_memory_runner_busy_cleanup_preserves_typed_retryable_failure() {
+    let repo = repository();
+    connect(&repo);
+    let oauth = std::sync::Arc::new(
+        super::MemoryOAuth::new(
+            repo.clone(),
+            Default::default(),
+            std::sync::Arc::new(NoTokens),
+        )
+        .unwrap(),
+    );
+    let service = appcall_actions::Service::new(
+        repo.clone(),
+        (**repo.registry()).clone(),
+        MemoryCredentials::new(repo.clone(), oauth),
+        KnownBusyRunner,
+        super::DevelopmentPolicy::new(repo.clone(), Default::default()).unwrap(),
+    );
+
+    for _ in 0..2 {
+        let error = service.execute(request("known-busy")).await.unwrap_err();
+        assert_eq!(error.code, "RUNNER_BUSY");
+        assert!(error.evidence.outcome == appcall_actions::ActionDispatchOutcome::NotDispatched);
+    }
+
+    let data = repo.lock().unwrap();
+    assert!(data.action_claims.is_empty());
+    assert!(data.usage_reserved.is_empty());
+    assert_eq!(data.pending_actions, 0);
+    assert_eq!(data.active_effects, 0);
+    assert_eq!(data.bytes_reserved, 0);
+    assert_eq!(data.histories_reserved, 0);
+    assert_eq!(data.action_logs.len(), 2);
+}
+
 #[test]
 #[ignore = "opens a local runner socket"]
 fn configured_runner_dispatches_real_rpc_and_idempotent_repeat_never_redispatches() {

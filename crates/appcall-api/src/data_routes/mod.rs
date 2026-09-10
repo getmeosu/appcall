@@ -81,6 +81,7 @@ impl LogQuery {
                     "CONNECTION_DISCONNECTED",
                     "CONNECTOR_RATE_LIMITED",
                     "CONNECTOR_UNAVAILABLE",
+                    "RUNNER_BUSY",
                     "IDEMPOTENCY_CONFLICT",
                     "IDEMPOTENCY_IN_PROGRESS",
                     "UNKNOWN_ACTION",
@@ -543,5 +544,12 @@ mod query_contract_tests {
             assert!(LogQuery::parse_for(&url, kind).is_ok());
             assert!(LogQuery::parse_for(&url, LogKind::Action).is_err());
         }
+    }
+
+    #[test]
+    fn runner_busy_is_a_supported_action_error_filter() {
+        let url = url::Url::parse("http://x/?errorCode=RUNNER_BUSY").unwrap();
+        let query = LogQuery::parse(&url).unwrap();
+        assert_eq!(query.get("errorCode"), "RUNNER_BUSY");
     }
 }
