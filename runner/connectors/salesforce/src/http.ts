@@ -1,4 +1,4 @@
-import { createConnectorHttpClient } from "../../../bun/src/http";
+import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
 export type SalesforceRateLimitResult =
@@ -6,6 +6,15 @@ export type SalesforceRateLimitResult =
   | { limited: false };
 
 const API_VERSION = "v60.0";
+
+const SALESFORCE_STATIC_HOSTS = new Set([
+  "login.salesforce.com",
+  "test.salesforce.com",
+  "my.salesforce.com",
+]);
+const SALESFORCE_DOMAIN_LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
+const SALESFORCE_PRODUCTION_DOMAIN = new RegExp(`^${SALESFORCE_DOMAIN_LABEL}\\.my\\.salesforce\\.com$`);
+const SALESFORCE_SANDBOX_DOMAIN = new RegExp(`^${SALESFORCE_DOMAIN_LABEL}--${SALESFORCE_DOMAIN_LABEL}\\.sandbox\\.my\\.salesforce\\.com$`);
 
 export function parseSalesforceRateLimit(status: number, headers: Record<string, string>): SalesforceRateLimitResult {
   if (status === 429) {
@@ -52,13 +61,18 @@ export function createSalesforceClient(options: SalesforceClientOptions) {
   });
 
   const baseUrl = options.instanceUrl.replace(/\/+$/, "");
+  let validatedBaseUrl: string | undefined;
+  const getValidatedBaseUrl = () => {
+    validatedBaseUrl ??= validateSalesforceInstanceUrl(options.instanceUrl);
+    return validatedBaseUrl;
+  };
 
   return {
     get apiVersion() { return API_VERSION; },
     get baseUrl() { return baseUrl; },
 
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
-      const response = await httpClient.fetchText(`${baseUrl}${path}`, {
+      const response = await httpClient.fetchText(`${getValidatedBaseUrl()}${path}`, {
         ...init,
         headers: {
           Authorization: `Bearer ${options.accessToken}`,
@@ -114,6 +128,48 @@ export function createSalesforceClient(options: SalesforceClientOptions) {
 }
 
 export type SalesforceClient = ReturnType<typeof createSalesforceClient>;
+
+/**
+ * Salesforce documents My Domain API URLs as
+ * <my-domain>.my.salesforce.com and
+ * <my-domain>--<sandbox-name>.sandbox.my.salesforce.com. Keep validation
+ * narrower than the manifest wildcards so a nested tenant or lookalike host
+ * cannot turn the connection URL into an arbitrary Salesforce subdomain.
+ */
+function validateSalesforceInstanceUrl(instanceUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(instanceUrl);
+  } catch {
+    throw new ConnectorHttpError("OUTBOUND_INVALID_URL", "Outbound URL is invalid.");
+  }
+
+  if (
+    url.protocol !== "https:"
+    || url.username
+    || url.password
+    || url.port
+    || url.pathname !== "/"
+    || url.search
+    || url.hash
+  ) {
+    throw new ConnectorHttpError("OUTBOUND_INVALID_URL", "Outbound URL is invalid.");
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  if (
+    !SALESFORCE_STATIC_HOSTS.has(hostname)
+    && !SALESFORCE_PRODUCTION_DOMAIN.test(hostname)
+    && !SALESFORCE_SANDBOX_DOMAIN.test(hostname)
+  ) {
+    throw new ConnectorHttpError(
+      "OUTBOUND_HOST_NOT_ALLOWED",
+      "Outbound host is not allowed for this connector.",
+    );
+  }
+
+  return url.origin;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
