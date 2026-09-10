@@ -122,6 +122,20 @@ export type ListConferenceRecordsInput = {
 
 // ─── validators ──────────────────────────────────────────────────────────────
 
+const MEET_SPACE_PREFIX = "spaces/";
+const MEET_SPACE_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+
+function requireMeetSpaceName(value: unknown): string {
+  const name = requireString(value, "name");
+  const identifier = name.startsWith(MEET_SPACE_PREFIX)
+    ? name.slice(MEET_SPACE_PREFIX.length)
+    : name;
+  if (!MEET_SPACE_IDENTIFIER_PATTERN.test(identifier)) {
+    throw new Error("name must be a valid Google Meet space name");
+  }
+  return name;
+}
+
 export function validateCreateMeetEventInput(input: unknown): CreateMeetEventInput {
   if (!isRecord(input)) throw new Error("meet.create input must be an object");
   return {
@@ -161,7 +175,7 @@ export function validateCreateMeetSpaceInput(input: unknown): CreateMeetSpaceInp
 export function validateGetMeetSpaceInput(input: unknown): GetMeetSpaceInput {
   if (!isRecord(input)) throw new Error("meet.spaces.get input must be an object");
   return {
-    name: requireString(input.name, "name"),
+    name: requireMeetSpaceName(input.name),
   };
 }
 
@@ -292,9 +306,10 @@ export function createMeetClient(options: {
 
     async getSpace(input: unknown): Promise<MeetSpaceResult> {
       const p = validateGetMeetSpaceInput(input);
-      // name can be "spaces/abc" or just "abc"; normalize to path form
-      const resourceName = p.name.startsWith("spaces/") ? p.name : `spaces/${p.name}`;
-      const url = `https://meet.googleapis.com/v2/${encodeURIComponent(resourceName)}`;
+      const identifier = p.name.startsWith(MEET_SPACE_PREFIX)
+        ? p.name.slice(MEET_SPACE_PREFIX.length)
+        : p.name;
+      const url = `https://meet.googleapis.com/v2/${MEET_SPACE_PREFIX}${encodeURIComponent(identifier)}`;
       const response = await client.fetchText(url, { headers: authHeaders });
       const res = await handleMeetResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
