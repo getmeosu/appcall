@@ -1,6 +1,15 @@
 use appcall_web::*;
 use serde_json::json;
 use std::collections::BTreeMap;
+
+fn google_workspace_input_schema(operation: &str) -> serde_json::Value {
+    let manifest: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../runner/connectors/google-workspace/manifest.json"
+    ))
+    .unwrap();
+    manifest["operations"][operation]["inputSchema"].clone()
+}
+
 #[test]
 fn guided_input_uses_schema_types_and_preserves_repeated_key_values() {
     let schema = json!({"type":"object","properties":{"count":{"type":"number"},"enabled":{"type":"boolean"},"emails":{"type":"array","items":{"type":"object","properties":{"email":{"type":"string"}}}},"metadata":{"type":"object"},"nested":{"type":"object","properties":{"title":{"type":"string"}}}}});
@@ -68,6 +77,66 @@ fn guided_boolean_values_preserve_omitted_false_and_true_states() {
         );
     }
 }
+
+#[test]
+fn guided_google_sheets_rows_preserve_json_cell_values_for_append_and_update() {
+    let rows: serde_json::Value =
+        serde_json::from_str(r#"[["A, B",42.5,true,"",null],["C",false,0],[]]"#).unwrap();
+    for operation in ["sheets.values.append", "sheets.values.update"] {
+        let schema = google_workspace_input_schema(operation);
+        let fields = BTreeMap::from([
+            ("f.spreadsheetId".into(), vec!["sheet-123".into()]),
+            ("f.range".into(), vec!["Sheet1!A1".into()]),
+            ("f.values".into(), vec![rows.to_string()]),
+        ]);
+        assert_eq!(
+            assemble_guided_input(&schema, &fields).unwrap(),
+            json!({"spreadsheetId":"sheet-123","range":"Sheet1!A1","values":rows}),
+            "{operation} should preserve structured rows"
+        );
+    }
+}
+
+#[test]
+fn guided_google_sheets_rows_reject_non_scalar_cells() {
+    for operation in ["sheets.values.append", "sheets.values.update"] {
+        let schema = google_workspace_input_schema(operation);
+        for (raw, description) in [
+            (r#"[[["x"]]]"#, "3-D row"),
+            (r#"[[{"x":1}]]"#, "object cell"),
+        ] {
+            let fields = BTreeMap::from([("f.values".into(), vec![raw.into()])]);
+            assert_eq!(
+                assemble_guided_input(&schema, &fields),
+                Err(Error::Invalid),
+                "{operation} should reject {description}"
+            );
+        }
+    }
+}
+
+#[test]
+fn guided_google_sheets_rows_reject_invalid_json_or_non_array_rows() {
+    for operation in ["sheets.values.append", "sheets.values.update"] {
+        let schema = google_workspace_input_schema(operation);
+        for raw in [r#"[["unterminated"]"#, r#"["not a row"]"#, r#"{"rows":[]}"#] {
+            let fields = BTreeMap::from([("f.values".into(), vec![raw.into()])]);
+            assert_eq!(
+                assemble_guided_input(&schema, &fields),
+                Err(Error::Invalid),
+                "{operation} should reject {raw}"
+            );
+        }
+    }
+}
+
+#[test]
+fn guided_google_sheets_rows_omit_empty_values() {
+    let schema = google_workspace_input_schema("sheets.values.append");
+    let fields = BTreeMap::from([("f.values".into(), vec!["  ".into()])]);
+    assert_eq!(assemble_guided_input(&schema, &fields).unwrap(), json!({}));
+}
+
 #[test]
 fn datastar_patch_escapes_event_html_and_cannot_inject_frames() {
     let result = render_event_patch(
@@ -366,6 +435,37 @@ async fn guided_html(schema: serde_json::Value, sample: serde_json::Value) -> St
     .await
     .unwrap()
     .body
+}
+
+#[tokio::test]
+async fn guided_google_sheets_rows_render_as_identified_json_textareas() {
+    for operation in ["sheets.values.append", "sheets.values.update"] {
+        let html = guided_html(
+            google_workspace_input_schema(operation),
+            json!({"values":[["A, B",42,true,""],[]]}),
+        )
+        .await;
+        let control = html
+            .split("<textarea class=\"ui-control\"")
+            .nth(1)
+            .expect("guided values control")
+            .split("</textarea>")
+            .next()
+            .unwrap();
+        assert!(control.contains("name=\"f.values\""));
+        assert!(
+            html.contains("JSON rows"),
+            "{operation} should identify JSON rows"
+        );
+        assert!(
+            html.contains("commas"),
+            "{operation} should explain comma preservation"
+        );
+        assert!(
+            html.contains("empty strings"),
+            "{operation} should explain empty cells"
+        );
+    }
 }
 
 fn rendered_select_option(html: &str, name: &str, label: &str) -> String {
