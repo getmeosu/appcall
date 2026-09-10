@@ -81,7 +81,7 @@ fn guided_boolean_values_preserve_omitted_false_and_true_states() {
 #[test]
 fn guided_google_sheets_rows_preserve_json_cell_values_for_append_and_update() {
     let rows: serde_json::Value =
-        serde_json::from_str(r#"[["A, B",42,true,""],["C",false,0],[]]"#).unwrap();
+        serde_json::from_str(r#"[["A, B",42.5,true,"",null],["C",false,0],[]]"#).unwrap();
     for operation in ["sheets.values.append", "sheets.values.update"] {
         let schema = google_workspace_input_schema(operation);
         let fields = BTreeMap::from([
@@ -94,6 +94,24 @@ fn guided_google_sheets_rows_preserve_json_cell_values_for_append_and_update() {
             json!({"spreadsheetId":"sheet-123","range":"Sheet1!A1","values":rows}),
             "{operation} should preserve structured rows"
         );
+    }
+}
+
+#[test]
+fn guided_google_sheets_rows_reject_non_scalar_cells() {
+    for operation in ["sheets.values.append", "sheets.values.update"] {
+        let schema = google_workspace_input_schema(operation);
+        for (raw, description) in [
+            (r#"[[["x"]]]"#, "3-D row"),
+            (r#"[[{"x":1}]]"#, "object cell"),
+        ] {
+            let fields = BTreeMap::from([("f.values".into(), vec![raw.into()])]);
+            assert_eq!(
+                assemble_guided_input(&schema, &fields),
+                Err(Error::Invalid),
+                "{operation} should reject {description}"
+            );
+        }
     }
 }
 

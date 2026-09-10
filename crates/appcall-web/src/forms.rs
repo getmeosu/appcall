@@ -74,10 +74,12 @@ fn field(
                     None
                 } else {
                     let value: Value = serde_json::from_str(raw).map_err(|_| Error::Invalid)?;
-                    if value
-                        .as_array()
-                        .is_some_and(|rows| rows.iter().all(Value::is_array))
-                    {
+                    if value.as_array().is_some_and(|rows| {
+                        rows.iter().all(|row| {
+                            row.as_array()
+                                .is_some_and(|cells| cells.iter().all(is_google_sheets_cell))
+                        })
+                    }) {
                         Some(value)
                     } else {
                         return Err(Error::Invalid);
@@ -170,6 +172,13 @@ fn nested_array(schema: &Value) -> bool {
             .and_then(|items| items.get("type"))
             .and_then(Value::as_str)
             == Some("array")
+}
+
+fn is_google_sheets_cell(value: &Value) -> bool {
+    matches!(
+        value,
+        Value::String(_) | Value::Number(_) | Value::Bool(_) | Value::Null
+    )
 }
 
 /// Source-class guided controls. `prefix` is server-selected (`f` or
