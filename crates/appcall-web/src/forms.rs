@@ -331,7 +331,18 @@ fn render_control(
     // submit an explicit true/false value. A select carries all three states
     // through native form submission without duplicate field names.
     let choices = if kind == "boolean" {
-        Some(vec![String::new(), "true".into(), "false".into()])
+        let values = node
+            .get("enum")
+            .and_then(Value::as_array)
+            .map(|values| {
+                values
+                    .iter()
+                    .filter_map(Value::as_bool)
+                    .map(|value| value.to_string())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_else(|| vec!["true".into(), "false".into()]);
+        Some(std::iter::once(String::new()).chain(values).collect())
     } else {
         node.get("enum").and_then(Value::as_array).map(|values| {
             std::iter::once(String::new())

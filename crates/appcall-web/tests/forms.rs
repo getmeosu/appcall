@@ -538,6 +538,29 @@ async fn guided_boolean_controls_offer_omit_true_and_false_choices() {
 }
 
 #[tokio::test]
+async fn guided_boolean_enum_options_only_offer_declared_values() {
+    for (allowed, forbidden) in [("true", "false"), ("false", "true")] {
+        let html = guided_html(
+            json!({"type":"object","properties":{"flag":{"type":"boolean","enum":[allowed == "true"]}}}),
+            json!({}),
+        )
+        .await;
+        let control = html
+            .split("name=\"f.flag\"")
+            .nth(1)
+            .unwrap()
+            .split("</select>")
+            .next()
+            .unwrap();
+        assert!(control.contains("<option value=\"\" selected>Omit</option>"));
+        assert!(control.contains(&format!("<option value=\"{allowed}\">{allowed}</option>")));
+        assert!(!control.contains(&format!(
+            "<option value=\"{forbidden}\">{forbidden}</option>"
+        )));
+    }
+}
+
+#[tokio::test]
 async fn guided_boolean_rendered_controls_submit_false_and_omit_optional_fields() {
     let schema = json!({"type":"object","required":["required_flag"],"properties":{
         "required_flag":{"type":"boolean"},
