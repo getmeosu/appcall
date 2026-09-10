@@ -72,7 +72,7 @@ describe("telegram sendPhoto action", () => {
     });
   });
 
-  test("maps 429 to RATE_LIMITED", async () => {
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(sendPhoto({
       botToken: "123:abc",
       chatId: "1001",
@@ -83,7 +83,7 @@ describe("telegram sendPhoto action", () => {
         description: "Too Many Requests: retry after 5",
         parameters: { retry_after: 5 },
       }), { status: 429 }),
-    })).rejects.toMatchObject({ ok: false, code: "RATE_LIMITED", retryAfterSeconds: 5 });
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 5 });
   });
 
   test("maps upstream error", async () => {
@@ -144,7 +144,7 @@ describe("telegram sendDocument action", () => {
     });
   });
 
-  test("maps 429 to RATE_LIMITED", async () => {
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(sendDocument({
       botToken: "123:abc",
       chatId: "1001",
@@ -152,7 +152,7 @@ describe("telegram sendDocument action", () => {
       fetch: async () => new Response(JSON.stringify({
         ok: false, error_code: 429, description: "Too Many Requests", parameters: { retry_after: 10 },
       }), { status: 429 }),
-    })).rejects.toMatchObject({ ok: false, code: "RATE_LIMITED" });
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED" });
   });
 });
 
@@ -203,7 +203,7 @@ describe("telegram editMessage action", () => {
     });
   });
 
-  test("maps 429 to RATE_LIMITED", async () => {
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(editMessage({
       botToken: "123:abc",
       chatId: "1001",
@@ -212,7 +212,7 @@ describe("telegram editMessage action", () => {
       fetch: async () => new Response(JSON.stringify({
         ok: false, error_code: 429, description: "Too Many Requests", parameters: { retry_after: 3 },
       }), { status: 429 }),
-    })).rejects.toMatchObject({ ok: false, code: "RATE_LIMITED", retryAfterSeconds: 3 });
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 3 });
   });
 });
 
@@ -257,7 +257,7 @@ describe("telegram deleteMessage action", () => {
     });
   });
 
-  test("maps 429 to RATE_LIMITED", async () => {
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(deleteMessage({
       botToken: "123:abc",
       chatId: "1001",
@@ -265,7 +265,7 @@ describe("telegram deleteMessage action", () => {
       fetch: async () => new Response(JSON.stringify({
         ok: false, error_code: 429, description: "Too Many Requests", parameters: { retry_after: 7 },
       }), { status: 429 }),
-    })).rejects.toMatchObject({ ok: false, code: "RATE_LIMITED" });
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED" });
   });
 });
 
@@ -313,7 +313,7 @@ describe("telegram forwardMessage action", () => {
     });
   });
 
-  test("maps 429 to RATE_LIMITED", async () => {
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(forwardMessage({
       botToken: "123:abc",
       chatId: "2002",
@@ -322,7 +322,7 @@ describe("telegram forwardMessage action", () => {
       fetch: async () => new Response(JSON.stringify({
         ok: false, error_code: 429, description: "Too Many Requests", parameters: { retry_after: 2 },
       }), { status: 429 }),
-    })).rejects.toMatchObject({ ok: false, code: "RATE_LIMITED" });
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED" });
   });
 });
 
@@ -368,7 +368,7 @@ describe("telegram pinMessage action", () => {
     });
   });
 
-  test("maps 429 to RATE_LIMITED", async () => {
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(pinMessage({
       botToken: "123:abc",
       chatId: "1001",
@@ -376,7 +376,7 @@ describe("telegram pinMessage action", () => {
       fetch: async () => new Response(JSON.stringify({
         ok: false, error_code: 429, description: "Too Many Requests", parameters: { retry_after: 8 },
       }), { status: 429 }),
-    })).rejects.toMatchObject({ ok: false, code: "RATE_LIMITED" });
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED" });
   });
 });
 
@@ -421,14 +421,14 @@ describe("telegram getChatInfo action", () => {
     expect((result as Record<string, unknown>).chat).toBeDefined();
   });
 
-  test("maps 429 to RATE_LIMITED", async () => {
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(getChatInfo({
       botToken: "123:abc",
       chatId: "-1001234567890",
       fetch: async () => new Response(JSON.stringify({
         ok: false, error_code: 429, description: "Too Many Requests", parameters: { retry_after: 4 },
       }), { status: 429 }),
-    })).rejects.toMatchObject({ ok: false, code: "RATE_LIMITED" });
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED" });
   });
 });
 
@@ -469,14 +469,14 @@ describe("telegram getChatMemberCount action", () => {
     });
   });
 
-  test("maps 429 to RATE_LIMITED", async () => {
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(getChatMemberCountAction({
       botToken: "123:abc",
       chatId: "-1001234567890",
       fetch: async () => new Response(JSON.stringify({
         ok: false, error_code: 429, description: "Too Many Requests", parameters: { retry_after: 6 },
       }), { status: 429 }),
-    })).rejects.toMatchObject({ ok: false, code: "RATE_LIMITED" });
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED" });
   });
 });
 
@@ -521,7 +521,7 @@ describe("telegram sendChatAction action", () => {
     });
   });
 
-  test("maps 429 to RATE_LIMITED", async () => {
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(sendChatActionHandler({
       botToken: "123:abc",
       chatId: "1001",
@@ -529,7 +529,7 @@ describe("telegram sendChatAction action", () => {
       fetch: async () => new Response(JSON.stringify({
         ok: false, error_code: 429, description: "Too Many Requests", parameters: { retry_after: 9 },
       }), { status: 429 }),
-    })).rejects.toMatchObject({ ok: false, code: "RATE_LIMITED" });
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED" });
   });
 });
 

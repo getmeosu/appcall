@@ -59,9 +59,24 @@ describe("telegram connector foundation", () => {
       parameters: { retry_after: 30 },
     })).toEqual({
       ok: false,
-      code: "RATE_LIMITED",
+      code: "CONNECTOR_RATE_LIMITED",
       message: "Too Many Requests: retry after 30",
       status: 429,
+      retryAfterSeconds: 30,
+    });
+  });
+
+  test("maps Telegram flood control in an HTTP 400 envelope to the shared rate-limit code", () => {
+    expect(mapTelegramError(new Response("{}", { status: 400 }), {
+      ok: false,
+      error_code: 429,
+      description: "Too Many Requests",
+      parameters: { retry_after: 30 },
+    })).toEqual({
+      ok: false,
+      code: "CONNECTOR_RATE_LIMITED",
+      message: "Too Many Requests",
+      status: 400,
       retryAfterSeconds: 30,
     });
   });

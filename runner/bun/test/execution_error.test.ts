@@ -19,6 +19,17 @@ describe("errorResponseForExecutionFailure", () => {
     expect(errorResponseForExecutionFailure({ code: "CONNECTOR_UNAVAILABLE" }, "X", "y").status).toBe(503);
   });
 
+  test("preserves the provider retry delay in the rate-limit envelope", () => {
+    expect(errorResponseForExecutionFailure(
+      { code: "CONNECTOR_RATE_LIMITED", message: "Too Many Requests", retryAfterSeconds: 30 },
+      "X",
+      "y",
+    )).toEqual({
+      status: 429,
+      error: { code: "CONNECTOR_RATE_LIMITED", message: "Too Many Requests", retryAfterSeconds: 30 },
+    });
+  });
+
   test("falls back for an unstructured Error (real invalid input)", () => {
     const result = errorResponseForExecutionFailure(new Error("email is required"), "INVALID_ACTION_INPUT", "Action input is invalid.");
     expect(result.status).toBe(400);
