@@ -30,6 +30,44 @@ fn message_page_requires_items_and_valid_records() {
     }
     assert_eq!(Page::decode(json!({"items":[]})).unwrap().records.len(), 0);
 }
+
+#[test]
+fn message_page_decodes_terminal_and_continuation_cursors() {
+    let message = json!({
+        "id": "m",
+        "provider": "slack",
+        "providerMessageId": "1",
+        "channelId": "C1",
+        "senderId": "U1",
+        "text": "hello",
+        "modelVersion": "2026-05-14",
+        "raw": {}
+    });
+
+    assert_eq!(
+        Page::decode(json!({"items":[message.clone()],"cursor":null}))
+            .unwrap()
+            .next_cursor,
+        ""
+    );
+    assert_eq!(
+        Page::decode(json!({"items":[message.clone()]}))
+            .unwrap()
+            .next_cursor,
+        ""
+    );
+    assert_eq!(
+        Page::decode(json!({"items":[message],"cursor":"next"}))
+            .unwrap()
+            .next_cursor,
+        "next"
+    );
+    assert_eq!(
+        Page::decode(json!({"items":[],"cursor":42})),
+        Err(Error::InvalidPage)
+    );
+}
+
 #[test]
 fn missing_raw_is_not_silently_converted_to_null() {
     let v = json!({"items":[{"id":"m","provider":"slack","providerMessageId":"1","channelId":"C1","senderId":"U1","modelVersion":"2026-05-14"}]});

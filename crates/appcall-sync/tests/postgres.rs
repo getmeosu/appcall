@@ -696,8 +696,16 @@ fn service_fetches_each_page_with_fresh_credentials_and_lease_deadline() {
                 .unwrap()
                 .as_millis() as u64;
             assert!(deadline > now && deadline <= now + 30000);
-            let p = page(if n == 1 { "next" } else { "" });
-            let output = json!({"items":p.records,"cursor":p.next_cursor});
+            let mut records = page("").records;
+            records[0].id = format!("m-{n}");
+            let output = json!({
+                "connector": "slack",
+                "sync": "messages.list",
+                "provider": "slack",
+                "operation": "messages.list",
+                "items": records,
+                "cursor": if n == 1 { json!("next") } else { json!(null) },
+            });
             let response =
                 json!({"id":body["id"],"ok":true,"result":{"output":output}}).to_string();
             write!(
@@ -747,6 +755,78 @@ fn service_fetches_each_page_with_fresh_credentials_and_lease_deadline() {
     drop(service);
     drop(rt);
     let mut c = connect();
+    c.batch_execute(&format!("SET search_path TO {schema}"))
+        .unwrap();
+    let records: Vec<(String, String, String)> = c
+        .query(
+            "SELECT id,provider,provider_message_id FROM synced_messages ORDER BY id",
+            &[],
+        )
+        .unwrap()
+        .into_iter()
+        .map(|row| (row.get(0), row.get(1), row.get(2)))
+        .collect();
+    assert_eq!(
+        records,
+        vec![
+            ("m-1".into(), "slack".into(), "1".into()),
+            ("m-2".into(), "slack".into(), "1".into()),
+        ]
+    );
+    assert_eq!(
+        c.query_one(
+            "SELECT cursor FROM sync_job_checkpoints WHERE job_id='j'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0),
+        ""
+    );
+    assert_eq!(
+        c.query_one(
+            "SELECT count(*) FROM usage_events WHERE id LIKE 'usage_sync_j_%'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        2
+    );
+    assert_eq!(
+        c.query_one("SELECT sum(quantity) FROM usage_monthly_rollups", &[])
+            .unwrap()
+            .get::<_, Option<i64>>(0),
+        Some(2)
+    );
+    assert_eq!(
+        c.query_one("SELECT status FROM sync_jobs WHERE id='j'", &[])
+            .unwrap()
+            .get::<_, String>(0),
+        "succeeded"
+    );
+    let events = history(&mut c, "j");
+    assert_eq!(
+        events
+            .iter()
+            .map(|(_, kind, _)| kind.as_str())
+            .collect::<Vec<_>>(),
+        vec![
+            "scheduled",
+            "claimed",
+            "page",
+            "claimed",
+            "page",
+            "succeeded"
+        ]
+    );
+    assert_eq!(
+        events[4],
+        (
+            5,
+            "page".into(),
+            json!({"recordsWritten":1,"hasMore":false})
+        )
+    );
+    assert_eq!(events[5], (6, "succeeded".into(), json!({})));
     c.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
 }
