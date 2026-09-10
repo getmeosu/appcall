@@ -20,6 +20,9 @@ impl PgPolicy {
 fn unavailable() -> ActionError {
     ActionError::new("CONNECTOR_UNAVAILABLE")
 }
+fn storage_unavailable() -> ActionError {
+    ActionError::new("STORAGE_UNAVAILABLE")
+}
 fn entitlements(
     tx: &mut Transaction<'_>,
     project: &str,
@@ -170,13 +173,15 @@ pub fn usage_snapshot<C: GenericClient>(
     month: &str,
     quantity: i64,
     e: &Entitlements,
-) -> std::result::Result<UsageSnapshot, postgres::Error> {
-    let row = client.query_one(
-        "SELECT COALESCE(sum(quantity),0)::bigint
+) -> Result<UsageSnapshot> {
+    let row = client
+        .query_one(
+            "SELECT COALESCE(sum(quantity),0)::bigint
                FROM usage_monthly_rollups
               WHERE project_id=$1 AND month=$2 AND kind='action_call'",
-        &[&project, &month],
-    )?;
+            &[&project, &month],
+        )
+        .map_err(|_| storage_unavailable())?;
     let used: i64 = row.get(0);
     let active = client
         .query_one(
@@ -185,12 +190,23 @@ pub fn usage_snapshot<C: GenericClient>(
               WHERE project_id=$1 AND month=$2 AND state IN ('pending','dispatched')
                 AND expires_at>now()",
             &[&project, &month],
-        )?
+        )
+        .map_err(|_| storage_unavailable())?
         .get::<_, i64>(0);
+    let projected = used
+        .checked_add(active)
+        .and_then(|total| total.checked_add(quantity))
+        .ok_or_else(|| {
+            if e.action_calls_hard > 0 {
+                ActionError::new("USAGE_LIMIT_EXCEEDED")
+            } else {
+                ActionError::new("USAGE_DECISION_FAILED")
+            }
+        })?;
     Ok(UsageSnapshot {
         month: month.to_owned(),
         current: used,
-        projected: used.saturating_add(active).saturating_add(quantity),
+        projected,
         soft_limit: e.action_calls_soft,
         hard_limit: e.action_calls_hard,
     })
@@ -276,8 +292,16 @@ impl PolicyGate for PgPolicy {
                 recover_expired_dispatched_quota(&mut tx, &project, &quota_month)?;
             }
             let quota_id = uuid::Uuid::new_v4().simple().to_string();
-            let usage = usage_snapshot(&mut tx, &project, &month, 1, &e)
-                .map_err(|_| unavailable())?;
+            let usage = match usage_snapshot(&mut tx, &project, &month, 1, &e) {
+                Ok(usage) => usage,
+                Err(error) if error.code == "USAGE_LIMIT_EXCEEDED" => {
+                    // An overflowing hard-limited projection is a denial even
+                    // though no representable snapshot can be attached.
+                    tx.commit().map_err(|_| unavailable())?;
+                    return Err(error);
+                }
+                Err(_) => return Err(unavailable()),
+            };
             if e.action_calls_hard > 0 && usage.projected > e.action_calls_hard {
                 // Recovery is durable cleanup even when this admission is
                 // denied; storage or policy errors still roll back.

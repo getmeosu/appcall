@@ -190,21 +190,19 @@ fn usage_snapshot_rejects_projected_usage_overflow() {
         )
         .unwrap();
 
-    assert!(
-        usage_snapshot(
-            &mut client,
-            "p",
-            &month,
-            2,
-            &Entitlements {
-                action_calls_soft: i64::MAX,
-                action_calls_hard: i64::MAX,
-                ..Default::default()
-            },
-        )
-        .is_err(),
-        "usage beyond i64::MAX must reject instead of saturating into an allowed snapshot"
-    );
+    let overflow = usage_snapshot(
+        &mut client,
+        "p",
+        &month,
+        2,
+        &Entitlements {
+            action_calls_soft: i64::MAX,
+            action_calls_hard: i64::MAX,
+            ..Default::default()
+        },
+    )
+    .expect_err("usage beyond i64::MAX must reject instead of saturating");
+    assert_eq!(overflow.code, "USAGE_LIMIT_EXCEEDED");
 
     client
         .execute("UPDATE usage_monthly_rollups SET quantity=$1", &[&i64::MAX])
@@ -220,10 +218,11 @@ fn usage_snapshot_rejects_projected_usage_overflow() {
             &quota_operation(),
             &json!({}),
         ));
-    assert!(
-        rejected.is_err(),
-        "admission must reject an overflowing completed usage total"
-    );
+    let error = match rejected {
+        Ok(_) => panic!("admission must reject an overflowing completed usage total"),
+        Err(error) => error,
+    };
+    assert_eq!(error.code, "USAGE_LIMIT_EXCEEDED");
 }
 
 #[test]

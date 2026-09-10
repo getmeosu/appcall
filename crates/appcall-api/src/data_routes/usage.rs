@@ -189,7 +189,7 @@ pub fn usage_read(
             } else {
                 let snapshot =
                     usage_snapshot(client, &identity.project_id, &month, quantity, &limits)
-                        .map_err(db_error)?;
+                        .map_err(ApiError::from)?;
                 (snapshot.current, snapshot.projected)
             };
             let exceeded = limits.action_calls_hard > 0 && projected > limits.action_calls_hard;
