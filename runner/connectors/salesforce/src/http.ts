@@ -14,7 +14,7 @@ const SALESFORCE_STATIC_HOSTS = new Set([
 ]);
 const SALESFORCE_DOMAIN_LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
 const SALESFORCE_PRODUCTION_DOMAIN = new RegExp(`^${SALESFORCE_DOMAIN_LABEL}\\.my\\.salesforce\\.com$`);
-const SALESFORCE_SANDBOX_DOMAIN = new RegExp(`^${SALESFORCE_DOMAIN_LABEL}\\.sandbox\\.my\\.salesforce\\.com$`);
+const SALESFORCE_SANDBOX_DOMAIN = new RegExp(`^${SALESFORCE_DOMAIN_LABEL}--${SALESFORCE_DOMAIN_LABEL}\\.sandbox\\.my\\.salesforce\\.com$`);
 
 export function parseSalesforceRateLimit(status: number, headers: Record<string, string>): SalesforceRateLimitResult {
   if (status === 429) {

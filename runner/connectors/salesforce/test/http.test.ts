@@ -26,6 +26,27 @@ describe("salesforce outbound host boundary", () => {
   });
 
   test.each([
+    "https://evil.sandbox.my.salesforce.com",
+    "https://acme--.sandbox.my.salesforce.com",
+    "https://--uat.sandbox.my.salesforce.com",
+  ])("requires the documented sandbox My Domain separator for %s", async (instanceUrl) => {
+    let calls = 0;
+    const client = createSalesforceClient({
+      accessToken: TOKEN,
+      instanceUrl,
+      fetch: async () => {
+        calls += 1;
+        return new Response(JSON.stringify({ Id: "003" }));
+      },
+    });
+
+    await expect(client.getRecord("Contact", "003")).rejects.toMatchObject({
+      code: "OUTBOUND_HOST_NOT_ALLOWED",
+    });
+    expect(calls).toBe(0);
+  });
+
+  test.each([
     "http://acme.my.salesforce.com",
     "https://user:pass@acme.my.salesforce.com",
     "https://acme.my.salesforce.com:8443",
