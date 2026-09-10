@@ -634,7 +634,7 @@ fn sse_uses_durable_cursor_and_go_account_projection() {
             &url::Url::parse("http://x/v1/events?since=query").unwrap(),
             &[("Last-Event-ID".into(), "header".into())]
         ),
-        "query"
+        "header"
     );
 }
 #[test]

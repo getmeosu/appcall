@@ -902,6 +902,100 @@ mod run_detail_route_tests {
             Some("acct-alias")
         );
     }
+
+    #[tokio::test]
+    async fn events_page_builds_an_encoded_filtered_stream_url_from_snapshot_cursor() {
+        let data = Capture {
+            value: json!({
+                "events": [{
+                    "id": "event-1",
+                    "connector": "mail",
+                    "operation": "messages.list",
+                    "connectionId": "connection-1",
+                    "createdAt": "2026-09-08T00:00:00Z"
+                }],
+                "streamCursor": "cursor<&"
+            }),
+            requests: Mutex::new(Vec::new()),
+        };
+        let mut fields = BTreeMap::new();
+        fields.insert("connector".into(), vec!["mail".into()]);
+        fields.insert("connectionId".into(), vec!["connection<&".into()]);
+        fields.insert("operation".into(), vec!["messages.list".into()]);
+        let response = DashboardRenderer { data: &data }
+            .render(
+                &Request {
+                    method: "GET",
+                    path: "/app/events",
+                    cookies: "",
+                    origin: None,
+                    referer: None,
+                    fields,
+                    now: 100,
+                },
+                Some(DashboardOperation::Events),
+                &Session {
+                    access_token: String::new(),
+                    refresh_token: String::new(),
+                    user_id: "user".into(),
+                    email: "user@example.test".into(),
+                    tenant_id: "tenant".into(),
+                    tenant_name: "Tenant".into(),
+                },
+                Principal::project("project").unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert!(response.body.contains(
+            "data-init=\"@get('/app/events/stream?connector=mail&amp;connectionId=connection%3C%26&amp;operation=messages.list&amp;since=cursor%3C%26')\""
+        ));
+    }
+
+    #[tokio::test]
+    async fn events_pagination_preserves_connector_connection_and_operation_filters() {
+        let data = Capture {
+            value: json!({
+                "events": [],
+                "pagination": {"hasMore": true, "nextCursor": "next+cursor="}
+            }),
+            requests: Mutex::new(Vec::new()),
+        };
+        let mut fields = BTreeMap::new();
+        fields.insert("connector".into(), vec!["mail".into()]);
+        fields.insert("connectionId".into(), vec!["connection<&".into()]);
+        fields.insert("operation".into(), vec!["messages.list".into()]);
+        let response = DashboardRenderer { data: &data }
+            .render(
+                &Request {
+                    method: "GET",
+                    path: "/app/events",
+                    cookies: "",
+                    origin: None,
+                    referer: None,
+                    fields,
+                    now: 100,
+                },
+                Some(DashboardOperation::Events),
+                &Session {
+                    access_token: String::new(),
+                    refresh_token: String::new(),
+                    user_id: "user".into(),
+                    email: "user@example.test".into(),
+                    tenant_id: "tenant".into(),
+                    tenant_name: "Tenant".into(),
+                },
+                Principal::project("project").unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert!(response.body.contains(
+            "href=\"/app/events?connector=mail&amp;connectionId=connection%3C%26&amp;operation=messages.list&amp;cursor=next%2Bcursor%3D\""
+        ));
+        assert!(!response.body.contains("status="));
+        assert!(!response.body.contains("action="));
+    }
 }
 
 // The trusted service must explicitly identify a configured development flow.

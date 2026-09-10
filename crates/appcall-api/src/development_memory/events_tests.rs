@@ -65,6 +65,41 @@ async fn events_are_scoped_sanitized_atomic_and_reject_sync_before_insert() {
         .is_err());
     assert_eq!(repo.lock().unwrap().events.len(), 1);
 }
+
+#[tokio::test]
+async fn history_snapshot_cursor_delivers_only_events_after_the_snapshot() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let (expected, revision) = repo.get_connection("proj_dev", None, "c").unwrap();
+    events
+        .accept(&expected, revision, &parsed("before-snapshot", ""))
+        .unwrap();
+    let principal = Principal::project("proj_dev").unwrap();
+    let history = events
+        .handle(
+            Some(&principal),
+            &Request {
+                method: "GET".into(),
+                uri: "/v1/webhook-events".into(),
+                headers: vec![],
+                body: vec![],
+            },
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    let cursor = history.body["streamCursor"]
+        .as_str()
+        .expect("history must expose its stream high-water cursor")
+        .to_owned();
+
+    assert!(events.poll(&principal, &cursor).await.unwrap().is_empty());
+    events
+        .accept(&expected, revision, &parsed("after-snapshot", ""))
+        .unwrap();
+    let delivered = events.poll(&principal, &cursor).await.unwrap();
+    assert_eq!(delivered.iter().map(|event| event.id.as_str()).collect::<Vec<_>>(), ["after-snapshot"]);
+}
 #[tokio::test]
 async fn shared_stream_backfill_live_revalidation_and_drain() {
     use std::sync::{
