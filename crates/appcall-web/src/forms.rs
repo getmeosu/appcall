@@ -69,35 +69,51 @@ fn field(
         },
         "array" => {
             let items = schema.get("items").unwrap_or(&Value::Null);
-            let kind = items
-                .get("type")
-                .and_then(Value::as_str)
-                .unwrap_or("string");
-            let values = raw
-                .split(',')
-                .map(str::trim)
-                .filter(|v| !v.is_empty())
-                .filter_map(|item| match kind {
-                    "number" | "integer" => item
-                        .parse::<f64>()
-                        .ok()
-                        .and_then(Number::from_f64)
-                        .map(Value::Number),
-                    "object"
-                        if items
-                            .get("properties")
-                            .and_then(|p| p.get("email"))
-                            .is_some() =>
+            if nested_array(schema) {
+                if raw.is_empty() {
+                    None
+                } else {
+                    let value: Value = serde_json::from_str(raw).map_err(|_| Error::Invalid)?;
+                    if value
+                        .as_array()
+                        .is_some_and(|rows| rows.iter().all(Value::is_array))
                     {
-                        Some(serde_json::json!({"email":item}))
+                        Some(value)
+                    } else {
+                        return Err(Error::Invalid);
                     }
-                    _ => Some(Value::String(item.into())),
-                })
-                .collect::<Vec<_>>();
-            if values.is_empty() {
-                None
+                }
             } else {
-                Some(Value::Array(values))
+                let kind = items
+                    .get("type")
+                    .and_then(Value::as_str)
+                    .unwrap_or("string");
+                let values = raw
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|v| !v.is_empty())
+                    .filter_map(|item| match kind {
+                        "number" | "integer" => item
+                            .parse::<f64>()
+                            .ok()
+                            .and_then(Number::from_f64)
+                            .map(Value::Number),
+                        "object"
+                            if items
+                                .get("properties")
+                                .and_then(|p| p.get("email"))
+                                .is_some() =>
+                        {
+                            Some(serde_json::json!({"email":item}))
+                        }
+                        _ => Some(Value::String(item.into())),
+                    })
+                    .collect::<Vec<_>>();
+                if values.is_empty() {
+                    None
+                } else {
+                    Some(Value::Array(values))
+                }
             }
         }
         "object"
@@ -146,6 +162,16 @@ fn field(
     };
     Ok(value)
 }
+
+fn nested_array(schema: &Value) -> bool {
+    schema.get("type").and_then(Value::as_str) == Some("array")
+        && schema
+            .get("items")
+            .and_then(|items| items.get("type"))
+            .and_then(Value::as_str)
+            == Some("array")
+}
+
 /// Source-class guided controls. `prefix` is server-selected (`f` or
 /// `f.runInput`), and the schema is the trusted operation definition.
 pub(crate) fn render_guided_fields(
@@ -240,7 +266,8 @@ fn humanize(key: &str) -> String {
 }
 
 fn multiline(node: &Value) -> bool {
-    node.get("type").and_then(Value::as_str) == Some("object")
+    nested_array(node)
+        || node.get("type").and_then(Value::as_str) == Some("object")
         || node.get("format").and_then(Value::as_str) == Some("textarea")
 }
 
@@ -263,7 +290,12 @@ pub(crate) fn presentation_id(kind: &str, name: &str) -> String {
 }
 
 fn sample_value(node: &Value, sample: &Value) -> String {
-    if node.get("type").and_then(Value::as_str) == Some("array") {
+    if nested_array(node) {
+        sample
+            .as_array()
+            .map(|_| sample.to_string())
+            .unwrap_or_default()
+    } else if node.get("type").and_then(Value::as_str) == Some("array") {
         sample
             .as_array()
             .map(|items| {
@@ -301,18 +333,26 @@ fn render_control(
     connector: Option<&str>,
 ) -> Result<String, Error> {
     use crate::ui;
+    let kind = node.get("type").and_then(Value::as_str).unwrap_or("");
+    let structured_rows = nested_array(node);
     let help = node
         .get("description")
         .and_then(Value::as_str)
         .unwrap_or("");
-    if let (Some(options), Some(connector)) = (
-        node.get("x-dynamic-options")
-            .filter(|o| o.get("source").and_then(Value::as_str).is_some()),
-        connector,
-    ) {
-        return dynamic_control(options, sample, name, label, help, connector);
+    let help = if structured_rows {
+        "Enter JSON rows as an outer array of arrays. JSON preserves commas, numbers, booleans, and empty strings."
+    } else {
+        help
+    };
+    if !structured_rows {
+        if let (Some(options), Some(connector)) = (
+            node.get("x-dynamic-options")
+                .filter(|o| o.get("source").and_then(Value::as_str).is_some()),
+            connector,
+        ) {
+            return dynamic_control(options, sample, name, label, help, connector);
+        }
     }
-    let kind = node.get("type").and_then(Value::as_str).unwrap_or("");
     if kind == "object" {
         let content = if node
             .get("properties")
@@ -328,6 +368,11 @@ fn render_control(
     if !matches!(kind, "string" | "number" | "integer" | "array" | "boolean") {
         return Ok(String::new());
     }
+    let display_label = if structured_rows {
+        format!("{label} (JSON rows)")
+    } else {
+        label.to_owned()
+    };
     let value = sample_value(node, sample);
     let example = node
         .get("examples")
@@ -377,7 +422,9 @@ fn render_control(
             })
             .collect::<Vec<_>>()
     });
-    let control = if let Some(options) = &options {
+    let control = if structured_rows {
+        ui::Control::Textarea
+    } else if let Some(options) = &options {
         ui::Control::Select(options)
     } else if kind == "string" && multiline(node) {
         ui::Control::Textarea
@@ -395,7 +442,12 @@ fn render_control(
         help,
         placeholder: &placeholder,
         checked: sample.as_bool() == Some(true),
-        ..ui::Field::new(&presentation_id("field", name), name, label, control)
+        ..ui::Field::new(
+            &presentation_id("field", name),
+            name,
+            &display_label,
+            control,
+        )
     }
     .render();
     let step = options.is_none().then(|| numeric_step(kind)).flatten();

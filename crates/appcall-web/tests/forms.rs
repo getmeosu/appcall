@@ -3,9 +3,10 @@ use serde_json::json;
 use std::collections::BTreeMap;
 
 fn google_workspace_input_schema(operation: &str) -> serde_json::Value {
-    let manifest: serde_json::Value =
-        serde_json::from_str(include_str!("../../../runner/connectors/google-workspace/manifest.json"))
-            .unwrap();
+    let manifest: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../runner/connectors/google-workspace/manifest.json"
+    ))
+    .unwrap();
     manifest["operations"][operation]["inputSchema"].clone()
 }
 
@@ -427,16 +428,25 @@ async fn guided_google_sheets_rows_render_as_identified_json_textareas() {
         )
         .await;
         let control = html
-            .split("name=\"f.values\"")
+            .split("<textarea class=\"ui-control\"")
             .nth(1)
             .expect("guided values control")
             .split("</textarea>")
             .next()
             .unwrap();
-        assert!(control.contains("<textarea class=\"ui-control\""));
-        assert!(html.contains("JSON rows"), "{operation} should identify JSON rows");
-        assert!(html.contains("commas"), "{operation} should explain comma preservation");
-        assert!(html.contains("empty strings"), "{operation} should explain empty cells");
+        assert!(control.contains("name=\"f.values\""));
+        assert!(
+            html.contains("JSON rows"),
+            "{operation} should identify JSON rows"
+        );
+        assert!(
+            html.contains("commas"),
+            "{operation} should explain comma preservation"
+        );
+        assert!(
+            html.contains("empty strings"),
+            "{operation} should explain empty cells"
+        );
     }
 }
 
