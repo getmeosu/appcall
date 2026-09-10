@@ -345,7 +345,7 @@ async fn api_stream_closes_when_verified_jwt_expires_or_api_key_is_revoked() {
         }
     }
     let fixture: serde_json::Value =
-        serde_json::from_str(include_str!("../../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../../appcall-auth/tests/auth_golden.json")).unwrap();
     let principal = Principal::project("p").unwrap();
     let key = Arc::new(RevocableKey {
         key: StaticApiKey::from_hash(

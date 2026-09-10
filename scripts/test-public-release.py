@@ -65,8 +65,7 @@ class ReleaseGateTests(unittest.TestCase):
         self.put('Cargo.toml', '[workspace.package]\nlicense = "Elastic-2.0"\n')
         self.put('package.json', '{"license":"Elastic-2.0"}')
         self.put('third_party/NOTICE', 'Third party provenance')
-        self.put('third_party/anusa-sdk-go-NOTICE', 'Upstream provenance')
-        for name in ('anusa-sdk-go', 'datastar', 'tailwindcss', 'activepieces'):
+        for name in ('datastar', 'tailwindcss', 'activepieces'):
             self.put('third_party/licenses/' + name + '-LICENSE', 'Upstream license text')
         for name in ('archivo', 'ibm-plex-mono'):
             self.put('third_party/licenses/' + name + '-LICENSE.txt', 'Upstream font license text')
@@ -236,24 +235,35 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertFalse(destination.exists())
         self.assertEqual(self.run_gate('check').returncode, 1)
 
-    def test_exact_provenance_exported_and_atlas_checksum_excluded(self):
+    def test_generic_provenance_exported_and_atlas_checksum_excluded(self):
         self.legal()
-        self.put('third_party/anusa-sdk-go-NOTICE', 'Upstream copyright and provenance')
         self.put('migrations/atlas.sum', 'h1:example')
         destination = Path(self.temp.name).resolve() / 'export'
         result = self.run_gate('export', '--destination', str(destination))
         self.assertEqual(result.returncode, 0, result.stdout)
         manifest = json.loads((destination / 'PUBLIC-RELEASE-MANIFEST.json').read_text())
         self.assertNotIn('migrations/atlas.sum', manifest['files'])
-        self.assertIn('third_party/anusa-sdk-go-NOTICE', manifest['files'])
+        self.assertIn('third_party/NOTICE', manifest['files'])
+        self.assertNotIn('third_party/anusa-sdk-go-NOTICE', manifest['files'])
+        self.assertNotIn('third_party/licenses/anusa-sdk-go-LICENSE', manifest['files'])
         self.assertNotIn('PUBLIC-RELEASE-MANIFEST.json', manifest['files'])
+
+    def test_retired_anusa_sdk_artifacts_are_rejected(self):
+        self.legal()
+        for path in ('third_party/anusa-sdk-go-NOTICE',
+                     'third_party/licenses/anusa-sdk-go-LICENSE'):
+            self.put(path, 'Retired artifact')
+        result = self.run_gate('check')
+        denied = {(entry['path'], entry['rule']) for entry in json.loads(result.stdout)['errors']}
+        self.assertIn(('third_party/anusa-sdk-go-NOTICE', 'path-not-allowed'), denied)
+        self.assertIn(('third_party/licenses/anusa-sdk-go-LICENSE', 'path-not-allowed'), denied)
 
     def test_redistributed_licenses_are_required_and_exported(self):
         self.legal()
         destination = Path(self.temp.name).resolve() / 'export'
         result = self.run_gate('export', '--destination', str(destination))
         self.assertEqual(result.returncode, 0, result.stdout)
-        for name in ('anusa-sdk-go', 'datastar', 'tailwindcss', 'activepieces'):
+        for name in ('datastar', 'tailwindcss', 'activepieces'):
             self.assertTrue((destination / ('third_party/licenses/' + name + '-LICENSE')).is_file())
         (self.root / 'third_party/licenses/datastar-LICENSE').unlink()
         result = self.run_gate('check')

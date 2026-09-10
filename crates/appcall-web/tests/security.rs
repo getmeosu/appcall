@@ -152,7 +152,7 @@ fn broker_configuration_rejects_credentials_and_insecure_remote() {
 #[test]
 fn encrypted_session_cannot_override_token_user_or_membership() {
     let f: serde_json::Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let jwt = appcall_auth::JwtVerifier::new(f["jwt_secret"].as_str().unwrap(), Default::default())
         .unwrap();
     let broker = Broker::new("http://127.0.0.1:1", "appcall").unwrap();
@@ -268,7 +268,7 @@ async fn members_page_uses_verified_tenant_and_escapes_broker_data() {
         stream.write_all(response.as_bytes()).await.unwrap();
     });
     let f: serde_json::Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let codec = SessionCodec::new("test", false).unwrap();
     let jwt = appcall_auth::JwtVerifier::new(f["jwt_secret"].as_str().unwrap(), Default::default())
         .unwrap();
@@ -341,7 +341,8 @@ async fn signal_canonical_revoke_success_and_error_recover_to_account_once() {
             );
         });
         let f: serde_json::Value =
-            serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+            serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json"))
+                .unwrap();
         let codec = SessionCodec::new("test", false).unwrap();
         let jwt =
             appcall_auth::JwtVerifier::new(f["jwt_secret"].as_str().unwrap(), Default::default())
@@ -421,7 +422,7 @@ impl DashboardData for DashboardFixture {
 #[tokio::test]
 async fn dashboard_embeds_assets_and_never_trusts_form_project() {
     let f: serde_json::Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let codec = SessionCodec::new("test", false).unwrap();
     let jwt = appcall_auth::JwtVerifier::new(f["jwt_secret"].as_str().unwrap(), Default::default())
         .unwrap();
@@ -489,7 +490,7 @@ async fn callback_requires_echoed_binding_before_issuing_cookie() {
         net::TcpListener,
     };
     let f: serde_json::Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let tx = OAuthTransaction::new(1800000000, "/app/logs").unwrap();
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
@@ -627,7 +628,7 @@ async fn mfa_qr_uses_broker_url_and_admin_errors_redirect_without_secrets() {
         }
     });
     let fixture: serde_json::Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let codec = SessionCodec::new("synthetic", false).unwrap();
     let jwt =
         appcall_auth::JwtVerifier::new(fixture["jwt_secret"].as_str().unwrap(), Default::default())
@@ -716,7 +717,7 @@ async fn replacement_identity_keeps_shared_refresh_and_rechecks_new_membership()
         }
     }
     let fixture: serde_json::Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let expired: serde_json::Value =
         serde_json::from_str(include_str!("refresh_generation.json")).unwrap();
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

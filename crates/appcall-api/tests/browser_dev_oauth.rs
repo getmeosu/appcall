@@ -318,7 +318,7 @@ fn read_request(socket: &mut TcpStream) -> String {
 fn browser_setup_local_callback_and_production_managed_fallback_guards() {
     let mut database = Database::new(std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap());
     let fixture: Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let broker = Broker::new(&fixture);
     let host = Host::start(&database, &broker, &fixture, false, false);
     let cookie = host.login();

@@ -18,7 +18,7 @@ use std::{
 const ORDINARY_API_KEY: &str = "ordinary-browser-api-key";
 
 fn fixture() -> Value {
-    serde_json::from_str(include_str!("../../../appcall-auth/tests/go_golden.json")).unwrap()
+    serde_json::from_str(include_str!("../../../appcall-auth/tests/auth_golden.json")).unwrap()
 }
 
 fn launch(

@@ -436,7 +436,7 @@ async fn copy_direct_failures_handle_preserves_csrf_identity_and_session_cookie(
     }
     let golden: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../appcall-auth/tests/go_golden.json"
+        "/../appcall-auth/tests/auth_golden.json"
     )))
     .unwrap();
     let codec = SessionCodec::new("synthetic-copy-session", false).unwrap();

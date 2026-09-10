@@ -253,7 +253,7 @@ async fn remaining_connection_flash_uses_a_live_shared_notice() {
 #[tokio::test]
 async fn remaining_certification_is_denied_before_data_even_for_all_grants() {
     let fixture: serde_json::Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let codec = SessionCodec::new("test", false).unwrap();
     let jwt =
         appcall_auth::JwtVerifier::new(fixture["jwt_secret"].as_str().unwrap(), Default::default())
@@ -388,7 +388,8 @@ async fn remaining_account_absorbs_sessions_and_preserves_security_on_session_fa
             }
         });
         let fixture: serde_json::Value =
-            serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+            serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json"))
+                .unwrap();
         let codec = SessionCodec::new("test", false).unwrap();
         let jwt = appcall_auth::JwtVerifier::new(
             fixture["jwt_secret"].as_str().unwrap(),

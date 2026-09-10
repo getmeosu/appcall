@@ -32,14 +32,13 @@ EXACT_FILES = {
     '.github/workflows/ci.yml', '.github/workflows/public-release.yml',
     '.github/public-release-policy.json', 'deploy/sandbox/Caddyfile',
     'crates/appcall-web/CONTRACT.md',
-    'third_party/anusa-sdk-go', 'third_party/anusa-sdk-go-NOTICE',
 }
 REQUIRED_THIRD_PARTY = {
-    'third_party/NOTICE', 'third_party/anusa-sdk-go-NOTICE',
+    'third_party/NOTICE',
     'third_party/licenses/archivo-LICENSE.txt',
     'third_party/licenses/ibm-plex-mono-LICENSE.txt',
     *(f'third_party/licenses/{name}-LICENSE' for name in
-      ('anusa-sdk-go', 'datastar', 'tailwindcss', 'activepieces')),
+      ('datastar', 'tailwindcss', 'activepieces')),
 }
 EXACT_FILES |= REQUIRED_THIRD_PARTY
 SIGNAL_FONTS = {

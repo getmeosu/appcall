@@ -430,7 +430,7 @@ fn application_login_refresh_dashboard_live_stream_and_membership_revocation() {
     let (app_url, anusa_url) = schemas.urls(&database);
     assert_ne!(app_url, anusa_url);
     let fixture: Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let broker = Broker::new(&fixture);
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let address = listener.local_addr().unwrap();

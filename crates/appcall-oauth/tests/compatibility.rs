@@ -2,7 +2,7 @@ use appcall_oauth::{Error, ExpectedState, StateSigner, TokenSet};
 #[test]
 fn go_state_and_token_wire_contracts() {
     let fixture: serde_json::Value =
-        serde_json::from_str(include_str!("fixtures/go-oauth.json")).unwrap();
+        serde_json::from_str(include_str!("fixtures/oauth_compatibility.json")).unwrap();
     let signer = StateSigner::new(&(0u8..32).collect::<Vec<_>>()).unwrap();
     let expected = ExpectedState {
         project_id: Some("project"),
