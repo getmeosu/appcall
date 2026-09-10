@@ -60,6 +60,25 @@ const manifest = {
   models: ["contact"],
 };
 
+const objectHeaderManifest = {
+  key: "object-header",
+  name: "Object Header",
+  runtime: "bun",
+  auth: { type: "api_key", scopes: [] },
+  network: { allowedHosts: ["api.object-header.test"] },
+  http: {
+    baseUrl: "https://api.object-header.test",
+    auth: { field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}" },
+  },
+  operations: {
+    "reports.get": {
+      kind: "action",
+      inputSchema: { type: "object", properties: { filter: { type: "object" } } },
+      request: { method: "GET", path: "/reports", headers: { "X-Filter": "{{filter}}" }, success: [200] },
+    },
+  },
+};
+
 function okResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
 }
@@ -158,6 +177,21 @@ describe("compileDeclarativeConnector", () => {
 
     await compiled.actions["contacts.get"]!({ apiKey: "k", contactId: "c1", expand: "company", fetch: mockFetch });
     expect(seenUrl).toBe("https://api.demo.test/v1/contacts/c1?expand=company");
+  });
+
+  it("serializes object-valued header templates as JSON", async () => {
+    let seenHeader = "";
+    const compiled = compileDeclarativeConnector(objectHeaderManifest as never);
+    const filter = { status: "open" };
+    await compiled.actions["reports.get"]!({
+      apiKey: "k",
+      filter,
+      fetch: async (_url: RequestInfo | URL, init?: RequestInit) => {
+        seenHeader = new Headers(init?.headers).get("X-Filter") ?? "";
+        return okResponse({});
+      },
+    });
+    expect(seenHeader).toBe(JSON.stringify(filter));
   });
 
   it("returns the raw body under data when the operation declares no result mapping", async () => {
