@@ -100,6 +100,135 @@ async fn history_snapshot_cursor_delivers_only_events_after_the_snapshot() {
     let delivered = events.poll(&principal, &cursor).await.unwrap();
     assert_eq!(delivered.iter().map(|event| event.id.as_str()).collect::<Vec<_>>(), ["after-snapshot"]);
 }
+
+#[tokio::test]
+async fn filtered_stream_delivers_matching_new_events_only() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let (expected, revision) = repo.get_connection("proj_dev", None, "c").unwrap();
+    events
+        .accept(&expected, revision, &parsed("before-filter", ""))
+        .unwrap();
+    let principal = Principal::project("proj_dev").unwrap();
+    let history = events
+        .handle(
+            Some(&principal),
+            &Request {
+                method: "GET".into(),
+                uri: "/v1/webhook-events".into(),
+                headers: vec![],
+                body: vec![],
+            },
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    let cursor = history.body["streamCursor"].as_str().unwrap().to_owned();
+    events
+        .accept(&expected, revision, &parsed("matching-after", ""))
+        .unwrap();
+    events
+        .accept(&expected, revision, &parsed("nonmatching-operation", ""))
+        .unwrap();
+    {
+        let mut data = repo.lock().unwrap();
+        data.events
+            .get_mut(&("proj_dev".into(), "matching-after".into()))
+            .unwrap()
+            .operation = "messages.list".into();
+        data.events
+            .get_mut(&("proj_dev".into(), "nonmatching-operation".into()))
+            .unwrap()
+            .operation = "messages.send".into();
+    }
+    let matching = crate::streaming::EventFilters {
+        connector: "slack".into(),
+        connection_id: "c".into(),
+        operation: "messages.list".into(),
+    };
+    let delivered = events
+        .poll_filtered(&principal, &cursor, &matching)
+        .await
+        .unwrap();
+    assert_eq!(
+        delivered.iter().map(|event| event.id.as_str()).collect::<Vec<_>>(),
+        ["matching-after"]
+    );
+    for filters in [
+        crate::streaming::EventFilters {
+            connector: "github".into(),
+            ..matching.clone()
+        },
+        crate::streaming::EventFilters {
+            connection_id: "other-connection".into(),
+            ..matching.clone()
+        },
+        crate::streaming::EventFilters {
+            operation: "messages.send".into(),
+            ..matching.clone()
+        },
+    ] {
+        assert!(events
+            .poll_filtered(&principal, &cursor, &filters)
+            .await
+            .unwrap()
+            .is_empty());
+    }
+}
+
+#[tokio::test]
+async fn event_inserted_between_snapshot_and_stream_open_is_delivered() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let (expected, revision) = repo.get_connection("proj_dev", None, "c").unwrap();
+    events
+        .accept(&expected, revision, &parsed("before-open", ""))
+        .unwrap();
+    let principal = Principal::project("proj_dev").unwrap();
+    let history = events
+        .handle(
+            Some(&principal),
+            &Request {
+                method: "GET".into(),
+                uri: "/v1/webhook-events".into(),
+                headers: vec![],
+                body: vec![],
+            },
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    let cursor = history.body["streamCursor"].as_str().unwrap().to_owned();
+    events
+        .accept(&expected, revision, &parsed("between-snapshot-and-open", ""))
+        .unwrap();
+    let expected_principal = principal.clone();
+    let verify: crate::streaming::SessionVerifier = std::sync::Arc::new(move || {
+        let expected_principal = expected_principal.clone();
+        Box::pin(async move { Ok(expected_principal) })
+    });
+    let (_stop, shutdown) = tokio::sync::watch::channel(false);
+    let mut receiver = events
+        .open_filtered(
+            principal,
+            cursor,
+            crate::streaming::EventFilters::default(),
+            shutdown,
+            verify,
+            false,
+        )
+        .await
+        .unwrap();
+    assert_eq!(receiver.recv().await.unwrap(), b": connected\n\n");
+    let frame = tokio::time::timeout(std::time::Duration::from_secs(1), receiver.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(String::from_utf8(frame)
+        .unwrap()
+        .contains("between-snapshot-and-open"));
+}
+
 #[tokio::test]
 async fn shared_stream_backfill_live_revalidation_and_drain() {
     use std::sync::{

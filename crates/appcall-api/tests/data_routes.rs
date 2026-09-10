@@ -638,6 +638,27 @@ fn sse_uses_durable_cursor_and_go_account_projection() {
     );
 }
 #[test]
+fn sse_filters_use_the_first_bounded_query_values() {
+    use appcall_api::data_routes::*;
+    let filters = sse_filters(
+        &url::Url::parse(
+            "http://x/v1/events?connector=slack&connector=ignored&connectionId=c%26d&operation=messages.list",
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(filters.connector, "slack");
+    assert_eq!(filters.connection_id, "c&d");
+    assert_eq!(filters.operation, "messages.list");
+    assert_eq!(
+        sse_cursor(
+            &url::Url::parse("http://x/v1/events?since=query").unwrap(),
+            &[("Last-Event-ID".into(), String::new())]
+        ),
+        ""
+    );
+}
+#[test]
 #[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
 fn webhook_replay_preserves_scope_and_rolls_back_failed_scheduling() {
     use appcall_api::data_routes::*;
