@@ -326,7 +326,10 @@ async fn default_wire_budget_supports_declared_large_operation_responses() {
         )
         .await
         .unwrap();
-    assert_eq!(response.output["data"].as_str().unwrap().len(), 8 * 1024 * 1024 + 1024);
+    assert_eq!(
+        response.output["data"].as_str().unwrap().len(),
+        8 * 1024 * 1024 + 1024
+    );
     task.await.unwrap();
 }
 

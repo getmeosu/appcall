@@ -2,6 +2,9 @@ import {test, expect} from 'bun:test';
 import {handleRPC} from '../src/server';
 import {createConnectorHttpClient} from '../src/http';
 import {executionContext} from '../src/execution';
+import {defaultConnectorRegistry} from '../src/registry';
+import {createFetchHandler} from '../src/serve';
+import {createCalDAVClient} from '../../connectors/caldav/src/http';
 test('RPC rejects null envelopes without throwing', async()=> {
  const r=await handleRPC(new Request('http://local/rpc',{method:'POST',body:'null'})); expect(r.status).toBe(400);
 });
@@ -23,9 +26,6 @@ test('RPC permits a simulated action deadline beyond the legacy 60 second cap',a
   expect(response.status).toBe(200); expect(observedDeadline).toBeGreaterThanOrEqual(deadline-250);
  }finally{defaultConnectorRegistry.executeAction=original;}
 });
-import {defaultConnectorRegistry} from '../src/registry';
-import {createFetchHandler} from '../src/serve';
-import {createCalDAVClient} from '../../connectors/caldav/src/http';
 test('CalDAV rejects unsafe credential destinations at construction',()=>{
  for(const baseUrl of ['http://caldav.icloud.com','https://caldav.icloud.com:8443','https://user:pass@caldav.icloud.com'])expect(()=>createCalDAVClient({username:'u',password:'p',baseUrl})).toThrow();
 });
@@ -143,7 +143,6 @@ test('handwritten RPC errors redact exact known credentials',async()=>{
  try{const response=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'secret',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send',input:{apiKey:'very-short-secret'}}})}));expect((await response.json()).error.message).toBe('reflected [REDACTED]');}finally{defaultConnectorRegistry.executeAction=original;}
 });
 test('RPC wire bounds reject oversized input and output',async()=>{
- const request=()=>new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'big',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
  const input=await handleRPC(new Request('http://local/rpc',{method:'POST',body:' '.repeat(25*1024*1024+256*1024+1)}));expect(input.status).toBe(413);
  const original=defaultConnectorRegistry.executeAction;
  defaultConnectorRegistry.executeAction=()=>({ok:true,output:{data:'x'.repeat(8*1024*1024)}});

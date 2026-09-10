@@ -140,10 +140,7 @@ impl Config {
         Registry::load(&self.connector_dir).map_err(|_| Error::Registry)
     }
     pub fn runner(&self) -> Result<RunnerClient> {
-        self.runner_with_options(ClientOptions {
-            timeout: Duration::from_secs(10),
-            ..Default::default()
-        })
+        self.runner_with_options(ClientOptions::default())
     }
     pub fn runner_with_options(&self, options: ClientOptions) -> Result<RunnerClient> {
         RunnerClient::new(&self.runner_url, &self.runner_token, options).map_err(|_| Error::Runner)

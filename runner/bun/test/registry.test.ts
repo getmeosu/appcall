@@ -23,6 +23,50 @@ describe("runner connector registry", () => {
     expect(defaultConnectorRegistry.validate()).toEqual([]);
   });
 
+  test("rejects an operation budget above the shared contract before dispatch", () => {
+    let called = false;
+    const registry = createConnectorRegistry({
+      manifests: [{
+        key: "unsupported-budget",
+        name: "Unsupported Budget",
+        version: "0.1.0",
+        runtime: "bun",
+        auth: { type: "none", scopes: [] },
+        network: { allowedHosts: ["api.example.com"] },
+        operations: {
+          "messages.send": {
+            kind: "action",
+            timeoutMs: 300_001,
+            maxInputBytes: 1024,
+            maxResponseBytes: 1024,
+          },
+        },
+      }],
+      healthchecks: {},
+      actions: {
+        "unsupported-budget": {
+          "messages.send": () => {
+            called = true;
+            return { ok: true };
+          },
+        },
+      },
+    });
+
+    expect(registry.validate()).toEqual([{
+      code: "UNSUPPORTED_OPERATION_BUDGET",
+      connectorKey: "unsupported-budget",
+      operation: "messages.send",
+      message: "Declared operation budget exceeds the runner contract.",
+    }]);
+    expect(registry.executeAction("unsupported-budget", "messages.send", {})).toEqual({
+      ok: false,
+      code: "UNSUPPORTED_OPERATION_BUDGET",
+      message: "Operation budget exceeds the runner contract.",
+    });
+    expect(called).toBe(false);
+  });
+
   test("executes connector-owned actions through registered handlers", () => {
     const result = defaultConnectorRegistry.executeAction("whatsapp", "messages.send", {
       phoneNumberId: "123456789",

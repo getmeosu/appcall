@@ -6,17 +6,18 @@ import {
 } from "./protocol";
 import { logLine, redactText } from "./redact";
 import { defaultConnectorRegistry } from "./registry";
+import { jsonByteLength, maxOperationTimeoutMs, operationWireResponseLimit, rpcRequestLimitBytes } from "./budget";
 
 export async function handleRPC(request: Request, admittedAt = Date.now()): Promise<Response> {
   const started = Math.min(admittedAt, Date.now());
   let envelope: RequestEnvelope;
   try {
     const reader = request.body?.getReader();
-    const readSignal=AbortSignal.any([request.signal,AbortSignal.timeout(Math.max(0, started + 60000 - Date.now()))]);
+    const readSignal=AbortSignal.any([request.signal,AbortSignal.timeout(Math.max(0, started + maxOperationTimeoutMs - Date.now()))]);
     const cancelRead=()=>{void reader?.cancel(readSignal.reason);};
     readSignal.addEventListener("abort",cancelRead,{once:true});
     const chunks: Uint8Array[] = []; let size = 0;
-    try { if(reader) while(true) { const {done,value}=await reader.read(); if(done)break; size+=value.byteLength; if(size>8*1024*1024){await reader.cancel();return jsonResponse(413,undefined,{ok:false,error:{code:"INPUT_TOO_LARGE",message:"RPC body exceeds byte limit."}});} chunks.push(value); } } finally {readSignal.removeEventListener("abort",cancelRead);}
+    try { if(reader) while(true) { const {done,value}=await reader.read(); if(done)break; size+=value.byteLength; if(size>rpcRequestLimitBytes){await reader.cancel();return jsonResponse(413,undefined,{ok:false,error:{code:"INPUT_TOO_LARGE",message:"RPC body exceeds byte limit."}});} chunks.push(value); } } finally {readSignal.removeEventListener("abort",cancelRead);}
     if(readSignal.aborted)return jsonResponse(504,undefined,{ok:false,error:{code:"OPERATION_TIMEOUT",message:"RPC request aborted."}});
     envelope = JSON.parse(Buffer.concat(chunks).toString());
     if (!isRecord(envelope) || (envelope.id !== undefined && (typeof envelope.id !== "string" || !envelope.id || envelope.id.length > 256)) || (envelope.params !== undefined && !isRecord(envelope.params)) || (envelope.deadlineUnixMs !== undefined && (!Number.isSafeInteger(envelope.deadlineUnixMs) || envelope.deadlineUnixMs < 0))) throw new Error("Invalid envelope");
@@ -30,7 +31,7 @@ export async function handleRPC(request: Request, admittedAt = Date.now()): Prom
   const requestID = envelope.id ?? request.headers.get("x-request-id") ?? "runner-local";
   logRequest(requestID, envelope.method ?? "missing.method");
 
-  try { return await runExecution(() => dispatchRPC(envelope), 60000, request.signal, Math.min(envelope.deadlineUnixMs??Infinity,started+60000), credentialValues(envelope)); } catch(error) { const failure=errorResponseForExecutionFailure(error,"CONNECTOR_UPSTREAM_ERROR","Runner failed."); return jsonResponse(failure.status,envelope.id,{ok:false,error:failure.error}); }
+  try { return await runExecution(() => dispatchRPC(envelope), maxOperationTimeoutMs, request.signal, Math.min(envelope.deadlineUnixMs??Infinity,started+maxOperationTimeoutMs), credentialValues(envelope)); } catch(error) { const failure=errorResponseForExecutionFailure(error,"CONNECTOR_UPSTREAM_ERROR","Runner failed."); return jsonResponse(failure.status,envelope.id,{ok:false,error:failure.error}); }
 }
 
 async function dispatchRPC(envelope: RequestEnvelope): Promise<Response> {
@@ -120,16 +121,24 @@ async function handleConnectorSyncList(envelope: RequestEnvelope): Promise<Respo
     });
   }
 
+  const operationOutput = {
+    connector: connectorKey,
+    sync,
+    ...(isRecord(output) ? output : {}),
+  };
+  const maxResponseBytes = defaultConnectorRegistry.operationBudget(connectorKey, sync)?.maxResponseBytes;
+  if (typeof maxResponseBytes !== "number" || jsonByteLength(operationOutput) > maxResponseBytes) {
+    return jsonResponse(502, envelope.id, {
+      ok: false,
+      error: { code: "OUTPUT_TOO_LARGE", message: "Operation output exceeds the manifest byte limit." },
+    });
+  }
   return jsonResponse(200, envelope.id, {
     ok: true,
     result: {
-      output: {
-        connector: connectorKey,
-        sync,
-        ...(isRecord(output) ? output : {}),
-      },
+      output: operationOutput,
     },
-  });
+  }, maxResponseBytes);
 }
 
 async function handleConnectorActionExecute(envelope: RequestEnvelope): Promise<Response> {
@@ -185,16 +194,24 @@ async function handleConnectorActionExecute(envelope: RequestEnvelope): Promise<
     });
   }
 
+  const operationOutput = {
+    connector: connectorKey,
+    action,
+    ...(isRecord(output) ? output : {}),
+  };
+  const maxResponseBytes = defaultConnectorRegistry.operationBudget(connectorKey, action)?.maxResponseBytes;
+  if (typeof maxResponseBytes !== "number" || jsonByteLength(operationOutput) > maxResponseBytes) {
+    return jsonResponse(502, envelope.id, {
+      ok: false,
+      error: { code: "OUTPUT_TOO_LARGE", message: "Operation output exceeds the manifest byte limit." },
+    });
+  }
   return jsonResponse(200, envelope.id, {
     ok: true,
     result: {
-      output: {
-        connector: connectorKey,
-        action,
-        ...(isRecord(output) ? output : {}),
-      },
+      output: operationOutput,
     },
-  });
+  }, maxResponseBytes);
 }
 
 // handleConnectorWebhookVerify proves an inbound webhook delivery is authentic.
@@ -334,16 +351,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function jsonResponse(status: number, requestID: string | undefined, payload: ResponseEnvelope): Response {
+function jsonResponse(status: number, requestID: string | undefined, payload: ResponseEnvelope, operationResponseBytes?: number): Response {
   const safePayload=payload.error ? {...payload,error:{...payload.error,message:redactText(payload.error.message)}}:payload;
   const body=JSON.stringify(requestID ? { id: requestID, ...safePayload } : safePayload);
-  if(Buffer.byteLength(body)>8*1024*1024) return Response.json({id:requestID,ok:false,error:{code:"OUTPUT_TOO_LARGE",message:"RPC output exceeds byte limit."}},{status:502});
+  if(Buffer.byteLength(body)>operationWireResponseLimit(operationResponseBytes)) return Response.json({id:requestID,ok:false,error:{code:"OUTPUT_TOO_LARGE",message:"RPC output exceeds byte limit."}},{status:502});
   return new Response(body,{status,headers:{"content-type":"application/json"}});
 }
 
 function statusForRegistryFailure(code: string): number {
   if (code === "INPUT_TOO_LARGE") {
     return 413;
+  }
+  if (code === "UNSUPPORTED_OPERATION_BUDGET") {
+    return 400;
   }
   return 404;
 }
@@ -364,6 +384,9 @@ export function statusForExecutionErrorCode(code: string): number {
     case "OUTPUT_TOO_LARGE":
     case "OUTBOUND_RESPONSE_TOO_LARGE":
       return 502;
+    case "OUTBOUND_UNSUPPORTED_BUDGET":
+    case "UNSUPPORTED_OPERATION_BUDGET":
+      return 400;
     case "CONNECTOR_ACCOUNT_RESTRICTED":
       // 423 Locked: the upstream account is flagged/checkpointed. The control
       // plane quarantines the connection on this signal.

@@ -114,6 +114,7 @@ impl From<appcall_actions::ActionError> for ApiError {
             "CONNECTION_DISCONNECTED",
             "UNKNOWN_ACTION",
             "ACTION_INPUT_TOO_LARGE",
+            "UNSUPPORTED_OPERATION_BUDGET",
             "ACTION_TIMEOUT",
             "ACTION_RESPONSE_INVALID",
             "ACTION_RESPONSE_TOO_LARGE",
@@ -472,6 +473,7 @@ fn error_response(error: ApiError) -> Response {
         "INVALID_REQUEST" => (400, "The request is invalid."),
         "REQUEST_TOO_LARGE" => (413, "The request is too large."),
         "ACTION_INPUT_TOO_LARGE" => (413, "Action input exceeded the configured size limit."),
+        "UNSUPPORTED_OPERATION_BUDGET" => (400, "The connector operation budget is not supported."),
         "REQUEST_TIMEOUT" => (408, "The request timed out."),
         "ACTION_TIMEOUT" => (504, "Action execution timed out."),
         "ACTION_RESPONSE_INVALID" => (502, "Action response was invalid."),
@@ -698,6 +700,7 @@ mod action_error_tests {
         for (code, status) in [
             ("UNKNOWN_ACTION", 404),
             ("ACTION_INPUT_TOO_LARGE", 413),
+            ("UNSUPPORTED_OPERATION_BUDGET", 400),
             ("ACTION_TIMEOUT", 504),
             ("ACTION_RESPONSE_INVALID", 502),
             ("ACTION_RESPONSE_TOO_LARGE", 502),

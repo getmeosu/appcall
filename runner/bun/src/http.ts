@@ -1,4 +1,5 @@
 import { executionContext } from "./execution";
+import { maxOperationResponseBytes, maxOperationTimeoutMs } from "./budget";
 export type ConnectorHttpClientOptions = {
   allowedHosts: string[];
   maxResponseBytes: number;
@@ -19,7 +20,7 @@ export type ConnectorHttpClientOptions = {
 // Applied when the caller supplies no deadline. Chosen above the slowest
 // manifest operation timeout so it acts as a backstop rather than as the
 // effective limit.
-export const defaultOutboundTimeoutMs = 60_000;
+export const defaultOutboundTimeoutMs = maxOperationTimeoutMs;
 
 export type ConnectorHttpResponse = {
   status: number;
@@ -32,6 +33,7 @@ export type ConnectorHttpErrorCode =
   | "OUTBOUND_INVALID_URL"
   | "OUTBOUND_REDIRECT_BLOCKED"
   | "OUTBOUND_RESPONSE_TOO_LARGE"
+  | "OUTBOUND_UNSUPPORTED_BUDGET"
   | "OUTBOUND_TIMEOUT";
 
 export class ConnectorHttpError extends Error {
@@ -77,6 +79,20 @@ export function createConnectorHttpClient(options: ConnectorHttpClientOptions): 
   const timeoutMs = options.timeoutMs && options.timeoutMs > 0
     ? options.timeoutMs
     : defaultOutboundTimeoutMs;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs > maxOperationTimeoutMs) {
+    throw new ConnectorHttpError(
+      "OUTBOUND_UNSUPPORTED_BUDGET",
+      "Outbound timeout exceeds the runner budget contract.",
+    );
+  }
+  if (!Number.isSafeInteger(options.maxResponseBytes)
+      || options.maxResponseBytes <= 0
+      || options.maxResponseBytes > maxOperationResponseBytes) {
+    throw new ConnectorHttpError(
+      "OUTBOUND_UNSUPPORTED_BUDGET",
+      "Outbound response budget exceeds the runner budget contract.",
+    );
+  }
 
   return {
     async fetchText(input: string | URL, init: RequestInit = {}): Promise<ConnectorHttpResponse> {

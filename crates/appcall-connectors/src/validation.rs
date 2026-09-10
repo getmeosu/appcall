@@ -97,7 +97,11 @@ impl Manifest {
             require(key(name), "operations.key")?;
             require(op.kind != OperationKind::Unknown, "operations.kind")?;
             require(
-                op.timeout_ms > 0 && op.max_input_bytes > 0 && op.max_response_bytes > 0,
+                crate::budget::supports_manifest_operation(
+                    op.timeout_ms,
+                    op.max_input_bytes,
+                    op.max_response_bytes,
+                ),
                 "operations.limits",
             )?;
             require(
