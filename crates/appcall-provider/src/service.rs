@@ -204,7 +204,7 @@ impl Service {
                 self.list(&project, brand, Some(channel))
             }
             "list" => self.list(&project, brand, None),
-            "accepted" => self.accepted(&project, brand, string(body, "sinceCursor")?),
+            "accepted" => self.accepted(&project, brand, cursor(body, "sinceCursor")?),
             "disconnect" => self.disconnect(&project, brand, string(body, "channel")?, active),
             "relations" => self.relations(
                 &project,
@@ -402,7 +402,7 @@ impl Service {
 pub(crate) fn string<'a>(body: &'a Value, key: &str) -> Result<&'a str> {
     match body.get(key) {
         None | Some(Value::Null) => Ok(""),
-        Some(Value::String(v)) if v.len() <= 4096 && !v.contains('\0') => Ok(v),
+        Some(Value::String(v)) if v.len() <= INPUT_STRING_MAX_BYTES && !v.contains('\0') => Ok(v),
         _ => Err(Error::new(
             400,
             "INVALID_INPUT",
@@ -410,6 +410,18 @@ pub(crate) fn string<'a>(body: &'a Value, key: &str) -> Result<&'a str> {
         )),
     }
 }
+pub(crate) fn cursor<'a>(body: &'a Value, key: &str) -> Result<&'a str> {
+    match body.get(key) {
+        None | Some(Value::Null) => Ok(""),
+        Some(Value::String(v)) if v.len() <= ACCEPTED_CURSOR_MAX_LEN && !v.contains('\0') => Ok(v),
+        _ => Err(Error::new(
+            400,
+            "INVALID_INPUT",
+            "A request field is invalid.",
+        )),
+    }
+}
+
 pub(crate) fn known_channel(channel: &str) -> bool {
     matches!(channel, "LINKEDIN" | "MAIL" | "MESSAGING")
 }
@@ -444,6 +456,19 @@ pub(crate) fn database_health(db: &Mutex<postgres::Client>) -> Option<bool> {
 #[cfg(test)]
 mod health_tests {
     use super::*;
+
+    #[test]
+    fn cursor_input_uses_the_shared_generated_cursor_bound() {
+        let at_bound = json!({"sinceCursor":"x".repeat(ACCEPTED_CURSOR_MAX_LEN)});
+        assert!(cursor(&at_bound, "sinceCursor").is_ok());
+
+        let over_bound = json!({
+            "sinceCursor": "x".repeat(ACCEPTED_CURSOR_MAX_LEN + 1)
+        });
+        let error = cursor(&over_bound, "sinceCursor").unwrap_err();
+        assert_eq!(error.code, "INVALID_INPUT");
+    }
+
     #[test]
     #[ignore = "requires local PostgreSQL"]
     fn service_health_checks_every_private_client_without_waiting() {
