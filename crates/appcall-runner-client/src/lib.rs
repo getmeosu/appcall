@@ -290,7 +290,7 @@ impl RunnerClient {
         method: &str,
         params: Option<Value>,
     ) -> Result<T> {
-        if context.request_id.is_empty() || context.request_id.len() > 256 {
+        if !is_safe_request_id(&context.request_id) {
             return Err(Error::new(
                 ErrorKind::InvalidRequest,
                 DispatchOutcome::NotDispatched,

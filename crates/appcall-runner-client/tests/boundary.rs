@@ -165,6 +165,36 @@ async fn expired_deadline_never_dispatches() {
 }
 
 #[tokio::test]
+async fn unsafe_request_id_is_rejected_before_network_dispatch() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let client = RunnerClient::new(
+        &format!("http://{}", listener.local_addr().unwrap()),
+        "",
+        ClientOptions {
+            timeout: Duration::from_millis(100),
+            ..ClientOptions::default()
+        },
+    )
+    .unwrap();
+    let error = client
+        .describe(&RequestContext {
+            request_id: "unsafe id".into(),
+            ..context()
+        })
+        .await
+        .unwrap_err();
+
+    assert!(
+        tokio::time::timeout(Duration::from_millis(20), listener.accept())
+            .await
+            .is_err(),
+        "unsafe request IDs must not reach the network"
+    );
+    assert_eq!(error.kind, ErrorKind::InvalidRequest);
+    assert_eq!(error.outcome, DispatchOutcome::NotDispatched);
+}
+
+#[tokio::test]
 async fn retries_are_typed_and_reflected_credentials_redacted() {
     let (url, server) = fixture(json!({"id":"test-id","ok":false,"error":{"code":"CONNECTOR_RATE_LIMITED","message":"secret-bearer slow","retryAfterSeconds":120}}).to_string()).await;
     let client = RunnerClient::new(&url, "secret-bearer", ClientOptions::default()).unwrap();
