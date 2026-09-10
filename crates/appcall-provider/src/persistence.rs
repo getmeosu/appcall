@@ -329,7 +329,7 @@ impl Service {
                 let time: SystemTime = r.get(2);
                 let accepted_at = format_accepted_at(time);
                 next = encode_accepted_cursor(brand, &account_id, &member_id, time);
-                json!({"memberId":member_id,"acceptedAt":accepted_at})
+                json!({"brandId":account_id,"memberId":member_id,"acceptedAt":accepted_at})
             })
             .collect();
         Ok(json!({"accepted":accepted,"nextCursor":next}))

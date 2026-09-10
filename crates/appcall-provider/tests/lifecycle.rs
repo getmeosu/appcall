@@ -2,6 +2,7 @@ use appcall_provider::*;
 use postgres::{Client as Pg, NoTls};
 use serde_json::{json, Value};
 use std::{
+    collections::BTreeSet,
     io::{Read, Write},
     net::TcpListener,
     sync::{Arc, Barrier, Mutex},
@@ -323,6 +324,8 @@ fn accepted_cursor_keeps_tied_rows_after_page_boundary() {
     assert_eq!(first_rows.len(), 200);
     assert_eq!(first_rows.first().unwrap()["memberId"], "member_000");
     assert_eq!(first_rows.last().unwrap()["memberId"], "member_199");
+    assert_eq!(first_rows.first().unwrap()["brandId"], "brand-a");
+    assert_eq!(first_rows.last().unwrap()["brandId"], "brand-a");
     assert_eq!(
         first_rows.last().unwrap()["acceptedAt"],
         "2026-09-09T10:00:00Z"
@@ -341,6 +344,7 @@ fn accepted_cursor_keeps_tied_rows_after_page_boundary() {
         .unwrap();
     assert_eq!(second["accepted"].as_array().unwrap().len(), 1);
     assert_eq!(second["accepted"][0]["memberId"], "member_200");
+    assert_eq!(second["accepted"][0]["brandId"], "brand-a");
     assert_eq!(second["accepted"][0]["acceptedAt"], "2026-09-09T10:00:00Z");
 
     let second_cursor = second["nextCursor"].as_str().unwrap();
@@ -388,25 +392,40 @@ fn accepted_project_cursor_orders_account_scope_with_overlapping_members() {
     let second_rows = second["accepted"].as_array().unwrap();
     assert_eq!(second_rows.len(), 2);
 
-    let mut members: Vec<&str> = first_rows
+    let mut pairs: Vec<(&str, &str)> = first_rows
         .iter()
         .chain(second_rows.iter())
-        .map(|row| row["memberId"].as_str().unwrap())
+        .map(|row| {
+            (
+                row["brandId"].as_str().unwrap(),
+                row["memberId"].as_str().unwrap(),
+            )
+        })
         .collect();
     let mut expected = (0..=100)
-        .chain(0..=100)
-        .map(|n| format!("member_{n:03}"))
+        .map(|n| ("brand-a", format!("member_{n:03}")))
+        .chain((0..=100).map(|n| ("brand-b", format!("member_{n:03}"))))
         .collect::<Vec<_>>();
-    assert_eq!(members.len(), expected.len());
+    // Each brand/member pair is part of the cursor identity. The response
+    // carries the account scope so project-wide consumers can retain it.
+    let unique_pairs: BTreeSet<_> = pairs.iter().copied().collect();
+    assert_eq!(unique_pairs.len(), 202);
+    assert_eq!(pairs.len(), expected.len());
     assert_eq!(
-        members,
-        expected.iter().map(String::as_str).collect::<Vec<_>>()
+        pairs,
+        expected
+            .iter()
+            .map(|(brand, member)| (*brand, member.as_str()))
+            .collect::<Vec<_>>()
     );
-    members.sort_unstable();
+    pairs.sort_unstable();
     expected.sort_unstable();
     assert_eq!(
-        members,
-        expected.iter().map(String::as_str).collect::<Vec<_>>()
+        pairs,
+        expected
+            .iter()
+            .map(|(brand, member)| (*brand, member.as_str()))
+            .collect::<Vec<_>>()
     );
 }
 #[test]
