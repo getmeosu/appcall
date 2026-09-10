@@ -76,7 +76,7 @@ pub async fn dispatch_preview(
         return Ok(response);
     }
     let fixture: Value =
-        serde_json::from_str(include_str!("../../../appcall-auth/tests/go_golden.json"))
+        serde_json::from_str(include_str!("../../../appcall-auth/tests/auth_golden.json"))
             .map_err(|_| Error::Configuration)?;
     let codec = SessionCodec::new("synthetic-preview", false)?;
     let jwt = appcall_auth::JwtVerifier::new(

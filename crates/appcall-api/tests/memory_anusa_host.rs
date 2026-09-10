@@ -260,7 +260,7 @@ fn response_json(wire: &str, expected: u16) -> Value {
 fn memory_with_independent_anusa_enforces_membership_and_shares_state() {
     let mut db = IdentityDb::new();
     let fixture: Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let broker = Broker::new(&fixture);
     let mut host = Host::start(&db, &broker, &fixture);
     assert_eq!(status(&host.request("GET", "/readyz", "", "", false)), 200);

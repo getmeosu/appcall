@@ -38,7 +38,7 @@ fn browser_cookie_requires_current_database_membership_and_unrevoked_token() {
         .unwrap();
     let memberships = PostgresMemberships::new(client);
     let f: serde_json::Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let jwt = JwtVerifier::new(f["jwt_secret"].as_str().unwrap(), Default::default()).unwrap();
     let broker = Broker::new("http://127.0.0.1:1", "appcall").unwrap();
     let identity = Identity {

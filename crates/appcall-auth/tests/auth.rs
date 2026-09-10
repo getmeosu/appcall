@@ -4,7 +4,7 @@ use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{json, Value};
 use sha2::Sha256;
 fn fixture() -> Value {
-    serde_json::from_str(include_str!("go_golden.json")).unwrap()
+    serde_json::from_str(include_str!("auth_golden.json")).unwrap()
 }
 fn token(header: Value, claims: Value) -> String {
     let h = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap());

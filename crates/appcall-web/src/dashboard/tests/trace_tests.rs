@@ -181,7 +181,7 @@ impl appcall_auth::MembershipVerifier for TraceMembership {
 async fn trace_handle_preserves_authorization_and_drawer_session_errors() {
     let golden: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../appcall-auth/tests/go_golden.json"
+        "/../appcall-auth/tests/auth_golden.json"
     )))
     .unwrap();
     let codec = SessionCodec::new("synthetic-trace-session", false).unwrap();

@@ -94,7 +94,7 @@ fn browser_host_runs_cookie_membership_and_broker_on_current_thread_runtime() {
         .batch_execute(&format!("SET search_path TO {schema}"))
         .unwrap();
     let fixture: Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let address = listener.local_addr().unwrap();
     let payload=json!({"accessToken":fixture["jwt"],"refreshToken":"synthetic-refresh","memberships":[{"tenantId":"tenant-a","tenantName":"Tenant A","isRoot":true}]}).to_string();
@@ -409,7 +409,7 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
         .unwrap();
     });
     let fixture: Value =
-        serde_json::from_str(include_str!("../../appcall-auth/tests/go_golden.json")).unwrap();
+        serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
     let host = BrowserHost::new(
         BrowserConfig {
             public_origin: "http://127.0.0.1:8088".into(),

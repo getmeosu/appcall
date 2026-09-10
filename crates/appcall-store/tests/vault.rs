@@ -4,7 +4,7 @@ fn go_envelope_and_rust_roundtrip_authenticate_without_debug_leaks() {
     let key: Vec<u8> = (0..32).collect();
     let provider = LocalProvider::new(&key).unwrap();
     let fixture: serde_json::Value =
-        serde_json::from_str(include_str!("fixtures/go-envelope.json")).unwrap();
+        serde_json::from_str(include_str!("fixtures/envelope.json")).unwrap();
     let bytes = |name: &str| {
         fixture[name]
             .as_array()

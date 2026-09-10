@@ -110,10 +110,10 @@ fn duplicate_connector_keys_fail_and_missing_root_never_falls_back() {
 }
 
 #[test]
-fn complete_inventory_matches_go_contract_oracle() {
+fn complete_inventory_matches_connector_contract_oracle() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../runner/connectors");
     let registry = Registry::load(root).unwrap();
-    let expected: Value = serde_json::from_str(include_str!("go_contract.json")).unwrap();
+    let expected: Value = serde_json::from_str(include_str!("connector_contract.json")).unwrap();
     let actual:Vec<Value>=registry.list().map(|c| json!({
         "key":c.manifest().key,"digest":c.manifest_digest(),"public":c.manifest().is_public(),
         "egress":c.manifest().network.makes_outbound_calls(),
