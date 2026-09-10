@@ -60,6 +60,31 @@ fn utc_month(tx: &mut Transaction<'_>) -> Result<String> {
         .map_err(|_| unavailable())
 }
 
+/// Collect every month with an expired active reservation before taking any
+/// advisory lock. Callers sort this set and acquire all month locks in the
+/// same order, so a month-boundary cleanup cannot deadlock with a late
+/// settlement from an older month.
+fn quota_months_to_lock(
+    tx: &mut Transaction<'_>,
+    project: &str,
+    current_month: &str,
+) -> Result<Vec<String>> {
+    let mut months = vec![current_month.to_owned()];
+    let rows = tx
+        .query(
+            "SELECT DISTINCT month
+               FROM action_usage_reservations
+              WHERE project_id=$1 AND state IN ('pending','dispatched') AND expires_at<=now()
+              ORDER BY month",
+            &[&project],
+        )
+        .map_err(|_| unavailable())?;
+    months.extend(rows.into_iter().map(|row| row.get::<_, String>(0)));
+    months.sort_unstable();
+    months.dedup();
+    Ok(months)
+}
+
 fn expire_pending_quota(tx: &mut Transaction<'_>, project: &str, month: &str) -> Result<()> {
     tx.execute(
         "UPDATE action_usage_reservations
@@ -244,11 +269,23 @@ impl PolicyGate for PgPolicy {
             let mut tx=c.transaction().map_err(|_|unavailable())?;
             let e=entitlements(&mut tx,&project,&config)?;
             let month = utc_month(&mut tx)?;
-            usage_quota_lock(&mut tx, &project, &month)?;
-            expire_pending_quota(&mut tx, &project, &month)?;
-            recover_expired_dispatched_quota(&mut tx, &project, &month)?;
+            for quota_month in quota_months_to_lock(&mut tx, &project, &month)? {
+                usage_quota_lock(&mut tx, &project, &quota_month)?;
+                expire_pending_quota(&mut tx, &project, &quota_month)?;
+                recover_expired_dispatched_quota(&mut tx, &project, &quota_month)?;
+            }
             let quota_id = uuid::Uuid::new_v4().simple().to_string();
-            let mut reservation=PolicyReservation {usage:usage(&mut tx,&project,&month,&e)?, quota_id: quota_id.clone(), quota_month: month.clone(), ..Default::default()};
+            let usage = match usage(&mut tx, &project, &month, &e) {
+                Ok(snapshot) => snapshot,
+                Err(error) if error.code == "USAGE_LIMIT_EXCEEDED" => {
+                    // Recovery is durable cleanup even when this admission is
+                    // denied; storage and other policy errors still roll back.
+                    tx.commit().map_err(|_| unavailable())?;
+                    return Err(error);
+                }
+                Err(error) => return Err(error),
+            };
+            let mut reservation=PolicyReservation {usage, quota_id: quota_id.clone(), quota_month: month.clone(), ..Default::default()};
             tx.execute("INSERT INTO action_usage_reservations(id,project_id,month,connection_id,connector,action,external_account_id,state,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,'pending',now()+($8::bigint * interval '1 millisecond'))",&[&quota_id,&project,&month,&connection_id,&connector,&action,&brand,&reservation_lease_ms]).map_err(|_|unavailable())?;
             if connector=="unipile" {
                 reservation.channel=channel(&action).into();

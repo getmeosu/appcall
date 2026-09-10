@@ -1022,6 +1022,341 @@ fn provider_response_releases_quota_but_keeps_mutation_claim_fenced() {
 
 #[test]
 #[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn prior_month_dispatched_recovery_uses_stored_month_once() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo.clone(), 3);
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let reservation = rt
+        .block_on(policy.reserve(
+            &quota_request("prior-month-recovery"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    let mut dispatched_attempt = attempt();
+    dispatched_attempt.key = "prior-month-recovery".into();
+    dispatched_attempt.request_id = "prior-month-request".into();
+    rt.block_on(repo.acquire(&dispatched_attempt)).unwrap();
+    let revision = rt.block_on(repo.connection("p", "c")).unwrap();
+    rt.block_on(repo.mark_dispatched_checked_with_reservation(
+        &dispatched_attempt,
+        &revision,
+        &reservation,
+    ))
+    .unwrap();
+
+    let (reservation_id, prior_month) = {
+        let mut db = shared.lock().unwrap();
+        let id = db
+            .query_one(
+                "SELECT id FROM action_usage_reservations WHERE state='dispatched'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, String>(0);
+        let prior = db
+            .query_one(
+                "SELECT to_char((now() AT TIME ZONE 'UTC' - interval '1 month'),'YYYY-MM')",
+                &[],
+            )
+            .unwrap()
+            .get::<_, String>(0);
+        db.execute(
+            "UPDATE action_usage_reservations
+                SET month=$1, created_at=now()-interval '1 month',
+                    expires_at=now()-interval '1 second'
+              WHERE id=$2",
+            &[&prior, &id],
+        )
+        .unwrap();
+        (id, prior)
+    };
+
+    let first = rt
+        .block_on(policy.reserve(
+            &quota_request("prior-month-next"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    let second = rt
+        .block_on(policy.reserve(
+            &quota_request("prior-month-next-2"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    let mut db = shared.lock().unwrap();
+    assert_eq!(
+        db.query_one(
+            "SELECT state FROM action_usage_reservations WHERE id=$1",
+            &[&reservation_id],
+        )
+        .unwrap()
+        .get::<_, String>(0),
+        "settled"
+    );
+    let rollup = db
+        .query_one(
+            "SELECT month,quantity FROM usage_monthly_rollups WHERE kind='action_call'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(rollup.get::<_, String>(0), prior_month);
+    assert_eq!(rollup.get::<_, i64>(1), 1);
+    assert_eq!(
+        db.query_one(
+            "SELECT to_char(occurred_at AT TIME ZONE 'UTC','YYYY-MM') FROM usage_events",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0),
+        prior_month
+    );
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+    drop(db);
+    let mut release = attempt();
+    release.key.clear();
+    rt.block_on(repo.release_pending_with_reservation(&release, &first))
+        .unwrap();
+    rt.block_on(repo.release_pending_with_reservation(&release, &second))
+        .unwrap();
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn quota_denial_commits_prior_month_recovery_cleanup() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo, 1);
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let (current_month, prior_month) = {
+        let mut db = shared.lock().unwrap();
+        let months = db
+            .query_one(
+                "SELECT to_char(now() AT TIME ZONE 'UTC','YYYY-MM'),
+                        to_char((now() AT TIME ZONE 'UTC' - interval '1 month'),'YYYY-MM')",
+                &[],
+            )
+            .unwrap();
+        let current = months.get::<_, String>(0);
+        let prior = months.get::<_, String>(1);
+        db.execute(
+            "INSERT INTO usage_monthly_rollups(project_id,external_account_id,month,kind,quantity)
+             VALUES('p','brand',$1,'action_call',1)",
+            &[&current],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO action_usage_reservations(
+                 id,project_id,month,connection_id,connector,action,external_account_id,
+                 state,expires_at,created_at
+             ) VALUES('denied-old','p',$1,'c','test','send','brand','dispatched',
+                      now()-interval '1 second',now()-interval '1 month')",
+            &[&prior],
+        )
+        .unwrap();
+        (current, prior)
+    };
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let error = rt
+        .block_on(policy.reserve(
+            &quota_request("denied-current"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .err()
+        .expect("full current-month quota must deny admission");
+    assert_eq!(error.code, "USAGE_LIMIT_EXCEEDED");
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one(
+                "SELECT state FROM action_usage_reservations WHERE id='denied-old'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, String>(0),
+        "settled"
+    );
+    let mut db = shared.lock().unwrap();
+    assert_eq!(
+        db.query_one(
+            "SELECT to_char(occurred_at AT TIME ZONE 'UTC','YYYY-MM') FROM usage_events",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0),
+        prior_month
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT count(*) FROM action_usage_reservations WHERE month=$1",
+            &[&current_month],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+    drop(db);
+    let second = rt.block_on(policy.reserve(
+        &quota_request("denied-current-again"),
+        &connection,
+        &operation,
+        &json!({}),
+    ));
+    assert_eq!(
+        second
+            .err()
+            .expect("repeated full current-month quota must remain denied")
+            .code,
+        "USAGE_LIMIT_EXCEEDED"
+    );
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn malformed_success_keeps_dispatch_for_bounded_recovery() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo.clone(), 2);
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let reservation = rt
+        .block_on(policy.reserve(
+            &quota_request("malformed-success"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    let mut dispatched_attempt = attempt();
+    dispatched_attempt.key = "malformed-success".into();
+    dispatched_attempt.request_id = "malformed-request".into();
+    rt.block_on(repo.acquire(&dispatched_attempt)).unwrap();
+    let revision = rt.block_on(repo.connection("p", "c")).unwrap();
+    rt.block_on(repo.mark_dispatched_checked_with_reservation(
+        &dispatched_attempt,
+        &revision,
+        &reservation,
+    ))
+    .unwrap();
+    rt.block_on(repo.finish_with_reservation(
+        &dispatched_attempt,
+        &reservation,
+        None,
+        Some("INVALID_ACTION_INPUT"),
+    ))
+    .unwrap();
+    let mut retry = dispatched_attempt.clone();
+    retry.request_id = "malformed-retry".into();
+    assert_eq!(
+        rt.block_on(repo.acquire(&retry)).unwrap_err().code,
+        "IDEMPOTENCY_IN_PROGRESS"
+    );
+    let reservation_id = shared
+        .lock()
+        .unwrap()
+        .query_one(
+            "SELECT id FROM action_usage_reservations WHERE state='dispatched'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0);
+    shared
+        .lock()
+        .unwrap()
+        .execute(
+            "UPDATE action_usage_reservations SET expires_at=now()-interval '1 second' WHERE id=$1",
+            &[&reservation_id],
+        )
+        .unwrap();
+    let next = rt
+        .block_on(policy.reserve(
+            &quota_request("malformed-next"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    assert_eq!(next.usage.current, 1);
+    rt.block_on(repo.finish_with_reservation(
+        &dispatched_attempt,
+        &reservation,
+        Some(&json!({"late":true})),
+        None,
+    ))
+    .unwrap();
+    let mut db = shared.lock().unwrap();
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT quantity FROM usage_monthly_rollups WHERE kind='action_call'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        1
+    );
+    drop(db);
+    let mut release = attempt();
+    release.key.clear();
+    rt.block_on(repo.release_pending_with_reservation(&release, &next))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
 fn pending_expiry_releases_capacity_but_dispatched_recovery_charges_once() {
     let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
     create_project_plans(&mut client);

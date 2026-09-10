@@ -228,6 +228,11 @@ impl<
                         )
                     };
                     if let Err(e) = valid {
+                        // A provider response may have caused an external
+                        // effect even when its payload fails local validation.
+                        // Keep the dispatched reservation and mutation fence;
+                        // bounded recovery meters it once if finish cannot
+                        // record a valid output.
                         self.repository
                             .finish_with_reservation(attempt, &reservation, None, Some(&e.code))
                             .await?;
