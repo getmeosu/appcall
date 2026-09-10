@@ -412,14 +412,37 @@ describe("google-workspace Meet: meet.spaces.create", () => {
 // ─── meet.spaces.get ─────────────────────────────────────────────────────────
 
 describe("google-workspace Meet: meet.spaces.get", () => {
+  const malformedSpaceNames = [
+    "",
+    "spaces/",
+    "spaces/abc/def",
+    "meetings/abc",
+    "spaces/../abc",
+    "../abc",
+    "spaces/abc%2Fdef",
+    "spaces/abc\n",
+    `spaces/${"a".repeat(129)}`,
+  ];
+
   test("validateGetMeetSpaceInput accepts name", () => {
     const r = validateGetMeetSpaceInput({ name: "spaces/abc123xyz" });
     expect(r.name).toBe("spaces/abc123xyz");
   });
 
+  test("validateGetMeetSpaceInput accepts server-generated leading-hyphen IDs", () => {
+    const r = validateGetMeetSpaceInput({ name: "spaces/-yy3uKlef_QB" });
+    expect(r.name).toBe("spaces/-yy3uKlef_QB");
+  });
+
   test("validateGetMeetSpaceInput throws when name is missing", () => {
     expect(() => validateGetMeetSpaceInput({})).toThrow();
     expect(() => validateGetMeetSpaceInput({ name: "" })).toThrow();
+  });
+
+  test("validateGetMeetSpaceInput rejects malformed space names", () => {
+    for (const name of malformedSpaceNames) {
+      expect(() => validateGetMeetSpaceInput({ name })).toThrow();
+    }
   });
 
   test("getSpace GETs from meet.googleapis.com/v2/spaces/{name}", async () => {
@@ -445,7 +468,7 @@ describe("google-workspace Meet: meet.spaces.get", () => {
     }
   });
 
-  test("getSpace normalizes bare name to spaces/ prefix", async () => {
+  test("getSpace preserves the resource slash for bare and full names", async () => {
     const requests: Request[] = [];
     const client = createMeetClient({
       accessToken: "ya29.test",
@@ -456,7 +479,43 @@ describe("google-workspace Meet: meet.spaces.get", () => {
     });
 
     await client.getSpace({ name: "abc123xyz" });
-    expect(requests[0].url).toContain("spaces%2Fabc123xyz");
+    await client.getSpace({ name: "spaces/abc123xyz" });
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "https://meet.googleapis.com/v2/spaces/abc123xyz",
+      "https://meet.googleapis.com/v2/spaces/abc123xyz",
+    ]);
+  });
+
+  test("getSpace rejects malformed names without dispatching a request", async () => {
+    const requests: Request[] = [];
+    const client = createMeetClient({
+      accessToken: "ya29.test",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(meetSpaceFixture);
+      },
+    });
+
+    for (const name of malformedSpaceNames) {
+      await expect(client.getSpace({ name })).rejects.toThrow();
+    }
+
+    expect(requests).toHaveLength(0);
+  });
+
+  test("getSpace rejects a trailing newline without dispatching a request", async () => {
+    const requests: Request[] = [];
+    const client = createMeetClient({
+      accessToken: "ya29.test",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(meetSpaceFixture);
+      },
+    });
+
+    await expect(client.getSpace({ name: "spaces/abc\n" })).rejects.toThrow();
+    expect(requests).toHaveLength(0);
   });
 
   test("getSpace dual-mode: returns validated when no accessToken", () => {
