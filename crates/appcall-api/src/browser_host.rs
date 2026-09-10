@@ -1078,7 +1078,9 @@ fn api_error(error: ApiError) -> appcall_web::Error {
         "REQUEST_TOO_LARGE" => appcall_web::Error::RequestTooLarge,
         "INVALID_REQUEST" | "INVALID_JSON" | "INVALID_LIMIT" | "INVALID_CURSOR"
         | "INVALID_RUN_STATUS" | "INVALID_RUN_FILTER" | "INVALID_TIME_RANGE" | "INVALID_STATUS"
-        | "INVALID_ERROR_CODE" | "UNKNOWN_ACTION" => appcall_web::Error::Invalid,
+        | "INVALID_ERROR_CODE"
+        | "UNKNOWN_ACTION"
+        | "UNSUPPORTED_OPERATION_BUDGET" => appcall_web::Error::Invalid,
         _ => appcall_web::Error::Unavailable,
     }
 }

@@ -122,9 +122,9 @@ async function handleConnectorSyncList(envelope: RequestEnvelope): Promise<Respo
   }
 
   const operationOutput = {
+    ...(isRecord(output) ? output : {}),
     connector: connectorKey,
     sync,
-    ...(isRecord(output) ? output : {}),
   };
   const maxResponseBytes = defaultConnectorRegistry.operationBudget(connectorKey, sync)?.maxResponseBytes;
   if (typeof maxResponseBytes !== "number" || jsonByteLength(operationOutput) > maxResponseBytes) {
@@ -195,9 +195,9 @@ async function handleConnectorActionExecute(envelope: RequestEnvelope): Promise<
   }
 
   const operationOutput = {
+    ...(isRecord(output) ? output : {}),
     connector: connectorKey,
     action,
-    ...(isRecord(output) ? output : {}),
   };
   const maxResponseBytes = defaultConnectorRegistry.operationBudget(connectorKey, action)?.maxResponseBytes;
   if (typeof maxResponseBytes !== "number" || jsonByteLength(operationOutput) > maxResponseBytes) {

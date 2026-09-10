@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { handleRPC } from "../src/server";
 import { supportedProtocolVersion } from "../src/protocol";
+import { defaultConnectorRegistry } from "../src/registry";
 import { healthcheck as brevoHealthcheck } from "../../connectors/brevo/src/healthcheck";
 
 afterEach(() => {
@@ -187,6 +188,56 @@ describe("runner protocol", () => {
     expect(body.result.output.connector).toBe("fake");
     expect(body.result.output.action).toBe("messages.send");
     expect(body.result.output.input.text).toBe("hello");
+  });
+
+  test("runner-owned operation identity cannot be overwritten by connector output", async () => {
+    const originalAction = defaultConnectorRegistry.executeAction;
+    const originalSync = defaultConnectorRegistry.executeSync;
+    defaultConnectorRegistry.executeAction = () => ({
+      ok: true,
+      output: { connector: "spoofed", action: "spoofed", value: "action" },
+    });
+    defaultConnectorRegistry.executeSync = () => ({
+      ok: true,
+      output: { connector: "spoofed", sync: "spoofed", value: "sync" },
+    });
+
+    try {
+      const actionResponse = await handleRPC(
+        new Request("http://runner.local/rpc", {
+          method: "POST",
+          body: JSON.stringify({
+            method: "connector.action.execute",
+            params: { connectorKey: "fake", action: "messages.send" },
+          }),
+        }),
+      );
+      const actionBody = await actionResponse.json();
+      expect(actionBody.result.output).toMatchObject({
+        connector: "fake",
+        action: "messages.send",
+        value: "action",
+      });
+
+      const syncResponse = await handleRPC(
+        new Request("http://runner.local/rpc", {
+          method: "POST",
+          body: JSON.stringify({
+            method: "connector.sync.list",
+            params: { connectorKey: "slack", sync: "messages.list" },
+          }),
+        }),
+      );
+      const syncBody = await syncResponse.json();
+      expect(syncBody.result.output).toMatchObject({
+        connector: "slack",
+        sync: "messages.list",
+        value: "sync",
+      });
+    } finally {
+      defaultConnectorRegistry.executeAction = originalAction;
+      defaultConnectorRegistry.executeSync = originalSync;
+    }
   });
 
   test("connector.action.execute validates telegram messages.send", async () => {
