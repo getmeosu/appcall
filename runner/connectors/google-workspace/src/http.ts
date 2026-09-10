@@ -1,4 +1,5 @@
-import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bun/src/http";
+import { supportsOperationBudget, type OperationBudgetLike } from "../../../bun/src/budget";
+import { createConnectorHttpClient, ConnectorHttpError, type ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
 export type GoogleRateLimitResult =
@@ -82,14 +83,21 @@ export type GoogleClientOptions = {
   accessToken: string;
   fetch?: typeof fetch;
   httpClient?: ConnectorHttpClient;
-  operation?: string;
+  operation: string;
 };
 
 export function createGoogleClient(options: GoogleClientOptions): ConnectorHttpClient {
-  const operation = options.operation ?? "messages.list";
+  const operationSpec = (manifest.operations as Record<string, OperationBudgetLike>)[options.operation];
+  if (!supportsOperationBudget(operationSpec)) {
+    throw new ConnectorHttpError(
+      "OUTBOUND_UNSUPPORTED_BUDGET",
+      "Outbound operation budget is not supported.",
+    );
+  }
   return options.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts as string[],
-    maxResponseBytes: (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 5242880,
+    timeoutMs: operationSpec.timeoutMs,
+    maxResponseBytes: operationSpec.maxResponseBytes,
     fetch: options.fetch,
   });
 }

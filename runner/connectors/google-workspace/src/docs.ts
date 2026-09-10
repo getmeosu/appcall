@@ -50,7 +50,12 @@ export function parseDocumentResponse(response: unknown): GetDocumentResult {
 }
 
 export function createDocsClient(options: { accessToken: string; fetch?: typeof fetch; httpClient?: ConnectorHttpClient }): DocsClient {
-  const httpClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "docs.get" });
+  const createHttpClient = (operation: string): ConnectorHttpClient => createGoogleClient({
+    accessToken: options.accessToken,
+    fetch: options.fetch,
+    httpClient: options.httpClient,
+    operation,
+  });
   const authHeaders = { Authorization: `Bearer ${options.accessToken}` };
   const jsonHeaders = { ...authHeaders, "Content-Type": "application/json" };
 
@@ -60,7 +65,7 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
       const params = new URLSearchParams();
       params.set("includeTabsContent", "true");
 
-      const response = await httpClient.fetchText(
+      const response = await createHttpClient("docs.get").fetchText(
         `https://www.googleapis.com/v1/documents/${encodeURIComponent(payload.documentId)}?${params}`,
         {
           headers: authHeaders,
@@ -75,7 +80,7 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
 
     async createDocument(input: unknown): Promise<CreateDocumentResult> {
       const payload = validateCreateDocumentInput(input);
-      const response = await httpClient.fetchText(
+      const response = await createHttpClient("docs.create").fetchText(
         "https://www.googleapis.com/v1/documents",
         {
           method: "POST",
