@@ -14,6 +14,7 @@ struct BoundaryBackend {
     readiness: usize,
     authentications: AtomicUsize,
     early_dispatches: AtomicUsize,
+    action_dispatches: AtomicUsize,
     calls: Mutex<Vec<(String, String, String)>>,
 }
 impl BoundaryBackend {
@@ -57,7 +58,7 @@ impl Backend for BoundaryBackend {
         }
         let key = headers
             .iter()
-            .find(|(k, _)| k == "X-API-Key")
+            .find(|(k, _)| k.eq_ignore_ascii_case("X-API-Key"))
             .map(|(_, v)| v.as_str());
         if key != Some("test-key") {
             return Err(ApiError::new("UNAUTHORIZED"));
@@ -95,7 +96,14 @@ impl Backend for BoundaryBackend {
         self.scoped("disconnect", i, id).map(|_| ())
     }
     async fn execute(&self, _: ExecuteRequest) -> Result<ExecuteResult> {
-        panic!("boundary rejection must not execute actions")
+        self.action_dispatches.fetch_add(1, Ordering::SeqCst);
+        Ok(ExecuteResult {
+            request_id: "req_boundary".into(),
+            output: json!({"accepted": true}),
+            replay_log_id: String::new(),
+            usage_warning: false,
+            usage: Default::default(),
+        })
     }
 }
 fn api(readiness: usize) -> Api<BoundaryBackend> {
@@ -368,6 +376,76 @@ async fn malformed_raw_paths_fail_before_authentication_raw_or_event_dispatch() 
             server.await.unwrap().unwrap();
         })
         .await;
+}
+
+#[tokio::test]
+#[ignore = "opens local TCP sockets"]
+async fn transport_accepts_shared_budget_requests_above_the_legacy_two_mib_cap() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let api = std::rc::Rc::new(api(0));
+            let (stop, shutdown) = tokio::sync::oneshot::channel();
+            let server = tokio::task::spawn_local(serve(listener, api.clone(), async {
+                let _ = shutdown.await;
+            }));
+            let body = serde_json::to_string(&json!({
+                "input": {"blob": "x".repeat(2 * 1024 * 1024)}
+            }))
+            .unwrap();
+            assert!(body.len() > 2 * 1024 * 1024);
+            assert!(body.len() <= appcall_connectors::budget::rpc_request_bytes());
+            let mut socket = tokio::net::TcpStream::connect(address).await.unwrap();
+            socket
+                .write_all(
+                    format!(
+                        "POST /v1/connections/connection/actions/a HTTP/1.1\r\nHost: localhost\r\nX-API-Key: test-key\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        body.len(), body
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+            let mut bytes = Vec::new();
+            tokio::time::timeout(
+                std::time::Duration::from_secs(3),
+                socket.read_to_end(&mut bytes),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+            let response = String::from_utf8(bytes).unwrap();
+            assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+            assert!(response.contains("\"accepted\":true"), "{response}");
+            assert_eq!(api.backend.action_dispatches.load(Ordering::SeqCst), 1);
+            stop.send(()).unwrap();
+            server.await.unwrap().unwrap();
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn api_accepts_shared_budget_request_above_the_legacy_two_mib_cap() {
+    let api = api(0);
+    let body = serde_json::to_vec(&json!({
+        "input": {"blob": "x".repeat(2 * 1024 * 1024)}
+    }))
+    .unwrap();
+    assert!(body.len() > 2 * 1024 * 1024);
+    assert!(body.len() <= appcall_connectors::budget::rpc_request_bytes());
+    let response = api
+        .handle(Request {
+            method: "POST".into(),
+            uri: "/v1/connections/connection/actions/a".into(),
+            headers: vec![("X-API-Key".into(), "test-key".into())],
+            body,
+        })
+        .await;
+    assert_eq!(response.status, 200, "{:?}", response.body);
+    assert_eq!(api.backend.action_dispatches.load(Ordering::SeqCst), 1);
 }
 
 #[test]
