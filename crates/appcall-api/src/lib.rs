@@ -134,6 +134,7 @@ impl From<appcall_actions::ActionError> for ApiError {
             "ACTION_NOT_PERMITTED",
             "CONNECTOR_RATE_LIMITED",
             "CONNECTOR_UNAVAILABLE",
+            "RUNNER_BUSY",
             "POLICY_UNSUPPORTED",
             "CIRCUIT_OPEN",
             "STORAGE_UNAVAILABLE",
@@ -504,7 +505,7 @@ fn error_response(error: ApiError) -> Response {
         "NOTE_TOO_LONG" => (400, "The invitation note is too long."),
         "CONNECTOR_RATE_LIMITED" => (429, "The connector is rate limited."),
         "RATE_LIMITED" => (429, "Too many requests. Slow down and retry."),
-        "SERVICE_BUSY" | "STORAGE_UNAVAILABLE" | "PROJECT_DISABLED" => {
+        "SERVICE_BUSY" | "STORAGE_UNAVAILABLE" | "PROJECT_DISABLED" | "RUNNER_BUSY" => {
             (503, "The service is unavailable.")
         }
         "POLICY_UNSUPPORTED" | "CONNECTOR_UNAVAILABLE" | "CIRCUIT_OPEN" => {
@@ -718,6 +719,39 @@ mod action_error_tests {
                     .contains(&("Retry-After".into(), "2".into())));
             }
         }
+    }
+    #[test]
+    fn runner_busy_keeps_not_dispatched_evidence_and_public_retryable_status() {
+        use appcall_actions::{ActionDispatchOutcome, ActionFailureEvidence, ActionFailureOrigin};
+        let evidence = ActionFailureEvidence {
+            outcome: ActionDispatchOutcome::NotDispatched,
+            origin: ActionFailureOrigin::Runner,
+            retry_after_seconds: Some(7),
+        };
+        let mut error = appcall_actions::ActionError::new("RUNNER_BUSY");
+        error.request_id = "req_runner_busy".into();
+        error.evidence = Box::new(evidence.clone());
+
+        let api = ApiError::from(error);
+        assert_eq!(api.code, "RUNNER_BUSY");
+        match api.evidence.as_deref() {
+            Some(ApiFailureEvidence::Action(actual)) => assert_eq!(actual, &evidence),
+            _ => panic!("runner admission evidence was lost"),
+        }
+
+        let response = error_response(api);
+        assert_eq!(response.status, 503);
+        assert_eq!(
+            response.body,
+            serde_json::json!({
+                "error": {
+                    "code": "RUNNER_BUSY",
+                    "message": "The service is unavailable.",
+                    "requestId": "req_runner_busy"
+                }
+            })
+        );
+        assert!(response.headers.is_empty());
     }
     #[test]
     fn usage_limit_error_retains_snapshot_at_error_scope() {
