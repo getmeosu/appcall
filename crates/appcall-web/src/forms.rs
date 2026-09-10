@@ -284,6 +284,14 @@ fn sample_value(node: &Value, sample: &Value) -> String {
     }
 }
 
+fn numeric_step(kind: &str) -> Option<&'static str> {
+    match kind {
+        "integer" => Some("1"),
+        "number" => Some("any"),
+        _ => None,
+    }
+}
+
 fn render_control(
     node: &Value,
     sample: &Value,
@@ -380,16 +388,25 @@ fn render_control(
             ui::InputType::Text
         })
     };
-    // Required labels report manifest metadata. Keep native validation unchanged:
-    // a nonempty raw JSON input still replaces all guided fields.
-    Ok(ui::Field {
+    // Required labels report manifest metadata. Guided controls stay optional so
+    // a nonempty raw JSON input can replace all guided fields.
+    let rendered = ui::Field {
         value: &value,
         help,
         placeholder: &placeholder,
         checked: sample.as_bool() == Some(true),
         ..ui::Field::new(&presentation_id("field", name), name, label, control)
     }
-    .render())
+    .render();
+    let step = options.is_none().then(|| numeric_step(kind)).flatten();
+    Ok(match step {
+        Some(step) => rendered.replacen(
+            " type=\"number\"",
+            &format!(" type=\"number\" step=\"{step}\""),
+            1,
+        ),
+        None => rendered,
+    })
 }
 
 fn group(name: &str, label: &str, help: &str, content: &str) -> String {

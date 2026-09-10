@@ -421,16 +421,43 @@ async fn toolkit_guided_field_accessibility() {
 }
 
 #[tokio::test]
-async fn guided_number_control_keeps_native_type_without_new_step_constraints() {
+async fn guided_number_control_accepts_decimal_values_with_any_step() {
     let html = guided_html(
         json!({"type":"object","required":["amount"],"properties":{"amount":{"type":"number"}}}),
         json!({"amount":1.5}),
     )
     .await;
-    assert!(html.contains("name=\"f.amount\" type=\"number\" value=\"1.5\""));
-    assert!(!html.contains(" step="));
+    assert!(html.contains("name=\"f.amount\" type=\"number\" step=\"any\" value=\"1.5\""));
     assert!(!html.contains(" required>"));
     assert!(!html.contains(" required "));
+}
+
+#[tokio::test]
+async fn guided_integer_control_keeps_integral_native_constraint() {
+    let html = guided_html(
+        json!({"type":"object","properties":{"count":{"type":"integer"}}}),
+        json!({"count":2}),
+    )
+    .await;
+    assert!(html.contains("name=\"f.count\" type=\"number\" step=\"1\" value=\"2\""));
+    assert!(!html.contains("name=\"f.count\" type=\"number\" step=\"any\""));
+}
+
+#[tokio::test]
+async fn guided_decimal_schema_keeps_raw_json_override_unblocked() {
+    let html = guided_html(
+        json!({"type":"object","required":["latitude","amount"],"properties":{
+            "latitude":{"type":"number"},
+            "amount":{"type":"number"}
+        }}),
+        json!({}),
+    )
+    .await;
+    assert!(html.contains("name=\"f.latitude\" type=\"number\" step=\"any\" value=\"\""));
+    assert!(html.contains("name=\"f.amount\" type=\"number\" step=\"any\" value=\"\""));
+    assert!(html.contains("name=\"input_raw\""));
+    assert!(!html.contains("name=\"f.latitude\" type=\"number\" step=\"any\" value=\"\" required"));
+    assert!(!html.contains("name=\"f.amount\" type=\"number\" step=\"any\" value=\"\" required"));
 }
 
 #[tokio::test]
