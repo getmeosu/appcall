@@ -75,6 +75,42 @@ const options = {
   auth: { type: "api_key", field: "apiKey", in: "header" as const, name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
 };
 
+const pathItemParameterSpec = {
+  openapi: "3.0.3",
+  info: { title: "Path Item API", version: "1.0.0" },
+  servers: [{ url: "https://api.path-item.test" }],
+  paths: {
+    "/accounts/{accountId}/widgets": {
+      parameters: [
+        { name: "accountId", in: "path", required: true, schema: { type: "string" }, description: "Inherited account." },
+        { $ref: "#/components/parameters/WorkspaceId" },
+        { name: "trace", in: "header", required: true, schema: { type: "string" }, description: "Inherited trace header." },
+        { $ref: "#/components/parameters/Limit" },
+      ],
+      get: {
+        operationId: "listWidgets",
+        tags: ["Widgets"],
+        summary: "List widgets",
+        parameters: [
+          { $ref: "#/components/parameters/AccountIdOverride" },
+          { name: "limit", in: "query", required: true, schema: { type: "integer" }, description: "Operation limit." },
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "trace", in: "query", required: false, schema: { type: "string" }, description: "Operation trace query." },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+  components: {
+    parameters: {
+      WorkspaceId: { name: "workspaceId", in: "query", required: true, schema: { type: "string" }, description: "Workspace identifier." },
+      Limit: { name: "limit", in: "query", required: false, schema: { type: "string" }, description: "Inherited limit." },
+      AccountIdOverride: { name: "accountId", in: "path", required: true, schema: { type: "string" }, description: "Operation account." },
+      RequestId: { name: "requestId", in: "header", required: true, schema: { type: "string" }, description: "Request identifier." },
+    },
+  },
+};
+
 describe("generateManifest", () => {
   it("builds the connector envelope from the spec and options", () => {
     const manifest = generateManifest(spec, options);
@@ -137,6 +173,22 @@ describe("generateManifest", () => {
     expect(operation.request.path).toBe("/contacts/{{contactId}}");
     expect(operation.inputSchema.required).toEqual(["contactId"]);
     expect(operation.inputSchema.properties.contactId).toEqual({ type: "string", description: "Contact ID." });
+  });
+
+  it("merges Path Item and operation parameters by name and location", () => {
+    const operation = generateManifest(pathItemParameterSpec, options).operations["widgets.list"]!;
+
+    expect(operation.inputSchema.properties).toEqual({
+      accountId: { type: "string", description: "Operation account." },
+      workspaceId: { type: "string", description: "Workspace identifier." },
+      trace: { type: "string", description: "Operation trace query." },
+      limit: { type: "integer", description: "Operation limit." },
+      requestId: { type: "string", description: "Request identifier." },
+    });
+    expect(operation.inputSchema.required).toEqual(["accountId", "workspaceId", "trace", "limit", "requestId"]);
+    expect(operation.request.path).toBe("/accounts/{{accountId}}/widgets");
+    expect(operation.request.query).toEqual({ workspaceId: "{{workspaceId}}", limit: "{{limit}}", trace: "{{trace}}" });
+    expect(operation.request.headers).toEqual({ trace: "{{trace}}", requestId: "{{requestId}}" });
   });
 
   it("resolves a $ref request body into input properties and a body template", () => {

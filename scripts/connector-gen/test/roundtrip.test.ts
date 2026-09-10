@@ -46,6 +46,49 @@ const manifest = generateManifest(spec, {
   auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
 });
 
+const pathItemSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.path-item.test" }],
+  paths: {
+    "/accounts/{accountId}/widgets": {
+      parameters: [
+        { name: "accountId", in: "path", required: true, schema: { type: "string" } },
+        { $ref: "#/components/parameters/WorkspaceId" },
+        { $ref: "#/components/parameters/TraceHeader" },
+        { $ref: "#/components/parameters/Limit" },
+      ],
+      get: {
+        operationId: "listWidgets",
+        tags: ["Widgets"],
+        summary: "List widgets",
+        parameters: [
+          { $ref: "#/components/parameters/AccountIdOverride" },
+          { name: "limit", in: "query", required: true, schema: { type: "integer" } },
+          { $ref: "#/components/parameters/RequestId" },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+  components: {
+    parameters: {
+      WorkspaceId: { name: "workspaceId", in: "query", required: true, schema: { type: "string" } },
+      TraceHeader: { name: "X-Trace", in: "header", required: true, schema: { type: "string" } },
+      Limit: { name: "limit", in: "query", required: false, schema: { type: "string" } },
+      AccountIdOverride: { name: "accountId", in: "path", required: true, schema: { type: "string" } },
+      RequestId: { name: "X-Request-ID", in: "header", required: true, schema: { type: "string" } },
+    },
+  },
+};
+
+const pathItemManifest = generateManifest(pathItemSpec, {
+  key: "path-item",
+  name: "Path Item",
+  categories: ["productivity"],
+  models: ["widget"],
+  auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+});
+
 describe("generated manifest round-trip", () => {
   it("is recognised as declarative and compiles to handlers", () => {
     expect(isDeclarativeManifest(manifest)).toBe(true);
@@ -85,6 +128,57 @@ describe("generated manifest round-trip", () => {
     expect(seenUrl).toBe("https://api.acme.test/tickets/TCK-9");
     expect(seenAuth).toBe("Bearer k_live");
     expect(result.data).toEqual({ id: "TCK-9", subject: "Printer" });
+  });
+
+  it("renders inherited path, query, and header parameters in a live round-trip", async () => {
+    const { actions } = compileDeclarativeConnector(pathItemManifest as never);
+    let seenUrl = "";
+    let seenHeaders: Record<string, string> = {};
+    const result = await actions["widgets.list"]!({
+      apiKey: "k_live",
+      accountId: "acct/42",
+      workspaceId: "ws-7",
+      limit: 25,
+      "X-Trace": "trace-1",
+      "X-Request-ID": "req-9",
+      fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+        seenUrl = String(url);
+        seenHeaders = Object.fromEntries(new Headers(init?.headers).entries());
+        return new Response(JSON.stringify({ items: [{ id: "W-1" }] }), { status: 200 });
+      },
+    }) as Record<string, unknown>;
+
+    expect(seenUrl).toBe("https://api.path-item.test/accounts/acct%2F42/widgets?workspaceId=ws-7&limit=25");
+    expect(seenHeaders).toMatchObject({
+      authorization: "Bearer k_live",
+      "x-trace": "trace-1",
+      "x-request-id": "req-9",
+    });
+    expect(result.data).toEqual({ items: [{ id: "W-1" }] });
+  });
+
+  it("enforces required inherited inputs before the provider call", async () => {
+    const { actions } = compileDeclarativeConnector(pathItemManifest as never);
+    const action = actions["widgets.list"]!;
+    const input = {
+      apiKey: "k_live",
+      accountId: "acct-42",
+      workspaceId: "ws-7",
+      limit: 25,
+      "X-Trace": "trace-1",
+      "X-Request-ID": "req-9",
+    };
+
+    for (const [field, message] of [
+      ["accountId", "accountId is required"],
+      ["workspaceId", "workspaceId is required"],
+      ["X-Trace", "X-Trace is required"],
+      ["limit", "limit is required"],
+      ["X-Request-ID", "X-Request-ID is required"],
+    ] as const) {
+      const missing = Object.fromEntries(Object.entries(input).filter(([key]) => key !== field));
+      await expect(action(missing)).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT", message });
+    }
   });
 
   it("enforces the generated required fields and enums before calling out", async () => {
