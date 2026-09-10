@@ -229,11 +229,17 @@ export function createMeetClient(options: {
   fetch?: typeof fetch;
   httpClient?: ConnectorHttpClient;
 }): MeetClient {
-  const client = createGoogleClient({
+  const createClient = createGoogleClient({
     accessToken: options.accessToken,
     fetch: options.fetch,
     httpClient: options.httpClient,
     operation: "meet.create",
+  });
+  const listClient = createGoogleClient({
+    accessToken: options.accessToken,
+    fetch: options.fetch,
+    httpClient: options.httpClient,
+    operation: "meet.conference_records.list",
   });
   const authHeaders = { Authorization: `Bearer ${options.accessToken}` };
   const jsonHeaders = { ...authHeaders, "Content-Type": "application/json" };
@@ -258,7 +264,7 @@ export function createMeetClient(options: {
       if (p.attendees) body.attendees = p.attendees.map((email) => ({ email }));
 
       const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events?conferenceDataVersion=1`;
-      const response = await client.fetchText(url, {
+      const response = await createClient.fetchText(url, {
         method: "POST",
         headers: jsonHeaders,
         body: JSON.stringify(body),
@@ -280,7 +286,7 @@ export function createMeetClient(options: {
         },
       };
       const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events/${encodeURIComponent(p.eventId)}?conferenceDataVersion=1`;
-      const response = await client.fetchText(url, {
+      const response = await createClient.fetchText(url, {
         method: "PATCH",
         headers: jsonHeaders,
         body: JSON.stringify(body),
@@ -294,7 +300,7 @@ export function createMeetClient(options: {
       const p = validateCreateMeetSpaceInput(input);
       const body: Record<string, unknown> = {};
       if (p.config) body.config = p.config;
-      const response = await client.fetchText("https://meet.googleapis.com/v2/spaces", {
+      const response = await createClient.fetchText("https://meet.googleapis.com/v2/spaces", {
         method: "POST",
         headers: jsonHeaders,
         body: JSON.stringify(body),
@@ -310,7 +316,7 @@ export function createMeetClient(options: {
         ? p.name.slice(MEET_SPACE_PREFIX.length)
         : p.name;
       const url = `https://meet.googleapis.com/v2/${MEET_SPACE_PREFIX}${encodeURIComponent(identifier)}`;
-      const response = await client.fetchText(url, { headers: authHeaders });
+      const response = await createClient.fetchText(url, { headers: authHeaders });
       const res = await handleMeetResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
       return { ok: true, space: normalizeMeetSpace(res.body) };
@@ -324,7 +330,7 @@ export function createMeetClient(options: {
       if (p.filter) params.set("filter", p.filter);
       const query = params.toString();
       const url = `https://meet.googleapis.com/v2/conferenceRecords${query ? `?${query}` : ""}`;
-      const response = await client.fetchText(url, { headers: authHeaders });
+      const response = await listClient.fetchText(url, { headers: authHeaders });
       const res = await handleMeetResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
       const records = Array.isArray(res.body.conferenceRecords)

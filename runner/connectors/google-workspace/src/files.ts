@@ -164,7 +164,10 @@ export type DriveActionsClient = {
 };
 
 export function createDriveActionsClient(options: { accessToken: string; fetch?: typeof fetch; httpClient?: ConnectorHttpClient }): DriveActionsClient {
-  const client = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.files.get" });
+  const getClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.files.get" });
+  const createClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.files.create" });
+  const deleteClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.files.delete" });
+  const permissionClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.permissions.create" });
   const authHeaders = { Authorization: `Bearer ${options.accessToken}` };
   const jsonHeaders = { ...authHeaders, "Content-Type": "application/json" };
 
@@ -188,7 +191,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
       const p = validateGetFileInput(input);
       const params = new URLSearchParams();
       params.set("fields", p.fields ?? DEFAULT_FILE_FIELDS);
-      const response = await client.fetchText(
+      const response = await getClient.fetchText(
         `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}?${params}`,
         { headers: authHeaders },
       );
@@ -203,7 +206,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
       if (p.parents) body.parents = p.parents;
       if (p.description) body.description = p.description;
       const params = new URLSearchParams({ fields: DEFAULT_FILE_FIELDS });
-      const response = await client.fetchText(
+      const response = await createClient.fetchText(
         `https://www.googleapis.com/drive/v3/files?${params}`,
         { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) },
       );
@@ -214,7 +217,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
 
     async deleteFile(input: unknown): Promise<DeleteFileResult> {
       const p = validateDeleteFileInput(input);
-      const response = await client.fetchText(
+      const response = await deleteClient.fetchText(
         `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}`,
         { method: "DELETE", headers: authHeaders },
       );
@@ -238,7 +241,7 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
       if (p.emailAddress) body.emailAddress = p.emailAddress;
       const params = new URLSearchParams({ fields: "id,role,type,emailAddress" });
       if (p.sendNotificationEmail !== undefined) params.set("sendNotificationEmail", String(p.sendNotificationEmail));
-      const response = await client.fetchText(
+      const response = await permissionClient.fetchText(
         `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}/permissions?${params}`,
         { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) },
       );
