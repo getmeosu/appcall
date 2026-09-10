@@ -208,8 +208,8 @@ describe("generated manifest round-trip", () => {
       accountId: "acct/42",
       workspaceId: "ws-7",
       limit: 25,
-      "X-Trace": "trace-1",
-      "X-Request-ID": "req-9",
+      "x-trace": "trace-1",
+      "x-request-id": "req-9",
       fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
         seenUrl = String(url);
         seenHeaders = Object.fromEntries(new Headers(init?.headers).entries());
@@ -234,16 +234,16 @@ describe("generated manifest round-trip", () => {
       accountId: "acct-42",
       workspaceId: "ws-7",
       limit: 25,
-      "X-Trace": "trace-1",
-      "X-Request-ID": "req-9",
+      "x-trace": "trace-1",
+      "x-request-id": "req-9",
     };
 
     for (const [field, message] of [
       ["accountId", "accountId is required"],
       ["workspaceId", "workspaceId is required"],
-      ["X-Trace", "X-Trace is required"],
+      ["x-trace", "x-trace is required"],
       ["limit", "limit is required"],
-      ["X-Request-ID", "X-Request-ID is required"],
+      ["x-request-id", "x-request-id is required"],
     ] as const) {
       const missing = Object.fromEntries(Object.entries(input).filter(([key]) => key !== field));
       await expect(action(missing)).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT", message });

@@ -317,7 +317,7 @@ function buildHeaders(http: DeclarativeHttp, request: DeclarativeRequest, input:
       continue;
     }
     for (const [key, value] of Object.entries(rendered)) {
-      headers[key] = String(value);
+      headers[key] = typeof value === "object" ? JSON.stringify(value) : String(value);
     }
   }
 

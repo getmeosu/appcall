@@ -240,7 +240,7 @@ describe("generateManifest", () => {
     expect(operation.inputSchema.properties.limit).toEqual({ type: "integer", description: "Page size." });
     expect(operation.inputSchema.required).toBeUndefined();
     expect(operation.request.query).toEqual({ limit: "{{limit}}", cursor: "{{cursor}}" });
-    expect(operation.request.headers).toEqual({ "X-Trace": "{{X-Trace}}" });
+    expect(operation.request.headers).toEqual({ "x-trace": "{{x-trace}}" });
     expect(operation.request.method).toBe("GET");
     expect(operation.request.path).toBe("/contacts");
     expect(operation.request.success).toEqual([200]);
@@ -262,12 +262,12 @@ describe("generateManifest", () => {
       trace: { type: "string", description: "Inherited trace header." },
       traceQuery: { type: "string", description: "Operation trace query." },
       limit: { type: "integer", description: "Operation limit." },
-      requestId: { type: "string", description: "Request identifier." },
+      requestid: { type: "string", description: "Request identifier." },
     });
-    expect(operation.inputSchema.required).toEqual(["accountId", "workspaceId", "trace", "limit", "requestId"]);
+    expect(operation.inputSchema.required).toEqual(["accountId", "workspaceId", "trace", "limit", "requestid"]);
     expect(operation.request.path).toBe("/accounts/{{accountId}}/widgets");
     expect(operation.request.query).toEqual({ workspaceId: "{{workspaceId}}", limit: "{{limit}}", traceQuery: "{{traceQuery}}" });
-    expect(operation.request.headers).toEqual({ trace: "{{trace}}", requestId: "{{requestId}}" });
+    expect(operation.request.headers).toEqual({ trace: "{{trace}}", requestid: "{{requestid}}" });
   });
 
   it("uses the sole media type schema for an inherited content parameter", () => {

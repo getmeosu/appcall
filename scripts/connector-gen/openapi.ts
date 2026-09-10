@@ -41,6 +41,18 @@ export type GenerateOptions = {
 
 type JSONObject = Record<string, any>;
 
+type OpenAPIErrorCode = "OPENAPI_AMBIGUOUS_PARAMETER";
+
+class OpenAPIError extends Error {
+  readonly code: OpenAPIErrorCode;
+
+  constructor(code: OpenAPIErrorCode, message: string) {
+    super(message);
+    this.name = "OpenAPIError";
+    this.code = code;
+  }
+}
+
 const methodVerbs: Record<string, string> = {
   post: "create",
   put: "update",
@@ -119,22 +131,34 @@ function buildOperation(
   ]) {
     const parameter = resolveRef(spec, rawParameter);
     if (isRecord(parameter)) {
-      parametersByIdentity.set(JSON.stringify([parameter.name, parameter.in]), parameter);
+      parametersByIdentity.set(parameterIdentity(parameter), parameter);
     }
   }
   const parameters = [...parametersByIdentity.values()];
   const properties: JSONObject = {};
   const required: string[] = [];
+  const parameterLocationsByInputName = new Map<string, string>();
 
   const query: JSONObject = {};
   const headers: JSONObject = {};
 
   for (const parameter of parameters) {
-    const name = String(parameter.name ?? "");
+    const name = generatedParameterName(parameter);
     if (name.length === 0 || parameter.in === "cookie") {
       continue;
     }
-    properties[name] = describeSchema(spec, parameter.schema, parameter.description);
+
+    const location = parameterLocation(parameter);
+    const previousLocation = parameterLocationsByInputName.get(name);
+    if (previousLocation !== undefined && previousLocation !== location) {
+      throw new OpenAPIError(
+        "OPENAPI_AMBIGUOUS_PARAMETER",
+        `OpenAPI parameter ${JSON.stringify(name)} has conflicting ${displayParameterLocation(previousLocation)} and ${displayParameterLocation(location)} locations.`,
+      );
+    }
+    parameterLocationsByInputName.set(name, location);
+
+    properties[name] = describeSchema(spec, parameterSchema(spec, parameter), parameter.description);
     if (parameter.required || parameter.in === "path") {
       required.push(name);
     }
@@ -176,6 +200,35 @@ function buildOperation(
       success,
     },
   };
+}
+
+function parameterSchema(spec: JSONObject, parameter: JSONObject): unknown {
+  if (!isRecord(parameter.content)) {
+    return parameter.schema;
+  }
+  const mediaTypes = Object.values(parameter.content);
+  if (mediaTypes.length !== 1) {
+    return undefined;
+  }
+  const mediaType = resolveRef(spec, mediaTypes[0]);
+  return isRecord(mediaType) ? mediaType.schema : undefined;
+}
+
+function generatedParameterName(parameter: JSONObject): string {
+  const name = String(parameter.name ?? "");
+  return parameter.in === "header" ? name.toLowerCase() : name;
+}
+
+function parameterIdentity(parameter: JSONObject): string {
+  return JSON.stringify([generatedParameterName(parameter), parameter.in]);
+}
+
+function parameterLocation(parameter: JSONObject): string {
+  return typeof parameter.in === "string" ? parameter.in : "unknown";
+}
+
+function displayParameterLocation(location: string): string {
+  return ["path", "query", "header", "cookie"].includes(location) ? location : "other";
 }
 
 function buildBody(spec: JSONObject, operation: JSONObject, properties: JSONObject, required: string[]): JSONObject | undefined {
