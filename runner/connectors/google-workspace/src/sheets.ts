@@ -131,14 +131,19 @@ export function validateAppendValuesInput(input: unknown): AppendValuesInput {
 }
 
 export function createSheetsClient(options: { accessToken: string; fetch?: typeof fetch; httpClient?: ConnectorHttpClient }): SheetsClient {
-  const httpClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "sheets.values.get" });
+  const createHttpClient = (operation: string): ConnectorHttpClient => createGoogleClient({
+    accessToken: options.accessToken,
+    fetch: options.fetch,
+    httpClient: options.httpClient,
+    operation,
+  });
   const authHeaders = { Authorization: `Bearer ${options.accessToken}` };
   const jsonHeaders = { ...authHeaders, "Content-Type": "application/json" };
 
   return {
     async getValues(input: unknown): Promise<GetValuesResult> {
       const payload = validateGetValuesInput(input);
-      const response = await httpClient.fetchText(
+      const response = await createHttpClient("sheets.values.get").fetchText(
         `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}`,
         {
           headers: { Authorization: `Bearer ${options.accessToken}` },
@@ -163,7 +168,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       params.set("insertDataOption", payload.insertDataOption ?? "INSERT_ROWS");
       params.set("includeValuesInResponse", "true");
 
-      const response = await httpClient.fetchText(
+      const response = await createHttpClient("sheets.values.append").fetchText(
         `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}:append?${params}`,
         {
           method: "POST",
@@ -191,7 +196,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       const params = new URLSearchParams();
       params.set("valueInputOption", payload.valueInputOption ?? "USER_ENTERED");
 
-      const response = await httpClient.fetchText(
+      const response = await createHttpClient("sheets.values.update").fetchText(
         `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}?${params}`,
         {
           method: "PUT",
@@ -214,7 +219,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
 
     async clearValues(input: unknown): Promise<ClearValuesResult> {
       const payload = validateClearValuesInput(input);
-      const response = await httpClient.fetchText(
+      const response = await createHttpClient("sheets.values.clear").fetchText(
         `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}:clear`,
         {
           method: "POST",
@@ -240,7 +245,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       if (payload.sheetTitles && payload.sheetTitles.length > 0) {
         body.sheets = payload.sheetTitles.map((title) => ({ properties: { title } }));
       }
-      const response = await httpClient.fetchText(
+      const response = await createHttpClient("sheets.spreadsheets.create").fetchText(
         "https://www.googleapis.com/v4/spreadsheets",
         {
           method: "POST",
@@ -263,7 +268,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
     async batchUpdateSpreadsheet(input: unknown): Promise<BatchUpdateSpreadsheetResult> {
       const payload = validateBatchUpdateSpreadsheetInput(input);
       const googleRequests = payload.requests.map(toGoogleBatchUpdateRequest);
-      const response = await httpClient.fetchText(
+      const response = await createHttpClient("sheets.spreadsheets.batchUpdate").fetchText(
         `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}:batchUpdate`,
         {
           method: "POST",

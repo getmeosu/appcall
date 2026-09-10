@@ -61,12 +61,20 @@ describe("outbound request deadline", () => {
   });
 
   test("falls back to the default deadline when none is given", () => {
-    expect(defaultOutboundTimeoutMs).toBeGreaterThan(0);
+    expect(defaultOutboundTimeoutMs).toBe(300_000);
     const client = createConnectorHttpClient({
       allowedHosts: ["api.example.com"],
       maxResponseBytes: 65536,
     });
     expect(typeof client.fetchText).toBe("function");
+  });
+
+  test("rejects an explicitly invalid timeout instead of falling back", () => {
+    expect(() => createConnectorHttpClient({
+      allowedHosts: ["api.example.com"],
+      maxResponseBytes: 65536,
+      timeoutMs: 0,
+    })).toThrow("Outbound timeout exceeds the runner budget contract.");
   });
 
   test("still blocks a disallowed host before any request is made", async () => {

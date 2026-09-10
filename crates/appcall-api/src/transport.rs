@@ -13,9 +13,9 @@ use std::{
 };
 
 /// Run inside a host LocalSet. At most 64 connections and bounded per-peer
-/// token buckets. Ordinary connections close after one request or 65 seconds;
-/// live event streams remain open until disconnection or shutdown. Shutdown drains
-/// admitted work for at most 65 seconds before cancelling remaining futures.
+/// token buckets. Ordinary connections close after one request or the supported
+/// operation budget plus a small connection grace; live event streams remain
+/// open until disconnection or shutdown. Shutdown uses the same bounded grace.
 pub async fn serve<B: Backend + 'static>(
     listener: tokio::net::TcpListener,
     api: Rc<Api<B>>,
@@ -54,14 +54,14 @@ pub async fn serve_with_rate<B: Backend + 'static>(
                     builder.keep_alive(false).max_headers(64).max_buf_size(16384).timer(TokioTimer::new()).header_read_timeout(Duration::from_secs(5));
                     let connection=builder.serve_connection(TokioIo::new(socket),service);
                     tokio::pin!(connection);
-                    if tokio::time::timeout(Duration::from_secs(65),&mut connection).await.is_err() && active_stream.get() {
+                    if tokio::time::timeout(appcall_connectors::budget::connection_timeout(),&mut connection).await.is_err() && active_stream.get() {
                         let _=connection.await;
                     }
                 });
             }
         }
     }
-    if tokio::time::timeout(Duration::from_secs(65), async {
+    if tokio::time::timeout(appcall_connectors::budget::connection_timeout(), async {
         while tasks.join_next().await.is_some() {}
     })
     .await
@@ -118,7 +118,7 @@ async fn handle<B: Backend>(
     }
     let body = match tokio::time::timeout(
         Duration::from_secs(5),
-        Limited::new(body, 2 * 1024 * 1024).collect(),
+        Limited::new(body, appcall_connectors::budget::rpc_request_bytes()).collect(),
     )
     .await
     {
@@ -151,14 +151,23 @@ async fn handle<B: Backend>(
         Ok(Err(error)) => return Ok(wire(crate::error_response(error))),
         Err(_) => return Ok(failure("REQUEST_TIMEOUT")),
     }
-    let raw = tokio::time::timeout(Duration::from_secs(60), api.backend.raw_route(&request)).await;
+    let raw = tokio::time::timeout(
+        appcall_connectors::budget::max_operation_timeout(),
+        api.backend.raw_route(&request),
+    )
+    .await;
     match raw {
         Ok(Ok(Some(response))) => return Ok(wire_raw(response)),
         Ok(Ok(None)) => {}
         Ok(Err(e)) => return Ok(wire(crate::error_response(e))),
         Err(_) => return Ok(failure("REQUEST_TIMEOUT")),
     }
-    let response = match tokio::time::timeout(Duration::from_secs(60), api.handle(request)).await {
+    let response = match tokio::time::timeout(
+        appcall_connectors::budget::max_operation_timeout(),
+        api.handle(request),
+    )
+    .await
+    {
         Ok(r) => r,
         Err(_) => crate::error_response(ApiError::new("REQUEST_TIMEOUT")),
     };
@@ -227,6 +236,17 @@ fn wire(response: crate::Response) -> WireResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn host_transport_budget_matches_runner_contract() {
+        assert_eq!(
+            appcall_connectors::budget::max_operation_timeout(),
+            Duration::from_secs(300)
+        );
+        assert_eq!(
+            appcall_connectors::budget::connection_timeout(),
+            Duration::from_secs(305)
+        );
+    }
     #[test]
     fn browser_security_headers_cannot_be_ambiguous() {
         for header in [

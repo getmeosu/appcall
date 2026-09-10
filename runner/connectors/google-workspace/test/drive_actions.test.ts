@@ -69,6 +69,30 @@ describe("google-workspace Drive actions", () => {
     }
   });
 
+  test("uses each Drive operation's response budget independently", async () => {
+    const responseWithinGetBudget = JSON.stringify(driveFileFixture) + " ".repeat(1_048_576);
+    const client = createDriveActionsClient({
+      accessToken: "ya29.test-token",
+      fetch: async () => new Response(responseWithinGetBudget),
+    });
+
+    await expect(client.getFile({ fileId: "read-file" })).resolves.toMatchObject({
+      ok: true,
+    });
+    await expect(client.createFile({ name: "New file", mimeType: "text/plain" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.deleteFile({ fileId: "delete-file" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.createPermission({ fileId: "permission-file", role: "reader", type: "user" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+  });
+
   // ─── drive.files.create ─────────────────────────────────────────────────
 
   test("validateCreateDriveFileInput accepts valid input", () => {

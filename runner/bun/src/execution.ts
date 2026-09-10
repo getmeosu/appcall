@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { maxOperationTimeoutMs } from "./budget";
 
 export type ExecutionContext = {
   signal: AbortSignal;
@@ -18,11 +19,18 @@ export const timeoutError = () => ({
 // cancels outbound HTTP and SMTP work before returning the timeout envelope.
 export function runExecution<T>(
   fn: () => T,
-  timeoutMs = 60_000,
+  timeoutMs = maxOperationTimeoutMs,
   signal?: AbortSignal,
   deadlineUnixMs?: number,
   secrets?: string[],
 ): T | Promise<Awaited<T>> {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > maxOperationTimeoutMs) {
+    throw {
+      ok: false,
+      code: "UNSUPPORTED_OPERATION_BUDGET",
+      message: "Operation timeout exceeds the runner budget contract.",
+    };
+  }
   const parent = contexts.getStore();
   const deadline = Math.min(
     Date.now() + timeoutMs,

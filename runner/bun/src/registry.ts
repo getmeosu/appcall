@@ -1,5 +1,10 @@
 import { withLiveMessageSync } from "./message_sync";
 import { runExecution } from "./execution";
+import {
+  jsonByteLength,
+  supportsOperationBudget,
+  type OperationBudgetLike,
+} from "./budget";
 import slackManifest from "../../connectors/slack/manifest.json";
 import {
   sendMessage as sendSlackMessage,
@@ -378,7 +383,7 @@ export type RegistryActionResult =
   | RegistryFailure;
 
 export type RegistryValidationIssue = {
-  code: "ACTION_HANDLER_MISSING" | "SYNC_HANDLER_MISSING";
+  code: "ACTION_HANDLER_MISSING" | "SYNC_HANDLER_MISSING" | "UNSUPPORTED_OPERATION_BUDGET";
   connectorKey: string;
   operation: string;
   message: string;
@@ -390,6 +395,7 @@ export type RegistryHealthcheckResult =
 
 export type ConnectorRegistry = {
   describe(connectorKey: string): Record<string, unknown> | undefined;
+  operationBudget(connectorKey: string, operation: string): OperationBudgetLike | undefined;
   healthcheck(connectorKey: string, input?: unknown): RegistryHealthcheckResult | undefined;
   executeAction(connectorKey: string, action: string, input: unknown): RegistryActionResult;
   executeSync(connectorKey: string, sync: string, input: unknown): RegistryActionResult;
@@ -1068,16 +1074,34 @@ export function createConnectorRegistry(input: {
     describe(connectorKey: string): Record<string, unknown> | undefined {
       return descriptions[connectorKey];
     },
+    operationBudget(connectorKey: string, operation: string): OperationBudgetLike | undefined {
+      return operationSpecs[connectorKey]?.[operation];
+    },
     healthcheck(connectorKey: string, inputValue?: unknown): RegistryHealthcheckResult | undefined {
       const handler = input.healthchecks[connectorKey];
       if (!handler) {
         return undefined;
       }
+      const operationSpec = operationSpecs[connectorKey]?.healthcheck;
+      const budgetFailure = unsupportedBudget(operationSpec);
+      if (budgetFailure) {
+        return budgetFailure;
+      }
+      const inputSizeFailure = validateInputSize(inputValue, operationSpec?.maxInputBytes);
+      if (inputSizeFailure) {
+        return inputSizeFailure;
+      }
       // Mirror the action path: invoke the handler with the credential input and
       // surface the (possibly Promise) output. A synchronous structured throw is
       // captured here; an async rejection is awaited+mapped by the server layer.
       try {
-        return { ok: true, output: runExecution(() => handler(inputValue), operationSpecs[connectorKey]?.healthcheck?.timeoutMs) };
+        return {
+          ok: true,
+          output: runExecution(
+            () => boundedOutput(handler(inputValue), operationSpec?.maxResponseBytes),
+            operationSpec?.timeoutMs,
+          ),
+        };
       } catch (error) {
         if (isRecord(error) && typeof error.code === "string" && error.code.length > 0) {
           return {
@@ -1113,6 +1137,10 @@ export function createConnectorRegistry(input: {
           message: "Operation is not executable as an action.",
         };
       }
+      const budgetFailure = unsupportedBudget(operationSpec);
+      if (budgetFailure) {
+        return budgetFailure;
+      }
       const inputSizeFailure = validateInputSize(inputValue, operationSpec.maxInputBytes);
       if (inputSizeFailure) {
         return inputSizeFailure;
@@ -1141,6 +1169,10 @@ export function createConnectorRegistry(input: {
           code: "SYNC_NOT_EXECUTABLE",
           message: "Operation is not executable as a sync.",
         };
+      }
+      const budgetFailure = unsupportedBudget(operationSpec);
+      if (budgetFailure) {
+        return budgetFailure;
       }
       const inputSizeFailure = validateInputSize(inputValue, operationSpec.maxInputBytes);
       if (inputSizeFailure) {
@@ -1213,6 +1245,14 @@ export function createConnectorRegistry(input: {
         const connectorActions = input.actions[manifest.key] ?? {};
         const connectorSyncs = input.syncs?.[manifest.key] ?? {};
         return Object.entries(operationSpecs[manifest.key] ?? {}).flatMap(([operation, spec]) => {
+          if (!supportsOperationBudget(spec)) {
+            return [{
+              code: "UNSUPPORTED_OPERATION_BUDGET",
+              connectorKey: manifest.key,
+              operation,
+              message: "Declared operation budget exceeds the runner contract.",
+            } satisfies RegistryValidationIssue];
+          }
           const hasHandler = operation === "healthcheck"
             ? Boolean(input.healthchecks[manifest.key])
             : Boolean(connectorActions[operation]);
@@ -1270,12 +1310,9 @@ function buildConnectorDescriptions(manifests: Manifest[]): Record<string, Recor
   );
 }
 
-function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations: unknown }>): Record<string, Record<string, {
-  kind?: string;
-  timeoutMs?: number;
-  maxInputBytes?: number;
-  maxResponseBytes?: number;
-}>> {
+type OperationSpec = OperationBudgetLike & { kind?: string };
+
+function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations: unknown }>): Record<string, Record<string, OperationSpec>> {
   return Object.fromEntries(
     manifests.map((manifest) => {
       const operations = isRecord(manifest.operations) ? manifest.operations : {};
@@ -1343,8 +1380,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function boundedOutput(value:unknown,maxBytes:number|undefined):unknown {
+function unsupportedBudget(spec: OperationSpec | undefined): RegistryFailure | null {
+  if (!spec || supportsOperationBudget(spec)) {
+    return null;
+  }
+  return {
+    ok: false,
+    code: "UNSUPPORTED_OPERATION_BUDGET",
+    message: "Operation budget exceeds the runner contract.",
+  };
+}
+
+function boundedOutput(value: unknown, maxBytes: number | undefined): unknown {
  if(value && typeof (value as any).then==='function')return Promise.resolve(value).then(output=>boundedOutput(output,maxBytes));
- if(typeof maxBytes==='number' && Buffer.byteLength(JSON.stringify(value)??'null')>maxBytes)throw {code:'OUTPUT_TOO_LARGE',message:'Operation output exceeds the manifest byte limit.'};
+ if(typeof maxBytes==='number' && jsonByteLength(value)>maxBytes)throw {code:'OUTPUT_TOO_LARGE',message:'Operation output exceeds the manifest byte limit.'};
  return value;
 }

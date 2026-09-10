@@ -415,6 +415,7 @@ mod tests {
             "INVALID_LIMIT",
             "INVALID_CURSOR",
             "UNKNOWN_ACTION",
+            "UNSUPPORTED_OPERATION_BUDGET",
         ] {
             assert_eq!(
                 map_api_error(ApiError::new(code)).classification(),

@@ -107,6 +107,46 @@ fn operation_validation_enforces_current_schema_contract() {
         ErrorCode::UnsupportedSchema
     );
 }
+
+#[test]
+fn operation_budgets_above_the_runner_contract_are_rejected() {
+    for (field, value) in [
+        ("timeoutMs", json!(300_001)),
+        ("maxInputBytes", json!(26_214_401)),
+        ("maxResponseBytes", json!(52_428_801)),
+    ] {
+        let mut unsupported = manifest();
+        unsupported["operations"]["read"][field] = value;
+        assert_eq!(
+            parse(&unsupported).unwrap_err().code(),
+            ErrorCode::InvalidManifest,
+            "{field} must not be accepted above the supported contract"
+        );
+    }
+}
+
+#[test]
+fn api_docker_build_context_copies_the_canonical_budget_contract() {
+    let dockerfile = include_str!("../../../Dockerfile.api");
+    assert!(
+        dockerfile.lines().any(|line| {
+            line.trim() == "COPY runner/budget-contract.json ./runner/budget-contract.json"
+        }),
+        "Dockerfile.api must copy the contract at the path used by include_str!"
+    );
+}
+
+#[test]
+fn runner_docker_build_context_copies_the_canonical_budget_contract() {
+    let dockerfile = include_str!("../../../Dockerfile.runner");
+    assert!(
+        dockerfile.lines().any(|line| {
+            line.trim() == "COPY runner/budget-contract.json /app/runner/budget-contract.json"
+        }),
+        "Dockerfile.runner must copy the contract at the path used by the Bun import"
+    );
+}
+
 #[test]
 fn unsupported_nested_schema_is_never_silently_ignored() {
     let op = Operation {

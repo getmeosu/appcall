@@ -1,5 +1,6 @@
 //! Immutable manifest registry shared by embedded and service Rust control planes.
 //! Unknown runner fields are retained; evidence digests cover exact source bytes.
+pub mod budget;
 mod json;
 mod schema;
 mod types;

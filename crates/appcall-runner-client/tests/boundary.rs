@@ -303,6 +303,37 @@ async fn request_and_response_wire_limits_are_enforced() {
 }
 
 #[tokio::test]
+async fn default_wire_budget_supports_declared_large_operation_responses() {
+    assert_eq!(ClientOptions::default().timeout, Duration::from_secs(300));
+    assert!(ClientOptions::default().max_response_bytes > 50 * 1024 * 1024);
+    let output = "x".repeat(8 * 1024 * 1024 + 1024);
+    let body = json!({
+        "id": "test-id",
+        "ok": true,
+        "result": {"output": {"data": output}}
+    })
+    .to_string();
+    let (url, task) = fixture(body).await;
+    let client = RunnerClient::new(&url, "", ClientOptions::default()).unwrap();
+    let response = client
+        .action_execute(
+            &context(),
+            ActionExecuteRequest {
+                connector_key: "apify".into(),
+                action: "actor.run_sync_get_dataset_items".into(),
+                input: json!({}),
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        response.output["data"].as_str().unwrap().len(),
+        8 * 1024 * 1024 + 1024
+    );
+    task.await.unwrap();
+}
+
+#[tokio::test]
 async fn connector_credentials_are_removed_from_remote_diagnostics() {
     let (url, task) = fixture(json!({"id":"test-id","ok":false,"error":{"code":"CONNECTOR_UPSTREAM_ERROR","message":"token=a%2Fb%20value; raw=a/b value"}}).to_string()).await;
     let client = RunnerClient::new(&url, "", ClientOptions::default()).unwrap();

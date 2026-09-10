@@ -96,12 +96,12 @@ impl<
             .catalog
             .operation(&connection.connector, &request.action)
             .map_err(ActionError::local_validation)?;
-        if operation.timeout_ms == 0
-            || operation.timeout_ms > 300_000
-            || operation.max_input_bytes == 0
-            || operation.max_response_bytes == 0
-        {
-            return Err(ActionError::new("UNKNOWN_ACTION").local_validation());
+        if !appcall_connectors::budget::supports_operation(
+            operation.timeout_ms,
+            operation.max_input_bytes,
+            operation.max_response_bytes,
+        ) {
+            return Err(ActionError::new("UNSUPPORTED_OPERATION_BUDGET").local_validation());
         }
         if encoded_len(&request.input).map_err(ActionError::local_validation)?
             > operation.max_input_bytes

@@ -13,6 +13,7 @@
 // escape hatch open for providers whose calls are genuinely irregular.
 
 import { createConnectorHttpClient, ConnectorHttpError } from "../http";
+import { maxOperationResponseBytes } from "../budget";
 import { isRecord, renderPath, renderTemplate, resolvePath } from "./template";
 import { assertOutputSchema, validateAgainstSchema } from "./validate";
 import type {
@@ -210,7 +211,7 @@ async function callProvider(
   const renderedHosts = renderTemplate(manifest.network?.allowedHosts ?? [], input);
   const client = createConnectorHttpClient({
     allowedHosts: Array.isArray(renderedHosts) ? renderedHosts.map(String) : [],
-    maxResponseBytes: operation.maxResponseBytes ?? 1048576,
+    maxResponseBytes: operation.maxResponseBytes ?? maxOperationResponseBytes,
     timeoutMs: operation.timeoutMs,
     fetch: typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined,
   });

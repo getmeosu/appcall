@@ -20,9 +20,9 @@ pub struct ClientOptions {
 impl Default for ClientOptions {
     fn default() -> Self {
         Self {
-            timeout: Duration::from_secs(60),
-            max_request_bytes: DEFAULT_WIRE_LIMIT,
-            max_response_bytes: DEFAULT_WIRE_LIMIT,
+            timeout: appcall_connectors::budget::max_operation_timeout(),
+            max_request_bytes: appcall_connectors::budget::rpc_request_bytes(),
+            max_response_bytes: appcall_connectors::budget::rpc_response_bytes(),
         }
     }
 }
@@ -185,6 +185,9 @@ impl RunnerClient {
             || options.max_request_bytes == 0
             || options.max_response_bytes == 0
             || options.timeout.as_millis() > u64::MAX as u128
+            || options.timeout > appcall_connectors::budget::max_operation_timeout()
+            || options.max_request_bytes > appcall_connectors::budget::rpc_request_bytes()
+            || options.max_response_bytes > appcall_connectors::budget::rpc_response_bytes()
         {
             return Err(invalid());
         }

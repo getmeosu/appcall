@@ -15,7 +15,7 @@ describe("runner startup", () => {
         auth: { type: "none", scopes: [] },
         network: { allowedHosts: ["runner.local"] },
         operations: {
-          healthcheck: { kind: "action" },
+          healthcheck: { kind: "action", timeoutMs: 1_000, maxInputBytes: 1_024, maxResponseBytes: 1_024 },
         },
       }],
       healthchecks: {
@@ -46,7 +46,7 @@ describe("runner startup", () => {
         auth: { type: "none", scopes: [] },
         network: { allowedHosts: ["runner.local"] },
         operations: {
-          "messages.send": { kind: "action" },
+          "messages.send": { kind: "action", timeoutMs: 1_000, maxInputBytes: 1_024, maxResponseBytes: 1_024 },
         },
       }],
       healthchecks: {

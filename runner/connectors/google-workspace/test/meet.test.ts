@@ -570,6 +570,32 @@ describe("google-workspace Meet: meet.conference_records.list", () => {
     }
   });
 
+  test("uses conference-record listing and event creation response budgets independently", async () => {
+    const responseWithinListBudget = JSON.stringify({
+      id: "event-1",
+      start: { dateTime: "2024-01-15T09:00:00Z" },
+      end: { dateTime: "2024-01-15T09:15:00Z" },
+      conferenceRecords: [],
+    }) + " ".repeat(1_048_576);
+    const client = createMeetClient({
+      accessToken: "ya29.test",
+      fetch: async () => new Response(responseWithinListBudget),
+    });
+
+    await expect(client.listConferenceRecords({})).resolves.toMatchObject({
+      ok: true,
+    });
+    await expect(client.createMeetEvent({
+      calendarId: "primary",
+      summary: "Standup",
+      startDateTime: "2024-01-15T09:00:00Z",
+      endDateTime: "2024-01-15T09:15:00Z",
+    })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+  });
+
   test("listConferenceRecords appends query params", async () => {
     const requests: Request[] = [];
     const client = createMeetClient({

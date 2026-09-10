@@ -85,6 +85,34 @@ describe("google-workspace Gmail actions", () => {
     }
   });
 
+  test("uses each Gmail operation's response budget independently", async () => {
+    const responseWithinGetBudget = JSON.stringify(messageGetFixture) + " ".repeat(1_048_576);
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async () => new Response(responseWithinGetBudget),
+    });
+
+    await expect(client.getMessage({ messageId: "read-message" })).resolves.toMatchObject({
+      ok: true,
+    });
+    await expect(client.modifyMessage({ messageId: "modify-message" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.trashMessage({ messageId: "trash-message" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.createDraft({ to: "recipient@example.com", subject: "Subject", body: "Body" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.listLabels()).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+  });
+
   // ─── messages.modify ────────────────────────────────────────────────────
 
   test("validateModifyMessageInput accepts valid input", () => {
