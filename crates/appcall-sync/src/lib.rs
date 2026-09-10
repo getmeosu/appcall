@@ -84,12 +84,12 @@ impl Page {
         struct Wire {
             items: Vec<Message>,
             #[serde(default)]
-            cursor: String,
+            cursor: Option<String>,
         }
         let wire: Wire = serde_json::from_value(value).map_err(|_| Error::InvalidPage)?;
         let page = Self {
             records: wire.items,
-            next_cursor: wire.cursor,
+            next_cursor: wire.cursor.unwrap_or_default(),
         };
         page.validate()?;
         Ok(page)

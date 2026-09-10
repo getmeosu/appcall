@@ -34,20 +34,11 @@ fn message_page_requires_items_and_valid_records() {
 #[test]
 fn message_page_decodes_terminal_and_continuation_cursors() {
     let terminal_with_null_cursor = Page::decode(json!({"items":[],"cursor":null})).unwrap();
-    assert_eq!(
-        terminal_with_null_cursor.next_cursor,
-        ""
-    );
+    assert_eq!(terminal_with_null_cursor.next_cursor, "");
     let terminal_without_cursor = Page::decode(json!({"items":[]})).unwrap();
-    assert_eq!(
-        terminal_without_cursor.next_cursor,
-        ""
-    );
+    assert_eq!(terminal_without_cursor.next_cursor, "");
     let continuation = Page::decode(json!({"items":[],"cursor":"next"})).unwrap();
-    assert_eq!(
-        continuation.next_cursor,
-        "next"
-    );
+    assert_eq!(continuation.next_cursor, "next");
     assert_eq!(
         Page::decode(json!({"items":[],"cursor":42})),
         Err(Error::InvalidPage)
