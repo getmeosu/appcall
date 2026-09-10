@@ -235,6 +235,22 @@ describe("compileDeclarativeConnector", () => {
     expect(seenUrl).toBe("https://api.reserved-query.test/search?q=a&b[]");
   });
 
+  it("keeps a reserved hash encoded so it remains part of the query value", async () => {
+    let seenUrl = "";
+    const compiled = compileDeclarativeConnector(reservedQueryManifest as never);
+    await compiled.actions["search.get"]!({
+      apiKey: "k",
+      query: "a#b",
+      fetch: async (url: RequestInfo | URL) => {
+        seenUrl = String(url);
+        return okResponse({});
+      },
+    });
+
+    expect(seenUrl).toBe("https://api.reserved-query.test/search?q=a%23b");
+    expect(new URL(seenUrl).searchParams.get("q")).toBe("a#b");
+  });
+
   it("returns the raw body under data when the operation declares no result mapping", async () => {
     const mockFetch = async (): Promise<Response> => okResponse({ id: "c_9", name: "Ada" });
     const compiled = compileDeclarativeConnector(manifest);
