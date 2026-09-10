@@ -196,13 +196,15 @@ impl<
         };
         if let Err(e) = self
             .repository
-            .mark_dispatched_checked(attempt, connection)
+            .mark_dispatched_checked_with_reservation(attempt, connection, &reservation)
             .await
         {
             self.policy
                 .observe_failure(request, connection, &reservation, "INVALID_ACTION_INPUT")
                 .await?;
-            self.repository.release_pending(attempt).await?;
+            self.repository
+                .release_pending_with_reservation(attempt, &reservation)
+                .await?;
             return Err(e);
         }
         let attempts = if operation.read_only { 3 } else { 1 };
@@ -226,14 +228,18 @@ impl<
                         )
                     };
                     if let Err(e) = valid {
-                        self.repository.finish(attempt, None, Some(&e.code)).await?;
+                        self.repository
+                            .finish_with_reservation(attempt, &reservation, None, Some(&e.code))
+                            .await?;
                         return Err(e);
                     }
                     let replay_log_id = self
                         .repository
                         .record_replay(attempt, &replay_input)
                         .await?;
-                    self.repository.finish(attempt, Some(&output), None).await?;
+                    self.repository
+                        .finish_with_reservation(attempt, &reservation, Some(&output), None)
+                        .await?;
                     return Ok((output, reservation.usage, replay_log_id));
                 }
                 Err(failure) => {
@@ -244,11 +250,27 @@ impl<
                         continue;
                     }
                     admission.resolve(failure.transient);
+                    if failure.outcome == ActionDispatchOutcome::NotDispatched {
+                        // Only an explicit no-dispatch result can clear the
+                        // mutation idempotency claim and make retry safe.
+                        self.repository
+                            .release_not_dispatched_with_reservation(attempt, &reservation)
+                            .await?;
+                    } else if failure.outcome == ActionDispatchOutcome::ResponseReceived {
+                        // A typed provider failure releases quota capacity,
+                        // but its dispatched claim still fences mutation
+                        // replay until normal recovery or operator handling.
+                        self.repository
+                            .release_quota_with_reservation(attempt, &reservation)
+                            .await?;
+                    }
                     self.policy
                         .observe_failure(request, connection, &reservation, &failure.code)
                         .await?;
                     let code = safe_runner_code(&failure.code);
-                    self.repository.finish(attempt, None, Some(code)).await?;
+                    self.repository
+                        .finish_with_reservation(attempt, &reservation, None, Some(code))
+                        .await?;
                     return Err(ActionError::new(code).with_detail(failure.detail));
                 }
             }
