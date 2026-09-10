@@ -309,4 +309,50 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn human_diagnostics_retain_safe_cleanup_reference_without_raw_error() {
+        let safe = "teardown cleanup failed (EXECUTION_ERROR)";
+        let raw = "provider cleanup failed: qa-secret-66";
+        let reports = [ConnectorReport {
+            connector: "test".into(),
+            overall: "red".into(),
+            total: 1,
+            failed: 1,
+            operations: vec![OperationResult {
+                operation: "write".into(),
+                status: "fail".into(),
+                scenarios: vec![ScenarioResult {
+                    name: "cleanup".into(),
+                    status: "fail".into(),
+                    failures: vec![safe.into()],
+                    error: "teardown failed".into(),
+                    error_code: "EXECUTION_ERROR".into(),
+                    failure_kind: "teardown_error".into(),
+                    ..Default::default()
+                }],
+                leak_warnings: vec![safe.into()],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }];
+        let rendered = human_text(&reports);
+        assert!(rendered.contains(&format!("x cleanup: {safe}")));
+        assert!(rendered.contains(&format!("! {safe}")));
+        assert!(!rendered.contains(raw));
+        assert!(!rendered.contains("qa-secret-66"));
+    }
+
+    #[test]
+    fn ordinary_report_gate_returns_nonzero_for_red_without_probe_requirement() {
+        let report = ConnectorReport {
+            connector: "test".into(),
+            overall: "red".into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            ordinary_report_exit(&[report]),
+            Err((1, "certification failed"))
+        );
+    }
 }
