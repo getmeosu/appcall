@@ -153,6 +153,42 @@ const inheritedContentParameterSpec = {
   },
 };
 
+const contentPathParameterSpec = {
+  openapi: "3.0.3",
+  info: { title: "Content Path Parameter API", version: "1.0.0" },
+  servers: [{ url: "https://api.content-path-parameter.test" }],
+  paths: {
+    "/reports/{filter}": {
+      get: {
+        operationId: "getReport",
+        tags: ["Reports"],
+        summary: "Get report",
+        parameters: [
+          {
+            name: "filter",
+            in: "path",
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ReportFilter" },
+              },
+            },
+          },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+  components: {
+    schemas: {
+      ReportFilter: {
+        type: "object",
+        properties: { status: { type: "string" }, owner: { type: "string" } },
+      },
+    },
+  },
+};
+
 const caseInsensitiveHeaderParameterSpec = {
   openapi: "3.0.3",
   info: { title: "Header Parameter API", version: "1.0.0" },
@@ -329,6 +365,36 @@ describe("generateManifest", () => {
     });
     expect(operation.inputSchema.required).toEqual(["filter"]);
     expect(operation.request.query).toEqual({ filter: "{{filter}}" });
+    expect(operation.request.parameters).toEqual([
+      {
+        wireName: "filter",
+        inputName: "filter",
+        in: "query",
+        style: "form",
+        explode: true,
+        allowReserved: false,
+        contentMediaType: "application/json",
+      },
+    ]);
+  });
+
+  it("retains runtime metadata for an object-valued content path parameter", () => {
+    const operation = generateManifest(contentPathParameterSpec, options).operations["reports.get"]!;
+
+    expect(operation.inputSchema.properties.filter).toEqual({ type: "object" });
+    expect(operation.inputSchema.required).toEqual(["filter"]);
+    expect(operation.request.path).toBe("/reports/{{filter}}");
+    expect(operation.request.parameters).toEqual([
+      {
+        wireName: "filter",
+        inputName: "filter",
+        in: "path",
+        style: "simple",
+        explode: false,
+        allowReserved: false,
+        contentMediaType: "application/json",
+      },
+    ]);
   });
 
   it("merges inherited and operation header parameters case-insensitively", () => {

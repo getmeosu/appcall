@@ -79,6 +79,32 @@ const objectHeaderManifest = {
   },
 };
 
+const reservedQueryManifest = {
+  key: "reserved-query",
+  name: "Reserved Query",
+  runtime: "bun",
+  auth: { type: "api_key", scopes: [] },
+  network: { allowedHosts: ["api.reserved-query.test"] },
+  http: {
+    baseUrl: "https://api.reserved-query.test",
+    auth: { field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}" },
+  },
+  operations: {
+    "search.get": {
+      kind: "action",
+      inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+      request: {
+        method: "GET",
+        path: "/search",
+        parameters: [
+          { wireName: "q", inputName: "query", in: "query", style: "form", explode: true, allowReserved: true },
+        ],
+        success: [200],
+      },
+    },
+  },
+};
+
 function okResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
 }
@@ -192,6 +218,21 @@ describe("compileDeclarativeConnector", () => {
       },
     });
     expect(seenHeader).toBe(JSON.stringify(filter));
+  });
+
+  it("preserves reserved query characters when allowReserved is true", async () => {
+    let seenUrl = "";
+    const compiled = compileDeclarativeConnector(reservedQueryManifest as never);
+    await compiled.actions["search.get"]!({
+      apiKey: "k",
+      query: "a&b[]",
+      fetch: async (url: RequestInfo | URL) => {
+        seenUrl = String(url);
+        return okResponse({});
+      },
+    });
+
+    expect(seenUrl).toBe("https://api.reserved-query.test/search?q=a&b[]");
   });
 
   it("returns the raw body under data when the operation declares no result mapping", async () => {

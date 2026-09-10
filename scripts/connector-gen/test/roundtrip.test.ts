@@ -95,6 +95,44 @@ const inheritedContentParameterManifest = generateManifest(inheritedContentParam
   auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
 });
 
+const contentPathParameterSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.content-path-parameter.test" }],
+  paths: {
+    "/reports/{filter}": {
+      get: {
+        operationId: "getReport",
+        tags: ["Reports"],
+        summary: "Get report",
+        parameters: [
+          {
+            name: "filter",
+            in: "path",
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { status: { type: "string" }, owner: { type: "string" } },
+                },
+              },
+            },
+          },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+};
+
+const contentPathParameterManifest = generateManifest(contentPathParameterSpec, {
+  key: "content-path-parameter",
+  name: "Content Path Parameter",
+  categories: ["productivity"],
+  models: ["report"],
+  auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+});
+
 const pathItemSpec = {
   openapi: "3.0.3",
   servers: [{ url: "https://api.path-item.test" }],
@@ -249,6 +287,24 @@ describe("generated manifest round-trip", () => {
     expect(url.searchParams.get("filter")).toBe(JSON.stringify(filter));
     expect(seenUrl).toContain("%26");
     expect(result.data).toEqual({ items: [{ id: "R-1" }] });
+  });
+
+  it("serializes an inherited JSON content path parameter as an encoded structured value", async () => {
+    const { actions } = compileDeclarativeConnector(contentPathParameterManifest as never);
+    const filter = { status: "open", owner: "A&B" };
+    let seenUrl = "";
+    await actions["reports.get"]!({
+      apiKey: "k_live",
+      filter,
+      fetch: async (url: RequestInfo | URL) => {
+        seenUrl = String(url);
+        return new Response(JSON.stringify({ id: "R-1" }), { status: 200 });
+      },
+    });
+
+    expect(seenUrl).toBe(
+      "https://api.content-path-parameter.test/reports/%7B%22status%22%3A%22open%22%2C%22owner%22%3A%22A%26B%22%7D",
+    );
   });
 
   it("renders inherited path, query, and header parameters in a live round-trip", async () => {
