@@ -138,6 +138,58 @@ const pathItemManifest = generateManifest(pathItemSpec, {
   auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
 });
 
+const serializationSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.serialization.test" }],
+  paths: {
+    "/items/{labelIds}/{matrixFilter}": {
+      get: {
+        operationId: "listSerializedItems",
+        tags: ["Items"],
+        summary: "List serialized items",
+        parameters: [
+          { name: "labelIds", in: "path", required: true, style: "label", schema: { type: "array", items: { type: "string" } } },
+          { name: "matrixFilter", in: "path", required: true, style: "matrix", explode: true, schema: { type: "object", properties: { R: { type: "integer" }, G: { type: "integer" } } } },
+          { name: "colors", in: "query", required: false, style: "spaceDelimited", explode: false, schema: { type: "array", items: { type: "string" } } },
+          { name: "pipes", in: "query", required: false, style: "pipeDelimited", explode: false, schema: { type: "array", items: { type: "string" } } },
+          { name: "filter", in: "query", required: false, style: "deepObject", schema: { type: "object", properties: { status: { type: "string" }, owner: { type: "string" } } } },
+          { name: "coords", in: "query", required: false, style: "form", explode: false, schema: { type: "object", properties: { R: { type: "integer" }, G: { type: "integer" } } } },
+          { name: "trace", in: "header", required: true, explode: true, schema: { type: "object", properties: { region: { type: "string" }, shard: { type: "integer" } } } },
+          { name: "colorsHeader", in: "header", required: false, explode: true, schema: { type: "array", items: { type: "string" } } },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+};
+
+const serializationManifest = generateManifest(serializationSpec, {
+  key: "serialization",
+  name: "Serialization",
+  categories: ["productivity"],
+  models: ["item"],
+  auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+});
+
+const aliasSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.alias.test" }],
+  paths: {
+    "/events": {
+      get: {
+        operationId: "listEvents",
+        tags: ["Events"],
+        summary: "List events",
+        parameters: [
+          { name: "trace", in: "header", required: true, explode: true, schema: { type: "object", properties: { region: { type: "string" } } } },
+          { name: "trace", in: "query", required: true, schema: { type: "string" } },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+};
+
 describe("generated manifest round-trip", () => {
   it("is recognised as declarative and compiles to handlers", () => {
     expect(isDeclarativeManifest(manifest)).toBe(true);
@@ -224,6 +276,68 @@ describe("generated manifest round-trip", () => {
       "x-request-id": "req-9",
     });
     expect(result.data).toEqual({ items: [{ id: "W-1" }] });
+  });
+
+  it("serializes generated OpenAPI path, query, and header styles exactly", async () => {
+    const { actions } = compileDeclarativeConnector(serializationManifest as never);
+    let seenUrl = "";
+    let seenHeaders: Record<string, string> = {};
+
+    await actions["items.get"]!({
+      apiKey: "k_live",
+      labelIds: ["blue", "black"],
+      matrixFilter: { R: 100, G: 200 },
+      colors: ["blue", "black"],
+      pipes: ["admin", "owner"],
+      filter: { status: "open", owner: "A&B" },
+      coords: { R: 100, G: 200 },
+      trace: { region: "us", shard: 2 },
+      colorsHeader: ["red", "green"],
+      fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+        seenUrl = String(url);
+        seenHeaders = Object.fromEntries(new Headers(init?.headers).entries());
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      },
+    });
+
+    expect(seenUrl).toBe(
+        "https://api.serialization.test/items/.blue.black/;R=100;G=200" +
+        "?colors=blue%20black&pipes=admin|owner&filter[status]=open&filter[owner]=A%26B" +
+        "&coords=R,100,G,200",
+    );
+    expect(seenHeaders).toMatchObject({
+      authorization: "Bearer k_live",
+      trace: "region=us,shard=2",
+      colorsheader: "red,green",
+    });
+  });
+
+  it("renders same-name query and header aliases only to their own locations", async () => {
+    const aliasManifest = generateManifest(aliasSpec, {
+      key: "alias",
+      name: "Alias",
+      categories: ["productivity"],
+      models: ["event"],
+      auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+    });
+    const { actions } = compileDeclarativeConnector(aliasManifest as never);
+    let seenUrl = "";
+    let seenTrace = "";
+
+    await actions["events.list"]!({
+      apiKey: "k_live",
+      traceHeader: { region: "eu" },
+      traceQuery: "query-value",
+      fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+        seenUrl = String(url);
+        seenTrace = new Headers(init?.headers).get("trace") ?? "";
+        return new Response("{}", { status: 200 });
+      },
+    });
+
+    expect(seenUrl).toContain("trace=query-value");
+    expect(seenTrace).toBe("region=eu");
+    expect(seenUrl).not.toContain("trace=region%3Deu");
   });
 
   it("enforces required inherited inputs before the provider call", async () => {

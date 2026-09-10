@@ -189,6 +189,56 @@ const ambiguousParameterSpec = {
   },
 };
 
+const pathItemRefSpec = {
+  openapi: "3.0.3",
+  info: { title: "Path Item Ref API", version: "1.0.0" },
+  servers: [{ url: "https://api.path-item-ref.test" }],
+  paths: {
+    "/accounts/{accountId}/widgets": { $ref: "#/components/pathItems/WidgetCollectionRef" },
+  },
+  components: {
+    pathItems: {
+      WidgetCollectionRef: { $ref: "#/components/pathItems/WidgetCollection" },
+      WidgetCollection: {
+        parameters: [
+          { name: "accountId", in: "path", required: true, schema: { type: "string" } },
+          { name: "workspace", in: "query", required: true, schema: { type: "string" } },
+        ],
+        get: {
+          operationId: "listReferencedWidgets",
+          tags: ["Widgets"],
+          summary: "List referenced widgets",
+          parameters: [{ name: "limit", in: "query", required: false, schema: { type: "integer" } }],
+          responses: { "200": { description: "ok" } },
+        },
+      },
+    },
+  },
+};
+
+const serializationMetadataSpec = {
+  openapi: "3.0.3",
+  info: { title: "Serialization Metadata API", version: "1.0.0" },
+  servers: [{ url: "https://api.serialization-metadata.test" }],
+  paths: {
+    "/items/{itemId}": {
+      get: {
+        operationId: "listSerializedItems",
+        tags: ["Items"],
+        summary: "List serialized items",
+        parameters: [
+          { name: "itemId", in: "path", required: true, style: "label", schema: { type: "string" } },
+          { name: "colors", in: "query", style: "spaceDelimited", explode: false, allowReserved: true, schema: { type: "array", items: { type: "string" } } },
+          { name: "filter", in: "query", style: "deepObject", schema: { type: "object", properties: { status: { type: "string" } } } },
+          { name: "X-Meta", in: "header", explode: true, schema: { type: "object", properties: { region: { type: "string" } } } },
+          { name: "defaultTags", in: "query", schema: { type: "array", items: { type: "string" } } },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+};
+
 describe("generateManifest", () => {
   it("builds the connector envelope from the spec and options", () => {
     const manifest = generateManifest(spec, options);
@@ -293,22 +343,45 @@ describe("generateManifest", () => {
     expect(operation.request.headers).toEqual({ "x-trace": "{{x-trace}}" });
   });
 
-  it("rejects same-name parameters in different locations before emitting a manifest", () => {
-    let thrown: unknown;
-    try {
-      generateManifest(ambiguousParameterSpec, options);
-    } catch (error) {
-      thrown = error;
-    }
+  it("aliases same-name parameters in different locations while preserving wire names", () => {
+    const operation = generateManifest(ambiguousParameterSpec, options).operations["reports.list"]!;
 
-    expect(thrown).toBeInstanceOf(Error);
-    if (!(thrown instanceof Error)) {
-      return;
-    }
-    expect((thrown as Error & { code?: unknown }).code).toBe("OPENAPI_AMBIGUOUS_PARAMETER");
-    expect(thrown.message).toContain("trace");
-    expect(thrown.message).toContain("header");
-    expect(thrown.message).toContain("query");
+    expect(operation.inputSchema.properties).toEqual({
+      traceHeader: { type: "string" },
+      traceQuery: { type: "string" },
+    });
+    expect(operation.inputSchema.required).toEqual(["traceHeader", "traceQuery"]);
+    expect(operation.request.query).toEqual({ trace: "{{traceQuery}}" });
+    expect(operation.request.headers).toEqual({ trace: "{{traceHeader}}" });
+    expect(operation.request.parameters).toEqual([
+      { wireName: "trace", inputName: "traceHeader", in: "header", style: "simple", explode: false, allowReserved: false },
+      { wireName: "trace", inputName: "traceQuery", in: "query", style: "form", explode: true, allowReserved: false },
+    ]);
+  });
+
+  it("resolves local Path Item reference chains with inherited parameters", () => {
+    const operation = generateManifest(pathItemRefSpec, options).operations["widgets.list"]!;
+
+    expect(operation.inputSchema.properties).toEqual({
+      accountId: { type: "string" },
+      workspace: { type: "string" },
+      limit: { type: "integer" },
+    });
+    expect(operation.inputSchema.required).toEqual(["accountId", "workspace"]);
+    expect(operation.request.path).toBe("/accounts/{{accountId}}/widgets");
+    expect(operation.request.query).toEqual({ workspace: "{{workspace}}", limit: "{{limit}}" });
+  });
+
+  it("retains OpenAPI parameter serialization metadata and defaults", () => {
+    const operation = generateManifest(serializationMetadataSpec, options).operations["items.get"]!;
+
+    expect(operation.request.parameters).toEqual([
+      { wireName: "itemId", inputName: "itemId", in: "path", style: "label", explode: false, allowReserved: false },
+      { wireName: "colors", inputName: "colors", in: "query", style: "spaceDelimited", explode: false, allowReserved: true },
+      { wireName: "filter", inputName: "filter", in: "query", style: "deepObject", explode: false, allowReserved: false },
+      { wireName: "X-Meta", inputName: "x-meta", in: "header", style: "simple", explode: true, allowReserved: false },
+      { wireName: "defaultTags", inputName: "defaultTags", in: "query", style: "form", explode: true, allowReserved: false },
+    ]);
   });
 
   it("resolves a $ref request body into input properties and a body template", () => {
