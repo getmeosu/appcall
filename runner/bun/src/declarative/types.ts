@@ -67,12 +67,40 @@ export type DeclarativeHttp = {
   errors?: DeclarativeErrors;
 };
 
+export type DeclarativeParameterStyle =
+  | "simple"
+  | "label"
+  | "matrix"
+  | "form"
+  | "spaceDelimited"
+  | "pipeDelimited"
+  | "deepObject";
+
+export type DeclarativeParameter = {
+  // wireName is the OpenAPI name sent to the provider. inputName is the
+  // generated manifest property, which may include a location suffix when
+  // OpenAPI uses the same name in more than one location.
+  wireName: string;
+  inputName: string;
+  in: "path" | "query" | "header";
+  style: DeclarativeParameterStyle;
+  explode: boolean;
+  allowReserved: boolean;
+  // contentMediaType selects the representation declared by an OpenAPI
+  // parameter's `content` map. When present, the runtime serializes the
+  // structured input as that representation instead of applying style rules.
+  contentMediaType?: string;
+};
+
 export type DeclarativeRequest = {
   method?: string;
   path?: string;
   baseUrl?: string;
   query?: Record<string, unknown>;
   headers?: Record<string, unknown>;
+  // OpenAPI-generated parameter metadata. Legacy manifests may omit this and
+  // continue using the string-template fallback above.
+  parameters?: DeclarativeParameter[];
   body?: unknown;
   success?: number[];
   // result maps the provider response onto the operation output. Placeholders

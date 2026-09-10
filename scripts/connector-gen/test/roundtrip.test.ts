@@ -46,6 +46,188 @@ const manifest = generateManifest(spec, {
   auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
 });
 
+const inheritedContentParameterSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.content-parameter.test" }],
+  paths: {
+    "/reports": {
+      parameters: [{ $ref: "#/components/parameters/ReportFilter" }],
+      get: {
+        operationId: "listReports",
+        tags: ["Reports"],
+        summary: "List reports",
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+  components: {
+    parameters: {
+      ReportFilter: {
+        name: "filter",
+        in: "query",
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ReportFilter" },
+          },
+        },
+      },
+    },
+    schemas: {
+      ReportFilter: {
+        type: "object",
+        description: "Structured report filter.",
+        required: ["status"],
+        properties: {
+          status: { type: "string", enum: ["open", "closed"] },
+          owner: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+const inheritedContentParameterManifest = generateManifest(inheritedContentParameterSpec, {
+  key: "content-parameter",
+  name: "Content Parameter",
+  categories: ["productivity"],
+  models: ["report"],
+  auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+});
+
+const contentPathParameterSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.content-path-parameter.test" }],
+  paths: {
+    "/reports/{filter}": {
+      get: {
+        operationId: "getReport",
+        tags: ["Reports"],
+        summary: "Get report",
+        parameters: [
+          {
+            name: "filter",
+            in: "path",
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { status: { type: "string" }, owner: { type: "string" } },
+                },
+              },
+            },
+          },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+};
+
+const contentPathParameterManifest = generateManifest(contentPathParameterSpec, {
+  key: "content-path-parameter",
+  name: "Content Path Parameter",
+  categories: ["productivity"],
+  models: ["report"],
+  auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+});
+
+const pathItemSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.path-item.test" }],
+  paths: {
+    "/accounts/{accountId}/widgets": {
+      parameters: [
+        { name: "accountId", in: "path", required: true, schema: { type: "string" } },
+        { $ref: "#/components/parameters/WorkspaceId" },
+        { $ref: "#/components/parameters/TraceHeader" },
+        { $ref: "#/components/parameters/Limit" },
+      ],
+      get: {
+        operationId: "listWidgets",
+        tags: ["Widgets"],
+        summary: "List widgets",
+        parameters: [
+          { $ref: "#/components/parameters/AccountIdOverride" },
+          { name: "limit", in: "query", required: true, schema: { type: "integer" } },
+          { $ref: "#/components/parameters/RequestId" },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+  components: {
+    parameters: {
+      WorkspaceId: { name: "workspaceId", in: "query", required: true, schema: { type: "string" } },
+      TraceHeader: { name: "X-Trace", in: "header", required: true, schema: { type: "string" } },
+      Limit: { name: "limit", in: "query", required: false, schema: { type: "string" } },
+      AccountIdOverride: { name: "accountId", in: "path", required: true, schema: { type: "string" } },
+      RequestId: { name: "X-Request-ID", in: "header", required: true, schema: { type: "string" } },
+    },
+  },
+};
+
+const pathItemManifest = generateManifest(pathItemSpec, {
+  key: "path-item",
+  name: "Path Item",
+  categories: ["productivity"],
+  models: ["widget"],
+  auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+});
+
+const serializationSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.serialization.test" }],
+  paths: {
+    "/items/{labelIds}/{matrixFilter}": {
+      get: {
+        operationId: "listSerializedItems",
+        tags: ["Items"],
+        summary: "List serialized items",
+        parameters: [
+          { name: "labelIds", in: "path", required: true, style: "label", schema: { type: "array", items: { type: "string" } } },
+          { name: "matrixFilter", in: "path", required: true, style: "matrix", explode: true, schema: { type: "object", properties: { R: { type: "integer" }, G: { type: "integer" } } } },
+          { name: "colors", in: "query", required: false, style: "spaceDelimited", explode: false, schema: { type: "array", items: { type: "string" } } },
+          { name: "pipes", in: "query", required: false, style: "pipeDelimited", explode: false, schema: { type: "array", items: { type: "string" } } },
+          { name: "filter", in: "query", required: false, style: "deepObject", schema: { type: "object", properties: { status: { type: "string" }, owner: { type: "string" } } } },
+          { name: "coords", in: "query", required: false, style: "form", explode: false, schema: { type: "object", properties: { R: { type: "integer" }, G: { type: "integer" } } } },
+          { name: "trace", in: "header", required: true, explode: true, schema: { type: "object", properties: { region: { type: "string" }, shard: { type: "integer" } } } },
+          { name: "colorsHeader", in: "header", required: false, explode: true, schema: { type: "array", items: { type: "string" } } },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+};
+
+const serializationManifest = generateManifest(serializationSpec, {
+  key: "serialization",
+  name: "Serialization",
+  categories: ["productivity"],
+  models: ["item"],
+  auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+});
+
+const aliasSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.alias.test" }],
+  paths: {
+    "/events": {
+      get: {
+        operationId: "listEvents",
+        tags: ["Events"],
+        summary: "List events",
+        parameters: [
+          { name: "trace", in: "header", required: true, explode: true, schema: { type: "object", properties: { region: { type: "string" } } } },
+          { name: "trace", in: "query", required: true, schema: { type: "string" } },
+        ],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+};
+
 describe("generated manifest round-trip", () => {
   it("is recognised as declarative and compiles to handlers", () => {
     expect(isDeclarativeManifest(manifest)).toBe(true);
@@ -85,6 +267,157 @@ describe("generated manifest round-trip", () => {
     expect(seenUrl).toBe("https://api.acme.test/tickets/TCK-9");
     expect(seenAuth).toBe("Bearer k_live");
     expect(result.data).toEqual({ id: "TCK-9", subject: "Printer" });
+  });
+
+  it("serializes an inherited content parameter as one encoded JSON query value", async () => {
+    const { actions } = compileDeclarativeConnector(inheritedContentParameterManifest as never);
+    const filter = { status: "open", owner: "A&B=one" };
+    let seenUrl = "";
+    const result = await actions["reports.list"]!({
+      apiKey: "k_live",
+      filter,
+      fetch: async (url: RequestInfo | URL) => {
+        seenUrl = String(url);
+        return new Response(JSON.stringify({ items: [{ id: "R-1" }] }), { status: 200 });
+      },
+    }) as Record<string, unknown>;
+
+    const url = new URL(seenUrl);
+    expect([...url.searchParams.keys()]).toEqual(["filter"]);
+    expect(url.searchParams.get("filter")).toBe(JSON.stringify(filter));
+    expect(seenUrl).toContain("%26");
+    expect(result.data).toEqual({ items: [{ id: "R-1" }] });
+  });
+
+  it("serializes an inherited JSON content path parameter as an encoded structured value", async () => {
+    const { actions } = compileDeclarativeConnector(contentPathParameterManifest as never);
+    const filter = { status: "open", owner: "A&B" };
+    let seenUrl = "";
+    await actions["reports.get"]!({
+      apiKey: "k_live",
+      filter,
+      fetch: async (url: RequestInfo | URL) => {
+        seenUrl = String(url);
+        return new Response(JSON.stringify({ id: "R-1" }), { status: 200 });
+      },
+    });
+
+    expect(seenUrl).toBe(
+      "https://api.content-path-parameter.test/reports/%7B%22status%22%3A%22open%22%2C%22owner%22%3A%22A%26B%22%7D",
+    );
+  });
+
+  it("renders inherited path, query, and header parameters in a live round-trip", async () => {
+    const { actions } = compileDeclarativeConnector(pathItemManifest as never);
+    let seenUrl = "";
+    let seenHeaders: Record<string, string> = {};
+    const result = await actions["widgets.list"]!({
+      apiKey: "k_live",
+      accountId: "acct/42",
+      workspaceId: "ws-7",
+      limit: 25,
+      "x-trace": "trace-1",
+      "x-request-id": "req-9",
+      fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+        seenUrl = String(url);
+        seenHeaders = Object.fromEntries(new Headers(init?.headers).entries());
+        return new Response(JSON.stringify({ items: [{ id: "W-1" }] }), { status: 200 });
+      },
+    }) as Record<string, unknown>;
+
+    expect(seenUrl).toBe("https://api.path-item.test/accounts/acct%2F42/widgets?workspaceId=ws-7&limit=25");
+    expect(seenHeaders).toMatchObject({
+      authorization: "Bearer k_live",
+      "x-trace": "trace-1",
+      "x-request-id": "req-9",
+    });
+    expect(result.data).toEqual({ items: [{ id: "W-1" }] });
+  });
+
+  it("serializes generated OpenAPI path, query, and header styles exactly", async () => {
+    const { actions } = compileDeclarativeConnector(serializationManifest as never);
+    let seenUrl = "";
+    let seenHeaders: Record<string, string> = {};
+
+    await actions["items.get"]!({
+      apiKey: "k_live",
+      labelIds: ["blue", "black"],
+      matrixFilter: { R: 100, G: 200 },
+      colors: ["blue", "black"],
+      pipes: ["admin", "owner"],
+      filter: { status: "open", owner: "A&B" },
+      coords: { R: 100, G: 200 },
+      trace: { region: "us", shard: 2 },
+      colorsheader: ["red", "green"],
+      fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+        seenUrl = String(url);
+        seenHeaders = Object.fromEntries(new Headers(init?.headers).entries());
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      },
+    });
+
+    expect(seenUrl).toBe(
+        "https://api.serialization.test/items/.blue.black/;R=100;G=200" +
+        "?colors=blue%20black&pipes=admin|owner&filter[status]=open&filter[owner]=A%26B" +
+        "&coords=R,100,G,200",
+    );
+    expect(seenHeaders).toMatchObject({
+      authorization: "Bearer k_live",
+      trace: "region=us,shard=2",
+      colorsheader: "red,green",
+    });
+  });
+
+  it("renders same-name query and header aliases only to their own locations", async () => {
+    const aliasManifest = generateManifest(aliasSpec, {
+      key: "alias",
+      name: "Alias",
+      categories: ["productivity"],
+      models: ["event"],
+      auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+    });
+    const { actions } = compileDeclarativeConnector(aliasManifest as never);
+    let seenUrl = "";
+    let seenTrace = "";
+
+    await actions["events.list"]!({
+      apiKey: "k_live",
+      traceHeader: { region: "eu" },
+      traceQuery: "query-value",
+      fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+        seenUrl = String(url);
+        seenTrace = new Headers(init?.headers).get("trace") ?? "";
+        return new Response("{}", { status: 200 });
+      },
+    });
+
+    expect(seenUrl).toContain("trace=query-value");
+    expect(seenTrace).toBe("region=eu");
+    expect(seenUrl).not.toContain("trace=region%3Deu");
+  });
+
+  it("enforces required inherited inputs before the provider call", async () => {
+    const { actions } = compileDeclarativeConnector(pathItemManifest as never);
+    const action = actions["widgets.list"]!;
+    const input = {
+      apiKey: "k_live",
+      accountId: "acct-42",
+      workspaceId: "ws-7",
+      limit: 25,
+      "x-trace": "trace-1",
+      "x-request-id": "req-9",
+    };
+
+    for (const [field, message] of [
+      ["accountId", "accountId is required"],
+      ["workspaceId", "workspaceId is required"],
+      ["x-trace", "x-trace is required"],
+      ["limit", "limit is required"],
+      ["x-request-id", "x-request-id is required"],
+    ] as const) {
+      const missing = Object.fromEntries(Object.entries(input).filter(([key]) => key !== field));
+      await expect(action(missing)).rejects.toMatchObject({ code: "INVALID_ACTION_INPUT", message });
+    }
   });
 
   it("enforces the generated required fields and enums before calling out", async () => {
