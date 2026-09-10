@@ -189,6 +189,70 @@ fn teardown_failure_marks_scenario_and_report_red_while_continuing_cleanup() {
     assert!(!serialized.contains("provider cleanup failed: qa-secret-66"));
     assert!(serialized.contains(diagnostic));
 }
+struct ExecutionAndTeardownFailureMock(std::sync::Mutex<Vec<String>>);
+impl Executor for ExecutionAndTeardownFailureMock {
+    async fn execute(
+        &self,
+        request: appcall_actions::ExecuteRequest,
+    ) -> Result<serde_json::Value, String> {
+        let action = request.action.clone();
+        self.0.lock().unwrap().push(action.clone());
+        match action.as_str() {
+            "write" => Err("PRIMARY_PROVIDER_ERROR".into()),
+            "cleanup" => Err("CLEANUP_PROVIDER_ERROR".into()),
+            _ => Ok(json!({"id":42})),
+        }
+    }
+}
+#[test]
+fn teardown_failure_preserves_primary_execution_failure_details() {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let ex = ExecutionAndTeardownFailureMock(Default::default());
+    let f = file(json!([{
+        "name":"primary and cleanup failure",
+        "operation":"write",
+        "expect":{"status":"ok"},
+        "teardown":[{"operation":"cleanup"}]
+    }]));
+    let report = rt.block_on(run_connector(
+        &connector(),
+        &f,
+        &ex,
+        "p",
+        Some("c"),
+        false,
+        "run",
+    ));
+    let operation = report
+        .operations
+        .iter()
+        .find(|operation| operation.operation == "write")
+        .unwrap();
+    let scenario = &operation.scenarios[0];
+    assert_eq!(scenario.status, "fail");
+    assert_eq!(scenario.failure_kind, "execution_error");
+    assert_eq!(scenario.error_code, "PRIMARY_PROVIDER_ERROR");
+    assert_eq!(scenario.error, "operation failed");
+    assert_eq!(
+        scenario.failures,
+        vec![
+            "operation returned an unexpected error code",
+            "teardown cleanup failed (CLEANUP_PROVIDER_ERROR)"
+        ]
+    );
+    assert_eq!(
+        operation.leak_warnings,
+        vec!["teardown cleanup failed (CLEANUP_PROVIDER_ERROR)"]
+    );
+    assert_eq!(report.overall, "red");
+    assert_eq!(
+        *ex.0.lock().unwrap(),
+        vec!["write".to_owned(), "cleanup".to_owned()]
+    );
+}
 #[test]
 fn health_rejects_fingerprint_drift_stale_future_zero_and_negative_only() {
     let dir = tempfile::tempdir().unwrap();

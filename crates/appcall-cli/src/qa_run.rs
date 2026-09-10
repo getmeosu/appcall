@@ -222,10 +222,12 @@ async fn run_scenario<E: Executor>(
                 safe_code(&code)
             );
             leaks.push(diagnostic.clone());
-            result.status = "fail".into();
-            result.failure_kind = "teardown_error".into();
-            result.error_code = safe_code(&code);
-            result.error = "teardown failed".into();
+            if result.status != "fail" {
+                result.status = "fail".into();
+                result.failure_kind = "teardown_error".into();
+                result.error_code = safe_code(&code);
+                result.error = "teardown failed".into();
+            }
             result.failures.push(diagnostic);
         }
     }

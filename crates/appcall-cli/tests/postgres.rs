@@ -409,7 +409,7 @@ fn manifest() -> Value {
     json!({"key":"test","name":"Test","version":"1","runtime":"bun","models":["item"],"auth":{"type":"api_key","setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"API key","secret":true,"required":true}]}},"network":{"egress":"none"},"operations":{"read":{"kind":"action","timeoutMs":1000,"maxInputBytes":1000,"maxResponseBytes":1000,"inputSchema":{"type":"object"},"outputSchema":{"type":"object","required":["id"]},"sideEffect":"read"}}})
 }
 fn teardown_manifest() -> Value {
-    json!({"key":"test","name":"Test","version":"1","runtime":"bun","models":["item"],"auth":{"type":"none"},"network":{"egress":"none"},"operations":{"write":{"kind":"action","timeoutMs":1000,"maxInputBytes":1000,"maxResponseBytes":1000,"inputSchema":{"type":"object"},"outputSchema":{"type":"object","required":["id"]},"sideEffect":"write"}}})
+    json!({"key":"test","name":"Test","version":"1","runtime":"bun","models":["item"],"auth":{"type":"api_key","setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"API key","secret":true,"required":true}]}},"network":{"egress":"none"},"operations":{"write":{"kind":"action","timeoutMs":1000,"maxInputBytes":1000,"maxResponseBytes":1000,"inputSchema":{"type":"object"},"outputSchema":{"type":"object","required":["id"]},"sideEffect":"write"}}})
 }
 #[test]
 #[ignore = "requires isolated local PostgreSQL and local HTTP"]
@@ -580,7 +580,20 @@ fn qa_subprocess_uses_encrypted_credentials_real_actions_and_persists_fingerprin
 #[ignore = "requires isolated local PostgreSQL and local HTTP"]
 fn qa_subprocess_failed_teardown_persists_red_verdict_and_exits_nonzero() {
     let mut f = Fixture::new();
-    f.db.batch_execute("INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id,secret_ref_id) VALUES('c','p','test','none','active','brand','b',NULL)").unwrap();
+    let key = [7u8; 32];
+    let mut client = Client::connect(&f.url, NoTls).unwrap();
+    client.batch_execute("SET statement_timeout='3s'").unwrap();
+    let mut store =
+        appcall_store::Store::new(client, appcall_store::LocalProvider::new(&key).unwrap());
+    store
+        .store_secret(
+            "p",
+            "teardown_fixture",
+            "api_key",
+            br#"{"apiKey":"synthetic-secret"}"#,
+        )
+        .unwrap();
+    f.db.batch_execute("INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id,secret_ref_id) VALUES('c','p','test','api_key','active','brand','b','teardown_fixture')").unwrap();
     let root = tempfile::tempdir().unwrap();
     copy_migrations(root.path());
     let manifests = root.path().join("runner/connectors/test");
@@ -605,8 +618,10 @@ fn qa_subprocess_failed_teardown_persists_red_verdict_and_exits_nonzero() {
     )
     .unwrap();
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
     let server = std::thread::spawn(move || {
+        let deadline = std::time::Instant::now() + Duration::from_secs(8);
         for (index, response) in [
             json!({"ok":true,"result":{"output":{"id":42}}}),
             json!({"ok":false,"error":{"code":"CONNECTOR_UPSTREAM_ERROR","message":"provider cleanup failed: synthetic-secret"}}),
@@ -614,7 +629,23 @@ fn qa_subprocess_failed_teardown_persists_red_verdict_and_exits_nonzero() {
         .into_iter()
         .enumerate()
         {
-            let (mut socket, _) = listener.accept().unwrap();
+            assert!(
+                std::time::Instant::now() < deadline,
+                "runner request deadline before action {index}"
+            );
+            let (mut socket, _) = loop {
+                match listener.accept() {
+                    Ok(socket) => break socket,
+                    Err(error)
+                        if error.kind() == std::io::ErrorKind::WouldBlock
+                            && std::time::Instant::now() < deadline =>
+                    {
+                        std::thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(error) => panic!("local runner accept for action {index}: {error}"),
+                }
+            };
+            socket.set_nonblocking(false).unwrap();
             socket
                 .set_read_timeout(Some(Duration::from_secs(5)))
                 .unwrap();
@@ -644,9 +675,10 @@ fn qa_subprocess_failed_teardown_persists_red_verdict_and_exits_nonzero() {
             assert_eq!(request["params"]["action"], "write");
             let mut body = response;
             body["id"] = request["id"].clone();
-            if index == 0 {
-                assert_eq!(request["params"]["input"], json!({}));
-            }
+            assert_eq!(
+                request["params"]["input"],
+                json!({"apiKey":"synthetic-secret"})
+            );
             let body = body.to_string();
             write!(
                 socket,
@@ -673,7 +705,14 @@ fn qa_subprocess_failed_teardown_persists_red_verdict_and_exits_nonzero() {
         String::from_utf8_lossy(&out.stderr),
         "qa: certification failed\n"
     );
-    server.join().unwrap();
+    server.join().unwrap_or_else(|_| {
+        panic!(
+            "fake runner did not receive the expected action sequence; status={:?} stdout={} stderr={}",
+            out.status.code(),
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        )
+    });
     let stdout = String::from_utf8_lossy(&out.stdout);
     let stderr = String::from_utf8_lossy(&out.stderr);
     let raw_provider_error = "provider cleanup failed: synthetic-secret";
