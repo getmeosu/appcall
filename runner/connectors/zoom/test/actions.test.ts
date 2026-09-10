@@ -9,6 +9,7 @@ import meetingAddRegistrantFixture from "../fixtures/meeting_add_registrant.json
 import pastMeetingParticipantsFixture from "../fixtures/past_meeting_participants.json";
 import webinarCreateFixture from "../fixtures/webinar_create.json";
 import webinarsListFixture from "../fixtures/webinars_list.json";
+import zoomManifest from "../manifest.json";
 
 import {
   getUsersMe,
@@ -516,6 +517,52 @@ describe("listPastMeetingParticipants", () => {
     expect(() => validatePastMeetingParticipantsInput({})).toThrow("meetingUUID is required");
   });
 
+  test("rejects unsafe raw UUIDs before provider dispatch without echoing them", async () => {
+    const invalidUUIDs = [
+      "abc def==",
+      "../abc==",
+      "abc/../def==",
+      "abc?def==",
+      "abc#def==",
+      "abc\\def==",
+      "abc\u0000def==",
+      "abc\u001fdef==",
+      "abc\u007fdef==",
+    ];
+
+    for (const meetingUUID of invalidUUIDs) {
+      let dispatches = 0;
+      try {
+        await listPastMeetingParticipants({
+          accessToken: "tok_test",
+          meetingUUID,
+          fetch: async () => {
+            dispatches += 1;
+            return new Response(JSON.stringify(pastMeetingParticipantsFixture), { status: 200 });
+          },
+        });
+        throw new Error("expected unsafe meeting UUID to be rejected");
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error).toMatchObject({ message: "meetingUUID is invalid" });
+        if (error instanceof Error) expect(error.message).not.toContain(meetingUUID);
+      }
+      expect(dispatches).toBe(0);
+    }
+  });
+
+  test("documents the non-empty raw UUID safety contract in the manifest", () => {
+    const meetingUUID = (zoomManifest.operations as Record<string, { inputSchema: { properties: Record<string, Record<string, unknown>> } }>)
+      ["past_meetings.participants"].inputSchema.properties.meetingUUID;
+    expect(meetingUUID).toMatchObject({ type: "string", minLength: 1 });
+    expect(meetingUUID.description).toContain("whitespace");
+    expect(meetingUUID.description).toContain("ASCII control characters");
+    expect(meetingUUID.description).toContain("backslash");
+    expect(meetingUUID.description).toContain("'?' or '#'");
+    expect(meetingUUID.description).toContain("'..' path segments");
+    expect(meetingUUID.description).toContain("beginning with '/' or containing '//'");
+  });
+
   test("calls GET /v2/past_meetings/{uuid}/participants with Bearer token and preserves query params", async () => {
     const requests: Request[] = [];
     const result = await listPastMeetingParticipants({
@@ -543,7 +590,7 @@ describe("listPastMeetingParticipants", () => {
     const requests: Request[] = [];
     await listPastMeetingParticipants({
       accessToken: "tok_test",
-      meetingUUID: "/abc//def==",
+      meetingUUID: "/abc/def==",
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
         return new Response(JSON.stringify(pastMeetingParticipantsFixture), { status: 200 });
@@ -551,7 +598,7 @@ describe("listPastMeetingParticipants", () => {
     });
     expect(requests).toHaveLength(1);
     expect(new URL(requests[0].url).pathname).toBe(
-      "/v2/past_meetings/%252Fabc%252F%252Fdef%253D%253D/participants",
+      "/v2/past_meetings/%252Fabc%252Fdef%253D%253D/participants",
     );
   });
 

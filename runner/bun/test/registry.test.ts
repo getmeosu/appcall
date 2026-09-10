@@ -82,6 +82,52 @@ describe("runner connector registry", () => {
     expect(dispatches).toBe(0);
   });
 
+  test("executes Zoom past meeting participants through the default registry with the full outgoing path", async () => {
+    const requests: Request[] = [];
+    const result = defaultConnectorRegistry.executeAction("zoom", "past_meetings.participants", {
+      accessToken: "tok_test",
+      meetingUUID: "/abc/def==",
+      page_size: 25,
+      next_page_token: "registry-page-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify({ participants: [], next_page_token: "registry-page-token" }), { status: 200 });
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const output = await result.output;
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe(
+      "https://api.zoom.us/v2/past_meetings/%252Fabc%252Fdef%253D%253D/participants?page_size=25&next_page_token=registry-page-token",
+    );
+    expect(requests[0].method).toBe("GET");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer tok_test");
+    expect(output).toMatchObject({ connector: "zoom", action: "past_meetings.participants", source: "connector" });
+  });
+
+  test("rejects unsafe Zoom meeting UUIDs before the registered provider dispatch", async () => {
+    const invalidUUIDs = ["abc def==", "../abc==", "abc?def==", "abc#def==", "abc\\def==", "abc\u0000def=="];
+
+    for (const meetingUUID of invalidUUIDs) {
+      let dispatches = 0;
+      const result = defaultConnectorRegistry.executeAction("zoom", "past_meetings.participants", {
+        accessToken: "tok_test",
+        meetingUUID,
+        fetch: async () => {
+          dispatches += 1;
+          return new Response(JSON.stringify({ participants: [] }), { status: 200 });
+        },
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      await expect(result.output).rejects.toMatchObject({ message: "meetingUUID is invalid" });
+      expect(dispatches).toBe(0);
+    }
+  });
+
   test("executes connector-owned sync handlers through registered handlers", () => {
     const result = defaultConnectorRegistry.executeSync("telegram", "messages.list", {
       response: {
