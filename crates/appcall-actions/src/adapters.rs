@@ -128,10 +128,7 @@ fn runner_failure(e: appcall_runner_client::Error, input: &Value) -> RunnerFailu
     }
     let transient = matches!(
         code.as_str(),
-        "CONNECTOR_RATE_LIMITED"
-            | "CONNECTOR_UNAVAILABLE"
-            | "RUNNER_BUSY"
-            | "RUNNER_UNAVAILABLE"
+        "CONNECTOR_RATE_LIMITED" | "CONNECTOR_UNAVAILABLE" | "RUNNER_BUSY" | "RUNNER_UNAVAILABLE"
     );
     let detail = (e.kind == ErrorKind::Runner).then(|| FailureDetail {
         safe_message: Some(scrub_detail(&e.message, &secrets, bounded)),

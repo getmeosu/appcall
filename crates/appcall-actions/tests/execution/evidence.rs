@@ -121,7 +121,7 @@ async fn evidence_all_attempts_and_only_final_retry_hint_survive() {
             .await;
             assert_eq!(error.evidence.outcome, expected);
             assert_eq!(error.evidence.origin, ActionFailureOrigin::Runner);
-    assert_eq!(error.evidence.retry_after_seconds, final_hint);
+            assert_eq!(error.evidence.retry_after_seconds, final_hint);
         }
     }
 }
@@ -150,10 +150,16 @@ async fn runner_busy_retries_read_only_within_bound_and_releases_claim() {
     }
 
     let state = state.lock().unwrap();
-    assert_eq!(state.claims, 2, "released idempotency claim can be acquired again");
+    assert_eq!(
+        state.claims, 2,
+        "released idempotency claim can be acquired again"
+    );
     assert_eq!(state.releases, 2);
     assert_eq!(state.not_dispatched_releases, 2);
-    assert!(!state.marked, "known pre-dispatch failure clears the dispatched marker");
+    assert!(
+        !state.marked,
+        "known pre-dispatch failure clears the dispatched marker"
+    );
 }
 
 #[tokio::test]
