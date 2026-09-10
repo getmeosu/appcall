@@ -174,6 +174,59 @@ fn usage_snapshot_counts_only_active_reservations() {
 }
 
 #[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn usage_snapshot_rejects_projected_usage_overflow() {
+    let Some(mut client) = database() else { return };
+    let month: String = client
+        .query_one("SELECT to_char(now() AT TIME ZONE 'UTC','YYYY-MM')", &[])
+        .unwrap()
+        .get(0);
+    client
+        .execute(
+            "INSERT INTO usage_monthly_rollups(
+                 project_id,external_account_id,month,kind,quantity
+             ) VALUES('p','brand',$1,'action_call',$2)",
+            &[&month, &(i64::MAX - 1)],
+        )
+        .unwrap();
+
+    assert!(
+        usage_snapshot(
+            &mut client,
+            "p",
+            &month,
+            2,
+            &Entitlements {
+                action_calls_soft: i64::MAX,
+                action_calls_hard: i64::MAX,
+                ..Default::default()
+            },
+        )
+        .is_err(),
+        "usage beyond i64::MAX must reject instead of saturating into an allowed snapshot"
+    );
+
+    client
+        .execute("UPDATE usage_monthly_rollups SET quantity=$1", &[&i64::MAX])
+        .unwrap();
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let policy = quota_policy(PgActionRepository::with_shared_client(shared), i64::MAX);
+    let rejected = tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(policy.reserve(
+            &quota_request("usage-overflow-admission"),
+            &quota_connection(),
+            &quota_operation(),
+            &json!({}),
+        ));
+    assert!(
+        rejected.is_err(),
+        "admission must reject an overflowing completed usage total"
+    );
+}
+
+#[test]
 fn postgres_claim_dispatch_fence_and_atomic_finish() {
     let Some(client) = database() else { return };
     let rt = tokio::runtime::Runtime::new().unwrap();
