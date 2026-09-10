@@ -257,6 +257,46 @@ describe("google-workspace Sheets extended actions", () => {
     expect(result.replies).toHaveLength(2);
   });
 
+  test("selects response budgets for each Sheets operation independently", async () => {
+    const responseLargerThanWriteBudget = JSON.stringify({
+      spreadsheetId: "spreadId",
+      range: "Sheet1!A1",
+      majorDimension: "ROWS",
+      values: [["value"]],
+    }) + " ".repeat(1_048_576);
+    const client = createSheetsClient({
+      accessToken: "ya29.test-token",
+      fetch: async () => new Response(responseLargerThanWriteBudget),
+    });
+
+    await expect(client.getValues({ spreadsheetId: "spreadId", range: "Sheet1!A1" })).resolves.toMatchObject({
+      spreadsheetId: "spreadId",
+    });
+    await expect(client.appendValues({ spreadsheetId: "spreadId", range: "Sheet1!A1", values: [["value"]] })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.updateValues({ spreadsheetId: "spreadId", range: "Sheet1!A1", values: [["value"]] })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.clearValues({ spreadsheetId: "spreadId", range: "Sheet1!A1" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.createSpreadsheet({ title: "Spreadsheet" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.batchUpdateSpreadsheet({
+      spreadsheetId: "spreadId",
+      requests: [{ freezeRows: { sheetId: 0, rowCount: 1 } }],
+    })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+  });
+
   test("batchUpdateSpreadsheet throws on upstream error", async () => {
     const client = createSheetsClient({
       accessToken: "token",
