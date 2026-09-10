@@ -5,11 +5,18 @@ export type GetDocumentInput = {
   documentId: string;
 };
 
+export type GoogleDocumentTab = {
+  documentTab?: Record<string, unknown>;
+  childTabs?: GoogleDocumentTab[];
+  [key: string]: unknown;
+};
+
 export type GetDocumentResult = {
   documentId: string;
   title: string;
   body: unknown;
   revisionId: string;
+  tabs?: GoogleDocumentTab[];
 };
 
 export function validateGetDocumentInput(input: unknown): GetDocumentInput {
@@ -26,11 +33,19 @@ export function parseDocumentResponse(response: unknown): GetDocumentResult {
     throw new Error("invalid document response");
   }
   const title = isRecord(response.title) ? response.title : (typeof response.title === "string" ? response.title : "");
+  const tabs = Array.isArray(response.tabs) ? response.tabs as GoogleDocumentTab[] : undefined;
+  const firstDocumentTab = tabs !== undefined && isRecord(tabs[0]) && isRecord(tabs[0].documentTab)
+    ? tabs[0].documentTab
+    : undefined;
+  const body = firstDocumentTab !== undefined && "body" in firstDocumentTab
+    ? firstDocumentTab.body
+    : response.body;
   return {
     documentId: requireString(response.documentId, "documentId"),
     title: typeof title === "string" ? title : "",
-    body: response.body,
+    body,
     revisionId: String(response.revisionId ?? ""),
+    ...(tabs === undefined ? {} : { tabs }),
   };
 }
 
