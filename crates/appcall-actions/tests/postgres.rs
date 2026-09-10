@@ -4,7 +4,7 @@ use serde_json::json;
 fn database() -> Option<Client> {
     let url = std::env::var("APPCALL_TEST_DATABASE_URL").ok()?;
     let mut c = Client::connect(&url, NoTls).unwrap();
-    c.batch_execute("CREATE TEMP TABLE projects(id text primary key,disabled_at timestamptz);CREATE TEMP TABLE connections(id text primary key,project_id text,connector text,status text,auth_type text,external_account_id text,secret_ref_id text);CREATE TEMP TABLE action_idempotency_claims(project_id text,idempotency_key text,connection_id text,action text,input_hash text,request_id text,leased_until timestamptz,dispatched_at timestamptz,primary key(project_id,idempotency_key));CREATE TEMP TABLE action_idempotency_records(project_id text,idempotency_key text,connection_id text,action text,input_hash text,output jsonb,primary key(project_id,idempotency_key));CREATE TEMP TABLE action_logs(id text primary key,request_id text,project_id text,connection_id text,connector text,action text,status text,error_code text,external_account_id text);CREATE TEMP TABLE action_replay_logs(id text primary key,project_id text,connection_id text,connector text,action text,request_id text,sanitized_input jsonb,external_account_id text);CREATE TEMP TABLE usage_events(id text primary key,project_id text,connection_id text,connector text,action text,kind text,occurred_at timestamptz,external_account_id text,quantity bigint,metering_event_key text,unique(project_id,metering_event_key));CREATE TEMP TABLE usage_monthly_rollups(project_id text,external_account_id text,month text,kind text,quantity bigint,updated_at timestamptz default now(),primary key(project_id,external_account_id,month,kind));INSERT INTO projects VALUES('p',NULL);INSERT INTO connections VALUES('c','p','test','active','api_key','brand',NULL);").unwrap();
+    c.batch_execute("CREATE TEMP TABLE projects(id text primary key,disabled_at timestamptz);CREATE TEMP TABLE connections(id text primary key,project_id text,connector text,status text,auth_type text,external_account_id text,secret_ref_id text);CREATE TEMP TABLE action_idempotency_claims(project_id text,idempotency_key text,connection_id text,action text,input_hash text,request_id text,leased_until timestamptz,dispatched_at timestamptz,primary key(project_id,idempotency_key));CREATE TEMP TABLE action_idempotency_records(project_id text,idempotency_key text,connection_id text,action text,input_hash text,output jsonb,primary key(project_id,idempotency_key));CREATE TEMP TABLE action_logs(id text primary key,request_id text,project_id text,connection_id text,connector text,action text,status text,error_code text,external_account_id text);CREATE TEMP TABLE action_replay_logs(id text primary key,project_id text,connection_id text,connector text,action text,request_id text,sanitized_input jsonb,external_account_id text);CREATE TEMP TABLE usage_events(id text primary key,project_id text,connection_id text,connector text,action text,kind text,occurred_at timestamptz,external_account_id text,quantity bigint,metering_event_key text,unique(project_id,metering_event_key));CREATE TEMP TABLE usage_monthly_rollups(project_id text,external_account_id text,month text,kind text,quantity bigint,updated_at timestamptz default now(),primary key(project_id,external_account_id,month,kind));CREATE TEMP TABLE action_usage_reservations(id text primary key,project_id text,month text,connection_id text,connector text,action text,external_account_id text default '',state text,expires_at timestamptz,created_at timestamptz default now(),dispatched_at timestamptz,settled_at timestamptz,released_at timestamptz);INSERT INTO projects VALUES('p',NULL);INSERT INTO connections VALUES('c','p','test','active','api_key','brand',NULL);").unwrap();
     Some(c)
 }
 fn attempt() -> Attempt {
@@ -19,6 +19,64 @@ fn attempt() -> Attempt {
         input_hash: "h".into(),
         lease_ms: 60_000,
     }
+}
+
+fn quota_request(key: &str) -> ExecuteRequest {
+    ExecuteRequest {
+        project_id: "p".into(),
+        connection_id: "c".into(),
+        external_account_id: "brand".into(),
+        admin_scope: false,
+        action: "send".into(),
+        idempotency_key: key.into(),
+        input: json!({}),
+        caller_credential: String::new(),
+    }
+}
+
+fn quota_connection() -> Connection {
+    Connection {
+        id: "c".into(),
+        project_id: "p".into(),
+        external_account_id: "brand".into(),
+        connector: "test".into(),
+        status: "active".into(),
+        auth_type: "none".into(),
+        secret_ref_id: None,
+    }
+}
+
+fn quota_operation() -> Operation {
+    Operation {
+        read_only: true,
+        timeout_ms: 1_000,
+        max_input_bytes: 1_024,
+        max_response_bytes: 1_024,
+        credential_fields: vec![],
+    }
+}
+
+fn quota_policy(repo: PgActionRepository, hard: i64) -> PgPolicy {
+    PgPolicy::new(
+        repo,
+        PolicyConfig {
+            defaults: Entitlements {
+                action_calls_soft: hard,
+                action_calls_hard: hard,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    )
+    .unwrap()
+}
+
+fn create_project_plans(client: &mut Client) {
+    client
+        .batch_execute(
+            "CREATE TEMP TABLE project_plans(project_id text primary key,plan_key text,status text,overrides jsonb)",
+        )
+        .unwrap();
 }
 #[test]
 fn postgres_claim_dispatch_fence_and_atomic_finish() {
@@ -275,6 +333,11 @@ fn policies_reserve_all_windows_atomically_and_quarantine_exact_brand() {
             .get::<_, String>(0),
         "connected"
     );
+    let cleanup_repo = PgActionRepository::with_shared_client(shared.clone());
+    let mut cleanup_attempt = attempt();
+    cleanup_attempt.key.clear();
+    rt.block_on(cleanup_repo.release_pending_with_reservation(&cleanup_attempt, &reservation))
+        .unwrap();
     let plain = Connection {
         connector: "test".into(),
         ..c.clone()
@@ -291,8 +354,13 @@ fn policies_reserve_all_windows_atomically_and_quarantine_exact_brand() {
         },
     )
     .unwrap();
-    rt.block_on(spend.reserve(&r, &plain, &o, &json!({})))
+    let spend_reservation = rt
+        .block_on(spend.reserve(&r, &plain, &o, &json!({})))
         .unwrap();
+    rt.block_on(
+        cleanup_repo.release_pending_with_reservation(&cleanup_attempt, &spend_reservation),
+    )
+    .unwrap();
     assert_eq!(
         rt.block_on(spend.reserve(&r, &plain, &o, &json!({})))
             .err()
@@ -384,7 +452,7 @@ fn policies_reserve_all_windows_atomically_and_quarantine_exact_brand() {
         .err()
         .unwrap();
     assert_eq!(denied.code, "USAGE_LIMIT_EXCEEDED");
-    assert_eq!(denied.usage.unwrap().projected, 3);
+    assert_eq!(denied.usage.unwrap().projected, 4);
 }
 
 #[test]
@@ -452,6 +520,22 @@ fn production_migrations_support_action_finish_and_policy() {
         policy.authorize(&r, &c, &o).await.unwrap();
         let reservation = policy.reserve(&r, &c, &o, &json!({})).await.unwrap();
         assert_eq!(reservation.usage.current, 1);
+        let mut quota_attempt = attempt();
+        quota_attempt.request_id = "quota-r2".into();
+        quota_attempt.key = "quota-k2".into();
+        quota_attempt.input_hash = "quota-h2".into();
+        repo.acquire(&quota_attempt).await.unwrap();
+        repo.mark_dispatched_checked_with_reservation(&quota_attempt, &c, &reservation)
+            .await
+            .unwrap();
+        repo.finish_with_reservation(
+            &quota_attempt,
+            &reservation,
+            Some(&json!({"ok":true})),
+            None,
+        )
+        .await
+        .unwrap();
     });
     drop(policy);
     drop(repo);
@@ -645,4 +729,747 @@ fn repository_physical_health_distinguishes_busy_and_poisoned() {
     })
     .join();
     assert_eq!(repo.database_health(), Some(false));
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn concurrent_quota_reservation_admits_only_one_final_slot() {
+    let url = std::env::var("APPCALL_TEST_DATABASE_URL")
+        .expect("APPCALL_TEST_DATABASE_URL is required for PostgreSQL quota tests");
+    let schema = format!("action_quota_race_{}", uuid::Uuid::new_v4().simple());
+    let mut owner = Client::connect(&url, NoTls).unwrap();
+    owner
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema};
+             CREATE TABLE projects(id text primary key, disabled_at timestamptz);
+             CREATE TABLE project_plans(project_id text primary key, plan_key text, status text, overrides jsonb);
+             CREATE TABLE usage_monthly_rollups(project_id text, external_account_id text, month text, kind text, quantity bigint, updated_at timestamptz default now(), primary key(project_id, external_account_id, month, kind));
+             CREATE TABLE action_usage_reservations(id text primary key, project_id text not null, month text not null, connection_id text not null, connector text not null, action text not null, external_account_id text not null default '', state text not null, expires_at timestamptz not null, created_at timestamptz not null default now(), dispatched_at timestamptz, settled_at timestamptz, released_at timestamptz);
+             INSERT INTO projects VALUES ('p', NULL);"
+        ))
+        .unwrap();
+
+    let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
+    let contenders = (0..2)
+        .map(|index| {
+            let url = url.clone();
+            let schema = schema.clone();
+            let barrier = barrier.clone();
+            std::thread::spawn(move || {
+                let mut client = Client::connect(&url, NoTls).unwrap();
+                client
+                    .batch_execute(&format!("SET search_path TO {schema}"))
+                    .unwrap();
+                let repository = PgActionRepository::new(client);
+                let policy = PgPolicy::new(
+                    repository,
+                    PolicyConfig {
+                        defaults: Entitlements {
+                            action_calls_soft: 1,
+                            action_calls_hard: 1,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+                let request = ExecuteRequest {
+                    project_id: "p".into(),
+                    connection_id: "c".into(),
+                    external_account_id: "brand".into(),
+                    admin_scope: false,
+                    action: "send".into(),
+                    idempotency_key: format!("race-{index}"),
+                    input: json!({}),
+                    caller_credential: String::new(),
+                };
+                let connection = Connection {
+                    id: "c".into(),
+                    project_id: "p".into(),
+                    external_account_id: "brand".into(),
+                    connector: "test".into(),
+                    status: "active".into(),
+                    auth_type: "none".into(),
+                    secret_ref_id: None,
+                };
+                let operation = Operation {
+                    read_only: true,
+                    timeout_ms: 1_000,
+                    max_input_bytes: 1_024,
+                    max_response_bytes: 1_024,
+                    credential_fields: vec![],
+                };
+                barrier.wait();
+                tokio::runtime::Runtime::new()
+                    .unwrap()
+                    .block_on(policy.reserve(&request, &connection, &operation, &json!({})))
+                    .map(|reservation| reservation.usage)
+            })
+        })
+        .collect::<Vec<_>>();
+    let outcomes = contenders
+        .into_iter()
+        .map(|handle| handle.join().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        outcomes.iter().filter(|outcome| outcome.is_ok()).count(),
+        1,
+        "exactly one independent PostgreSQL connection may reserve the final slot: {outcomes:?}"
+    );
+    assert_eq!(
+        outcomes
+            .iter()
+            .filter_map(|outcome| outcome.as_ref().err())
+            .map(|error| error.code.as_str())
+            .collect::<Vec<_>>(),
+        vec!["USAGE_LIMIT_EXCEEDED"]
+    );
+
+    let active = owner
+        .query_one(
+            "SELECT count(*) FROM action_usage_reservations WHERE state IN ('pending','dispatched')",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0);
+    assert_eq!(active, 1);
+    owner
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn quota_settlement_is_month_stable_and_repeated_finish_is_idempotent() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo.clone(), 2);
+    let request = quota_request("settle-once");
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let reservation = rt
+        .block_on(policy.reserve(&request, &connection, &operation, &json!({})))
+        .unwrap();
+    let a = attempt();
+    rt.block_on(repo.acquire(&a)).unwrap();
+    let revision = rt.block_on(repo.connection("p", "c")).unwrap();
+    rt.block_on(repo.mark_dispatched_checked_with_reservation(&a, &revision, &reservation))
+        .unwrap();
+    rt.block_on(repo.finish_with_reservation(&a, &reservation, Some(&json!({"ok":true})), None))
+        .unwrap();
+    rt.block_on(repo.finish_with_reservation(&a, &reservation, Some(&json!({"ok":true})), None))
+        .unwrap();
+
+    let mut db = shared.lock().unwrap();
+    let rollup = db
+        .query_one(
+            "SELECT month,quantity FROM usage_monthly_rollups WHERE kind='action_call'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(rollup.get::<_, String>(0), reservation.usage.month);
+    assert_eq!(rollup.get::<_, i64>(1), 1);
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT state FROM action_usage_reservations WHERE state='settled'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0),
+        "settled"
+    );
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn proven_not_dispatched_release_fences_late_success_and_reuses_slot() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo.clone(), 2);
+    let request = quota_request("release-slot");
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let reservation = rt
+        .block_on(policy.reserve(&request, &connection, &operation, &json!({})))
+        .unwrap();
+    let a = attempt();
+    rt.block_on(repo.acquire(&a)).unwrap();
+    let revision = rt.block_on(repo.connection("p", "c")).unwrap();
+    rt.block_on(repo.mark_dispatched_checked_with_reservation(&a, &revision, &reservation))
+        .unwrap();
+    rt.block_on(repo.release_not_dispatched_with_reservation(&a, &reservation))
+        .unwrap();
+    assert_eq!(
+        rt.block_on(repo.finish_with_reservation(
+            &a,
+            &reservation,
+            Some(&json!({"late":true})),
+            None,
+        ))
+        .unwrap_err()
+        .code,
+        "USAGE_RESERVATION_INVALID"
+    );
+
+    let next = rt
+        .block_on(policy.reserve(
+            &quota_request("release-slot-next"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    assert_eq!(next.usage.current, 0);
+    assert_eq!(next.usage.projected, 1);
+    let mut db = shared.lock().unwrap();
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn provider_response_releases_quota_but_keeps_mutation_claim_fenced() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo.clone(), 1);
+    let request = quota_request("response-failure");
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let reservation = rt
+        .block_on(policy.reserve(&request, &connection, &operation, &json!({})))
+        .unwrap();
+    let reservation_id = shared
+        .lock()
+        .unwrap()
+        .query_one(
+            "SELECT id FROM action_usage_reservations WHERE state='pending'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0);
+    let mut a = attempt();
+    a.key = "response-failure".into();
+    a.request_id = "response-request".into();
+    rt.block_on(repo.acquire(&a)).unwrap();
+    let revision = rt.block_on(repo.connection("p", "c")).unwrap();
+    rt.block_on(repo.mark_dispatched_checked_with_reservation(&a, &revision, &reservation))
+        .unwrap();
+    rt.block_on(repo.release_quota_with_reservation(&a, &reservation))
+        .unwrap();
+    rt.block_on(repo.finish_with_reservation(
+        &a,
+        &reservation,
+        None,
+        Some("CONNECTOR_UNAVAILABLE"),
+    ))
+    .unwrap();
+
+    let next = rt
+        .block_on(policy.reserve(
+            &quota_request("response-failure-next"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    assert_eq!(next.usage.current, 0);
+    assert_eq!(next.usage.projected, 1);
+    let mut retry = a.clone();
+    retry.request_id = "response-retry".into();
+    assert_eq!(
+        rt.block_on(repo.acquire(&retry)).unwrap_err().code,
+        "IDEMPOTENCY_IN_PROGRESS"
+    );
+    let mut db = shared.lock().unwrap();
+    assert_eq!(
+        db.query_one(
+            "SELECT state FROM action_usage_reservations WHERE id=$1",
+            &[&reservation_id],
+        )
+        .unwrap()
+        .get::<_, String>(0),
+        "released"
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT count(*) FROM action_idempotency_claims WHERE project_id='p' AND idempotency_key='response-failure'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        1
+    );
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn prior_month_dispatched_recovery_uses_stored_month_once() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo.clone(), 3);
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let reservation = rt
+        .block_on(policy.reserve(
+            &quota_request("prior-month-recovery"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    let mut dispatched_attempt = attempt();
+    dispatched_attempt.key = "prior-month-recovery".into();
+    dispatched_attempt.request_id = "prior-month-request".into();
+    rt.block_on(repo.acquire(&dispatched_attempt)).unwrap();
+    let revision = rt.block_on(repo.connection("p", "c")).unwrap();
+    rt.block_on(repo.mark_dispatched_checked_with_reservation(
+        &dispatched_attempt,
+        &revision,
+        &reservation,
+    ))
+    .unwrap();
+
+    let (reservation_id, prior_month) = {
+        let mut db = shared.lock().unwrap();
+        let id = db
+            .query_one(
+                "SELECT id FROM action_usage_reservations WHERE state='dispatched'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, String>(0);
+        let prior = db
+            .query_one(
+                "SELECT to_char((now() AT TIME ZONE 'UTC' - interval '1 month'),'YYYY-MM')",
+                &[],
+            )
+            .unwrap()
+            .get::<_, String>(0);
+        db.execute(
+            "UPDATE action_usage_reservations
+                SET month=$1, created_at=now()-interval '1 month',
+                    expires_at=now()-interval '1 second'
+              WHERE id=$2",
+            &[&prior, &id],
+        )
+        .unwrap();
+        (id, prior)
+    };
+
+    let first = rt
+        .block_on(policy.reserve(
+            &quota_request("prior-month-next"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    let second = rt
+        .block_on(policy.reserve(
+            &quota_request("prior-month-next-2"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    let mut db = shared.lock().unwrap();
+    assert_eq!(
+        db.query_one(
+            "SELECT state FROM action_usage_reservations WHERE id=$1",
+            &[&reservation_id],
+        )
+        .unwrap()
+        .get::<_, String>(0),
+        "settled"
+    );
+    let rollup = db
+        .query_one(
+            "SELECT month,quantity FROM usage_monthly_rollups WHERE kind='action_call'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(rollup.get::<_, String>(0), prior_month);
+    assert_eq!(rollup.get::<_, i64>(1), 1);
+    assert_eq!(
+        db.query_one(
+            "SELECT to_char(occurred_at AT TIME ZONE 'UTC','YYYY-MM') FROM usage_events",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0),
+        prior_month
+    );
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+    drop(db);
+    let mut release = attempt();
+    release.key.clear();
+    rt.block_on(repo.release_pending_with_reservation(&release, &first))
+        .unwrap();
+    rt.block_on(repo.release_pending_with_reservation(&release, &second))
+        .unwrap();
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn quota_denial_commits_prior_month_recovery_cleanup() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo, 1);
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let (current_month, prior_month) = {
+        let mut db = shared.lock().unwrap();
+        let months = db
+            .query_one(
+                "SELECT to_char(now() AT TIME ZONE 'UTC','YYYY-MM'),
+                        to_char((now() AT TIME ZONE 'UTC' - interval '1 month'),'YYYY-MM')",
+                &[],
+            )
+            .unwrap();
+        let current = months.get::<_, String>(0);
+        let prior = months.get::<_, String>(1);
+        db.execute(
+            "INSERT INTO usage_monthly_rollups(project_id,external_account_id,month,kind,quantity)
+             VALUES('p','brand',$1,'action_call',1)",
+            &[&current],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO action_usage_reservations(
+                 id,project_id,month,connection_id,connector,action,external_account_id,
+                 state,expires_at,created_at
+             ) VALUES('denied-old','p',$1,'c','test','send','brand','dispatched',
+                      now()-interval '1 second',now()-interval '1 month')",
+            &[&prior],
+        )
+        .unwrap();
+        (current, prior)
+    };
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let error = rt
+        .block_on(policy.reserve(
+            &quota_request("denied-current"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .err()
+        .expect("full current-month quota must deny admission");
+    assert_eq!(error.code, "USAGE_LIMIT_EXCEEDED");
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one(
+                "SELECT state FROM action_usage_reservations WHERE id='denied-old'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, String>(0),
+        "settled"
+    );
+    let mut db = shared.lock().unwrap();
+    assert_eq!(
+        db.query_one(
+            "SELECT to_char(occurred_at AT TIME ZONE 'UTC','YYYY-MM') FROM usage_events",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0),
+        prior_month
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT count(*) FROM action_usage_reservations WHERE month=$1",
+            &[&current_month],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+    drop(db);
+    let second = rt.block_on(policy.reserve(
+        &quota_request("denied-current-again"),
+        &connection,
+        &operation,
+        &json!({}),
+    ));
+    assert_eq!(
+        second
+            .err()
+            .expect("repeated full current-month quota must remain denied")
+            .code,
+        "USAGE_LIMIT_EXCEEDED"
+    );
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn malformed_success_keeps_dispatch_for_bounded_recovery() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo.clone(), 2);
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let reservation = rt
+        .block_on(policy.reserve(
+            &quota_request("malformed-success"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    let mut dispatched_attempt = attempt();
+    dispatched_attempt.key = "malformed-success".into();
+    dispatched_attempt.request_id = "malformed-request".into();
+    rt.block_on(repo.acquire(&dispatched_attempt)).unwrap();
+    let revision = rt.block_on(repo.connection("p", "c")).unwrap();
+    rt.block_on(repo.mark_dispatched_checked_with_reservation(
+        &dispatched_attempt,
+        &revision,
+        &reservation,
+    ))
+    .unwrap();
+    rt.block_on(repo.finish_with_reservation(
+        &dispatched_attempt,
+        &reservation,
+        None,
+        Some("INVALID_ACTION_INPUT"),
+    ))
+    .unwrap();
+    let mut retry = dispatched_attempt.clone();
+    retry.request_id = "malformed-retry".into();
+    assert_eq!(
+        rt.block_on(repo.acquire(&retry)).unwrap_err().code,
+        "IDEMPOTENCY_IN_PROGRESS"
+    );
+    let reservation_id = shared
+        .lock()
+        .unwrap()
+        .query_one(
+            "SELECT id FROM action_usage_reservations WHERE state='dispatched'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0);
+    shared
+        .lock()
+        .unwrap()
+        .execute(
+            "UPDATE action_usage_reservations SET expires_at=now()-interval '1 second' WHERE id=$1",
+            &[&reservation_id],
+        )
+        .unwrap();
+    let next = rt
+        .block_on(policy.reserve(
+            &quota_request("malformed-next"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    assert_eq!(next.usage.current, 1);
+    rt.block_on(repo.finish_with_reservation(
+        &dispatched_attempt,
+        &reservation,
+        Some(&json!({"late":true})),
+        None,
+    ))
+    .unwrap();
+    let mut db = shared.lock().unwrap();
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT quantity FROM usage_monthly_rollups WHERE kind='action_call'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        1
+    );
+    drop(db);
+    let mut release = attempt();
+    release.key.clear();
+    rt.block_on(repo.release_pending_with_reservation(&release, &next))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn pending_expiry_releases_capacity_but_dispatched_recovery_charges_once() {
+    let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
+    create_project_plans(&mut client);
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = quota_policy(repo.clone(), 2);
+    let request = quota_request("pending-expiry");
+    let connection = quota_connection();
+    let operation = quota_operation();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let _pending = rt
+        .block_on(policy.reserve(&request, &connection, &operation, &json!({})))
+        .unwrap();
+    let pending_id = shared
+        .lock()
+        .unwrap()
+        .query_one(
+            "SELECT id FROM action_usage_reservations WHERE state='pending'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, String>(0);
+    shared
+        .lock()
+        .unwrap()
+        .execute(
+            "UPDATE action_usage_reservations SET expires_at=now()-interval '1 second' WHERE state='pending'",
+            &[],
+        )
+        .unwrap();
+    let released = rt
+        .block_on(policy.reserve(
+            &quota_request("pending-expiry-next"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    assert_eq!(released.usage.current, 0);
+    assert_eq!(released.usage.projected, 1);
+    let mut release_attempt = attempt();
+    release_attempt.key.clear();
+    rt.block_on(repo.release_pending_with_reservation(&release_attempt, &released))
+        .unwrap();
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one(
+                "SELECT state FROM action_usage_reservations WHERE id=$1",
+                &[&pending_id],
+            )
+            .unwrap()
+            .get::<_, String>(0),
+        "released"
+    );
+
+    let dispatch_request = quota_request("dispatch-recovery");
+    let dispatched = rt
+        .block_on(policy.reserve(&dispatch_request, &connection, &operation, &json!({})))
+        .unwrap();
+    let mut dispatched_attempt = attempt();
+    dispatched_attempt.key = "dispatch-recovery".into();
+    dispatched_attempt.request_id = "recovery-request".into();
+    rt.block_on(repo.acquire(&dispatched_attempt)).unwrap();
+    let revision = rt.block_on(repo.connection("p", "c")).unwrap();
+    rt.block_on(repo.mark_dispatched_checked_with_reservation(
+        &dispatched_attempt,
+        &revision,
+        &dispatched,
+    ))
+    .unwrap();
+    shared
+        .lock()
+        .unwrap()
+        .execute(
+            "UPDATE action_usage_reservations SET expires_at=now()-interval '1 second' WHERE state='dispatched'",
+            &[],
+        )
+        .unwrap();
+
+    let recovery_policy = quota_policy(repo.clone(), 2);
+    let next = rt
+        .block_on(recovery_policy.reserve(
+            &quota_request("after-recovery"),
+            &connection,
+            &operation,
+            &json!({}),
+        ))
+        .unwrap();
+    assert_eq!(next.usage.current, 1);
+    assert_eq!(next.usage.projected, 2);
+    rt.block_on(repo.finish_with_reservation(
+        &dispatched_attempt,
+        &dispatched,
+        Some(&json!({"late":true})),
+        None,
+    ))
+    .unwrap();
+    let mut db = shared.lock().unwrap();
+    assert_eq!(
+        db.query_one(
+            "SELECT COALESCE(sum(quantity),0)::bigint FROM usage_monthly_rollups",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        1
+    );
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
 }

@@ -40,17 +40,154 @@ fn entitlements(
     });
     resolve_entitlements(record, &config.defaults)
 }
-fn usage(tx: &mut Transaction<'_>, project: &str, e: &Entitlements) -> Result<UsageSnapshot> {
-    let row=tx.query_one("SELECT COALESCE(sum(quantity),0)::bigint FROM usage_monthly_rollups WHERE project_id=$1 AND month=to_char(now() AT TIME ZONE 'UTC','YYYY-MM') AND kind='action_call'",&[&project]).map_err(|_|unavailable())?;
+/// Serialize all action-call capacity transitions for one project and UTC
+/// month. The month is part of the lock key so an action settling after UTC
+/// midnight cannot race a new month's admission.
+pub(crate) fn usage_quota_lock(tx: &mut Transaction<'_>, project: &str, month: &str) -> Result<()> {
+    let identity = serde_json::to_string(&["quota", project, month, "action_call"])
+        .map_err(|_| unavailable())?;
+    tx.query_one(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+        &[&identity],
+    )
+    .map_err(|_| unavailable())?;
+    Ok(())
+}
+
+fn utc_month(tx: &mut Transaction<'_>) -> Result<String> {
+    tx.query_one("SELECT to_char(now() AT TIME ZONE 'UTC','YYYY-MM')", &[])
+        .map(|row| row.get(0))
+        .map_err(|_| unavailable())
+}
+
+/// Collect every month with an expired active reservation before taking any
+/// advisory lock. Callers sort this set and acquire all month locks in the
+/// same order, so a month-boundary cleanup cannot deadlock with a late
+/// settlement from an older month.
+fn quota_months_to_lock(
+    tx: &mut Transaction<'_>,
+    project: &str,
+    current_month: &str,
+) -> Result<Vec<String>> {
+    let mut months = vec![current_month.to_owned()];
+    let rows = tx
+        .query(
+            "SELECT DISTINCT month
+               FROM action_usage_reservations
+              WHERE project_id=$1 AND state IN ('pending','dispatched') AND expires_at<=now()
+              ORDER BY month",
+            &[&project],
+        )
+        .map_err(|_| unavailable())?;
+    months.extend(rows.into_iter().map(|row| row.get::<_, String>(0)));
+    months.sort_unstable();
+    months.dedup();
+    Ok(months)
+}
+
+fn expire_pending_quota(tx: &mut Transaction<'_>, project: &str, month: &str) -> Result<()> {
+    tx.execute(
+        "UPDATE action_usage_reservations
+            SET state='released', released_at=now()
+          WHERE project_id=$1 AND month=$2 AND state='pending' AND expires_at<=now()",
+        &[&project, &month],
+    )
+    .map_err(|_| unavailable())?;
+    Ok(())
+}
+
+/// A dispatched call whose worker disappeared is conservatively charged once
+/// after its bounded recovery lease. This releases the active reservation
+/// without allowing a late provider response to create a second usage event.
+fn recover_expired_dispatched_quota(
+    tx: &mut Transaction<'_>,
+    project: &str,
+    month: &str,
+) -> Result<()> {
+    let rows = tx
+        .query(
+            "SELECT id
+               FROM action_usage_reservations
+              WHERE project_id=$1 AND month=$2 AND state='dispatched' AND expires_at<=now()
+              FOR UPDATE",
+            &[&project, &month],
+        )
+        .map_err(|_| unavailable())?;
+    for row in rows {
+        let id: String = row.get(0);
+        let _ = tx
+            .query_opt(
+                "WITH reservation AS (
+                     SELECT id,project_id,connector,action,external_account_id,created_at
+                       FROM action_usage_reservations
+                      WHERE id=$1 AND state='dispatched'
+                 ), inserted AS (
+                     INSERT INTO usage_events(
+                         id,project_id,connection_id,connector,action,kind,occurred_at,
+                         external_account_id,quantity,metering_event_key
+                     )
+                     SELECT 'usage_quota_recovery_' || id,project_id,NULL,connector,action,
+                            'action_call',created_at,external_account_id,1,
+                            'quota_recovery:' || id
+                       FROM reservation
+                     ON CONFLICT(project_id,metering_event_key) DO NOTHING
+                     RETURNING project_id,external_account_id
+                 )
+                 INSERT INTO usage_monthly_rollups(
+                     project_id,external_account_id,month,kind,quantity
+                 )
+                 SELECT project_id,COALESCE(external_account_id,''),$2,'action_call',1
+                   FROM inserted
+                 ON CONFLICT(project_id,external_account_id,month,kind)
+                 DO UPDATE SET quantity=usage_monthly_rollups.quantity+EXCLUDED.quantity,
+                               updated_at=now()
+                 RETURNING project_id",
+                &[&id, &month],
+            )
+            .map_err(|_| unavailable())?;
+        tx.execute(
+            "UPDATE action_usage_reservations
+                SET state='settled', settled_at=now()
+              WHERE id=$1 AND state='dispatched'",
+            &[&id],
+        )
+        .map_err(|_| unavailable())?;
+    }
+    Ok(())
+}
+
+fn usage(
+    tx: &mut Transaction<'_>,
+    project: &str,
+    month: &str,
+    e: &Entitlements,
+) -> Result<UsageSnapshot> {
+    let row = tx
+        .query_one(
+            "SELECT COALESCE(sum(quantity),0)::bigint
+               FROM usage_monthly_rollups
+              WHERE project_id=$1 AND month=$2 AND kind='action_call'",
+            &[&project, &month],
+        )
+        .map_err(|_| unavailable())?;
     let used: i64 = row.get(0);
+    let active = tx
+        .query_one(
+            "SELECT count(*)::bigint
+               FROM action_usage_reservations
+              WHERE project_id=$1 AND month=$2 AND state IN ('pending','dispatched')",
+            &[&project, &month],
+        )
+        .map_err(|_| unavailable())?
+        .get::<_, i64>(0);
     let snapshot = UsageSnapshot {
-        month: Utc::now().format("%Y-%m").to_string(),
+        month: month.to_owned(),
         current: used,
-        projected: used.saturating_add(1),
+        projected: used.saturating_add(active).saturating_add(1),
         soft_limit: e.action_calls_soft,
         hard_limit: e.action_calls_hard,
     };
-    if e.action_calls_hard > 0 && used >= e.action_calls_hard {
+    if e.action_calls_hard > 0 && snapshot.projected > e.action_calls_hard {
         let mut error = ActionError::new("USAGE_LIMIT_EXCEEDED");
         error.usage = Some(snapshot);
         return Err(error);
@@ -108,8 +245,9 @@ impl PolicyGate for PgPolicy {
         o: &Operation,
         input: &Value,
     ) -> Result<PolicyReservation> {
-        let (project, brand, action, connector) = (
+        let (project, connection_id, brand, action, connector) = (
             r.project_id.clone(),
+            r.connection_id.clone(),
             r.external_account_id.clone(),
             r.action.clone(),
             c.connector.clone(),
@@ -126,10 +264,29 @@ impl PolicyGate for PgPolicy {
             .to_owned();
         let read = o.read_only;
         let config = self.config.clone();
+        let reservation_lease_ms = (o.timeout_ms as i64).saturating_add(60_000).max(1);
         self.repository.run(move|c|{
             let mut tx=c.transaction().map_err(|_|unavailable())?;
             let e=entitlements(&mut tx,&project,&config)?;
-            let mut reservation=PolicyReservation {usage:usage(&mut tx,&project,&e)?,..Default::default()};
+            let month = utc_month(&mut tx)?;
+            for quota_month in quota_months_to_lock(&mut tx, &project, &month)? {
+                usage_quota_lock(&mut tx, &project, &quota_month)?;
+                expire_pending_quota(&mut tx, &project, &quota_month)?;
+                recover_expired_dispatched_quota(&mut tx, &project, &quota_month)?;
+            }
+            let quota_id = uuid::Uuid::new_v4().simple().to_string();
+            let usage = match usage(&mut tx, &project, &month, &e) {
+                Ok(snapshot) => snapshot,
+                Err(error) if error.code == "USAGE_LIMIT_EXCEEDED" => {
+                    // Recovery is durable cleanup even when this admission is
+                    // denied; storage and other policy errors still roll back.
+                    tx.commit().map_err(|_| unavailable())?;
+                    return Err(error);
+                }
+                Err(error) => return Err(error),
+            };
+            let mut reservation=PolicyReservation {usage, quota_id: quota_id.clone(), quota_month: month.clone(), ..Default::default()};
+            tx.execute("INSERT INTO action_usage_reservations(id,project_id,month,connection_id,connector,action,external_account_id,state,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,'pending',now()+($8::bigint * interval '1 millisecond'))",&[&quota_id,&project,&month,&connection_id,&connector,&action,&brand,&reservation_lease_ms]).map_err(|_|unavailable())?;
             if connector=="unipile" {
                 reservation.channel=channel(&action).into();
                 reservation.class=linkedin_class(&action).into();

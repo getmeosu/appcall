@@ -197,6 +197,18 @@ pub trait ActionRepository: Send + Sync {
         }
         self.mark_dispatched(attempt).await
     }
+    /// Atomically fences external dispatch and a policy reservation when the
+    /// storage adapter supports both state transitions. Adapters without a
+    /// durable quota reservation retain the legacy dispatch behavior.
+    async fn mark_dispatched_checked_with_reservation(
+        &self,
+        attempt: &Attempt,
+        revision: &Connection,
+        reservation: &PolicyReservation,
+    ) -> Result<()> {
+        let _ = reservation;
+        self.mark_dispatched_checked(attempt, revision).await
+    }
     /// Reserve replay storage before the external effect. Bounded stores must
     /// reject insufficient capacity here, never after a successful provider call.
     async fn prepare_replay(&self, _: &Attempt, _: &Value) -> Result<()> {
@@ -204,12 +216,57 @@ pub trait ActionRepository: Send + Sync {
     }
     async fn record_replay(&self, attempt: &Attempt, sanitized_input: &Value) -> Result<String>;
     async fn release_pending(&self, attempt: &Attempt) -> Result<()>;
+    /// Release a quota claim only when the caller has evidence that no
+    /// provider effect was dispatched. Dispatched or ambiguous work must keep
+    /// its reservation until a successful settlement or explicit recovery.
+    async fn release_pending_with_reservation(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+    ) -> Result<()> {
+        let _ = reservation;
+        self.release_pending(attempt).await
+    }
+    /// Release quota after a provider response proved that this invocation
+    /// did not succeed, while retaining any dispatched idempotency claim so a
+    /// mutation cannot be replayed speculatively.
+    async fn release_quota_with_reservation(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+    ) -> Result<()> {
+        self.release_pending_with_reservation(attempt, reservation)
+            .await
+    }
+    /// Release quota and clear the claim only when the runner proved that no
+    /// provider request was dispatched.
+    async fn release_not_dispatched_with_reservation(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+    ) -> Result<()> {
+        self.release_pending_with_reservation(attempt, reservation)
+            .await
+    }
     async fn finish(
         &self,
         attempt: &Attempt,
         output: Option<&Value>,
         error_code: Option<&str>,
     ) -> Result<()>;
+    /// Settle a policy reservation and finish the action in one transaction
+    /// when supported by the repository. Legacy adapters keep their existing
+    /// finish behavior.
+    async fn finish_with_reservation(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+        output: Option<&Value>,
+        error_code: Option<&str>,
+    ) -> Result<()> {
+        let _ = reservation;
+        self.finish(attempt, output, error_code).await
+    }
 }
 /// Credential fields and the exact connection revision that supplied them.
 /// No Debug/Serialize implementation: fields may contain live credentials.

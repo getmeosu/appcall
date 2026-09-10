@@ -118,6 +118,28 @@ async fn evidence_all_attempts_and_only_final_retry_hint_survive() {
 }
 
 #[tokio::test]
+async fn response_received_failure_releases_quota_but_unknown_retains_it() {
+    for (outcome, expected_releases) in [(ResponseReceived, 1), (Unknown, 0)] {
+        let state = Arc::new(Mutex::new(State::default()));
+        let error = Service::new(
+            Repo {
+                state: state.clone(),
+                brand: "owner".into(),
+            },
+            Catalog { read: true },
+            Credentials,
+            Scripted(Mutex::new(vec![failure(outcome, None, false)].into())),
+            Allow,
+        )
+        .execute(request("owner"))
+        .await
+        .unwrap_err();
+        assert_eq!(error.evidence.outcome, outcome);
+        assert_eq!(state.lock().unwrap().releases, expected_releases);
+    }
+}
+
+#[tokio::test]
 async fn evidence_success_then_storage_failure_keeps_response_received() {
     for state in [
         State {

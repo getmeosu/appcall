@@ -245,6 +245,8 @@ pub(crate) fn linkedin_class(action: &str) -> &str {
 #[derive(Default)]
 pub struct PolicyReservation {
     pub usage: UsageSnapshot,
+    pub(crate) quota_id: String,
+    pub(crate) quota_month: String,
     pub(crate) provider_account_id: String,
     pub(crate) channel: String,
     pub(crate) class: String,
