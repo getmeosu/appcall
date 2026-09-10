@@ -144,7 +144,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
     async getValues(input: unknown): Promise<GetValuesResult> {
       const payload = validateGetValuesInput(input);
       const response = await createHttpClient("sheets.values.get").fetchText(
-        `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}`,
         {
           headers: { Authorization: `Bearer ${options.accessToken}` },
         },
@@ -169,7 +169,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       params.set("includeValuesInResponse", "true");
 
       const response = await createHttpClient("sheets.values.append").fetchText(
-        `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}:append?${params}`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}:append?${params}`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${options.accessToken}`, "Content-Type": "application/json" },
@@ -197,7 +197,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       params.set("valueInputOption", payload.valueInputOption ?? "USER_ENTERED");
 
       const response = await createHttpClient("sheets.values.update").fetchText(
-        `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}?${params}`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}?${params}`,
         {
           method: "PUT",
           headers: jsonHeaders,
@@ -220,7 +220,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
     async clearValues(input: unknown): Promise<ClearValuesResult> {
       const payload = validateClearValuesInput(input);
       const response = await createHttpClient("sheets.values.clear").fetchText(
-        `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}:clear`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values/${encodeURIComponent(payload.range)}:clear`,
         {
           method: "POST",
           headers: jsonHeaders,
@@ -246,7 +246,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
         body.sheets = payload.sheetTitles.map((title) => ({ properties: { title } }));
       }
       const response = await createHttpClient("sheets.spreadsheets.create").fetchText(
-        "https://www.googleapis.com/v4/spreadsheets",
+        "https://sheets.googleapis.com/v4/spreadsheets",
         {
           method: "POST",
           headers: jsonHeaders,
@@ -269,7 +269,7 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
       const payload = validateBatchUpdateSpreadsheetInput(input);
       const googleRequests = payload.requests.map(toGoogleBatchUpdateRequest);
       const response = await createHttpClient("sheets.spreadsheets.batchUpdate").fetchText(
-        `https://www.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}:batchUpdate`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}:batchUpdate`,
         {
           method: "POST",
           headers: jsonHeaders,

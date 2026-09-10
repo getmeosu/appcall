@@ -84,7 +84,8 @@ describe("google-workspace sheets", () => {
     const result = await client.getValues({ spreadsheetId: "sheet123", range: "Sheet1!A1:C3" });
 
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toContain("/v4/spreadsheets/sheet123/values/Sheet1!A1%3AC3");
+    expect(requests[0].url).toBe("https://sheets.googleapis.com/v4/spreadsheets/sheet123/values/Sheet1!A1%3AC3");
+    expect(requests[0].method).toBe("GET");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
     expect(result.spreadsheetId).toBe("sheet123");
     expect(result.values).toHaveLength(3);
@@ -104,8 +105,10 @@ describe("google-workspace sheets", () => {
     const result = await client.appendValues({ spreadsheetId: "sheet123", range: "Sheet1!A1", values: [["New", "Row"]] });
 
     expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://sheets.googleapis.com/v4/spreadsheets/sheet123/values/Sheet1!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&includeValuesInResponse=true");
     expect(requests[0].method).toBe("POST");
-    expect(requests[0].url).toContain(":append");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
+    expect(await requests[0].json()).toEqual({ values: [["New", "Row"]], majorDimension: "ROWS" });
     expect(result.updatedRange).toBe("Sheet1!A4:C4");
     expect(result.updatedRows).toBe(1);
     expect(result.updatedCells).toBe(3);

@@ -66,7 +66,7 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
       params.set("includeTabsContent", "true");
 
       const response = await createHttpClient("docs.get").fetchText(
-        `https://www.googleapis.com/v1/documents/${encodeURIComponent(payload.documentId)}?${params}`,
+        `https://docs.googleapis.com/v1/documents/${encodeURIComponent(payload.documentId)}?${params}`,
         {
           headers: authHeaders,
         },
@@ -81,7 +81,7 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
     async createDocument(input: unknown): Promise<CreateDocumentResult> {
       const payload = validateCreateDocumentInput(input);
       const response = await createHttpClient("docs.create").fetchText(
-        "https://www.googleapis.com/v1/documents",
+        "https://docs.googleapis.com/v1/documents",
         {
           method: "POST",
           headers: jsonHeaders,
