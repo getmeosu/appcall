@@ -51,6 +51,7 @@ type GeneratedParameter = {
   style: ParameterStyle;
   explode: boolean;
   allowReserved: boolean;
+  contentMediaType?: string;
 };
 
 const methodVerbs: Record<string, string> = {
@@ -170,7 +171,8 @@ function buildOperation(
       // name and is authoritative at runtime.
       headers[generatedParameterName(parameter)] = `{{${inputName}}}`;
     }
-    if (!isRecord(parameter.content)) {
+    const contentMediaType = parameterContentMediaType(parameter);
+    if (!isRecord(parameter.content) || contentMediaType !== undefined) {
       const generated: GeneratedParameter = {
         wireName,
         inputName,
@@ -178,6 +180,7 @@ function buildOperation(
         style: parameterStyle(parameter, location),
         explode: parameterExplode(parameter, parameterStyle(parameter, location)),
         allowReserved: parameter.allowReserved === true,
+        ...(contentMediaType !== undefined ? { contentMediaType } : {}),
       };
       requestParameters.push(generated);
       if (location === "path") {
@@ -223,12 +226,20 @@ function parameterSchema(spec: JSONObject, parameter: JSONObject): unknown {
   if (!isRecord(parameter.content)) {
     return parameter.schema;
   }
-  const mediaTypes = Object.values(parameter.content);
-  if (mediaTypes.length !== 1) {
+  const mediaType = parameterContentMediaType(parameter);
+  if (mediaType === undefined) {
     return undefined;
   }
-  const mediaType = resolveRef(spec, mediaTypes[0]);
-  return isRecord(mediaType) ? mediaType.schema : undefined;
+  const content = resolveRef(spec, parameter.content[mediaType]);
+  return isRecord(content) ? content.schema : undefined;
+}
+
+function parameterContentMediaType(parameter: JSONObject): string | undefined {
+  if (!isRecord(parameter.content)) {
+    return undefined;
+  }
+  const mediaTypes = Object.keys(parameter.content);
+  return mediaTypes.length === 1 ? mediaTypes[0] : undefined;
 }
 
 function generatedParameterName(parameter: JSONObject): string {

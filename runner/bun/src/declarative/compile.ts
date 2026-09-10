@@ -398,6 +398,10 @@ function parameterInput(parameter: DeclarativeParameter, input: Record<string, u
 }
 
 function serializePathParameter(parameter: DeclarativeParameter, value: unknown): string {
+  if (parameter.contentMediaType) {
+    return encodeURIComponent(serializeContentParameter(parameter, value));
+  }
+
   const encode = (part: unknown) => encodeURIComponent(parameterPart(part));
   const name = encode(parameter.wireName);
   const items = Array.isArray(value) ? value : undefined;
@@ -469,6 +473,10 @@ function appendSerializedQueryParameters(
 function serializeQueryParameter(parameter: DeclarativeParameter, value: unknown): SerializedQuery[] {
   const encode = (part: unknown) => encodeQueryComponent(parameterPart(part), parameter.allowReserved);
   const key = parameter.wireName;
+  if (parameter.contentMediaType) {
+    return [{ key, value: encodeQueryComponent(serializeContentParameter(parameter, value), parameter.allowReserved) }];
+  }
+
   const items = Array.isArray(value) ? value : undefined;
   const object = isRecord(value) ? Object.entries(value) : undefined;
 
@@ -506,6 +514,10 @@ function serializeQueryParameter(parameter: DeclarativeParameter, value: unknown
 }
 
 function serializeHeaderParameter(parameter: DeclarativeParameter, value: unknown): string {
+  if (parameter.contentMediaType) {
+    return serializeContentParameter(parameter, value);
+  }
+
   if (Array.isArray(value)) {
     return value.map(parameterPart).join(",");
   }
@@ -525,6 +537,15 @@ function parameterPart(value: unknown): string {
   return String(value);
 }
 
+function serializeContentParameter(parameter: DeclarativeParameter, value: unknown): string {
+  const mediaType = parameter.contentMediaType?.split(";", 1)[0]?.trim().toLowerCase();
+  if (mediaType === "application/json" || mediaType?.endsWith("+json")) {
+    const serialized = JSON.stringify(value);
+    return serialized === undefined ? String(value) : serialized;
+  }
+  return parameterPart(value);
+}
+
 function encodeQueryComponent(value: string, allowReserved: boolean): string {
   const encoded = encodeURIComponent(value);
   if (!allowReserved) {
@@ -533,8 +554,12 @@ function encodeQueryComponent(value: string, allowReserved: boolean): string {
   return encoded.replace(/%3A/gi, ":")
     .replace(/%2F/gi, "/")
     .replace(/%3F/gi, "?")
+    .replace(/%23/gi, "#")
+    .replace(/%5B/gi, "[")
+    .replace(/%5D/gi, "]")
     .replace(/%40/gi, "@")
     .replace(/%24/gi, "$")
+    .replace(/%26/gi, "&")
     .replace(/%2B/gi, "+")
     .replace(/%2C/gi, ",")
     .replace(/%3B/gi, ";")

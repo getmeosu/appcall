@@ -86,6 +86,10 @@ export type DeclarativeParameter = {
   style: DeclarativeParameterStyle;
   explode: boolean;
   allowReserved: boolean;
+  // contentMediaType selects the representation declared by an OpenAPI
+  // parameter's `content` map. When present, the runtime serializes the
+  // structured input as that representation instead of applying style rules.
+  contentMediaType?: string;
 };
 
 export type DeclarativeRequest = {
