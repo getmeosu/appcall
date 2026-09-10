@@ -33,33 +33,19 @@ fn message_page_requires_items_and_valid_records() {
 
 #[test]
 fn message_page_decodes_terminal_and_continuation_cursors() {
-    let message = json!({
-        "id": "m",
-        "provider": "slack",
-        "providerMessageId": "1",
-        "channelId": "C1",
-        "senderId": "U1",
-        "text": "hello",
-        "modelVersion": "2026-05-14",
-        "raw": {}
-    });
-
+    let terminal_with_null_cursor = Page::decode(json!({"items":[],"cursor":null})).unwrap();
     assert_eq!(
-        Page::decode(json!({"items":[message.clone()],"cursor":null}))
-            .unwrap()
-            .next_cursor,
+        terminal_with_null_cursor.next_cursor,
         ""
     );
+    let terminal_without_cursor = Page::decode(json!({"items":[]})).unwrap();
     assert_eq!(
-        Page::decode(json!({"items":[message.clone()]}))
-            .unwrap()
-            .next_cursor,
+        terminal_without_cursor.next_cursor,
         ""
     );
+    let continuation = Page::decode(json!({"items":[],"cursor":"next"})).unwrap();
     assert_eq!(
-        Page::decode(json!({"items":[message],"cursor":"next"}))
-            .unwrap()
-            .next_cursor,
+        continuation.next_cursor,
         "next"
     );
     assert_eq!(
