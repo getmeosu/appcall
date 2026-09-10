@@ -480,9 +480,11 @@ export function createPastMeetingsClient(options: { accessToken: string; fetch?:
       if (payload.page_size !== undefined) params.set("page_size", String(payload.page_size));
       if (payload.next_page_token) params.set("next_page_token", payload.next_page_token);
       const query = params.toString();
-      // Double-encode UUIDs that begin with '/' or contain '//'
       const encodedUUID = encodeURIComponent(payload.meetingUUID);
-      const response = await client.fetchJSON(`/v2/past_meetings/${encodedUUID}/participants${query ? `?${query}` : ""}`);
+      const pathUUID = payload.meetingUUID.startsWith("/") || payload.meetingUUID.includes("//")
+        ? encodeURIComponent(encodedUUID)
+        : encodedUUID;
+      const response = await client.fetchJSON(`/v2/past_meetings/${pathUUID}/participants${query ? `?${query}` : ""}`);
       if (response.status === 200) {
         const body = response.body as Record<string, unknown>;
         const participants = Array.isArray(body.participants) ? body.participants : [];
