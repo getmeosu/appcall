@@ -57,7 +57,11 @@ export function normalizeGmailMessage(message: GmailMessage): NormalizedMessage 
 
 export function createGmailClient(options: { accessToken: string; fetch?: typeof fetch; httpClient?: ConnectorHttpClient }): GmailClient {
   const sendClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.send" });
-  const gmailClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.get" });
+  const getClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.get" });
+  const modifyClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.modify" });
+  const trashClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.trash" });
+  const draftClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drafts.create" });
+  const labelsClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "labels.list" });
 
   const authHeaders = { Authorization: `Bearer ${options.accessToken}` };
   const jsonHeaders = { ...authHeaders, "Content-Type": "application/json" };
@@ -100,7 +104,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
       const params = new URLSearchParams();
       if (payload.format) params.set("format", payload.format);
       const qs = params.toString() ? `?${params}` : "";
-      const response = await gmailClient.fetchText(
+      const response = await getClient.fetchText(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}${qs}`,
         { headers: authHeaders },
       );
@@ -124,7 +128,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
 
     async modifyMessage(input: unknown): Promise<ModifyMessageResult> {
       const payload = validateModifyMessageInput(input);
-      const response = await gmailClient.fetchText(
+      const response = await modifyClient.fetchText(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}/modify`,
         {
           method: "POST",
@@ -150,7 +154,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
 
     async trashMessage(input: unknown): Promise<TrashMessageResult> {
       const payload = validateTrashMessageInput(input);
-      const response = await gmailClient.fetchText(
+      const response = await trashClient.fetchText(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}/trash`,
         {
           method: "POST",
@@ -174,7 +178,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
     async createDraft(input: unknown): Promise<CreateDraftResult> {
       const payload = validateCreateDraftInput(input);
       const raw = base64UrlEncode(buildMimeMessage(payload));
-      const response = await gmailClient.fetchText(
+      const response = await draftClient.fetchText(
         "https://gmail.googleapis.com/gmail/v1/users/me/drafts",
         {
           method: "POST",
@@ -197,7 +201,7 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
     },
 
     async listLabels(): Promise<ListLabelsResult> {
-      const response = await gmailClient.fetchText(
+      const response = await labelsClient.fetchText(
         "https://gmail.googleapis.com/gmail/v1/users/me/labels",
         { headers: authHeaders },
       );
