@@ -54,10 +54,13 @@ pub(crate) fn usage_quota_lock(tx: &mut Transaction<'_>, project: &str, month: &
     Ok(())
 }
 
-fn utc_month(tx: &mut Transaction<'_>) -> Result<String> {
-    tx.query_one("SELECT to_char(now() AT TIME ZONE 'UTC','YYYY-MM')", &[])
+/// Return the database-authoritative UTC month used by quota admission and
+/// usage decisions. Callers should capture it once per operation so a local
+/// clock cannot disagree with PostgreSQL at a month boundary.
+pub fn utc_month<C: GenericClient>(client: &mut C) -> std::result::Result<String, postgres::Error> {
+    client
+        .query_one("SELECT to_char(now() AT TIME ZONE 'UTC','YYYY-MM')", &[])
         .map(|row| row.get(0))
-        .map_err(|_| unavailable())
 }
 
 /// Collect every month with an expired active reservation before taking any
@@ -179,7 +182,8 @@ pub fn usage_snapshot<C: GenericClient>(
         .query_one(
             "SELECT count(*)::bigint
                FROM action_usage_reservations
-              WHERE project_id=$1 AND month=$2 AND state IN ('pending','dispatched')",
+              WHERE project_id=$1 AND month=$2 AND state IN ('pending','dispatched')
+                AND expires_at>now()",
             &[&project, &month],
         )?
         .get::<_, i64>(0);
@@ -265,7 +269,7 @@ impl PolicyGate for PgPolicy {
         self.repository.run(move|c|{
             let mut tx=c.transaction().map_err(|_|unavailable())?;
             let e=entitlements(&mut tx,&project,&config)?;
-            let month = utc_month(&mut tx)?;
+            let month = utc_month(&mut tx).map_err(|_| unavailable())?;
             for quota_month in quota_months_to_lock(&mut tx, &project, &month)? {
                 usage_quota_lock(&mut tx, &project, &quota_month)?;
                 expire_pending_quota(&mut tx, &project, &quota_month)?;

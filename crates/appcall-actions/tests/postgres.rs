@@ -107,6 +107,19 @@ fn usage_snapshot_counts_only_active_reservations() {
             )
             .unwrap();
     }
+    for (id, state) in [
+        ("pending-expired", "pending"),
+        ("dispatched-expired", "dispatched"),
+    ] {
+        client
+            .execute(
+                "INSERT INTO action_usage_reservations(
+                     id,project_id,month,connection_id,connector,action,state,expires_at
+                 ) VALUES($1,'p',$2,'c','test','send',$3,now()-interval '1 hour')",
+                &[&id, &month, &state],
+            )
+            .unwrap();
+    }
     let prior_month: String = client
         .query_one(
             "SELECT to_char((now() AT TIME ZONE 'UTC' - interval '1 month'),'YYYY-MM')",
