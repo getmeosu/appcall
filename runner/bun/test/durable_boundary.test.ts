@@ -35,11 +35,11 @@ test('admission limits reject overflow and recycle only after accepted work drai
  try{const pending=handler(request());await new Promise(r=>setTimeout(r,1));expect((await handler(request())).status).toBe(503);expect(recycled).toBe(0);resolve();await pending;expect(recycled).toBe(1);expect((await handler(request())).status).toBe(503);}finally{defaultConnectorRegistry.executeAction=original;}
 });
 function admissionRequest(bodyID: string, headerID?: string): Request {
- const headers = headerID === undefined ? undefined : {'x-appcall-request-id': headerID};
+ const headers = headerID === undefined ? undefined : {'x-request-id': headerID};
  return new Request('http://local/rpc',{method:'POST',...(headers ? {headers} : {}),body:JSON.stringify({id:bodyID,method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
 }
 function describeAdmissionRequest(bodyID: string, headerID?: string): Request {
- const headers = headerID === undefined ? undefined : {'x-appcall-request-id': headerID};
+ const headers = headerID === undefined ? undefined : {'x-request-id': headerID};
  return new Request('http://local/rpc',{method:'POST',...(headers ? {headers} : {}),body:JSON.stringify({id:bodyID,method:'runner.describe'})});
 }
 test('saturated admission returns a correlated RUNNER_BUSY envelope',async()=>{

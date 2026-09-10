@@ -402,6 +402,7 @@ fn safe_runner_code(code: &str) -> &str {
         "CONNECTOR_ACTION_NOT_PERMITTED" => "ACTION_NOT_PERMITTED",
         "CONNECTOR_RATE_LIMITED"
         | "CONNECTOR_UNAVAILABLE"
+        | "RUNNER_BUSY"
         | "ACTION_TIMEOUT"
         | "INVALID_ACTION_INPUT"
         | "NOTE_TOO_LONG"

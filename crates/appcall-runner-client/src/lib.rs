@@ -9,6 +9,7 @@ use std::{
 
 pub const PROTOCOL_VERSION: &str = "2026-05-14";
 pub const DEFAULT_WIRE_LIMIT: usize = 8 * 1024 * 1024;
+const REQUEST_ID_HEADER: &str = "x-request-id";
 
 #[derive(Clone, Debug)]
 pub struct ClientOptions {
@@ -349,11 +350,15 @@ impl RunnerClient {
         secrets: &[String],
     ) -> Result<T> {
         let unknown = |kind, message| Error::new(kind, DispatchOutcome::Unknown, message);
-        let mut response = self
+        let mut request = self
             .http
             .post(self.endpoint.clone())
             .header("content-type", "application/json")
-            .header("accept", "application/json")
+            .header("accept", "application/json");
+        if is_safe_request_id(id) {
+            request = request.header(REQUEST_ID_HEADER, id);
+        }
+        let mut response = request
             .body(body)
             .send()
             .await
@@ -405,13 +410,20 @@ impl RunnerClient {
                 serde_json::from_value(result).map_err(|_| malformed())
             }
             (Some(false), None, Some(error)) if !error.code.is_empty() => {
+                let admission_busy = status == reqwest::StatusCode::SERVICE_UNAVAILABLE
+                    && error.code == "RUNNER_BUSY";
+                if error.code == "RUNNER_BUSY" && !admission_busy {
+                    return Err(malformed());
+                }
                 let ambiguous = matches!(
                     error.code.as_str(),
                     "OPERATION_TIMEOUT" | "OUTBOUND_TIMEOUT"
                 );
                 Err(Error {
                     kind: ErrorKind::Runner,
-                    outcome: if ambiguous {
+                    outcome: if admission_busy {
+                        DispatchOutcome::NotDispatched
+                    } else if ambiguous {
                         DispatchOutcome::Unknown
                     } else {
                         DispatchOutcome::ResponseReceived
@@ -452,6 +464,15 @@ fn timeout(outcome: DispatchOutcome) -> Error {
         outcome,
         "Runner request deadline exceeded.",
     )
+}
+fn is_safe_request_id(id: &str) -> bool {
+    let bytes = id.as_bytes();
+    !bytes.is_empty()
+        && bytes.len() <= 256
+        && bytes[0].is_ascii_alphanumeric()
+        && bytes[1..]
+            .iter()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b':' | b'-'))
 }
 fn collect_secrets(value: &Value, secrets: &mut Vec<String>, depth: usize) {
     if depth > 32 {

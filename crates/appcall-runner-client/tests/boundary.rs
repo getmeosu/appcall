@@ -100,7 +100,7 @@ async fn correlated_runner_busy_admission_is_typed_not_dispatched() {
     let request = String::from_utf8(server.await.unwrap()).unwrap();
     assert!(request
         .to_ascii_lowercase()
-        .contains("x-appcall-request-id: test-id"));
+        .contains("x-request-id: test-id"));
 }
 
 #[tokio::test]
