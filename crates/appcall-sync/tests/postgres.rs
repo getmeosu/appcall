@@ -792,9 +792,12 @@ fn service_fetches_each_page_with_fresh_credentials_and_lease_deadline() {
         2
     );
     assert_eq!(
-        c.query_one("SELECT sum(quantity) FROM usage_monthly_rollups", &[])
-            .unwrap()
-            .get::<_, Option<i64>>(0),
+        c.query_one(
+            "SELECT sum(quantity)::bigint FROM usage_monthly_rollups",
+            &[],
+        )
+        .unwrap()
+        .get::<_, Option<i64>>(0),
         Some(2)
     );
     assert_eq!(
