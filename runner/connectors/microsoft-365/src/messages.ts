@@ -71,10 +71,13 @@ export type SendMessageInput = { to: string[]; subject: string; body: string; co
 
 export function validateSendMessageInput(input: unknown): SendMessageInput {
   if (!isRecord(input)) throw new Error("send message input must be an object");
-  const to = requireArray(input.to, "to").map((r) => requireRecord(r, "to"));
-  const recipients = to.map((r) => {
-    const addr = isRecord(r.emailAddress) ? r.emailAddress : r;
-    return requireString(typeof addr === "string" ? addr : (typeof addr.address === "string" ? addr.address : ""), "to[].address");
+  const to = requireArray(input.to, "to");
+  if (to.length === 0) throw new Error("to must contain at least one recipient");
+  const recipients = to.map((recipient) => {
+    if (typeof recipient === "string") return requireString(recipient, "to[].address");
+    const record = requireRecord(recipient, "to");
+    const address = isRecord(record.emailAddress) ? record.emailAddress.address : record.address;
+    return requireString(address, "to[].address");
   });
   return { to: recipients, subject: requireString(input.subject, "subject"), body: requireString(input.body, "body"), contentType: typeof input.contentType === "string" ? input.contentType : "text" };
 }
