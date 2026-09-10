@@ -37,6 +37,51 @@ describe("runner connector registry", () => {
     });
   });
 
+  test("routes microsoft-365 messages.send through the registered action", async () => {
+    const requests: Request[] = [];
+    const result = defaultConnectorRegistry.executeAction("microsoft-365", "messages.send", {
+      accessToken: "test-token",
+      to: ["recipient@example.com"],
+      subject: "Hello",
+      body: "World",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(null, { status: 202 });
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      await expect(result.output).resolves.toEqual({
+        connector: "microsoft-365",
+        action: "messages.send",
+        source: "connector",
+        sent: true,
+      });
+    }
+    expect(requests).toHaveLength(1);
+  });
+
+  test("rejects whitespace-only Outlook recipients before provider dispatch", async () => {
+    let dispatches = 0;
+    const result = defaultConnectorRegistry.executeAction("microsoft-365", "messages.send", {
+      accessToken: "test-token",
+      to: ["   "],
+      subject: "Hello",
+      body: "World",
+      fetch: async () => {
+        dispatches += 1;
+        return new Response(null, { status: 202 });
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      await expect(result.output).rejects.toThrow("to[].address is required");
+    }
+    expect(dispatches).toBe(0);
+  });
+
   test("executes connector-owned sync handlers through registered handlers", () => {
     const result = defaultConnectorRegistry.executeSync("telegram", "messages.list", {
       response: {

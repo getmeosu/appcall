@@ -35,16 +35,55 @@ describe("microsoft-365 connector actions", () => {
     expect(result.validated.body).toBe("World");
   });
 
+  test("sendMessage accepts every documented recipient form, including mixed arrays", () => {
+    const cases = [
+      { to: ["plain@example.com"], expected: ["plain@example.com"] },
+      { to: [{ address: "address@example.com" }], expected: ["address@example.com"] },
+      { to: [{ emailAddress: { address: "nested@example.com" } }], expected: ["nested@example.com"] },
+      {
+        to: ["plain@example.com", { address: "address@example.com" }, { emailAddress: { address: "nested@example.com" } }],
+        expected: ["plain@example.com", "address@example.com", "nested@example.com"],
+      },
+    ];
+
+    for (const { to, expected } of cases) {
+      const result = sendMessage({ to, subject: "Hello", body: "World" });
+      expect(result.validated.to).toEqual(expected);
+    }
+  });
+
   test("sendMessage rejects invalid input", () => {
     expect(() => sendMessage("not an object")).toThrow();
     expect(() => sendMessage({ to: [{ address: "test@example.com" }], subject: "", body: "World" })).toThrow();
+  });
+
+  test("sendMessage rejects malformed and empty recipients before provider dispatch", async () => {
+    let dispatches = 0;
+    const fetch = async () => {
+      dispatches += 1;
+      return new Response(null, { status: 202 });
+    };
+    const cases = [
+      { to: [], message: "to must contain at least one recipient" },
+      { to: [""], message: "to[].address is required" },
+      { to: [{}], message: "to[].address is required" },
+      { to: [{ address: "" }], message: "to[].address is required" },
+      { to: [{ emailAddress: {} }], message: "to[].address is required" },
+      { to: ["valid@example.com", { address: "" }], message: "to[].address is required" },
+    ];
+
+    for (const { to, message } of cases) {
+      await expect(sendMessage({ accessToken: "test-token", to, subject: "Hello", body: "World", fetch })).rejects.toThrow(message);
+    }
+
+    expect(dispatches).toBe(0);
   });
 
   test("sendMessage posts to Graph API with connector-owned raw HTTP", async () => {
     const requests: Request[] = [];
     const result = await sendMessage({
       accessToken: "test-token",
-      to: [{ address: "recipient@example.com" }],
+      to: ["recipient@example.com", { address: "second@example.com" }, { emailAddress: { address: "third@example.com" } }],
       subject: "Test",
       body: "Hello",
       fetch: async (input, init) => {
@@ -58,6 +97,17 @@ describe("microsoft-365 connector actions", () => {
     expect(requests[0].url).toContain("https://graph.microsoft.com/v1.0/me/sendMail");
     expect(requests[0].method).toBe("POST");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer test-token");
+    expect(await requests[0].json()).toEqual({
+      message: {
+        subject: "Test",
+        body: { contentType: "text", content: "Hello" },
+        toRecipients: [
+          { emailAddress: { address: "recipient@example.com" } },
+          { emailAddress: { address: "second@example.com" } },
+          { emailAddress: { address: "third@example.com" } },
+        ],
+      },
+    });
     expect(result).toEqual({
       connector: "microsoft-365",
       action: "messages.send",
