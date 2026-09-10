@@ -1,7 +1,9 @@
 use super::*;
+use crate::Api;
 use appcall_mcp::ConnectionLister;
 use appcall_store::{AuthType, Connection, CredentialOwner, Status, TestStatus};
 use appcall_web::{DashboardData, DashboardOperation, DashboardRequest};
+use serde_json::Value;
 use std::sync::Arc;
 #[tokio::test]
 async fn certification_direct_memory_dispatch_denies_all_grants() {
@@ -668,7 +670,12 @@ fn setup_missing_declared_field_keeps_internal_evidence_and_public_contract() {
         matches!(api.evidence.as_deref(), Some(crate::ApiFailureEvidence::Setup(crate::SetupFailureEvidence::MissingField(Some(key)))) if key.as_str() == "apiKey")
     );
     let actual = crate::error_response(api);
-    let expected = crate::provider_routes::setup_error(appcall_setup::Error::MissingField, false);
+    let expected = crate::provider_routes::setup_error(
+        appcall_setup::Error::MissingDeclaredField(
+            appcall_setup::DeclaredFieldKey::new("apiKey").unwrap(),
+        ),
+        false,
+    );
     assert_eq!(actual.status, 400);
     assert_eq!(actual.body, expected.body);
 }
@@ -786,4 +793,195 @@ async fn replay_dispatches_shared_action_service_and_records_usage() {
     };
     assert!(backend.auxiliary_route(&wrong, &request).await.is_err());
     assert_eq!(backend.core.usage(&wrong, "").unwrap()["actionCalls"], 0);
+}
+
+fn mail_setup_api() -> Api<MemoryBackend> {
+    let registry = Arc::new(
+        appcall_connectors::Registry::from_connectors([
+            appcall_connectors::Connector::from_bytes(include_bytes!(
+                "../../../../runner/connectors/brevo/manifest.json"
+            ))
+            .unwrap(),
+            appcall_connectors::Connector::from_bytes(include_bytes!(
+                "../../../../runner/connectors/resend/manifest.json"
+            ))
+            .unwrap(),
+            appcall_connectors::Connector::from_bytes(include_bytes!(
+                "../../../../runner/connectors/sendgrid/manifest.json"
+            ))
+            .unwrap(),
+        ])
+        .unwrap(),
+    );
+    let repository = MemoryRepository::new(
+        DevelopmentPermit::validate(false, None).unwrap(),
+        registry.clone(),
+        MemoryLimits::default(),
+    )
+    .unwrap();
+    let oauth = Arc::new(
+        MemoryOAuth::new(repository.clone(), Default::default(), Arc::new(NoTokens)).unwrap(),
+    );
+    let setup = Arc::new(MemorySetup::new(repository.clone(), None, oauth.clone()));
+    let actions = memory_actions(repository.clone(), None, Default::default(), oauth).unwrap();
+    let events = Arc::new(MemoryEvents::new(repository.clone(), None, None));
+    let core = Arc::new(MemoryCore::new(repository, actions, setup, events, 0));
+    let key = appcall_auth::StaticApiKey::from_hash(
+        &appcall_auth::hash_api_key("test-platform-key"),
+        appcall_auth::Principal::project("proj_dev").unwrap(),
+    )
+    .unwrap();
+    Api {
+        registry: (*registry).clone(),
+        backend: MemoryBackend::new(core, Some(Arc::new(key)), None),
+    }
+}
+
+#[tokio::test]
+async fn rest_setup_routes_describe_and_submit_selected_smtp_credentials() {
+    let api = mail_setup_api();
+    for connector in ["brevo", "resend", "sendgrid"] {
+        let description = api
+            .handle(api_request(
+                "GET",
+                &format!("/v1/connectors/{connector}/setup"),
+                Value::Null,
+            ))
+            .await;
+        assert_eq!(description.status, 200, "{connector}: {description:?}");
+        let routes = description.body["routes"].as_array().unwrap();
+        assert_eq!(routes.len(), 2, "{connector}");
+        assert_eq!(routes[0]["id"], "api_key", "{connector}");
+        assert_eq!(routes[1]["id"], "smtp", "{connector}");
+        assert!(routes[1]["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|field| field["key"] == "smtpPassword" && field["secret"] == true));
+
+        let default = api
+            .handle(api_request(
+                "POST",
+                &format!("/v1/connectors/{connector}/setup/api-key"),
+                serde_json::json!({"fields":{"apiKey":format!("{connector}-api-secret")}}),
+            ))
+            .await;
+        assert_eq!(default.status, 201, "{connector}: {default:?}");
+
+        for route in [Value::Null, Value::String(String::new())] {
+            let explicit_default = api
+                .handle(api_request(
+                    "POST",
+                    &format!("/v1/connectors/{connector}/setup/api-key"),
+                    serde_json::json!({
+                        "route":route,
+                        "fields":{"apiKey":format!("{connector}-explicit-default-secret")}
+                    }),
+                ))
+                .await;
+            assert_eq!(
+                explicit_default.status, 201,
+                "{connector}: {explicit_default:?}"
+            );
+            assert_eq!(explicit_default.body["connection"]["connector"], connector);
+            assert!(!explicit_default
+                .body
+                .to_string()
+                .contains("explicit-default-secret"));
+        }
+
+        let smtp_secret = format!("{connector}-smtp-secret");
+        let selected = api
+            .handle(api_request(
+                "POST",
+                &format!("/v1/connectors/{connector}/setup/api-key"),
+                serde_json::json!({
+                    "route":"smtp",
+                    "fields":{
+                        "smtpHost":format!("smtp.{connector}.example"),
+                        "smtpPort":"587",
+                        "smtpUser":"smtp-user",
+                        "smtpPassword":smtp_secret,
+                    }
+                }),
+            ))
+            .await;
+        assert_eq!(selected.status, 201, "{connector}: {selected:?}");
+        assert_eq!(selected.body["connection"]["connector"], connector);
+        assert!(!selected.body.to_string().contains(&smtp_secret));
+    }
+}
+
+#[tokio::test]
+async fn rest_setup_route_validation_is_safe_and_does_not_persist_invalid_submissions() {
+    let api = mail_setup_api();
+    for connector in ["brevo", "resend", "sendgrid"] {
+        let unknown = api
+            .handle(api_request(
+                "POST",
+                &format!("/v1/connectors/{connector}/setup/api-key"),
+                serde_json::json!({
+                    "route":"unknown",
+                    "fields":{"smtpPassword":"unknown-route-secret"}
+                }),
+            ))
+            .await;
+        assert_eq!(unknown.status, 400, "{connector}: {unknown:?}");
+        assert_eq!(unknown.body["error"]["code"], "INVALID_REQUEST");
+        assert!(!unknown.body.to_string().contains("unknown-route-secret"));
+        assert!(api
+            .backend
+            .core
+            .setup
+            .list("proj_dev", None)
+            .unwrap()
+            .iter()
+            .all(|connection| connection.connector != connector));
+
+        let missing = api
+            .handle(api_request(
+                "POST",
+                &format!("/v1/connectors/{connector}/setup/api-key"),
+                serde_json::json!({
+                    "route":"smtp",
+                    "fields":{
+                        "smtpHost":format!("smtp.{connector}.example"),
+                        "smtpPort":"587",
+                        "smtpUser":"smtp-user",
+                    }
+                }),
+            ))
+            .await;
+        assert_eq!(missing.status, 400, "{connector}: {missing:?}");
+        assert_eq!(missing.body["error"]["code"], "MISSING_SETUP_FIELD");
+        assert_eq!(missing.body["error"]["field"], "smtpPassword");
+        assert!(!missing.body.to_string().contains("smtpPassword-secret"));
+        assert!(api
+            .backend
+            .core
+            .setup
+            .list("proj_dev", None)
+            .unwrap()
+            .iter()
+            .all(|connection| connection.connector != connector));
+
+        let wrong_type = api
+            .handle(api_request(
+                "POST",
+                &format!("/v1/connectors/{connector}/setup/api-key"),
+                serde_json::json!({"route":42,"fields":{"apiKey":"wrong-type-secret"}}),
+            ))
+            .await;
+        assert_eq!(wrong_type.status, 400, "{connector}: {wrong_type:?}");
+        assert_eq!(wrong_type.body["error"]["code"], "INVALID_JSON");
+        assert!(!wrong_type.body.to_string().contains("wrong-type-secret"));
+        assert!(api
+            .backend
+            .core
+            .setup
+            .list("proj_dev", None)
+            .unwrap()
+            .iter()
+            .all(|connection| connection.connector != connector));
+    }
 }
