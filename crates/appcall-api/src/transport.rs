@@ -118,7 +118,7 @@ async fn handle<B: Backend>(
     }
     let body = match tokio::time::timeout(
         Duration::from_secs(5),
-        Limited::new(body, 2 * 1024 * 1024).collect(),
+        Limited::new(body, appcall_connectors::budget::rpc_request_bytes()).collect(),
     )
     .await
     {

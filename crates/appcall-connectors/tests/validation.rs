@@ -124,6 +124,18 @@ fn operation_budgets_above_the_runner_contract_are_rejected() {
         );
     }
 }
+
+#[test]
+fn api_docker_build_context_copies_the_canonical_budget_contract() {
+    let dockerfile = include_str!("../../../Dockerfile.api");
+    assert!(
+        dockerfile.lines().any(|line| {
+            line.trim() == "COPY runner/budget-contract.json ./runner/budget-contract.json"
+        }),
+        "Dockerfile.api must copy the contract at the path used by include_str!"
+    );
+}
+
 #[test]
 fn unsupported_nested_schema_is_never_silently_ignored() {
     let op = Operation {

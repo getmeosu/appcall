@@ -163,7 +163,7 @@ async fn oversized_requests_and_header_injection_fail_before_auth_or_dispatch() 
     uri.uri = format!("/{}", "x".repeat(4096));
     requests.push((uri, 413));
     let mut body = request("POST", "/v1/connections/connection/actions/a");
-    body.body = vec![b' '; 2 * 1024 * 1024 + 1];
+    body.body = vec![b' '; appcall_connectors::budget::rpc_request_bytes() + 1];
     requests.push((body, 413));
     let mut count = request("GET", "/v1/connections");
     count

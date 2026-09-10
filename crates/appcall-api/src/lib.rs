@@ -114,10 +114,17 @@ impl From<appcall_actions::ActionError> for ApiError {
             "CONNECTION_DISCONNECTED",
             "UNKNOWN_ACTION",
             "ACTION_INPUT_TOO_LARGE",
+            "INPUT_TOO_LARGE",
+            "OUTPUT_TOO_LARGE",
             "UNSUPPORTED_OPERATION_BUDGET",
             "ACTION_TIMEOUT",
+            "OPERATION_TIMEOUT",
+            "OUTBOUND_TIMEOUT",
             "ACTION_RESPONSE_INVALID",
             "ACTION_RESPONSE_TOO_LARGE",
+            "OUTBOUND_RESPONSE_TOO_LARGE",
+            "OUTBOUND_REQUEST_TOO_LARGE",
+            "OUTBOUND_UNSUPPORTED_BUDGET",
             "IDEMPOTENCY_CONFLICT",
             "IDEMPOTENCY_IN_PROGRESS",
             "MISSING_CREDENTIAL",
@@ -221,7 +228,9 @@ impl<B: Backend> Api<B> {
         }
     }
     async fn route(&self, request: Request) -> Result<Response> {
-        if request.uri.len() > 4096 || request.body.len() > 2 * 1024 * 1024 {
+        if request.uri.len() > 4096
+            || request.body.len() > appcall_connectors::budget::rpc_request_bytes()
+        {
             return Err(ApiError::new("REQUEST_TOO_LARGE"));
         }
         validate_headers(&request.headers)?;
@@ -473,11 +482,22 @@ fn error_response(error: ApiError) -> Response {
         "INVALID_REQUEST" => (400, "The request is invalid."),
         "REQUEST_TOO_LARGE" => (413, "The request is too large."),
         "ACTION_INPUT_TOO_LARGE" => (413, "Action input exceeded the configured size limit."),
+        "INPUT_TOO_LARGE" => (413, "Operation input exceeded the configured size limit."),
+        "OUTPUT_TOO_LARGE" => (502, "Operation output exceeded the configured size limit."),
         "UNSUPPORTED_OPERATION_BUDGET" => (400, "The connector operation budget is not supported."),
         "REQUEST_TIMEOUT" => (408, "The request timed out."),
         "ACTION_TIMEOUT" => (504, "Action execution timed out."),
+        "OPERATION_TIMEOUT" => (504, "Operation execution timed out."),
+        "OUTBOUND_TIMEOUT" => (504, "Outbound request timed out."),
         "ACTION_RESPONSE_INVALID" => (502, "Action response was invalid."),
         "ACTION_RESPONSE_TOO_LARGE" => (502, "Action response exceeded the configured size limit."),
+        "OUTBOUND_RESPONSE_TOO_LARGE" => {
+            (502, "Outbound response exceeded the configured size limit.")
+        }
+        "OUTBOUND_REQUEST_TOO_LARGE" => {
+            (413, "Outbound request exceeded the configured size limit.")
+        }
+        "OUTBOUND_UNSUPPORTED_BUDGET" => (400, "Outbound operation budget is not supported."),
         "CONNECTION_DISCONNECTED" => (400, "Connection is disconnected."),
         "CONNECTION_CHANGED" => (409, "The connection is unavailable or changed."),
         "IDEMPOTENCY_CONFLICT" => (
