@@ -54,6 +54,21 @@ impl Executor for Mock {
         }
     }
 }
+struct TeardownFailureMock(std::sync::Mutex<Vec<String>>);
+impl Executor for TeardownFailureMock {
+    async fn execute(
+        &self,
+        request: appcall_actions::ExecuteRequest,
+    ) -> Result<serde_json::Value, String> {
+        let action = request.action.clone();
+        self.0.lock().unwrap().push(action.clone());
+        if action == "cleanup" {
+            Err("provider cleanup failed: qa-secret-66".into())
+        } else {
+            Ok(json!({"id":42}))
+        }
+    }
+}
 fn connector() -> appcall_connectors::Connector {
     let mut ops = serde_json::Map::new();
     for (k, e) in [
@@ -129,6 +144,114 @@ fn setup_failure_still_tears_down_and_negative_expectation_is_not_probe() {
         .scenarios[0];
     assert_eq!(negative.status, "pass");
     assert!(!negative.probe_passed);
+}
+#[test]
+fn teardown_failure_marks_scenario_and_report_red_while_continuing_cleanup() {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let ex = TeardownFailureMock(Default::default());
+    let f = file(json!([{
+        "name":"cleanup failure",
+        "operation":"write",
+        "expect":{"status":"ok","assertions":[{"path":"id","op":"eq","value":42}]},
+        "teardown":[{"operation":"cleanup"},{"operation":"read"}]
+    }]));
+    let report = rt.block_on(run_connector(
+        &connector(),
+        &f,
+        &ex,
+        "p",
+        Some("c"),
+        false,
+        "run",
+    ));
+    let operation = report
+        .operations
+        .iter()
+        .find(|operation| operation.operation == "write")
+        .unwrap();
+    let scenario = &operation.scenarios[0];
+    let diagnostic = "teardown cleanup failed (EXECUTION_ERROR)";
+    assert_eq!(scenario.status, "fail");
+    assert_eq!(scenario.failure_kind, "teardown_error");
+    assert_eq!(scenario.error_code, "EXECUTION_ERROR");
+    assert_eq!(scenario.error, "teardown failed");
+    assert_eq!(scenario.failures, vec![diagnostic]);
+    assert_eq!(operation.status, "fail");
+    assert_eq!(report.overall, "red");
+    assert_eq!(report.failed, 1);
+    assert_eq!(operation.leak_warnings, vec![diagnostic]);
+    assert_eq!(*ex.0.lock().unwrap(), vec!["write", "cleanup", "read"]);
+    let serialized = serde_json::to_string(&report).unwrap();
+    assert!(!serialized.contains("qa-secret-66"));
+    assert!(!serialized.contains("provider cleanup failed: qa-secret-66"));
+    assert!(serialized.contains(diagnostic));
+}
+struct ExecutionAndTeardownFailureMock(std::sync::Mutex<Vec<String>>);
+impl Executor for ExecutionAndTeardownFailureMock {
+    async fn execute(
+        &self,
+        request: appcall_actions::ExecuteRequest,
+    ) -> Result<serde_json::Value, String> {
+        let action = request.action.clone();
+        self.0.lock().unwrap().push(action.clone());
+        match action.as_str() {
+            "write" => Err("PRIMARY_PROVIDER_ERROR".into()),
+            "cleanup" => Err("CLEANUP_PROVIDER_ERROR".into()),
+            _ => Ok(json!({"id":42})),
+        }
+    }
+}
+#[test]
+fn teardown_failure_preserves_primary_execution_failure_details() {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let ex = ExecutionAndTeardownFailureMock(Default::default());
+    let f = file(json!([{
+        "name":"primary and cleanup failure",
+        "operation":"write",
+        "expect":{"status":"ok"},
+        "teardown":[{"operation":"cleanup"}]
+    }]));
+    let report = rt.block_on(run_connector(
+        &connector(),
+        &f,
+        &ex,
+        "p",
+        Some("c"),
+        false,
+        "run",
+    ));
+    let operation = report
+        .operations
+        .iter()
+        .find(|operation| operation.operation == "write")
+        .unwrap();
+    let scenario = &operation.scenarios[0];
+    assert_eq!(scenario.status, "fail");
+    assert_eq!(scenario.failure_kind, "execution_error");
+    assert_eq!(scenario.error_code, "PRIMARY_PROVIDER_ERROR");
+    assert_eq!(scenario.error, "operation failed");
+    assert_eq!(
+        scenario.failures,
+        vec![
+            "operation returned an unexpected error code",
+            "teardown cleanup failed (CLEANUP_PROVIDER_ERROR)"
+        ]
+    );
+    assert_eq!(
+        operation.leak_warnings,
+        vec!["teardown cleanup failed (CLEANUP_PROVIDER_ERROR)"]
+    );
+    assert_eq!(report.overall, "red");
+    assert_eq!(
+        *ex.0.lock().unwrap(),
+        vec!["write".to_owned(), "cleanup".to_owned()]
+    );
 }
 #[test]
 fn health_rejects_fingerprint_drift_stale_future_zero_and_negative_only() {

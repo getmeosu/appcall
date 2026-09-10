@@ -408,6 +408,9 @@ fn wait_for_migration_lock(
 fn manifest() -> Value {
     json!({"key":"test","name":"Test","version":"1","runtime":"bun","models":["item"],"auth":{"type":"api_key","setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"API key","secret":true,"required":true}]}},"network":{"egress":"none"},"operations":{"read":{"kind":"action","timeoutMs":1000,"maxInputBytes":1000,"maxResponseBytes":1000,"inputSchema":{"type":"object"},"outputSchema":{"type":"object","required":["id"]},"sideEffect":"read"}}})
 }
+fn teardown_manifest() -> Value {
+    json!({"key":"test","name":"Test","version":"1","runtime":"bun","models":["item"],"auth":{"type":"api_key","setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"API key","secret":true,"required":true}]}},"network":{"egress":"none"},"operations":{"write":{"kind":"action","timeoutMs":1000,"maxInputBytes":1000,"maxResponseBytes":1000,"inputSchema":{"type":"object"},"outputSchema":{"type":"object","required":["id"]},"sideEffect":"write"}}})
+}
 #[test]
 #[ignore = "requires isolated local PostgreSQL and local HTTP"]
 fn qa_subprocess_uses_encrypted_credentials_real_actions_and_persists_fingerprint() {
@@ -572,6 +575,211 @@ fn qa_subprocess_uses_encrypted_credentials_real_actions_and_persists_fingerprin
     let out = check();
     assert!(!out.status.success());
     assert!(String::from_utf8_lossy(&out.stdout).contains("manifest changed"));
+}
+#[test]
+#[ignore = "requires isolated local PostgreSQL and local HTTP"]
+fn qa_subprocess_failed_teardown_persists_red_verdict_and_exits_nonzero() {
+    let mut f = Fixture::new();
+    let key = [7u8; 32];
+    let mut client = Client::connect(&f.url, NoTls).unwrap();
+    client.batch_execute("SET statement_timeout='3s'").unwrap();
+    let mut store =
+        appcall_store::Store::new(client, appcall_store::LocalProvider::new(&key).unwrap());
+    store
+        .store_secret(
+            "p",
+            "teardown_fixture",
+            "api_key",
+            br#"{"apiKey":"synthetic-secret"}"#,
+        )
+        .unwrap();
+    f.db.batch_execute("INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id,secret_ref_id) VALUES('c','p','test','api_key','active','brand','b','teardown_fixture')").unwrap();
+    let root = tempfile::tempdir().unwrap();
+    copy_migrations(root.path());
+    let manifests = root.path().join("runner/connectors/test");
+    std::fs::create_dir_all(&manifests).unwrap();
+    std::fs::write(
+        manifests.join("manifest.json"),
+        serde_json::to_vec(&teardown_manifest()).unwrap(),
+    )
+    .unwrap();
+    std::fs::write(
+        manifests.join("qa.json"),
+        serde_json::to_vec(&json!({
+            "connector":"test",
+            "scenarios":[{
+                "name":"write",
+                "operation":"write",
+                "expect":{"status":"ok","assertions":[{"path":"id","op":"eq","value":42}]},
+                "teardown":[{"operation":"write"}]
+            }]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let server = std::thread::spawn(move || {
+        let deadline = std::time::Instant::now() + Duration::from_secs(8);
+        for (index, response) in [
+            json!({"ok":true,"result":{"output":{"id":42}}}),
+            json!({"ok":false,"error":{"code":"CONNECTOR_UPSTREAM_ERROR","message":"provider cleanup failed: synthetic-secret"}}),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "runner request deadline before action {index}"
+            );
+            let (mut socket, _) = loop {
+                match listener.accept() {
+                    Ok(socket) => break socket,
+                    Err(error)
+                        if error.kind() == std::io::ErrorKind::WouldBlock
+                            && std::time::Instant::now() < deadline =>
+                    {
+                        std::thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(error) => panic!("local runner accept for action {index}: {error}"),
+                }
+            };
+            socket.set_nonblocking(false).unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .unwrap();
+            let mut data = vec![];
+            let request = loop {
+                let mut buffer = [0; 2048];
+                let bytes = socket.read(&mut buffer).unwrap();
+                assert!(bytes > 0);
+                data.extend_from_slice(&buffer[..bytes]);
+                if let Some(end) = data.windows(4).position(|b| b == b"\r\n\r\n") {
+                    let headers = String::from_utf8_lossy(&data[..end]);
+                    let length: usize = headers
+                        .lines()
+                        .find_map(|line| {
+                            line.to_lowercase()
+                                .strip_prefix("content-length:")
+                                .map(|value| value.trim().parse().unwrap())
+                        })
+                        .unwrap();
+                    if data.len() >= end + 4 + length {
+                        break serde_json::from_slice::<Value>(&data[end + 4..end + 4 + length])
+                            .unwrap();
+                    }
+                }
+            };
+            assert_eq!(request["method"], "connector.action.execute");
+            assert_eq!(request["params"]["action"], "write");
+            let mut body = response;
+            body["id"] = request["id"].clone();
+            assert_eq!(
+                request["params"]["input"],
+                json!({"apiKey":"synthetic-secret"})
+            );
+            let body = body.to_string();
+            write!(
+                socket,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            )
+            .unwrap();
+        }
+    });
+    let out = Command::new(env!("CARGO_BIN_EXE_qa"))
+        .current_dir(root.path())
+        .env_clear()
+        .envs(std::env::var_os("LLVM_PROFILE_FILE").map(|v| ("LLVM_PROFILE_FILE", v)))
+        .env("APPCALL_DATABASE_URL", &f.url)
+        .env("APPCALL_SECRET_KEY", "07".repeat(32))
+        .env("APPCALL_RUNNER_URL", url)
+        .env("APPCALL_RUNNER_TOKEN", "local-fixture")
+        .args(["run", "--project", "p", "--json"])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stderr),
+        "qa: certification failed\n"
+    );
+    server.join().unwrap_or_else(|_| {
+        panic!(
+            "fake runner did not receive the expected action sequence; status={:?} stdout={} stderr={}",
+            out.status.code(),
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        )
+    });
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let raw_provider_error = "provider cleanup failed: synthetic-secret";
+    assert!(!stdout.contains("synthetic-secret"));
+    assert!(!stdout.contains(raw_provider_error));
+    assert!(!stderr.contains("synthetic-secret"));
+    assert!(!stderr.contains(raw_provider_error));
+    let reports: Value = serde_json::from_slice(&out.stdout).unwrap();
+    let report = &reports[0];
+    assert_eq!(report["overall"], "red");
+    assert_eq!(report["total"], 1);
+    assert_eq!(report["passed"], 0);
+    assert_eq!(report["failed"], 1);
+    assert_eq!(report["notCertified"], 0);
+    let operation = &report["operations"][0];
+    assert_eq!(operation["operation"], "write");
+    assert_eq!(operation["status"], "fail");
+    let scenario = &operation["scenarios"][0];
+    assert_eq!(scenario["status"], "fail");
+    assert_eq!(scenario["failureKind"], "teardown_error");
+    assert_eq!(scenario["errorCode"], "CONNECTOR_UPSTREAM_ERROR");
+    assert_eq!(scenario["error"], "teardown failed");
+    assert_eq!(
+        scenario["failures"][0],
+        "teardown write failed (CONNECTOR_UPSTREAM_ERROR)"
+    );
+    assert_eq!(
+        operation["leakWarnings"][0],
+        "teardown write failed (CONNECTOR_UPSTREAM_ERROR)"
+    );
+    assert!(report["manifestDigest"]
+        .as_str()
+        .is_some_and(|digest| !digest.is_empty()));
+    let row = f
+        .db
+        .query_one(
+            "SELECT overall,total,passed,failed,not_certified,results FROM qa_connector_status WHERE connector='test'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(row.get::<_, String>(0), "red");
+    assert_eq!(row.get::<_, i32>(1), 1);
+    assert_eq!(row.get::<_, i32>(2), 0);
+    assert_eq!(row.get::<_, i32>(3), 1);
+    assert_eq!(row.get::<_, i32>(4), 0);
+    let saved: Value = row.get(5);
+    assert!(saved["manifestDigest"]
+        .as_str()
+        .is_some_and(|digest| !digest.is_empty()));
+    let saved_operation = &saved["operations"][0];
+    assert_eq!(saved_operation["operation"], "write");
+    assert_eq!(saved_operation["status"], "fail");
+    let saved_scenario = &saved_operation["scenarios"][0];
+    assert_eq!(saved_scenario["status"], "fail");
+    assert_eq!(saved_scenario["failureKind"], "teardown_error");
+    assert_eq!(saved_scenario["errorCode"], "CONNECTOR_UPSTREAM_ERROR");
+    assert_eq!(
+        saved_scenario["failures"][0],
+        "teardown write failed (CONNECTOR_UPSTREAM_ERROR)"
+    );
+    assert_eq!(
+        saved_operation["leakWarnings"][0],
+        "teardown write failed (CONNECTOR_UPSTREAM_ERROR)"
+    );
+    let saved_json = saved.to_string();
+    assert!(!saved_json.contains("synthetic-secret"));
+    assert!(!saved_json.contains(raw_provider_error));
 }
 #[test]
 #[ignore = "requires isolated local PostgreSQL and process signals"]

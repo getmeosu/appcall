@@ -222,9 +222,7 @@ fn execute_run(
     if cancellation.is_cancelled() {
         return Err((1, "interrupted; inspect provider state before retrying"));
     }
-    if reports.iter().any(|r| r.overall == "red") {
-        return Err((1, "certification failed"));
-    };
+    ordinary_report_exit(&reports)?;
     if f.get("require-probe").is_some_and(|v| v == "true") {
         let health =
             assess(&reg, &reports, filter, chrono::Utc::now(), timeout).map_err(|e| (1, e))?;
@@ -239,6 +237,13 @@ fn save(db: &mut postgres::Client, r: &ConnectorReport) -> Result<(), postgres::
     db.execute("INSERT INTO qa_connector_status(connector,overall,total,passed,failed,not_certified,results,last_run_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(connector) DO UPDATE SET overall=EXCLUDED.overall,total=EXCLUDED.total,passed=EXCLUDED.passed,failed=EXCLUDED.failed,not_certified=EXCLUDED.not_certified,results=EXCLUDED.results,last_run_at=EXCLUDED.last_run_at",&[&r.connector,&r.overall,&(r.total as i32),&(r.passed as i32),&(r.failed as i32),&(r.not_certified as i32),&payload,&r.last_run_at])?;
     Ok(())
 }
+fn ordinary_report_exit(reports: &[ConnectorReport]) -> Result<(), Error> {
+    if reports.iter().any(|r| r.overall == "red") {
+        Err((1, "certification failed"))
+    } else {
+        Ok(())
+    }
+}
 fn output(value: &impl serde::Serialize) -> Result<(), Error> {
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
@@ -250,27 +255,35 @@ fn human(reports: &[ConnectorReport]) -> Result<(), Error> {
     use std::io::Write;
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
+    out.write_all(human_text(reports).as_bytes())
+        .map_err(|_| (1, "output failed"))
+}
+fn human_text(reports: &[ConnectorReport]) -> String {
+    use std::fmt::Write;
+    let mut out = String::new();
     for r in reports {
         writeln!(
-            out,
+            &mut out,
             "{}  [{}]  pass={} fail={} uncertified={}",
             r.connector, r.overall, r.passed, r.failed, r.not_certified
         )
-        .map_err(|_| (1, "output failed"))?;
+        .expect("writing human QA output to a string cannot fail");
         for op in &r.operations {
-            writeln!(out, "  - {:28} {}", op.operation, op.status)
-                .map_err(|_| (1, "output failed"))?;
+            writeln!(&mut out, "  - {:28} {}", op.operation, op.status)
+                .expect("writing human QA output to a string cannot fail");
             for s in &op.scenarios {
                 for f in &s.failures {
-                    writeln!(out, "      x {}: {}", s.name, f).map_err(|_| (1, "output failed"))?;
+                    writeln!(&mut out, "      x {}: {}", s.name, f)
+                        .expect("writing human QA output to a string cannot fail");
                 }
             }
             for warning in &op.leak_warnings {
-                writeln!(out, "      ! {warning}").map_err(|_| (1, "output failed"))?;
+                writeln!(&mut out, "      ! {warning}")
+                    .expect("writing human QA output to a string cannot fail");
             }
         }
     }
-    Ok(())
+    out
 }
 
 async fn interrupt() {
@@ -307,6 +320,52 @@ mod tests {
                 1,
                 "run deadline exceeded; inspect provider state before retrying"
             ))
+        );
+    }
+
+    #[test]
+    fn human_diagnostics_retain_safe_cleanup_reference_without_raw_error() {
+        let safe = "teardown cleanup failed (EXECUTION_ERROR)";
+        let raw = "provider cleanup failed: qa-secret-66";
+        let reports = [ConnectorReport {
+            connector: "test".into(),
+            overall: "red".into(),
+            total: 1,
+            failed: 1,
+            operations: vec![OperationResult {
+                operation: "write".into(),
+                status: "fail".into(),
+                scenarios: vec![ScenarioResult {
+                    name: "cleanup".into(),
+                    status: "fail".into(),
+                    failures: vec![safe.into()],
+                    error: "teardown failed".into(),
+                    error_code: "EXECUTION_ERROR".into(),
+                    failure_kind: "teardown_error".into(),
+                    ..Default::default()
+                }],
+                leak_warnings: vec![safe.into()],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }];
+        let rendered = human_text(&reports);
+        assert!(rendered.contains(&format!("x cleanup: {safe}")));
+        assert!(rendered.contains(&format!("! {safe}")));
+        assert!(!rendered.contains(raw));
+        assert!(!rendered.contains("qa-secret-66"));
+    }
+
+    #[test]
+    fn ordinary_report_gate_returns_nonzero_for_red_without_probe_requirement() {
+        let report = ConnectorReport {
+            connector: "test".into(),
+            overall: "red".into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            ordinary_report_exit(&[report]),
+            Err((1, "certification failed"))
         );
     }
 }
