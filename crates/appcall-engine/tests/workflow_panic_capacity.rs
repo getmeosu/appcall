@@ -168,7 +168,20 @@ fn malformed_blocked_rejection_releases_detached_dispatch_capacity() {
             )
         })
         .unwrap();
-    engine.register_activity("detached", "v1").unwrap();
+    let (started_sender, started_receiver) = mpsc::channel();
+    let (release_sender, release_receiver) = mpsc::channel();
+    let release_receiver = Mutex::new(release_receiver);
+    engine
+        .register_activity_fn("detached", "v1", move |_, _| {
+            started_sender.send(()).unwrap();
+            release_receiver
+                .lock()
+                .unwrap()
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap();
+            Ok(PayloadRef::durable("late-output").unwrap())
+        })
+        .unwrap();
     engine
         .start(
             "malformed-run",
@@ -191,6 +204,18 @@ fn malformed_blocked_rejection_releases_detached_dispatch_capacity() {
         outcome => panic!("expected detached activity dispatch, got {outcome:?}"),
     };
     assert_eq!(detached_attempt.run_id, "malformed-run");
+    let invocation = engine
+        .prepare_registered(&detached_attempt, &Local)
+        .unwrap()
+        .unwrap();
+    let worker = thread::spawn(move || invocation.run());
+    let mut native = NativeGuard {
+        release_sender: Some(release_sender),
+        worker: Some(worker),
+    };
+    started_receiver
+        .recv_timeout(Duration::from_secs(2))
+        .unwrap();
     assert!(matches!(
         engine.drive("healthy-run", 0).unwrap(),
         DriveOutcome::Waiting
@@ -205,28 +230,34 @@ fn malformed_blocked_rejection_releases_detached_dispatch_capacity() {
         engine.failure_reason("malformed-run").unwrap(),
         Some(RunFailure::InvalidCommand)
     );
+    assert!(matches!(
+        engine.drive("healthy-run", 100).unwrap(),
+        DriveOutcome::Waiting
+    ));
+
+    let late_result = native.finish();
+    assert!(matches!(
+        engine.finish_registered(late_result),
+        Err(Error::Conflict)
+    ));
     assert!(engine
         .runnable(100, 10)
         .unwrap()
         .contains(&"healthy-run".into()));
-
     let healthy_attempt = match engine.drive("healthy-run", 100).unwrap() {
         DriveOutcome::Activity(attempt) => attempt,
         outcome => panic!("expected healthy activity dispatch, got {outcome:?}"),
     };
-    assert!(matches!(
-        engine.complete(
-            &detached_attempt,
-            PayloadRef::durable("late-output").unwrap()
-        ),
-        Err(Error::Conflict)
-    ));
     engine
         .complete(
             &healthy_attempt,
             PayloadRef::durable("healthy-output").unwrap(),
         )
         .unwrap();
+    assert!(matches!(
+        engine.drive("healthy-run", 100).unwrap(),
+        DriveOutcome::Completed(output) if output == PayloadRef::durable("healthy-output").unwrap()
+    ));
 }
 
 struct Local;

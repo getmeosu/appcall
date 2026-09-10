@@ -134,10 +134,16 @@ impl<S: Store> Engine<S> {
     }
     fn reject_malformed_run(&mut self, id: &str) -> Result<()> {
         self.reject_run(id, RunFailure::InvalidCommand)?;
+        let run = self.store.load(id)?;
         let attempts: Vec<_> = self
             .dispatched
             .values()
-            .filter(|attempt| attempt.run_id == id)
+            .filter(|attempt| {
+                attempt.run_id == id
+                    && run.tasks.iter().any(|task| {
+                        task.attempt == **attempt && matches!(task.state, TaskState::InFlight)
+                    })
+            })
             .cloned()
             .collect();
         for attempt in attempts {
