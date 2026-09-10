@@ -128,6 +128,68 @@ test('invalid submit never starts busy; errors release only on finished and miss
   f.fetch('retrying');assert.equal(f.run.disabled,true);f.fetch('finished');assert.equal(f.run.disabled,false);assert.match(f.nodes.get('tk-status').textContent,/tool may have run/i);
   f.emit('submit',f.form);f.fetch('started');f.fetch('finished');f.flush();assert.equal(f.run.disabled,false);assert.match(f.nodes.get('tk-status').textContent,/result/i);
 });
+test('decimal coordinates and amounts submit with raw JSON despite an invalid integer control',()=>{
+  const f=fixture();
+  const controls=[
+    f.node('f.latitude',{name:'f.latitude',type:'number',value:'1.5',attrs:{step:'any'}}),
+    f.node('f.longitude',{name:'f.longitude',type:'number',value:'-73.98',attrs:{step:'any'}}),
+    f.node('f.amount',{name:'f.amount',type:'number',value:'12.75',attrs:{step:'any'}}),
+    f.node('f.count',{name:'f.count',type:'number',value:'1.5',attrs:{step:'1'}}),
+    f.node('tk-input-raw',{name:'input_raw',value:'{"latitude":1.5,"longitude":-73.98,"amount":12.75}'})
+  ];
+  const unrelated=f.node('unrelated',{name:'unrelated',required:true,value:'kept'});
+  f.inputs.push(...controls,unrelated);
+  const queryAll=f.root.querySelectorAll;
+  f.root.querySelectorAll=selector=>selector==='[name^="f."]'
+    ? f.inputs.filter(control=>control.name?.startsWith('f.'))
+    : queryAll(selector);
+  const nativeNumberIsValid=control=>{
+    if(control.disabled)return true;
+    if(control.type!=='number'||control.value==='')return true;
+    const step=control.getAttribute('step');
+    if(step==='any')return Number.isFinite(Number(control.value));
+    const increment=Number(step||1),value=Number(control.value);
+    return Number.isFinite(value)&&Number.isFinite(increment)&&increment>0&&Number.isInteger(value/increment);
+  };
+  f.form.checkValidity=()=>controls.every(nativeNumberIsValid)&&unrelated.value.trim()!=='';
+  assert.equal(f.form.checkValidity(),false);
+  f.emit('input',controls.at(-1));
+  assert.equal(controls[3].disabled,true);
+  assert.equal(controls.at(-1).disabled,false);
+  assert.equal(unrelated.disabled,false);
+  assert.equal(f.form.checkValidity(),true);
+  assert.equal(f.emit('submit',f.form,{submitter:f.run}).stopped,undefined);
+  f.fetch('started');f.flush();
+  assert.equal(f.run.attrs['aria-busy'],'true');
+  f.fetch('finished');
+  unrelated.value='';
+  assert.equal(unrelated.disabled,false);
+  assert.equal(f.form.checkValidity(),false);
+  assert.equal(f.emit('submit',f.form).stopped,true);
+  unrelated.value='kept';
+  controls.at(-1).value='';
+  f.emit('input',controls.at(-1));
+  assert.equal(controls[3].disabled,false);
+  assert.equal(f.form.checkValidity(),false);
+  assert.equal(f.emit('submit',f.form).stopped,true);
+});
+test('whitespace raw JSON is treated as a nonempty override until cleared',()=>{
+  const f=fixture();
+  const guided=f.node('f.amount',{name:'f.amount',type:'number',value:'1.5'});
+  const raw=f.node('tk-input-raw',{name:'input_raw',value:'   '});
+  f.inputs.push(guided,raw);
+  const queryAll=f.root.querySelectorAll;
+  f.root.querySelectorAll=selector=>selector==='[name^="f."]'
+    ? f.inputs.filter(control=>control.name?.startsWith('f.'))
+    : queryAll(selector);
+  f.emit('input',raw);
+  assert.equal(guided.disabled,true);
+  assert.equal(f.inputs.filter(control=>control.name?.startsWith('f.')).every(control=>control.disabled),true);
+  raw.value='';
+  f.emit('input',raw);
+  assert.equal(guided.disabled,false);
+  assert.equal(f.inputs.filter(control=>control.name?.startsWith('f.')).every(control=>!control.disabled),true);
+});
 test('destructive submit requires an explicit confirmation click, updates current account, cancel does not execute',()=>{
   const f=fixture();
   const confirm=f.node('confirm');

@@ -431,6 +431,23 @@ if (brandingName && brandingLogo && brandingColor) {
   const stop = event => { event.preventDefault(); event.stopImmediatePropagation(); };
   const runButton = () => get('tk-run-control')?.querySelector('button');
   const executionButtons = submitter => [runButton(), submitter].filter((button, index, buttons) => button && buttons.indexOf(button) === index);
+  const rawOverride = () => get('tk-input-raw');
+  const rawDisabled = new WeakMap();
+  // Native validation runs before submit listeners. Exclude only guided f.*
+  // controls while raw JSON replaces them; unrelated required controls remain
+  // part of the form's native validation contract.
+  const syncRawOverride = () => {
+    const useRaw = !!rawOverride()?.value;
+    for (const control of root.querySelectorAll('[name^="f."]')) {
+      if (useRaw) {
+        if (!rawDisabled.has(control)) rawDisabled.set(control, control.disabled);
+        control.disabled = true;
+      } else if (rawDisabled.has(control)) {
+        control.disabled = rawDisabled.get(control);
+        rawDisabled.delete(control);
+      }
+    }
+  };
   // Both label spans stay in the shared grid, reserving the working text width
   // before execution begins. Visibility changes never replace button content.
   for (const button of executionButtons(get('tk-run-confirm')?.querySelector('[data-confirm-submit]'))) {
@@ -524,6 +541,7 @@ if (brandingName && brandingLogo && brandingColor) {
   get('tk-tabs').setAttribute('role', 'tablist');
   activate(tabs.find(a => a.parentElement.dataset.selected === 'true') || tabs[0]);
   syncSelection();
+  syncRawOverride();
   document.addEventListener('keydown', event => {
     const tab = event.target.closest?.('#tk-tabs a');
     const tool = event.target.closest?.('.tk-tool-item a');
@@ -572,6 +590,7 @@ if (brandingName && brandingLogo && brandingColor) {
     }
   }, true);
   document.addEventListener('input', event => {
+    if (event.target.id === 'tk-input-raw') syncRawOverride();
     if (event.target.id !== 'tk-tool-filter') return;
     const query = event.target.value.trim().toLowerCase();
     let count = 0;
@@ -587,6 +606,7 @@ if (brandingName && brandingLogo && brandingColor) {
     announce(count ? count + (count === 1 ? ' tool shown.' : ' tools shown.') : 'No matching tools.');
   });
   document.addEventListener('change', event => {
+    if (event.target.id === 'tk-input-raw') syncRawOverride();
     if (event.target.id === 'tk-connection' && !pending) {
       syncSelection(); runAvailability();
       resultMessage('Account changed. Run the tool to see a result for this account.');
@@ -620,7 +640,10 @@ if (brandingName && brandingLogo && brandingColor) {
         const request = fieldsRequest;
         queueMicrotask(() => { if (fieldsRequest === request) runAvailability(); });
       } else if (fieldsRequest?.el === el) {
-        if (type === 'datastar-patch-elements') fieldsRequest.patch ||= argsRaw.selector === '#tk-test-fields' || /\bid=["']tk-test-fields["']/.test(argsRaw.elements || '');
+        if (type === 'datastar-patch-elements') {
+          fieldsRequest.patch ||= argsRaw.selector === '#tk-test-fields' || /\bid=["']tk-test-fields["']/.test(argsRaw.elements || '');
+          queueMicrotask(syncRawOverride);
+        }
         if (['error', 'retrying', 'retries-failed'].includes(type)) fieldsRequest.failed = true;
         if (type === 'finished') {
           fieldsReady = fieldsRequest.patch && !fieldsRequest.failed && get('tk-test-fields')?.getAttribute('data-fields-valid') === 'true' && fieldsRequest.action === get('tk-selected-action').value && fieldsRequest.connection === account();
