@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { sendMessage, validateCredentials } from "../src/actions";
+import { errorResponseForExecutionFailure } from "../../../bun/src/server";
+import { deleteMessage, editMessage, sendMessage, validateCredentials } from "../src/actions";
 
 describe("telegram connector actions", () => {
   test("sendMessage validates input and marks connector-owned output", () => {
@@ -67,11 +68,47 @@ describe("telegram connector actions", () => {
       }), { status: 429 }),
     })).rejects.toEqual({
       ok: false,
-      code: "RATE_LIMITED",
+      code: "CONNECTOR_RATE_LIMITED",
       message: "Too Many Requests: retry after 12",
       status: 429,
       retryAfterSeconds: 12,
     });
+  });
+
+  test("carries Telegram flood control through send, edit, and delete into the runner envelope", async () => {
+    const floodControl = () => new Response(JSON.stringify({
+      ok: false,
+      error_code: 429,
+      description: "Too Many Requests: retry after 17",
+      parameters: { retry_after: 17 },
+    }), { status: 400 });
+    const fetch = async () => floodControl();
+    const failures = await Promise.all([
+      sendMessage({ botToken: "123:abc", chatId: "1001", text: "hello", fetch }).catch((error) => error),
+      editMessage({ botToken: "123:abc", chatId: "1001", messageId: 42, text: "updated", fetch }).catch((error) => error),
+      deleteMessage({ botToken: "123:abc", chatId: "1001", messageId: 42, fetch }).catch((error) => error),
+    ]);
+
+    for (const failure of failures) {
+      expect(failure).toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+        status: 400,
+        retryAfterSeconds: 17,
+      });
+      expect(errorResponseForExecutionFailure(
+        failure,
+        "CONNECTOR_UPSTREAM_ERROR",
+        "Action failed.",
+      )).toEqual({
+        status: 429,
+        error: {
+          code: "CONNECTOR_RATE_LIMITED",
+          message: "Too Many Requests: retry after 17",
+          retryAfterSeconds: 17,
+        },
+      });
+    }
   });
 
   test("validateCredentials accepts required setup fields", () => {

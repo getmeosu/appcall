@@ -496,7 +496,7 @@ export function mapTelegramError(response: Response | { status: number }, body: 
   if (response.status === 429 || errorCode === 429) {
     return {
       ok: false,
-      code: "RATE_LIMITED",
+      code: "CONNECTOR_RATE_LIMITED",
       message: description,
       status: response.status,
       retryAfterSeconds: retryAfter ?? 0,
