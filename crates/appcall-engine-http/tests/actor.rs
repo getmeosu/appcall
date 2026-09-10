@@ -320,3 +320,179 @@ fn workflow_panic_keeps_actor_available() {
     host.shutdown().unwrap();
     assert!(!client.is_alive());
 }
+
+#[test]
+fn blocked_workflow_fails_closed_without_stopping_actor_or_replaying_after_restart() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let bad_invocations = Arc::new(AtomicUsize::new(0));
+    let mut e = Engine::open(&db).unwrap();
+    let initial_bad_invocations = bad_invocations.clone();
+    e.register_workflow("bad", "v1", move |_| -> WorkflowResult {
+        initial_bad_invocations.fetch_add(1, Ordering::SeqCst);
+        Err(WorkflowError::Blocked)
+    })
+    .unwrap();
+    e.register_workflow("healthy", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.start(
+        "bad-run",
+        "bad",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    e.start(
+        "healthy-run",
+        "healthy",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+
+    let host = EngineHost::spawn(
+        HttpAdapter::new(e, TOKEN).unwrap(),
+        Arc::new(MissingPayloads),
+    )
+    .unwrap();
+    let client = host.client();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let authorization = format!("Bearer {TOKEN}");
+
+    runtime.block_on(async {
+        let mut bad_body = String::new();
+        for _ in 0..100 {
+            let response = client
+                .request(
+                    "GET".into(),
+                    "/runs/bad-run".into(),
+                    authorization.clone(),
+                    vec![],
+                    Duration::from_secs(2),
+                )
+                .await;
+            assert_eq!(
+                response.status, 200,
+                "bad response status: {}",
+                response.status
+            );
+            bad_body = String::from_utf8(response.body).unwrap();
+            if bad_body.contains("\"state\":\"Failed\"")
+                && bad_body.contains("\"failure_reason\":\"InvalidCommand\"")
+            {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(bad_body.contains("\"state\":\"Failed\""), "{bad_body}");
+        assert!(
+            bad_body.contains("\"failure_reason\":\"InvalidCommand\""),
+            "{bad_body}"
+        );
+
+        let history = client
+            .request(
+                "GET".into(),
+                "/runs/bad-run/history".into(),
+                authorization.clone(),
+                vec![],
+                Duration::from_secs(2),
+            )
+            .await;
+        assert_eq!(history.status, 200);
+        assert!(String::from_utf8(history.body)
+            .unwrap()
+            .contains("\"data\":[]"));
+
+        let mut healthy_body = String::new();
+        for _ in 0..100 {
+            let response = client
+                .request(
+                    "GET".into(),
+                    "/runs/healthy-run".into(),
+                    authorization.clone(),
+                    vec![],
+                    Duration::from_secs(2),
+                )
+                .await;
+            assert_eq!(
+                response.status, 200,
+                "healthy response status: {}",
+                response.status
+            );
+            healthy_body = String::from_utf8(response.body).unwrap();
+            if healthy_body.contains("\"state\":\"Completed\"") {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(
+            healthy_body.contains("\"state\":\"Completed\""),
+            "{healthy_body}"
+        );
+    });
+
+    assert_eq!(bad_invocations.load(Ordering::SeqCst), 1);
+    assert!(client.is_alive());
+    host.shutdown().unwrap();
+    assert!(!client.is_alive());
+
+    let mut reopened = Engine::open(&db).unwrap();
+    let restart_bad_invocations = bad_invocations.clone();
+    reopened
+        .register_workflow("bad", "v1", move |_| -> WorkflowResult {
+            restart_bad_invocations.fetch_add(1, Ordering::SeqCst);
+            Err(WorkflowError::Blocked)
+        })
+        .unwrap();
+    reopened
+        .register_workflow("healthy", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    let reopened_host = EngineHost::spawn(
+        HttpAdapter::new(reopened, TOKEN).unwrap(),
+        Arc::new(MissingPayloads),
+    )
+    .unwrap();
+    let reopened_client = reopened_host.client();
+
+    runtime.block_on(async {
+        let mut bad_body = String::new();
+        for _ in 0..100 {
+            let response = reopened_client
+                .request(
+                    "GET".into(),
+                    "/runs/bad-run".into(),
+                    authorization.clone(),
+                    vec![],
+                    Duration::from_secs(2),
+                )
+                .await;
+            assert_eq!(
+                response.status, 200,
+                "reopened response status: {}",
+                response.status
+            );
+            bad_body = String::from_utf8(response.body).unwrap();
+            if bad_body.contains("\"state\":\"Failed\"")
+                && bad_body.contains("\"failure_reason\":\"InvalidCommand\"")
+            {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(bad_body.contains("\"state\":\"Failed\""), "{bad_body}");
+        assert!(
+            bad_body.contains("\"failure_reason\":\"InvalidCommand\""),
+            "{bad_body}"
+        );
+    });
+
+    assert_eq!(bad_invocations.load(Ordering::SeqCst), 1);
+    assert!(reopened_client.is_alive());
+    reopened_host.shutdown().unwrap();
+}

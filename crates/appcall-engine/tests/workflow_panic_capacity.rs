@@ -141,6 +141,125 @@ fn workflow_panic_keeps_in_flight_capacity_until_late_native_result() {
     ));
 }
 
+#[test]
+fn malformed_blocked_rejection_releases_detached_dispatch_capacity() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut engine = Engine::open(directory.path().join("engine.db")).unwrap();
+    engine.set_dispatch_limit(1).unwrap();
+    engine
+        .register_workflow("malformed", "v1", |context| {
+            let _ = context.spawn_activity(
+                "detached",
+                "v1",
+                context.input().clone(),
+                EffectPolicy::Read,
+            )?;
+            context.timer(100)?;
+            Err(WorkflowError::Blocked)
+        })
+        .unwrap();
+    engine
+        .register_workflow("healthy", "v1", |context| {
+            context.activity(
+                "detached",
+                "v1",
+                context.input().clone(),
+                EffectPolicy::Read,
+            )
+        })
+        .unwrap();
+    let (started_sender, started_receiver) = mpsc::channel();
+    let (release_sender, release_receiver) = mpsc::channel();
+    let release_receiver = Mutex::new(release_receiver);
+    engine
+        .register_activity_fn("detached", "v1", move |_, _| {
+            started_sender.send(()).unwrap();
+            release_receiver
+                .lock()
+                .unwrap()
+                .recv_timeout(Duration::from_secs(10))
+                .unwrap();
+            Ok(PayloadRef::durable("late-output").unwrap())
+        })
+        .unwrap();
+    engine
+        .start(
+            "malformed-run",
+            "malformed",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    engine
+        .start(
+            "healthy-run",
+            "healthy",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+
+    let detached_attempt = match engine.drive("malformed-run", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        outcome => panic!("expected detached activity dispatch, got {outcome:?}"),
+    };
+    assert_eq!(detached_attempt.run_id, "malformed-run");
+    let invocation = engine
+        .prepare_registered(&detached_attempt, &Local)
+        .unwrap()
+        .unwrap();
+    let worker = thread::spawn(move || invocation.run());
+    let mut native = NativeGuard {
+        release_sender: Some(release_sender),
+        worker: Some(worker),
+    };
+    started_receiver
+        .recv_timeout(Duration::from_secs(2))
+        .unwrap();
+    assert!(matches!(
+        engine.drive("healthy-run", 0).unwrap(),
+        DriveOutcome::Waiting
+    ));
+
+    assert!(matches!(
+        engine.drive("malformed-run", 100).unwrap(),
+        DriveOutcome::Suspended(RunState::Failed)
+    ));
+    assert_eq!(engine.status("malformed-run").unwrap(), RunState::Failed);
+    assert_eq!(
+        engine.failure_reason("malformed-run").unwrap(),
+        Some(RunFailure::InvalidCommand)
+    );
+    assert!(matches!(
+        engine.drive("healthy-run", 100).unwrap(),
+        DriveOutcome::Waiting
+    ));
+
+    let late_result = native.finish();
+    assert!(matches!(
+        engine.finish_registered(late_result),
+        Err(Error::Conflict)
+    ));
+    assert!(engine
+        .runnable(100, 10)
+        .unwrap()
+        .contains(&"healthy-run".into()));
+    let healthy_attempt = match engine.drive("healthy-run", 100).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        outcome => panic!("expected healthy activity dispatch, got {outcome:?}"),
+    };
+    engine
+        .complete(
+            &healthy_attempt,
+            PayloadRef::durable("healthy-output").unwrap(),
+        )
+        .unwrap();
+    assert!(matches!(
+        engine.drive("healthy-run", 100).unwrap(),
+        DriveOutcome::Completed(output) if output == PayloadRef::durable("healthy-output").unwrap()
+    ));
+}
+
 struct Local;
 impl PayloadResolver for Local {
     fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {

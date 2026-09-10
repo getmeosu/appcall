@@ -132,6 +132,25 @@ impl<S: Store> Engine<S> {
         run.wakeup = None;
         self.save(&mut run, &[])
     }
+    fn reject_malformed_run(&mut self, id: &str) -> Result<()> {
+        self.reject_run(id, RunFailure::InvalidCommand)?;
+        let run = self.store.load(id)?;
+        let attempts: Vec<_> = self
+            .dispatched
+            .values()
+            .filter(|attempt| {
+                attempt.run_id == id
+                    && run.tasks.iter().any(|task| {
+                        task.attempt == **attempt && matches!(task.state, TaskState::InFlight)
+                    })
+            })
+            .cloned()
+            .collect();
+        for attempt in attempts {
+            self.release_dispatch(&attempt)?;
+        }
+        Ok(())
+    }
     /// Reject an attempt before native invocation began. Invoking work cannot
     /// be classified as unexecuted or release its capacity through this API.
     pub fn reject_dispatch(&mut self, attempt: &ActivityAttempt, reason: RunFailure) -> Result<()> {
@@ -290,6 +309,13 @@ impl<S: Store> Engine<S> {
                 }
                 Err(WorkflowError::Nondeterminism | WorkflowError::Invalid) => {
                     return self.suspend(&mut r, RunState::Nondeterminism)
+                }
+                Err(WorkflowError::Blocked)
+                    if ctx.pending.is_none()
+                        && !r.history.iter().any(|event| event.value.is_none()) =>
+                {
+                    self.reject_malformed_run(id)?;
+                    return Ok(DriveOutcome::Suspended(RunState::Failed));
                 }
                 Err(WorkflowError::Blocked) => {}
             }
