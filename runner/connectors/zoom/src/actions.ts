@@ -462,10 +462,24 @@ export function addMeetingRegistrant(input: unknown): Record<string, unknown> | 
 
 export type PastMeetingParticipantsInput = { meetingUUID: string; page_size?: number; next_page_token?: string };
 
+function requireSafeMeetingUUID(value: unknown): string {
+  const meetingUUID = requireString(value, "meetingUUID");
+  const hasWhitespace = /\s/.test(meetingUUID);
+  const hasAsciiControl = /[\u0000-\u001F\u007F]/.test(meetingUUID);
+  const hasPathTraversal = meetingUUID.split("/").some((segment) => segment === "..");
+  const hasUnsafeDelimiter = meetingUUID.includes("?") || meetingUUID.includes("#");
+  const hasBackslash = meetingUUID.includes("\\");
+
+  if (hasWhitespace || hasAsciiControl || hasPathTraversal || hasUnsafeDelimiter || hasBackslash) {
+    throw new Error("meetingUUID is invalid");
+  }
+  return meetingUUID;
+}
+
 export function validatePastMeetingParticipantsInput(input: unknown): PastMeetingParticipantsInput {
   if (!isRecord(input)) throw new Error("past_meetings.participants input must be an object");
   return {
-    meetingUUID: requireString(input.meetingUUID, "meetingUUID"),
+    meetingUUID: requireSafeMeetingUUID(input.meetingUUID),
     page_size: typeof input.page_size === "number" ? input.page_size : undefined,
     next_page_token: typeof input.next_page_token === "string" ? input.next_page_token : undefined,
   };
