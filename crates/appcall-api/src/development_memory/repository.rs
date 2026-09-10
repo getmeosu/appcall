@@ -761,6 +761,54 @@ impl ActionRepository for MemoryRepository {
         }
         Ok(())
     }
+    async fn release_not_dispatched_with_reservation(
+        &self,
+        a: &Attempt,
+        _: &appcall_actions::PolicyReservation,
+    ) -> appcall_actions::Result<()> {
+        let mut d = self.lock().map_err(action_error)?;
+        if owned(&d, a)
+            .ok()
+            .is_some_and(|claim| claim.phase == ClaimPhase::Dispatched)
+        {
+            clear_dispatched(&mut d, a)?;
+        }
+        Ok(())
+    }
+    async fn finish_not_dispatched_with_reservation(
+        &self,
+        a: &Attempt,
+        _: &appcall_actions::PolicyReservation,
+        error: &str,
+    ) -> appcall_actions::Result<()> {
+        if error.len() > 128
+            || !error
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+        {
+            return Err(ActionError::new("INVALID_ACTION_INPUT"));
+        }
+        let mut d = self.lock().map_err(action_error)?;
+        let claim = checked_claim(&d, a, ClaimPhase::Dispatched)?;
+        if claim.reserved_bytes < 8192 || claim.reserved_histories < 1 {
+            return Err(action_error(MemoryError::Capacity));
+        }
+        clear_dispatched(&mut d, a)?;
+        d.bytes_used = d
+            .bytes_used
+            .checked_add(8192)
+            .ok_or_else(|| action_error(MemoryError::Capacity))?;
+        d.action_logs.insert(
+            format!("alog_{}", a.request_id),
+            ActionLog {
+                attempt: a.clone(),
+                status: "failed".into(),
+                error_code: error.into(),
+                created_at: Utc::now(),
+            },
+        );
+        Ok(())
+    }
     async fn finish(
         &self,
         a: &Attempt,
@@ -832,4 +880,32 @@ fn remove_pending(d: &mut MemoryData, k: &(String, String)) {
         d.histories_reserved -= c.reserved_histories;
         d.pending_actions -= 1;
     }
+}
+fn clear_dispatched(d: &mut MemoryData, a: &Attempt) -> appcall_actions::Result<()> {
+    let claim = checked_claim(d, a, ClaimPhase::Dispatched)?;
+    let has_usage_reservation = d
+        .usage_reserved
+        .get(&a.request_id)
+        .filter(|reservation| {
+            reservation.project == a.project_id && reservation.brand == a.external_account_id
+        })
+        .is_some();
+    if !has_usage_reservation {
+        return Err(action_error(MemoryError::Unavailable));
+    }
+    if d.active_effects == 0
+        || d.bytes_reserved < claim.reserved_bytes
+        || d.histories_reserved < claim.reserved_histories
+    {
+        return Err(action_error(MemoryError::Unavailable));
+    }
+    let claim = d
+        .action_claims
+        .remove(&key(a))
+        .expect("checked dispatched claim");
+    d.usage_reserved.remove(&a.request_id);
+    d.bytes_reserved -= claim.reserved_bytes;
+    d.histories_reserved -= claim.reserved_histories;
+    d.active_effects -= 1;
+    Ok(())
 }

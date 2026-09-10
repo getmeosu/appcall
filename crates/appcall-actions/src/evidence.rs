@@ -32,6 +32,9 @@ impl DispatchEvidence {
         state.outcome = combine(prior, current);
         state.retry_after_seconds = failure.and_then(|f| f.retry_after_seconds);
     }
+    pub(crate) fn outcome(&self) -> ActionDispatchOutcome {
+        self.0.lock().unwrap_or_else(|e| e.into_inner()).outcome
+    }
     pub(crate) fn local_error(&self, error: &ActionError) {
         let mut state = self.0.lock().unwrap_or_else(|e| e.into_inner());
         // Only before any runner entry can a local origin describe this failure.

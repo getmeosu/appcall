@@ -282,8 +282,123 @@ impl ActionRepository for PgActionRepository {
         attempt: &Attempt,
         reservation: &PolicyReservation,
     ) -> Result<()> {
+        if reservation.quota_id.is_empty() {
+            let a = attempt.clone();
+            return self
+                .run(move |client| {
+                    if !a.key.is_empty() {
+                        client
+                            .execute(
+                                "DELETE FROM action_idempotency_claims
+                                  WHERE project_id=$1 AND idempotency_key=$2
+                                    AND request_id=$3 AND dispatched_at IS NOT NULL",
+                                &[&a.project_id, &a.key, &a.request_id],
+                            )
+                            .map_err(|_| storage())?;
+                    }
+                    Ok(())
+                })
+                .await;
+        }
         self.release_quota_reservation(attempt, reservation, true, true)
             .await
+    }
+    async fn finish_not_dispatched_with_reservation(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+        error_code: &str,
+    ) -> Result<()> {
+        let a = attempt.clone();
+        let error = error_code.to_owned();
+        if reservation.quota_id.is_empty() {
+            return self
+                .run(move |client| {
+                    let mut tx = client.transaction().map_err(|_| storage())?;
+                    lock_key(&mut tx, &a)?;
+                    if !a.key.is_empty()
+                        && tx
+                            .query_opt(
+                                "SELECT request_id
+                                   FROM action_idempotency_claims
+                                  WHERE project_id=$1 AND idempotency_key=$2
+                                    AND request_id=$3 AND dispatched_at IS NOT NULL
+                                  FOR UPDATE",
+                                &[&a.project_id, &a.key, &a.request_id],
+                            )
+                            .map_err(|_| storage())?
+                            .is_none()
+                    {
+                        return Err(ActionError::new("IDEMPOTENCY_IN_PROGRESS"));
+                    }
+                    write_log(&mut tx, &a, Some(&error))?;
+                    if !a.key.is_empty() {
+                        tx.execute(
+                            "DELETE FROM action_idempotency_claims
+                              WHERE project_id=$1 AND idempotency_key=$2 AND request_id=$3",
+                            &[&a.project_id, &a.key, &a.request_id],
+                        )
+                        .map_err(|_| storage())?;
+                    }
+                    tx.commit().map_err(|_| storage())
+                })
+                .await;
+        }
+
+        let quota_id = reservation.quota_id.clone();
+        let quota_month = reservation.quota_month.clone();
+        self.run(move |client| {
+            let mut tx = client.transaction().map_err(|_| storage())?;
+            crate::policy_postgres::usage_quota_lock(&mut tx, &a.project_id, &quota_month)?;
+            lock_key(&mut tx, &a)?;
+            let state = tx
+                .query_opt(
+                    "SELECT state
+                       FROM action_usage_reservations
+                      WHERE id=$1 AND project_id=$2 AND month=$3
+                      FOR UPDATE",
+                    &[&quota_id, &a.project_id, &quota_month],
+                )
+                .map_err(|_| storage())?
+                .ok_or_else(|| ActionError::new("USAGE_RESERVATION_INVALID"))?
+                .get::<_, String>(0);
+            if state != "dispatched" {
+                return Err(ActionError::new("USAGE_RESERVATION_INVALID"));
+            }
+            if !a.key.is_empty()
+                && tx
+                    .query_opt(
+                        "SELECT request_id
+                           FROM action_idempotency_claims
+                          WHERE project_id=$1 AND idempotency_key=$2
+                            AND request_id=$3 AND dispatched_at IS NOT NULL
+                          FOR UPDATE",
+                        &[&a.project_id, &a.key, &a.request_id],
+                    )
+                    .map_err(|_| storage())?
+                    .is_none()
+            {
+                return Err(ActionError::new("IDEMPOTENCY_IN_PROGRESS"));
+            }
+            write_log(&mut tx, &a, Some(&error))?;
+            tx.execute(
+                "UPDATE action_usage_reservations
+                    SET state='released', released_at=now()
+                  WHERE id=$1 AND state='dispatched'",
+                &[&quota_id],
+            )
+            .map_err(|_| storage())?;
+            if !a.key.is_empty() {
+                tx.execute(
+                    "DELETE FROM action_idempotency_claims
+                      WHERE project_id=$1 AND idempotency_key=$2 AND request_id=$3",
+                    &[&a.project_id, &a.key, &a.request_id],
+                )
+                .map_err(|_| storage())?;
+            }
+            tx.commit().map_err(|_| storage())
+        })
+        .await
     }
     async fn finish(
         &self,

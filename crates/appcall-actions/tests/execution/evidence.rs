@@ -163,6 +163,34 @@ async fn runner_busy_retries_read_only_within_bound_and_releases_claim() {
 }
 
 #[tokio::test]
+async fn unknown_prior_retry_keeps_dispatch_fenced_after_late_not_dispatched() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let service = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        Catalog { read: true },
+        Credentials,
+        Scripted(Mutex::new(
+            vec![
+                failure(Unknown, None, true),
+                failure(NotDispatched, None, false),
+            ]
+            .into(),
+        )),
+        Allow,
+    );
+
+    let error = service.execute(request("owner")).await.unwrap_err();
+    assert_eq!(error.code, "CONNECTOR_UNAVAILABLE");
+    assert_eq!(error.evidence.outcome, Unknown);
+    let state = state.lock().unwrap();
+    assert!(state.marked, "an earlier unknown attempt keeps the fence");
+    assert_eq!(state.not_dispatched_releases, 0);
+}
+
+#[tokio::test]
 async fn response_received_failure_releases_quota_but_unknown_retains_it() {
     for (outcome, expected_releases) in [(ResponseReceived, 1), (Unknown, 0)] {
         let state = Arc::new(Mutex::new(State::default()));
@@ -368,6 +396,33 @@ async fn evidence_observation_failure_retains_runner_context() {
     assert_eq!(error.evidence.outcome, Unknown);
     assert_eq!(error.evidence.origin, ActionFailureOrigin::Runner);
     assert_eq!(error.evidence.retry_after_seconds, Some(3));
+}
+
+#[tokio::test]
+async fn no_dispatch_cleanup_precedes_observation_failure() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let error = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        Catalog { read: true },
+        Credentials,
+        Scripted(Mutex::new(vec![failure(NotDispatched, None, false)].into())),
+        Policy {
+            reject: false,
+            fail_observation: true,
+        },
+    )
+    .execute(request("owner"))
+    .await
+    .unwrap_err();
+
+    assert_eq!(error.code, "STORAGE_UNAVAILABLE");
+    assert_eq!(error.evidence.outcome, NotDispatched);
+    let state = state.lock().unwrap();
+    assert!(!state.marked);
+    assert_eq!(state.not_dispatched_releases, 1);
 }
 
 struct ShortCatalog;

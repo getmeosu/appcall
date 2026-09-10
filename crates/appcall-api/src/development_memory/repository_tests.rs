@@ -178,6 +178,79 @@ async fn action_claims_fence_stale_owner_and_commit_usage_once() {
         .unwrap()
         .is_empty());
 }
+
+#[tokio::test]
+async fn proven_not_dispatched_finalizer_releases_memory_admission() {
+    let r = repository(MemoryLimits::default());
+    r.create_connection(connection("c", "proj_dev", "brand"), None)
+        .unwrap();
+    let first = attempt("one", "known-busy");
+    r.acquire(&first).await.unwrap();
+    let revision = r.connection("proj_dev", "c").await.unwrap();
+    let reservation = appcall_actions::PolicyReservation::default();
+    r.mark_dispatched_checked_with_reservation(&first, &revision, &reservation)
+        .await
+        .unwrap();
+
+    let (reserved_bytes, reserved_histories) = {
+        let data = r.lock().unwrap();
+        assert_eq!(data.action_claims.len(), 1);
+        assert_eq!(data.pending_actions, 0);
+        assert_eq!(data.active_effects, 1);
+        assert_eq!(data.usage_reserved.len(), 1);
+        assert!(data.bytes_reserved > 0);
+        assert_eq!(data.histories_reserved, 3);
+        (data.bytes_reserved, data.histories_reserved)
+    };
+
+    r.release_pending(&first).await.unwrap();
+    r.release_quota_with_reservation(&first, &reservation)
+        .await
+        .unwrap();
+    assert_eq!(r.lock().unwrap().action_claims.len(), 1);
+
+    let mut stale = first.clone();
+    stale.request_id = "stale-owner".into();
+    assert_eq!(
+        r.finish_not_dispatched_with_reservation(&stale, &reservation, "RUNNER_BUSY")
+            .await
+            .unwrap_err()
+            .code,
+        "IDEMPOTENCY_IN_PROGRESS"
+    );
+    {
+        let data = r.lock().unwrap();
+        assert_eq!(data.action_claims.len(), 1);
+        assert_eq!(data.usage_reserved.len(), 1);
+        assert!(data.action_logs.is_empty());
+    }
+
+    r.finish_not_dispatched_with_reservation(&first, &reservation, "RUNNER_BUSY")
+        .await
+        .unwrap();
+    let data = r.lock().unwrap();
+    assert!(data.action_claims.is_empty());
+    assert!(data.usage_reserved.is_empty());
+    assert_eq!(data.pending_actions, 0);
+    assert_eq!(data.active_effects, 0);
+    assert_eq!(data.bytes_reserved, 0);
+    assert_eq!(data.histories_reserved, 0);
+    assert!(reserved_bytes > 0);
+    assert_eq!(reserved_histories, 3);
+    assert_eq!(data.action_logs.len(), 1);
+    assert_eq!(
+        data.action_logs.values().next().unwrap().error_code,
+        "RUNNER_BUSY"
+    );
+    drop(data);
+
+    let mut retry = first.clone();
+    retry.request_id = "retry-owner".into();
+    assert!(matches!(
+        r.acquire(&retry).await.unwrap(),
+        Acquisition::Acquired
+    ));
+}
 #[tokio::test]
 async fn capacity_reserved_before_dispatch_and_unknown_never_retries() {
     let r = repository(MemoryLimits {

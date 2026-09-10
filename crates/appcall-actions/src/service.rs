@@ -255,13 +255,18 @@ impl<
                         continue;
                     }
                     admission.resolve(failure.transient);
-                    if failure.outcome == ActionDispatchOutcome::NotDispatched {
-                        // Only an explicit no-dispatch result can clear the
-                        // mutation idempotency claim and make retry safe.
+                    let code = safe_runner_code(&failure.code);
+                    let outcome = evidence.outcome();
+                    if outcome == ActionDispatchOutcome::NotDispatched {
+                        // This explicit finalizer clears the dispatched claim
+                        // and records the failure without re-entering the
+                        // ordinary dispatched-claim finish path. Keep it
+                        // before policy observation, matching the existing
+                        // no-dispatch cleanup ordering.
                         self.repository
-                            .release_not_dispatched_with_reservation(attempt, &reservation)
+                            .finish_not_dispatched_with_reservation(attempt, &reservation, code)
                             .await?;
-                    } else if failure.outcome == ActionDispatchOutcome::ResponseReceived {
+                    } else if outcome == ActionDispatchOutcome::ResponseReceived {
                         // A typed provider failure releases quota capacity,
                         // but its dispatched claim still fences mutation
                         // replay until normal recovery or operator handling.
@@ -272,10 +277,11 @@ impl<
                     self.policy
                         .observe_failure(request, connection, &reservation, &failure.code)
                         .await?;
-                    let code = safe_runner_code(&failure.code);
-                    self.repository
-                        .finish_with_reservation(attempt, &reservation, None, Some(code))
-                        .await?;
+                    if outcome != ActionDispatchOutcome::NotDispatched {
+                        self.repository
+                            .finish_with_reservation(attempt, &reservation, None, Some(code))
+                            .await?;
+                    }
                     return Err(ActionError::new(code).with_detail(failure.detail));
                 }
             }

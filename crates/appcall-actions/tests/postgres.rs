@@ -944,6 +944,90 @@ fn proven_not_dispatched_release_fences_late_success_and_reuses_slot() {
 
 #[test]
 #[ignore = "requires APPCALL_TEST_DATABASE_URL"]
+fn empty_reservation_not_dispatched_finalizer_requires_owned_claim() {
+    let Some(client) = database() else { return };
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let reservation = PolicyReservation::default();
+    let first = attempt();
+    rt.block_on(repo.acquire(&first)).unwrap();
+    rt.block_on(repo.mark_dispatched(&first)).unwrap();
+    rt.block_on(repo.release_pending(&first)).unwrap();
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT count(*) FROM action_idempotency_claims", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+
+    let mut stale = first.clone();
+    stale.request_id = "stale-owner".into();
+    assert_eq!(
+        rt.block_on(repo.finish_not_dispatched_with_reservation(
+            &stale,
+            &reservation,
+            "RUNNER_BUSY",
+        ))
+        .unwrap_err()
+        .code,
+        "IDEMPOTENCY_IN_PROGRESS"
+    );
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT count(*) FROM action_idempotency_claims", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+
+    rt.block_on(repo.finish_not_dispatched_with_reservation(&first, &reservation, "RUNNER_BUSY"))
+        .unwrap();
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT count(*) FROM action_idempotency_claims", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT error_code FROM action_logs", &[])
+            .unwrap()
+            .get::<_, String>(0),
+        "RUNNER_BUSY"
+    );
+    let mut retry = first.clone();
+    retry.request_id = "retry-owner".into();
+    assert!(matches!(
+        rt.block_on(repo.acquire(&retry)).unwrap(),
+        Acquisition::Acquired
+    ));
+    rt.block_on(repo.mark_dispatched(&retry)).unwrap();
+    rt.block_on(repo.finish_not_dispatched_with_reservation(&retry, &reservation, "RUNNER_BUSY"))
+        .unwrap();
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT count(*) FROM action_logs", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+}
+
+#[test]
+#[ignore = "requires APPCALL_TEST_DATABASE_URL"]
 fn provider_response_releases_quota_but_keeps_mutation_claim_fenced() {
     let mut client = database().expect("database fixture requires APPCALL_TEST_DATABASE_URL");
     create_project_plans(&mut client);
