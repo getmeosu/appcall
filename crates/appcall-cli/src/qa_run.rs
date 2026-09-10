@@ -216,11 +216,17 @@ async fn run_scenario<E: Executor>(
         )
         .await
         {
-            leaks.push(format!(
+            let diagnostic = format!(
                 "teardown {} failed ({})",
                 label(&step.operation),
                 safe_code(&code)
-            ));
+            );
+            leaks.push(diagnostic.clone());
+            result.status = "fail".into();
+            result.failure_kind = "teardown_error".into();
+            result.error_code = safe_code(&code);
+            result.error = "teardown failed".into();
+            result.failures.push(diagnostic);
         }
     }
     (result, leaks)
