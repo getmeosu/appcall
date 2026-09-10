@@ -78,7 +78,8 @@ describe("google-workspace docs", () => {
     const result = await client.getDocument({ documentId: "1aBcDeFgHiJkLmNoPqRsTuVwXyZ" });
 
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toContain("/v1/documents/1aBcDeFgHiJkLmNoPqRsTuVwXyZ");
+    expect(requests[0].url).toBe("https://docs.googleapis.com/v1/documents/1aBcDeFgHiJkLmNoPqRsTuVwXyZ?includeTabsContent=true");
+    expect(requests[0].method).toBe("GET");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
     expect(requests[0].url).toContain("includeTabsContent=true");
     expect(result.title).toBe("Project Requirements");

@@ -29,10 +29,11 @@ describe("google-workspace Docs extended actions", () => {
     const result = await client.createDocument({ title: "My New Document" });
 
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toBe("https://www.googleapis.com/v1/documents");
+    expect(requests[0].url).toBe("https://docs.googleapis.com/v1/documents");
     expect(requests[0].method).toBe("POST");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
     expect(requests[0].headers.get("Content-Type")).toBe("application/json");
+    expect(await requests[0].json()).toEqual({ title: "My New Document" });
     expect(result.documentId).toBe("newDocId456");
     expect(result.title).toBe("My New Document");
     expect(result.revisionId).toBe("rev001");

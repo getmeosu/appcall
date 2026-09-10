@@ -53,9 +53,10 @@ describe("google-workspace Sheets extended actions", () => {
     });
 
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toContain("https://www.googleapis.com/v4/spreadsheets/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/values/");
+    expect(requests[0].url).toBe("https://sheets.googleapis.com/v4/spreadsheets/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/values/Sheet1!A1%3AC2?valueInputOption=USER_ENTERED");
     expect(requests[0].method).toBe("PUT");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
+    expect(await requests[0].json()).toEqual({ values: [["a", "b", "c"], ["d", "e", "f"]], majorDimension: "ROWS" });
     expect(result.spreadsheetId).toBe("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms");
     expect(result.updatedRange).toBe("Sheet1!A1:C2");
     expect(result.updatedRows).toBe(2);
@@ -105,9 +106,10 @@ describe("google-workspace Sheets extended actions", () => {
     });
 
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toContain(":clear");
+    expect(requests[0].url).toBe("https://sheets.googleapis.com/v4/spreadsheets/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/values/Sheet1!A1%3AC10:clear");
     expect(requests[0].method).toBe("POST");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
+    expect(await requests[0].json()).toEqual({});
     expect(result.spreadsheetId).toBe("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms");
     expect(result.clearedRange).toBe("Sheet1!A1:C10");
   });
@@ -159,9 +161,10 @@ describe("google-workspace Sheets extended actions", () => {
     const result = await client.createSpreadsheet({ title: "My New Spreadsheet" });
 
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toBe("https://www.googleapis.com/v4/spreadsheets");
+    expect(requests[0].url).toBe("https://sheets.googleapis.com/v4/spreadsheets");
     expect(requests[0].method).toBe("POST");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
+    expect(await requests[0].json()).toEqual({ properties: { title: "My New Spreadsheet" } });
     expect(result.spreadsheetId).toBe("newSpreadsheetId123");
     expect(result.spreadsheetUrl).toContain("newSpreadsheetId123");
     expect(result.title).toBe("My New Spreadsheet");
@@ -236,7 +239,7 @@ describe("google-workspace Sheets extended actions", () => {
     });
 
     expect(requests).toHaveLength(1);
-    expect(requests[0].url).toBe("https://www.googleapis.com/v4/spreadsheets/spreadId:batchUpdate");
+    expect(requests[0].url).toBe("https://sheets.googleapis.com/v4/spreadsheets/spreadId:batchUpdate");
     expect(requests[0].method).toBe("POST");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
     const body = await requests[0].json() as { requests: Array<Record<string, unknown>> };
