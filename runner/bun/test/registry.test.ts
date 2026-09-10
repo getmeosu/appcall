@@ -67,6 +67,81 @@ describe("runner connector registry", () => {
     expect(called).toBe(false);
   });
 
+  test("rejects an operation with missing budget fields before dispatch", () => {
+    let called = false;
+    const registry = createConnectorRegistry({
+      manifests: [{
+        key: "missing-budget",
+        name: "Missing Budget",
+        version: "0.1.0",
+        runtime: "bun",
+        auth: { type: "none", scopes: [] },
+        network: { allowedHosts: ["api.example.com"] },
+        operations: {
+          "messages.send": { kind: "action" },
+        },
+      }],
+      healthchecks: {},
+      actions: {
+        "missing-budget": {
+          "messages.send": () => {
+            called = true;
+            return { ok: true };
+          },
+        },
+      },
+    });
+
+    expect(registry.validate()).toEqual([{
+      code: "UNSUPPORTED_OPERATION_BUDGET",
+      connectorKey: "missing-budget",
+      operation: "messages.send",
+      message: "Declared operation budget exceeds the runner contract.",
+    }]);
+    expect(registry.executeAction("missing-budget", "messages.send", {})).toEqual({
+      ok: false,
+      code: "UNSUPPORTED_OPERATION_BUDGET",
+      message: "Operation budget exceeds the runner contract.",
+    });
+    expect(called).toBe(false);
+  });
+
+  test("rejects healthcheck input larger than its manifest limit before dispatch", () => {
+    let called = false;
+    const registry = createConnectorRegistry({
+      manifests: [{
+        key: "bounded-healthcheck",
+        name: "Bounded Healthcheck",
+        version: "0.1.0",
+        runtime: "bun",
+        auth: { type: "none", scopes: [] },
+        network: { allowedHosts: ["api.example.com"] },
+        operations: {
+          healthcheck: {
+            kind: "action",
+            timeoutMs: 1_000,
+            maxInputBytes: 16,
+            maxResponseBytes: 1_024,
+          },
+        },
+      }],
+      healthchecks: {
+        "bounded-healthcheck": () => {
+          called = true;
+          return { status: "ok" };
+        },
+      },
+      actions: {},
+    });
+
+    expect(registry.healthcheck("bounded-healthcheck", { text: "this is too large" })).toEqual({
+      ok: false,
+      code: "INPUT_TOO_LARGE",
+      message: "Operation input exceeds the connector manifest byte limit.",
+    });
+    expect(called).toBe(false);
+  });
+
   test("executes connector-owned actions through registered handlers", () => {
     const result = defaultConnectorRegistry.executeAction("whatsapp", "messages.send", {
       phoneNumberId: "123456789",
@@ -237,8 +312,8 @@ describe("runner connector registry", () => {
         auth: { type: "none", scopes: [] },
         network: { allowedHosts: ["runner.local"] },
         operations: {
-          "messages.send": { kind: "action" },
-          "messages.list": { kind: "sync" },
+          "messages.send": { kind: "action", timeoutMs: 1_000, maxInputBytes: 1_024, maxResponseBytes: 1_024 },
+          "messages.list": { kind: "sync", timeoutMs: 1_000, maxInputBytes: 1_024, maxResponseBytes: 1_024 },
         },
       }],
       healthchecks: {
@@ -275,7 +350,7 @@ describe("runner connector registry", () => {
         auth: { type: "none", scopes: [] },
         network: { allowedHosts: ["runner.local"] },
         operations: {
-          "messages.list": { kind: "sync" },
+          "messages.list": { kind: "sync", timeoutMs: 1_000, maxInputBytes: 1_024, maxResponseBytes: 1_024 },
         },
       }],
       healthchecks: {
@@ -312,6 +387,8 @@ describe("runner connector registry", () => {
         operations: {
           "messages.send": {
             kind: "action",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
             maxResponseBytes: 4,
           },
         },
@@ -345,8 +422,8 @@ describe("runner connector registry", () => {
         auth: { type: "none", scopes: [] },
         network: { allowedHosts: ["api.example.com"] },
         operations: {
-          "messages.send": { kind: "action", maxInputBytes: 16 },
-          "messages.list": { kind: "sync", maxInputBytes: 16 },
+          "messages.send": { kind: "action", timeoutMs: 1_000, maxInputBytes: 16, maxResponseBytes: 1_024 },
+          "messages.list": { kind: "sync", timeoutMs: 1_000, maxInputBytes: 16, maxResponseBytes: 1_024 },
         },
       }],
       healthchecks: {},
@@ -388,8 +465,8 @@ describe("runner connector registry", () => {
         auth: { type: "none", scopes: [] },
         network: { allowedHosts: ["api.example.com"] },
         operations: {
-          "messages.send": { kind: "action", timeoutMs: 1, maxInputBytes: 1024 },
-          "messages.list": { kind: "sync", timeoutMs: 1, maxInputBytes: 1024 },
+          "messages.send": { kind: "action", timeoutMs: 1, maxInputBytes: 1024, maxResponseBytes: 1024 },
+          "messages.list": { kind: "sync", timeoutMs: 1, maxInputBytes: 1024, maxResponseBytes: 1024 },
         },
       }],
       healthchecks: {},

@@ -76,10 +76,8 @@ export function hostIsAllowed(hostname: string, allowedHosts: string[]): boolean
 export function createConnectorHttpClient(options: ConnectorHttpClientOptions): ConnectorHttpClient {
   const allowedHosts = options.allowedHosts;
   const fetchImpl = options.fetch ?? fetch;
-  const timeoutMs = options.timeoutMs && options.timeoutMs > 0
-    ? options.timeoutMs
-    : defaultOutboundTimeoutMs;
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs > maxOperationTimeoutMs) {
+  const timeoutMs = options.timeoutMs === undefined ? defaultOutboundTimeoutMs : options.timeoutMs;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > maxOperationTimeoutMs) {
     throw new ConnectorHttpError(
       "OUTBOUND_UNSUPPORTED_BUDGET",
       "Outbound timeout exceeds the runner budget contract.",

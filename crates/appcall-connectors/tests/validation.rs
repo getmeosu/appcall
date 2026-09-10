@@ -137,6 +137,17 @@ fn api_docker_build_context_copies_the_canonical_budget_contract() {
 }
 
 #[test]
+fn runner_docker_build_context_copies_the_canonical_budget_contract() {
+    let dockerfile = include_str!("../../../Dockerfile.runner");
+    assert!(
+        dockerfile.lines().any(|line| {
+            line.trim() == "COPY runner/budget-contract.json /app/runner/budget-contract.json"
+        }),
+        "Dockerfile.runner must copy the contract at the path used by the Bun import"
+    );
+}
+
+#[test]
 fn unsupported_nested_schema_is_never_silently_ignored() {
     let op = Operation {
         input_schema: Some(json!({"type":"object","properties":{"optional":{"pattern":"SECRET"}}})),

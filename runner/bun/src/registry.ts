@@ -2,9 +2,6 @@ import { withLiveMessageSync } from "./message_sync";
 import { runExecution } from "./execution";
 import {
   jsonByteLength,
-  maxOperationInputBytes,
-  maxOperationResponseBytes,
-  maxOperationTimeoutMs,
   supportsOperationBudget,
   type OperationBudgetLike,
 } from "./budget";
@@ -1090,6 +1087,10 @@ export function createConnectorRegistry(input: {
       if (budgetFailure) {
         return budgetFailure;
       }
+      const inputSizeFailure = validateInputSize(inputValue, operationSpec?.maxInputBytes);
+      if (inputSizeFailure) {
+        return inputSizeFailure;
+      }
       // Mirror the action path: invoke the handler with the credential input and
       // surface the (possibly Promise) output. A synchronous structured throw is
       // captured here; an async rejection is awaited+mapped by the server layer.
@@ -1322,9 +1323,9 @@ function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations
           }
           return [[operation, {
             kind: typeof spec.kind === "string" ? spec.kind : undefined,
-            timeoutMs: typeof spec.timeoutMs === "number" ? spec.timeoutMs : maxOperationTimeoutMs,
-            maxInputBytes: typeof spec.maxInputBytes === "number" ? spec.maxInputBytes : maxOperationInputBytes,
-            maxResponseBytes: typeof spec.maxResponseBytes === "number" ? spec.maxResponseBytes : maxOperationResponseBytes,
+            timeoutMs: typeof spec.timeoutMs === "number" ? spec.timeoutMs : undefined,
+            maxInputBytes: typeof spec.maxInputBytes === "number" ? spec.maxInputBytes : undefined,
+            maxResponseBytes: typeof spec.maxResponseBytes === "number" ? spec.maxResponseBytes : undefined,
           }]];
         }),
       );

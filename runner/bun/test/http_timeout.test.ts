@@ -69,6 +69,14 @@ describe("outbound request deadline", () => {
     expect(typeof client.fetchText).toBe("function");
   });
 
+  test("rejects an explicitly invalid timeout instead of falling back", () => {
+    expect(() => createConnectorHttpClient({
+      allowedHosts: ["api.example.com"],
+      maxResponseBytes: 65536,
+      timeoutMs: 0,
+    })).toThrow("Outbound timeout exceeds the runner budget contract.");
+  });
+
   test("still blocks a disallowed host before any request is made", async () => {
     let called = false;
     const client = createConnectorHttpClient({
