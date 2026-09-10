@@ -74,7 +74,7 @@ export function generateManifest(spec: JSONObject, options: GenerateOptions): JS
       }
 
       const key = uniqueKey(operationKey(spec, options, path, method, operation), path, taken);
-      operations[key] = buildOperation(spec, options, path, method, operation, success);
+      operations[key] = buildOperation(spec, options, path, method, pathItem, operation, success);
     }
   }
 
@@ -108,10 +108,21 @@ function buildOperation(
   options: GenerateOptions,
   path: string,
   method: string,
+  pathItem: JSONObject,
   operation: JSONObject,
   success: number[],
 ): JSONObject {
-  const parameters = (operation.parameters ?? []).map((parameter: unknown) => resolveRef(spec, parameter)).filter(isRecord);
+  const parametersByIdentity = new Map<string, JSONObject>();
+  for (const rawParameter of [
+    ...(Array.isArray(pathItem.parameters) ? pathItem.parameters : []),
+    ...(Array.isArray(operation.parameters) ? operation.parameters : []),
+  ]) {
+    const parameter = resolveRef(spec, rawParameter);
+    if (isRecord(parameter)) {
+      parametersByIdentity.set(JSON.stringify([parameter.name, parameter.in]), parameter);
+    }
+  }
+  const parameters = [...parametersByIdentity.values()];
   const properties: JSONObject = {};
   const required: string[] = [];
 
