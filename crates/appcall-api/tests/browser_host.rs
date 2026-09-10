@@ -194,8 +194,8 @@ fn browser_host_runs_cookie_membership_and_broker_on_current_thread_runtime() {
 fn guided_input_preserves_types_and_restricts_actor_schema_scope() {
     use appcall_api::browser_host::guided_action_input;
     use serde_json::json;
-    let fields = [
-        ("f.enabled".into(), vec!["on".into()]),
+    let mut fields = [
+        ("f.enabled".into(), vec!["true".into()]),
         ("f.count".into(), vec!["2".into()]),
         ("f.runInput.city".into(), vec!["Pune".into()]),
     ]
@@ -206,6 +206,11 @@ fn guided_input_preserves_types_and_restricts_actor_schema_scope() {
     assert_eq!(
         guided_action_input(&schema, &fields, actor).unwrap(),
         json!({"enabled":true,"count":2.0,"runInput":{"city":"Pune"}})
+    );
+    fields.insert("f.enabled".into(), vec!["false".into()]);
+    assert_eq!(
+        guided_action_input(&schema, &fields, actor).unwrap(),
+        json!({"enabled":false,"count":2.0,"runInput":{"city":"Pune"}})
     );
     assert!(guided_action_input(&json!({"type":"object"}), &fields, actor).is_err());
 }

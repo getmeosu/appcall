@@ -6,7 +6,7 @@ fn guided_input_uses_schema_types_and_preserves_repeated_key_values() {
     let schema = json!({"type":"object","properties":{"count":{"type":"number"},"enabled":{"type":"boolean"},"emails":{"type":"array","items":{"type":"object","properties":{"email":{"type":"string"}}}},"metadata":{"type":"object"},"nested":{"type":"object","properties":{"title":{"type":"string"}}}}});
     let fields = BTreeMap::from([
         ("f.count".into(), vec!["42".into()]),
-        ("f.enabled".into(), vec!["on".into()]),
+        ("f.enabled".into(), vec!["true".into()]),
         (
             "f.emails".into(),
             vec!["a@example.invalid, b@example.invalid".into()],
@@ -23,6 +23,50 @@ fn guided_input_uses_schema_types_and_preserves_repeated_key_values() {
         assemble_guided_input(&schema, &fields).unwrap(),
         json!({"count":42.0,"enabled":true,"emails":[{"email":"a@example.invalid"},{"email":"b@example.invalid"}],"metadata":{"first":"a","second":"b"},"nested":{"title":"Hello"}})
     );
+}
+
+#[test]
+fn guided_boolean_values_preserve_omitted_false_and_true_states() {
+    let schema = json!({
+        "type":"object",
+        "required":["required_flag"],
+        "properties":{
+            "required_flag":{"type":"boolean"},
+            "hoist":{"type":"boolean"},
+            "mentionable":{"type":"boolean"},
+            "enabled":{"type":"boolean"}
+        }
+    });
+    let fields = BTreeMap::from([
+        ("f.required_flag".into(), vec!["false".into()]),
+        ("f.hoist".into(), vec!["false".into()]),
+        ("f.mentionable".into(), vec!["false".into()]),
+        ("f.enabled".into(), vec!["true".into()]),
+    ]);
+    assert_eq!(
+        assemble_guided_input(&schema, &fields).unwrap(),
+        json!({"required_flag":false,"hoist":false,"mentionable":false,"enabled":true})
+    );
+
+    let omitted_optional = BTreeMap::from([("f.required_flag".into(), vec!["false".into()])]);
+    assert_eq!(
+        assemble_guided_input(&schema, &omitted_optional).unwrap(),
+        json!({"required_flag":false})
+    );
+    let blank_optional = BTreeMap::from([("f.hoist".into(), vec![String::new()])]);
+    assert_eq!(
+        assemble_guided_input(&schema, &blank_optional).unwrap(),
+        json!({})
+    );
+
+    for invalid in ["on", "0", "yes", "TRUE"] {
+        let fields = BTreeMap::from([("f.hoist".into(), vec![invalid.into()])]);
+        assert_eq!(
+            assemble_guided_input(&schema, &fields),
+            Err(Error::Invalid),
+            "{invalid} must not be accepted as a boolean"
+        );
+    }
 }
 #[test]
 fn datastar_patch_escapes_event_html_and_cannot_inject_frames() {
@@ -324,6 +368,28 @@ async fn guided_html(schema: serde_json::Value, sample: serde_json::Value) -> St
     .body
 }
 
+fn rendered_select_option(html: &str, name: &str, label: &str) -> String {
+    let control = html
+        .split(&format!("name=\"{name}\""))
+        .nth(1)
+        .unwrap()
+        .split("</select>")
+        .next()
+        .unwrap();
+    let option = control
+        .split("</option>")
+        .find(|option| option.ends_with(&format!(">{label}")))
+        .unwrap();
+    option
+        .split("value=\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap()
+        .to_owned()
+}
+
 #[tokio::test]
 async fn toolkit_guided_field_accessibility() {
     let html = guided_html(json!({"type":"object","required":["body","recipient_email"],"properties":{
@@ -413,15 +479,17 @@ async fn guided_nested_map_boolean_and_dynamic_fields_preserve_submission_contra
     assert_eq!(html.matches("name=\"f.metadata.key\"").count(), 3);
     assert_eq!(html.matches("name=\"f.metadata.val\"").count(), 3);
     assert!(html.contains("name=\"f.nested.message_text\""));
-    let checkbox = html
+    let boolean = html
         .split("id=\"tk-field-662e656e61626c6564\"")
         .nth(1)
         .unwrap()
-        .split('>')
+        .split("</select>")
         .next()
         .unwrap();
-    assert!(checkbox.contains("type=\"checkbox\" value=\"true\" checked"));
-    assert!(!checkbox.contains(" required"));
+    assert!(boolean.contains("name=\"f.enabled\""));
+    assert!(boolean.contains("<option value=\"true\" selected>true</option>"));
+    assert!(boolean.contains("<option value=\"false\">false</option>"));
+    assert!(!boolean.contains(" required"));
     assert!(html.contains("name=\"f.actor\" type=\"hidden\" value=\"a&quot;&amp;&lt;b&gt;\""));
     assert!(html.contains("data-options-source=\"/app/connectors/provider/options?"));
     assert!(html.contains("source=actors.%27%3Coptions%3E"));
@@ -431,4 +499,91 @@ async fn guided_nested_map_boolean_and_dynamic_fields_preserve_submission_contra
     assert!(html.contains("id=\"tk-opts-f.actor\""));
     assert!(html.contains("aria-describedby=\"tk-search-662e6163746f72-help\""));
     assert!(!html.contains("@get(&#39;/app/connectors"));
+}
+
+#[tokio::test]
+async fn guided_boolean_controls_offer_omit_true_and_false_choices() {
+    let html = guided_html(
+        json!({"type":"object","required":["required_flag"],"properties":{
+            "required_flag":{"type":"boolean"},
+            "hoist":{"type":"boolean","title":"Hoist"},
+            "mentionable":{"type":"boolean","title":"Mentionable"}
+        }}),
+        json!({"required_flag":true}),
+    )
+    .await;
+    for name in ["required_flag", "hoist", "mentionable"] {
+        let control = html
+            .split(&format!("name=\"f.{name}\""))
+            .nth(1)
+            .unwrap()
+            .split("</select>")
+            .next()
+            .unwrap();
+        assert!(
+            control.contains("<option value=\"\"") && control.contains(">Omit</option>"),
+            "{name}: {control}"
+        );
+        assert!(
+            control.contains("<option value=\"true\"") && control.contains(">true</option>"),
+            "{name}"
+        );
+        assert!(
+            control.contains("<option value=\"false\">false</option>"),
+            "{name}"
+        );
+    }
+    assert!(!html.contains("type=\"checkbox\""));
+    assert!(html.contains("<option value=\"true\" selected>true</option>"));
+}
+
+#[tokio::test]
+async fn guided_boolean_enum_options_only_offer_declared_values() {
+    for (allowed, forbidden) in [("true", "false"), ("false", "true")] {
+        let html = guided_html(
+            json!({"type":"object","properties":{"flag":{"type":"boolean","enum":[allowed == "true"]}}}),
+            json!({}),
+        )
+        .await;
+        let control = html
+            .split("name=\"f.flag\"")
+            .nth(1)
+            .unwrap()
+            .split("</select>")
+            .next()
+            .unwrap();
+        assert!(control.contains("<option value=\"\" selected>Omit</option>"));
+        assert!(control.contains(&format!("<option value=\"{allowed}\">{allowed}</option>")));
+        assert!(!control.contains(&format!(
+            "<option value=\"{forbidden}\">{forbidden}</option>"
+        )));
+    }
+}
+
+#[tokio::test]
+async fn guided_boolean_rendered_controls_submit_false_and_omit_optional_fields() {
+    let schema = json!({"type":"object","required":["required_flag"],"properties":{
+        "required_flag":{"type":"boolean"},
+        "hoist":{"type":"boolean"},
+        "mentionable":{"type":"boolean"}
+    }});
+    let html = guided_html(schema.clone(), json!({})).await;
+    let fields = BTreeMap::from([
+        (
+            "f.required_flag".into(),
+            vec![rendered_select_option(&html, "f.required_flag", "false")],
+        ),
+        (
+            "f.hoist".into(),
+            vec![rendered_select_option(&html, "f.hoist", "false")],
+        ),
+        (
+            "f.mentionable".into(),
+            vec![rendered_select_option(&html, "f.mentionable", "Omit")],
+        ),
+    ]);
+    assert_eq!(
+        assemble_guided_input(&schema, &fields).unwrap(),
+        json!({"required_flag":false,"hoist":false})
+    );
 }
