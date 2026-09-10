@@ -95,7 +95,7 @@ const pathItemParameterSpec = {
           { $ref: "#/components/parameters/AccountIdOverride" },
           { name: "limit", in: "query", required: true, schema: { type: "integer" }, description: "Operation limit." },
           { $ref: "#/components/parameters/RequestId" },
-          { name: "trace", in: "query", required: false, schema: { type: "string" }, description: "Operation trace query." },
+          { name: "traceQuery", in: "query", required: false, schema: { type: "string" }, description: "Operation trace query." },
         ],
         responses: { "200": { description: "ok" } },
       },
@@ -107,6 +107,84 @@ const pathItemParameterSpec = {
       Limit: { name: "limit", in: "query", required: false, schema: { type: "string" }, description: "Inherited limit." },
       AccountIdOverride: { name: "accountId", in: "path", required: true, schema: { type: "string" }, description: "Operation account." },
       RequestId: { name: "requestId", in: "header", required: true, schema: { type: "string" }, description: "Request identifier." },
+    },
+  },
+};
+
+const inheritedContentParameterSpec = {
+  openapi: "3.0.3",
+  info: { title: "Content Parameter API", version: "1.0.0" },
+  servers: [{ url: "https://api.content-parameter.test" }],
+  paths: {
+    "/reports": {
+      parameters: [{ $ref: "#/components/parameters/ReportFilter" }],
+      get: {
+        operationId: "listReports",
+        tags: ["Reports"],
+        summary: "List reports",
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+  components: {
+    parameters: {
+      ReportFilter: {
+        name: "filter",
+        in: "query",
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ReportFilter" },
+          },
+        },
+      },
+    },
+    schemas: {
+      ReportFilter: {
+        type: "object",
+        description: "Structured report filter.",
+        required: ["status"],
+        properties: {
+          status: { type: "string", enum: ["open", "closed"] },
+          owner: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+const caseInsensitiveHeaderParameterSpec = {
+  openapi: "3.0.3",
+  info: { title: "Header Parameter API", version: "1.0.0" },
+  servers: [{ url: "https://api.header-parameter.test" }],
+  paths: {
+    "/reports": {
+      parameters: [{ name: "X-Trace", in: "header", required: false, schema: { type: "string" }, description: "Inherited trace." }],
+      get: {
+        operationId: "listReports",
+        tags: ["Reports"],
+        summary: "List reports",
+        parameters: [{ name: "x-trace", in: "header", required: true, schema: { type: "integer" }, description: "Operation trace override." }],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+};
+
+const ambiguousParameterSpec = {
+  openapi: "3.0.3",
+  info: { title: "Ambiguous Parameter API", version: "1.0.0" },
+  servers: [{ url: "https://api.ambiguous-parameter.test" }],
+  paths: {
+    "/reports": {
+      parameters: [{ name: "trace", in: "header", required: true, schema: { type: "string" } }],
+      get: {
+        operationId: "listReports",
+        tags: ["Reports"],
+        summary: "List reports",
+        parameters: [{ name: "trace", in: "query", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "ok" } },
+      },
     },
   },
 };
@@ -181,14 +259,56 @@ describe("generateManifest", () => {
     expect(operation.inputSchema.properties).toEqual({
       accountId: { type: "string", description: "Operation account." },
       workspaceId: { type: "string", description: "Workspace identifier." },
-      trace: { type: "string", description: "Operation trace query." },
+      trace: { type: "string", description: "Inherited trace header." },
+      traceQuery: { type: "string", description: "Operation trace query." },
       limit: { type: "integer", description: "Operation limit." },
       requestId: { type: "string", description: "Request identifier." },
     });
     expect(operation.inputSchema.required).toEqual(["accountId", "workspaceId", "trace", "limit", "requestId"]);
     expect(operation.request.path).toBe("/accounts/{{accountId}}/widgets");
-    expect(operation.request.query).toEqual({ workspaceId: "{{workspaceId}}", limit: "{{limit}}", trace: "{{trace}}" });
+    expect(operation.request.query).toEqual({ workspaceId: "{{workspaceId}}", limit: "{{limit}}", traceQuery: "{{traceQuery}}" });
     expect(operation.request.headers).toEqual({ trace: "{{trace}}", requestId: "{{requestId}}" });
+  });
+
+  it("uses the sole media type schema for an inherited content parameter", () => {
+    const operation = generateManifest(inheritedContentParameterSpec, options).operations["reports.list"]!;
+
+    expect(operation.inputSchema.properties.filter).toMatchObject({
+      type: "object",
+      description: "Structured report filter.",
+    });
+    expect(operation.inputSchema.required).toEqual(["filter"]);
+    expect(operation.request.query).toEqual({ filter: "{{filter}}" });
+  });
+
+  it("merges inherited and operation header parameters case-insensitively", () => {
+    const operation = generateManifest(caseInsensitiveHeaderParameterSpec, options).operations["reports.list"]!;
+
+    expect(Object.keys(operation.inputSchema.properties)).toEqual(["x-trace"]);
+    expect(operation.inputSchema.properties["x-trace"]).toEqual({
+      type: "integer",
+      description: "Operation trace override.",
+    });
+    expect(operation.inputSchema.required).toEqual(["x-trace"]);
+    expect(operation.request.headers).toEqual({ "x-trace": "{{x-trace}}" });
+  });
+
+  it("rejects same-name parameters in different locations before emitting a manifest", () => {
+    let thrown: unknown;
+    try {
+      generateManifest(ambiguousParameterSpec, options);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    if (!(thrown instanceof Error)) {
+      return;
+    }
+    expect((thrown as Error & { code?: unknown }).code).toBe("OPENAPI_AMBIGUOUS_PARAMETER");
+    expect(thrown.message).toContain("trace");
+    expect(thrown.message).toContain("header");
+    expect(thrown.message).toContain("query");
   });
 
   it("resolves a $ref request body into input properties and a body template", () => {

@@ -46,6 +46,55 @@ const manifest = generateManifest(spec, {
   auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
 });
 
+const inheritedContentParameterSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.content-parameter.test" }],
+  paths: {
+    "/reports": {
+      parameters: [{ $ref: "#/components/parameters/ReportFilter" }],
+      get: {
+        operationId: "listReports",
+        tags: ["Reports"],
+        summary: "List reports",
+        responses: { "200": { description: "ok" } },
+      },
+    },
+  },
+  components: {
+    parameters: {
+      ReportFilter: {
+        name: "filter",
+        in: "query",
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ReportFilter" },
+          },
+        },
+      },
+    },
+    schemas: {
+      ReportFilter: {
+        type: "object",
+        description: "Structured report filter.",
+        required: ["status"],
+        properties: {
+          status: { type: "string", enum: ["open", "closed"] },
+          owner: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+const inheritedContentParameterManifest = generateManifest(inheritedContentParameterSpec, {
+  key: "content-parameter",
+  name: "Content Parameter",
+  categories: ["productivity"],
+  models: ["report"],
+  auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+});
+
 const pathItemSpec = {
   openapi: "3.0.3",
   servers: [{ url: "https://api.path-item.test" }],
@@ -128,6 +177,26 @@ describe("generated manifest round-trip", () => {
     expect(seenUrl).toBe("https://api.acme.test/tickets/TCK-9");
     expect(seenAuth).toBe("Bearer k_live");
     expect(result.data).toEqual({ id: "TCK-9", subject: "Printer" });
+  });
+
+  it("serializes an inherited content parameter as one encoded JSON query value", async () => {
+    const { actions } = compileDeclarativeConnector(inheritedContentParameterManifest as never);
+    const filter = { status: "open", owner: "A&B=one" };
+    let seenUrl = "";
+    const result = await actions["reports.list"]!({
+      apiKey: "k_live",
+      filter,
+      fetch: async (url: RequestInfo | URL) => {
+        seenUrl = String(url);
+        return new Response(JSON.stringify({ items: [{ id: "R-1" }] }), { status: 200 });
+      },
+    }) as Record<string, unknown>;
+
+    const url = new URL(seenUrl);
+    expect([...url.searchParams.keys()]).toEqual(["filter"]);
+    expect(url.searchParams.get("filter")).toBe(JSON.stringify(filter));
+    expect(seenUrl).toContain("%26");
+    expect(result.data).toEqual({ items: [{ id: "R-1" }] });
   });
 
   it("renders inherited path, query, and header parameters in a live round-trip", async () => {
