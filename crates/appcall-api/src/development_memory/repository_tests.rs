@@ -228,21 +228,23 @@ async fn proven_not_dispatched_finalizer_releases_memory_admission() {
     r.finish_not_dispatched_with_reservation(&first, &reservation, "RUNNER_BUSY")
         .await
         .unwrap();
-    let data = r.lock().unwrap();
-    assert!(data.action_claims.is_empty());
-    assert!(data.usage_reserved.is_empty());
-    assert_eq!(data.pending_actions, 0);
-    assert_eq!(data.active_effects, 0);
-    assert_eq!(data.bytes_reserved, 0);
-    assert_eq!(data.histories_reserved, 0);
-    assert!(reserved_bytes > 0);
-    assert_eq!(reserved_histories, 3);
-    assert_eq!(data.action_logs.len(), 1);
-    assert_eq!(
-        data.action_logs.values().next().unwrap().error_code,
-        "RUNNER_BUSY"
-    );
-    drop(data);
+    {
+        let data = r.lock().unwrap();
+        assert!(data.action_claims.is_empty());
+        assert!(data.usage_reserved.is_empty());
+        assert_eq!(data.pending_actions, 0);
+        assert_eq!(data.active_effects, 0);
+        assert_eq!(data.bytes_reserved, 0);
+        assert_eq!(data.histories_reserved, 0);
+        assert!(reserved_bytes > 0);
+        assert_eq!(reserved_histories, 3);
+        assert_eq!(data.action_logs.len(), 1);
+        assert_eq!(
+            data.action_logs.values().next().unwrap().error_code,
+            "RUNNER_BUSY"
+        );
+        drop(data);
+    }
 
     let mut retry = first.clone();
     retry.request_id = "retry-owner".into();
