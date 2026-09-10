@@ -551,10 +551,11 @@ function encodeQueryComponent(value: string, allowReserved: boolean): string {
   if (!allowReserved) {
     return encoded;
   }
+  // Keep `%23` encoded: a literal `#` starts the URL fragment and would no
+  // longer be transmitted as part of the query value.
   return encoded.replace(/%3A/gi, ":")
     .replace(/%2F/gi, "/")
     .replace(/%3F/gi, "?")
-    .replace(/%23/gi, "#")
     .replace(/%5B/gi, "[")
     .replace(/%5D/gi, "]")
     .replace(/%40/gi, "@")
