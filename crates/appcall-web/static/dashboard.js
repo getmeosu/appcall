@@ -437,7 +437,7 @@ if (brandingName && brandingLogo && brandingColor) {
   // controls while raw JSON replaces them; unrelated required controls remain
   // part of the form's native validation contract.
   const syncRawOverride = () => {
-    const useRaw = !!rawOverride()?.value.trim();
+    const useRaw = !!rawOverride()?.value;
     for (const control of root.querySelectorAll('[name^="f."]')) {
       if (useRaw) {
         if (!rawDisabled.has(control)) rawDisabled.set(control, control.disabled);

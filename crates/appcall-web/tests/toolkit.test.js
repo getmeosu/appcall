@@ -173,6 +173,23 @@ test('decimal coordinates and amounts submit with raw JSON despite an invalid in
   assert.equal(f.form.checkValidity(),false);
   assert.equal(f.emit('submit',f.form).stopped,true);
 });
+test('whitespace raw JSON is treated as a nonempty override until cleared',()=>{
+  const f=fixture();
+  const guided=f.node('f.amount',{name:'f.amount',type:'number',value:'1.5'});
+  const raw=f.node('tk-input-raw',{name:'input_raw',value:'   '});
+  f.inputs.push(guided,raw);
+  const queryAll=f.root.querySelectorAll;
+  f.root.querySelectorAll=selector=>selector==='[name^="f."]'
+    ? f.inputs.filter(control=>control.name?.startsWith('f.'))
+    : queryAll(selector);
+  f.emit('input',raw);
+  assert.equal(guided.disabled,true);
+  assert.equal(f.inputs.filter(control=>control.name?.startsWith('f.')).every(control=>control.disabled),true);
+  raw.value='';
+  f.emit('input',raw);
+  assert.equal(guided.disabled,false);
+  assert.equal(f.inputs.filter(control=>control.name?.startsWith('f.')).every(control=>!control.disabled),true);
+});
 test('destructive submit requires an explicit confirmation click, updates current account, cancel does not execute',()=>{
   const f=fixture();
   const confirm=f.node('confirm');
