@@ -74,10 +74,10 @@ export function validateSendMessageInput(input: unknown): SendMessageInput {
   const to = requireArray(input.to, "to");
   if (to.length === 0) throw new Error("to must contain at least one recipient");
   const recipients = to.map((recipient) => {
-    if (typeof recipient === "string") return requireString(recipient, "to[].address");
+    if (typeof recipient === "string") return requireRecipientAddress(recipient);
     const record = requireRecord(recipient, "to");
     const address = isRecord(record.emailAddress) ? record.emailAddress.address : record.address;
-    return requireString(address, "to[].address");
+    return requireRecipientAddress(address);
   });
   return { to: recipients, subject: requireString(input.subject, "subject"), body: requireString(input.body, "body"), contentType: typeof input.contentType === "string" ? input.contentType : "text" };
 }
@@ -287,6 +287,12 @@ function parseNextOdataLink(response: Record<string, unknown>): string | null {
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
   return value;
+}
+
+function requireRecipientAddress(value: unknown): string {
+  const address = requireString(value, "to[].address");
+  if (address.trim().length === 0) throw new Error("to[].address is required");
+  return address;
 }
 
 function requireArray(value: unknown, field: string): unknown[] {
