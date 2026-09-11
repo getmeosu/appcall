@@ -2,6 +2,16 @@
 use appcall_engine::*;
 use appcall_engine_postgres::PostgresStore;
 use postgres::{Client, NoTls};
+
+#[test]
+fn postgres_contract_guard_serializes_parallel_tests() {
+    let _guard = postgres_contract_guard();
+    let acquired = std::thread::spawn(|| POSTGRES_CONTRACT_LOCK.try_lock().is_ok())
+        .join()
+        .unwrap();
+    assert!(!acquired);
+}
+
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
 fn postgres_atomic_replay_ownership_and_parent_wakeup() {
