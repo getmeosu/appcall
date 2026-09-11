@@ -576,6 +576,176 @@ impl DashboardData for Failing {
 }
 
 #[tokio::test]
+async fn dashboard_certification_retries_the_original_cookie_after_handoff_expiry() {
+    use std::{
+        sync::atomic::{AtomicUsize, Ordering},
+        time::{Duration, Instant},
+    };
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::TcpListener,
+    };
+    struct Allow;
+    impl appcall_auth::MembershipVerifier for Allow {
+        fn verify_membership(
+            &self,
+            _: &appcall_auth::AccessClaims,
+            tenant: &str,
+            _: &str,
+        ) -> Result<Option<appcall_auth::Membership>, appcall_auth::AuthError> {
+            Ok(Some(appcall_auth::Membership {
+                tenant_id: tenant.into(),
+                allowed_brands: appcall_auth::Grant::All,
+                scopes: appcall_auth::Grant::All,
+            }))
+        }
+    }
+
+    const OLD_REFRESH_TOKEN: &str = "dashboard-old-single-use";
+    const ROTATED_REFRESH_TOKEN: &str = "dashboard-rotated-refresh";
+    let fixture: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../appcall-auth/tests/auth_golden.json"
+    )))
+    .unwrap();
+    let expired: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/refresh_generation.json"
+    )))
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let access_token = fixture["jwt"].as_str().unwrap().to_owned();
+    let calls = std::sync::Arc::new(AtomicUsize::new(0));
+    let server_calls = calls.clone();
+    let server = tokio::spawn(async move {
+        for (call_index, (expected_status, body)) in [
+            (
+                "200 OK",
+                serde_json::json!({
+                    "accessToken": access_token,
+                    "refreshToken": ROTATED_REFRESH_TOKEN,
+                })
+                .to_string(),
+            ),
+            ("401 Unauthorized", "{}".to_owned()),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut bytes = [0; 8192];
+            let count = stream.read(&mut bytes).await.unwrap();
+            let request = String::from_utf8_lossy(&bytes[..count]);
+            assert!(request.starts_with("POST /api/auth/refresh "));
+            assert!(request.contains(OLD_REFRESH_TOKEN));
+            assert_eq!(server_calls.fetch_add(1, Ordering::SeqCst), call_index);
+            stream
+                .write_all(
+                    format!(
+                        "HTTP/1.1 {expected_status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+        }
+    });
+    let codec = SessionCodec::new("dashboard-certification-handoff", false).unwrap();
+    let jwt =
+        appcall_auth::JwtVerifier::new(fixture["jwt_secret"].as_str().unwrap(), Default::default())
+            .unwrap();
+    let broker = Broker::new(&format!("http://{address}"), "appcall").unwrap();
+    let browser = Browser {
+        codec: &codec,
+        identity: Identity {
+            jwt: &jwt,
+            memberships: &Allow,
+            broker: &broker,
+        },
+        public_origin: "https://app.example",
+    };
+    let dashboard = Dashboard {
+        browser: &browser,
+        data: &Failing(Error::Unavailable),
+    };
+    let session = Session {
+        access_token: expired["expired_access_token"].as_str().unwrap().into(),
+        refresh_token: OLD_REFRESH_TOKEN.into(),
+        user_id: "11111111-1111-1111-1111-111111111111".into(),
+        email: "fixture@example.invalid".into(),
+        tenant_id: "tenant-a".into(),
+        tenant_name: "Tenant".into(),
+    };
+    let cookies = format!("appcall_session={}", codec.seal_session(&session).unwrap());
+    let request = Request {
+        method: "GET",
+        path: "/app/certification",
+        cookies: &cookies,
+        origin: None,
+        referer: None,
+        fields: BTreeMap::new(),
+        now: 1800000000,
+    };
+    let first_now = Instant::now()
+        .checked_sub(Duration::from_secs(60))
+        .expect("test clock must have a monotonic origin");
+    let first_response: Response =
+        crate::refresh::with_test_now(first_now, dashboard.handle(&request))
+            .await
+            .unwrap();
+    assert_eq!(first_response.status, 403);
+    assert_eq!(first_response.body, Error::Forbidden.to_string());
+    assert!(first_response.body.contains("Appcall denied this request"));
+    let first_cookie = first_response
+        .headers
+        .iter()
+        .find(|(key, _)| key == "Set-Cookie")
+        .expect("the expired session must receive the rotated handoff cookie")
+        .1
+        .strip_prefix("appcall_session=")
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap();
+    let rotated = codec.open_session(first_cookie).unwrap();
+    assert_eq!(rotated.access_token, fixture["jwt"].as_str().unwrap());
+    assert_eq!(rotated.refresh_token, ROTATED_REFRESH_TOKEN);
+    assert!(!first_response.body.contains(OLD_REFRESH_TOKEN));
+    assert!(!first_response.body.contains(ROTATED_REFRESH_TOKEN));
+    assert!(first_response
+        .headers
+        .iter()
+        .all(|header: &(String, String)| {
+            !header.1.contains(OLD_REFRESH_TOKEN) && !header.1.contains(ROTATED_REFRESH_TOKEN)
+        }));
+
+    let second_response: Response = crate::refresh::with_test_now(
+        first_now + Duration::from_secs(31),
+        dashboard.handle(&request),
+    )
+    .await
+    .unwrap();
+    assert_eq!(second_response.status, 302);
+    assert!(second_response
+        .headers
+        .iter()
+        .any(|(key, value)| key == "Location" && value == "/app/login"));
+    let clear_cookies: Vec<_> = second_response
+        .headers
+        .iter()
+        .filter(|(key, _)| key == "Set-Cookie")
+        .collect();
+    assert_eq!(clear_cookies.len(), 1);
+    assert!(clear_cookies[0].1.contains("Max-Age=0"));
+    assert!(!second_response.body.contains(OLD_REFRESH_TOKEN));
+    assert!(!second_response.body.contains(ROTATED_REFRESH_TOKEN));
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+    server.await.unwrap();
+}
+
+#[tokio::test]
 async fn rotated_session_cookie_survives_dashboard_renderer_error() {
     use tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
