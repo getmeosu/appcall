@@ -190,7 +190,12 @@ async fn event_only_manifest_webhooks_support_filters_usage_replay_and_deduplica
             apollo_operation.as_str(),
             apollo_event_id.as_str(),
         ),
-        ("rb2b", "rb2b", rb2b_operation.as_str(), rb2b_event_id.as_str()),
+        (
+            "rb2b",
+            "rb2b",
+            rb2b_operation.as_str(),
+            rb2b_event_id.as_str(),
+        ),
     ] {
         let filtered = events
             .poll_filtered(
@@ -331,6 +336,7 @@ async fn memory_webhook_dedup_capacity_rejects_before_any_mutation() {
         (
             data.events.keys().cloned().collect::<Vec<_>>(),
             data.usage_events.keys().cloned().collect::<Vec<_>>(),
+            data.usage_monthly.clone(),
             data.event_dedup.clone(),
             data.bytes_used,
             data.bytes_reserved,
@@ -346,6 +352,7 @@ async fn memory_webhook_dedup_capacity_rejects_before_any_mutation() {
         (
             data.events.keys().cloned().collect::<Vec<_>>(),
             data.usage_events.keys().cloned().collect::<Vec<_>>(),
+            data.usage_monthly.clone(),
             data.event_dedup.clone(),
             data.bytes_used,
             data.bytes_reserved,
@@ -380,6 +387,7 @@ async fn memory_webhook_accounting_charges_one_new_dedup_entry_exactly() {
         (
             data.events.keys().cloned().collect::<Vec<_>>(),
             data.usage_events.keys().cloned().collect::<Vec<_>>(),
+            data.usage_monthly.clone(),
             data.event_dedup.clone(),
             data.bytes_used,
             data.next_sequence,
@@ -394,6 +402,7 @@ async fn memory_webhook_accounting_charges_one_new_dedup_entry_exactly() {
         (
             data.events.keys().cloned().collect::<Vec<_>>(),
             data.usage_events.keys().cloned().collect::<Vec<_>>(),
+            data.usage_monthly.clone(),
             data.event_dedup.clone(),
             data.bytes_used,
             data.next_sequence,

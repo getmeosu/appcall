@@ -173,6 +173,17 @@ pub(crate) struct UsageReservation {
     pub brand: String,
     pub month: String,
 }
+pub(crate) type EventDedupKey = (String, String, String, u64, String);
+
+pub(crate) fn event_dedup_entry_bytes(key: &EventDedupKey, event_id: &str) -> Result<usize> {
+    key.0
+        .len()
+        .checked_add(key.1.len())
+        .and_then(|bytes| bytes.checked_add(key.2.len()))
+        .and_then(|bytes| bytes.checked_add(key.4.len()))
+        .and_then(|bytes| bytes.checked_add(event_id.len()))
+        .ok_or(MemoryError::Capacity)
+}
 pub(crate) struct ActionClaim {
     pub attempt: appcall_actions::Attempt,
     pub phase: ClaimPhase,
@@ -199,9 +210,9 @@ pub(crate) struct MemoryData {
     pub usage_reserved: BTreeMap<String, UsageReservation>,
     pub action_limits: appcall_actions::Entitlements,
     pub events: BTreeMap<(String, String), appcall_events::Event>,
-    /// The parser's provider key is scoped to the connection; the mapped event
-    /// ID remains the public resource identity used by all history APIs.
-    pub event_dedup: BTreeMap<(String, String, String, String), String>,
+    /// The parser's provider key is scoped to the connection generation; the
+    /// mapped event ID remains the public resource identity used by history APIs.
+    pub event_dedup: BTreeMap<EventDedupKey, String>,
     pub oauth_pending: BTreeMap<String, OAuthPending>,
     pub next_sequence: i64,
     pub bytes_used: usize,
