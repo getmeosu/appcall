@@ -2,6 +2,7 @@ use appcall_worker::*;
 use postgres::{Client, NoTls};
 use serde_json::{json, Value};
 use std::{
+    future::Future,
     io::{Read, Write},
     sync::{Arc, Mutex},
     time::Duration,
@@ -48,8 +49,18 @@ fn fixture() -> (Client, String) {
     ] {
         db.batch_execute(migration).unwrap();
     }
-    db.batch_execute("INSERT INTO projects(id,name) VALUES('p','p');INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id) VALUES('c','p','slack','api_key','active','brand','brand')").unwrap();
+    db.batch_execute("INSERT INTO projects(id,name) VALUES('p','p');INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id) VALUES('c','p','slack','api_key','active','brand','brand'),('apollo','p','apollo','api_key','active','brand','brand'),('rb2b','p','rb2b','api_key','active','brand','brand')").unwrap();
     (db, schema)
+}
+
+struct NeverCredentials;
+impl appcall_sync::CredentialResolver for NeverCredentials {
+    fn resolve(
+        &self,
+        _: appcall_store::Connection,
+    ) -> impl Future<Output = appcall_sync::Result<appcall_sync::ResolvedCredentials>> + Send {
+        std::future::ready(Err(appcall_sync::Error::Unavailable))
+    }
 }
 #[test]
 #[ignore = "requires explicit PostgreSQL and local HTTP"]
@@ -100,6 +111,108 @@ impl appcall_oauth::TokenProvider for RefreshProvider {
 fn maximum_provider_event_id_reaches_durable_sync() {
     run_event(4);
 }
+
+#[test]
+#[ignore = "requires explicit PostgreSQL"]
+fn unsupported_webhook_events_do_not_create_sync_jobs() {
+    let (mut db, schema) = fixture();
+    for (connection, connector, event_id, operation, payload) in [
+        (
+            "apollo",
+            "apollo",
+            "apollo-event",
+            "webhook.phone_revealed",
+            json!({"personId":"person-1","phone":"+15550001111"}),
+        ),
+        (
+            "rb2b",
+            "rb2b",
+            "rb2b-event",
+            "webhook.visitor_identified",
+            json!({"provider":"rb2b","id":"visitor-1"}),
+        ),
+    ] {
+        appcall_events::PgEvents::new(&mut db)
+            .accept(
+                &appcall_auth::WebhookClaims {
+                    project_id: "p".into(),
+                    connection_id: connection.into(),
+                    connector: connector.into(),
+                },
+                &appcall_events::ParsedWebhook {
+                    idempotency_key: event_id.into(),
+                    operation: operation.into(),
+                    sanitized: payload,
+                },
+            )
+            .unwrap();
+    }
+    let runner = appcall_runner_client::RunnerClient::new(
+        "http://127.0.0.1:1",
+        "runner-token",
+        Default::default(),
+    )
+    .unwrap();
+    let service = appcall_sync::Service::new(
+        appcall_sync::Repository::new(client(Some(&schema))),
+        appcall_store::Store::new(
+            client(Some(&schema)),
+            appcall_store::LocalProvider::new(&[1; 32]).unwrap(),
+        ),
+        appcall_connectors::Registry::default(),
+        runner,
+        NeverCredentials,
+        Default::default(),
+    )
+    .unwrap();
+    let worker = Worker::new(
+        client(Some(&schema)),
+        service,
+        TickLimits { outbox: 2, jobs: 1 },
+    )
+    .unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let report = rt.block_on(worker.tick("worker")).unwrap();
+    assert_eq!(report.outbox_completed, 2);
+    assert_eq!(report.outbox_failed, 0);
+    assert_eq!(report.pages_completed, 0);
+    assert!(report.job_failures.is_empty());
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM sync_jobs", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM webhook_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT count(*) FROM webhook_outbox WHERE dispatched_at IS NULL",
+            &[]
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT sum(quantity)::bigint FROM usage_monthly_rollups WHERE kind='webhook_event'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        2
+    );
+    drop(worker);
+    drop(rt);
+    db.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
 fn run_event(mode: u8) {
     let disconnect = mode == 1 || mode == 3;
     let managed = mode == 2 || mode == 3;

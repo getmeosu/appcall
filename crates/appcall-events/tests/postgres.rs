@@ -29,7 +29,7 @@ impl Db {
         ] {
             client.batch_execute(migration).unwrap();
         }
-        client.batch_execute("INSERT INTO projects(id,name) VALUES('p','p'),('q','q'); INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id) VALUES('a','p','slack','api_key','active','brand','brand-a'),('b','p','slack','api_key','active','brand','brand-b'),('other','q','slack','api_key','active','brand','brand-a')").unwrap();
+        client.batch_execute("INSERT INTO projects(id,name) VALUES('p','p'),('q','q'); INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id) VALUES('a','p','slack','api_key','active','brand','brand-a'),('b','p','slack','api_key','active','brand','brand-b'),('apollo','p','apollo','api_key','active','brand','brand-a'),('rb2b','p','rb2b','api_key','active','brand','brand-a'),('other','q','slack','api_key','active','brand','brand-a')").unwrap();
         Self { client, schema }
     }
 }
@@ -41,10 +41,13 @@ impl Drop for Db {
     }
 }
 fn claims(connection: &str) -> appcall_auth::WebhookClaims {
+    claims_for(connection, "slack")
+}
+fn claims_for(connection: &str, connector: &str) -> appcall_auth::WebhookClaims {
     appcall_auth::WebhookClaims {
         project_id: "p".into(),
         connection_id: connection.into(),
-        connector: "slack".into(),
+        connector: connector.into(),
     }
 }
 fn parsed(id: &str) -> ParsedWebhook {
@@ -129,6 +132,108 @@ fn acceptance_outbox_and_brand_replay_are_atomic() {
         Error::NotFound
     );
 }
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn event_only_webhooks_retain_usage_and_replay_without_sync_jobs() {
+    let mut db = Db::new();
+    db.client
+        .batch_execute(
+            "CREATE TABLE scheduled(project_id text,dedup_key text,input jsonb,PRIMARY KEY(project_id,dedup_key))",
+        )
+        .unwrap();
+    let cases = [
+        (
+            "apollo",
+            "apollo-event",
+            "webhook.phone_revealed",
+            json!({"personId":"person-1","phone":"+15550001111"}),
+        ),
+        (
+            "rb2b",
+            "rb2b-event",
+            "webhook.visitor_identified",
+            json!({"provider":"rb2b","id":"visitor-1"}),
+        ),
+    ];
+    {
+        let mut store = PgEvents::new(&mut db.client);
+        for (connection, event_id, operation, payload) in &cases {
+            store
+                .accept(
+                    &claims_for(connection, connection),
+                    &ParsedWebhook {
+                        idempotency_key: (*event_id).into(),
+                        operation: (*operation).into(),
+                        sanitized: payload.clone(),
+                    },
+                )
+                .unwrap();
+        }
+        assert_eq!(
+            store
+                .dispatch_pending(2, &mut Sink { fail: false })
+                .unwrap(),
+            DispatchReport {
+                completed: 2,
+                failed: 0,
+            }
+        );
+    }
+    assert_eq!(
+        db.client
+            .query_one("SELECT count(*) FROM scheduled", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT count(*) FROM webhook_outbox WHERE dispatched_at IS NULL",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        db.client
+            .query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT sum(quantity)::bigint FROM usage_monthly_rollups WHERE kind='webhook_event'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    {
+        let mut store = PgEvents::new(&mut db.client);
+        for (connection, event_id, operation, _) in &cases {
+            let event = store.get(&brand("brand-a"), event_id).unwrap();
+            assert_eq!(event.connector, *connection);
+            assert_eq!(event.operation, *operation);
+            store
+                .replay(&brand("brand-a"), event_id, &mut Sink { fail: false })
+                .unwrap();
+        }
+    }
+    assert_eq!(
+        db.client
+            .query_one("SELECT count(*) FROM scheduled", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+}
+
 #[test]
 #[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
 fn poisoned_outbox_does_not_starve_and_replays_do_not_double_meter() {

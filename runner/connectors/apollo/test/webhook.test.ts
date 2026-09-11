@@ -56,4 +56,18 @@ describe("parseWebhook", () => {
     expect(result.sanitized).toEqual({ personId: "", phone: "" });
     expect(result.idempotencyKey).toBe("apollo-wh:unknown:unknown");
   });
+
+  test("classifies a phone reveal as a webhook event for independent retention", () => {
+    expect(
+      parseWebhook({
+        event_id: "evt_phone_1",
+        person_id: "p6",
+        sanitized_number: "+15550001111",
+      }),
+    ).toEqual({
+      idempotencyKey: "apollo-wh:p6:+15550001111",
+      operation: "webhook.phone_revealed",
+      sanitized: { personId: "p6", phone: "+15550001111" },
+    });
+  });
 });
