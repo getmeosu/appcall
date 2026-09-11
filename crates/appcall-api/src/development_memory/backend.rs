@@ -178,6 +178,10 @@ impl MemoryBackend {
             shutdown: tokio::sync::watch::channel(false).0,
         }
     }
+    pub fn with_mcp_transport_config(mut self, config: appcall_mcp::McpTransportConfig) -> Self {
+        self.mcp = self.mcp.with_transport_config(config);
+        self
+    }
     pub fn stop(&self) {
         self.shutdown.send_replace(true);
     }
@@ -547,18 +551,13 @@ impl Backend for MemoryBackend {
         crate::validate_headers(&r.headers)?;
         let i = self.authorize(&r.headers).await?;
         let token = header(r, "X-Connector-Token");
-        let session_id = r
-            .headers
-            .iter()
-            .find(|(name, _)| name.eq_ignore_ascii_case(appcall_mcp::MCP_SESSION_ID_HEADER))
-            .map(|(_, value)| value.as_str());
-        let auth_context_fingerprint = appcall_mcp::auth_context_fingerprint(&r.headers);
         let scope = appcall_mcp::Scope::new(&i.project_id, &i.account_id)
             .with_profile(header(r, "X-Capability-Profile"))
-            .with_auth_context_fingerprint(&auth_context_fingerprint)
-            .with_session_header(session_id)
             .with_connector_token(token.strip_prefix("Bearer ").unwrap_or(token));
-        let result = self.mcp.handle_http(&r.method, &scope, &r.body).await;
+        let result = self
+            .mcp
+            .handle_http_with_headers(&r.method, &scope, &r.headers, &r.body)
+            .await;
         let appcall_mcp::HttpResponse {
             status,
             headers: mcp_headers,

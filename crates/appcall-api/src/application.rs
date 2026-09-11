@@ -160,12 +160,16 @@ impl Application {
             None
         };
         let mcp_database = Arc::new(Mutex::new(config.connect()?));
+        let mcp_transport =
+            appcall_mcp::McpTransportConfig::from_allowed_origins(config.mcp_allowed_origins())
+                .map_err(|_| "invalid MCP transport origin configuration")?;
         let mcp = appcall_mcp::Server::new(
             registry,
             appcall_mcp::PgConnections::new(mcp_database.clone()),
             executor,
             shared.mcp_usage.clone(),
-        );
+        )
+        .with_transport_config(mcp_transport);
         let verifier = if policy_config.webhook_secret.is_empty() {
             None
         } else {
@@ -459,18 +463,13 @@ impl Backend for Application {
         appcall_api::validate_headers(&r.headers)?;
         let identity = self.authorize(&r.headers).await?;
         let token = header(r, "X-Connector-Token");
-        let session_id = r
-            .headers
-            .iter()
-            .find(|(name, _)| name.eq_ignore_ascii_case(appcall_mcp::MCP_SESSION_ID_HEADER))
-            .map(|(_, value)| value.as_str());
-        let auth_context_fingerprint = appcall_mcp::auth_context_fingerprint(&r.headers);
         let scope = appcall_mcp::Scope::new(&identity.project_id, &identity.account_id)
             .with_profile(header(r, "X-Capability-Profile"))
-            .with_auth_context_fingerprint(&auth_context_fingerprint)
-            .with_session_header(session_id)
             .with_connector_token(token.strip_prefix("Bearer ").unwrap_or(token));
-        let response = self.mcp.handle_http(&r.method, &scope, &r.body).await;
+        let response = self
+            .mcp
+            .handle_http_with_headers(&r.method, &scope, &r.headers, &r.body)
+            .await;
         let appcall_mcp::HttpResponse {
             status,
             headers: mcp_headers,

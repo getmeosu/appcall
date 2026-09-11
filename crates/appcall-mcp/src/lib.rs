@@ -22,32 +22,16 @@ pub const MAX_REQUEST_BYTES: usize = 1 << 20;
 pub const PROTOCOL_VERSION: &str = "2025-06-18";
 /// Construct only from authenticated HTTP context, never tool arguments.
 /// Deliberately not Debug or Serialize because it carries a caller credential.
-#[derive(Clone)]
+///
+/// Keep this shape stable: callers may construct a `Scope` directly when using
+/// the framework-neutral, non-session API. HTTP session state lives in
+/// `McpRequestContext` instead of adding fields to this public struct.
+#[derive(Clone, Default)]
 pub struct Scope {
     pub project_id: String,
     pub account_id: String,
-    /// Server-issued identity for the MCP session that owns requests.
-    /// HTTP hosts must pass the incoming `Mcp-Session-Id` through the builder.
-    pub session_id: String,
     pub profile: String,
     pub connector_token: String,
-    pub(crate) auth_context_fingerprint: String,
-    session_header_present: bool,
-    legacy_scope_id: u64,
-}
-impl Default for Scope {
-    fn default() -> Self {
-        Self {
-            project_id: String::new(),
-            account_id: String::new(),
-            session_id: String::new(),
-            profile: String::new(),
-            connector_token: String::new(),
-            auth_context_fingerprint: String::new(),
-            session_header_present: false,
-            legacy_scope_id: session::next_legacy_scope_id(),
-        }
-    }
 }
 impl Scope {
     pub fn new(project: &str, account: &str) -> Self {
@@ -61,13 +45,67 @@ impl Scope {
         self.profile = profile.into();
         self
     }
+    pub fn with_connector_token(mut self, token: &str) -> Self {
+        self.connector_token = token.into();
+        self
+    }
+}
+
+/// Per-request context supplied by an authenticated HTTP host.
+///
+/// The session ID is server-issued and visible-safe. The authentication
+/// fingerprint is a non-secret digest of the headers that established the
+/// identity; raw credentials are never retained here.
+#[derive(Clone)]
+pub struct McpRequestContext {
+    session_id: Option<String>,
+    auth_context_fingerprint: String,
+    namespace_id: u64,
+    session_admission: bool,
+    durable_cancellation: bool,
+}
+impl Default for McpRequestContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl McpRequestContext {
+    pub fn new() -> Self {
+        Self {
+            session_id: None,
+            auth_context_fingerprint: String::new(),
+            namespace_id: session::next_legacy_scope_id(),
+            session_admission: true,
+            durable_cancellation: true,
+        }
+    }
+    /// Build the context used by a legacy direct HTTP call. It retains the
+    /// cancellation reservation semantics but does not create an inaccessible
+    /// server session for callers that only use `Scope`.
+    pub(crate) fn legacy_http() -> Self {
+        Self {
+            session_admission: false,
+            durable_cancellation: false,
+            ..Self::new()
+        }
+    }
+    pub fn from_headers(headers: &[(String, String)]) -> Self {
+        let session_id = headers
+            .iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case(MCP_SESSION_ID_HEADER))
+            .map(|(_, value)| value.as_str());
+        Self::new()
+            .with_auth_context_fingerprint(&auth_context_fingerprint(headers))
+            .with_session_header(session_id)
+    }
     pub fn with_auth_context_fingerprint(mut self, fingerprint: &str) -> Self {
         self.auth_context_fingerprint = fingerprint.into();
         self
     }
     pub fn with_session_header(mut self, session_id: Option<&str>) -> Self {
-        self.session_header_present = session_id.is_some();
-        self.session_id = session_id.unwrap_or_default().into();
+        self.session_id = session_id.map(str::to_owned);
+        self.session_admission = true;
+        self.durable_cancellation = true;
         self
     }
     pub fn with_session_id(self, session_id: &str) -> Self {
@@ -76,13 +114,17 @@ impl Scope {
     pub fn with_session(self, session_id: &str) -> Self {
         self.with_session_id(session_id)
     }
-    pub fn with_connector_token(mut self, token: &str) -> Self {
-        self.connector_token = token.into();
-        self
+    pub fn session_id(&self) -> Option<&str> {
+        self.session_id.as_deref()
     }
-    pub(crate) fn incoming_session_id(&self) -> Option<&str> {
-        self.session_header_present
-            .then_some(self.session_id.as_str())
+    pub(crate) fn auth_context_fingerprint(&self) -> &str {
+        &self.auth_context_fingerprint
+    }
+    pub(crate) fn admits_sessions(&self) -> bool {
+        self.session_admission
+    }
+    pub(crate) fn durable_cancellation(&self) -> bool {
+        self.durable_cancellation
     }
 }
 
@@ -95,16 +137,19 @@ struct ScopeKey {
     legacy_scope_id: u64,
 }
 impl ScopeKey {
-    fn from_scope(scope: &Scope) -> Self {
+    fn from_scope(scope: &Scope, context: &McpRequestContext) -> Self {
+        let session_id = context.session_id.clone().unwrap_or_default();
         Self {
             project_id: scope.project_id.clone(),
             account_id: scope.account_id.clone(),
             profile: scope.profile.clone(),
-            session_id: scope.session_id.clone(),
-            legacy_scope_id: if scope.incoming_session_id().is_some() {
+            session_id,
+            legacy_scope_id: if context.session_id.is_some() {
                 0
+            } else if !context.admits_sessions() {
+                session::legacy_scope_id(scope)
             } else {
-                scope.legacy_scope_id
+                context.namespace_id
             },
         }
     }
@@ -189,6 +234,36 @@ impl InFlightEntry {
         state.lifecycle = InFlightState::Completed;
         true
     }
+    fn finish_execution(&self) -> bool {
+        let mut state = self.state_guard();
+        match state.lifecycle {
+            InFlightState::Dispatched => {
+                state.lifecycle = InFlightState::Completed;
+                true
+            }
+            InFlightState::Cancelled(CancelPhase::AfterDispatch) => {
+                state.lifecycle = InFlightState::Completed;
+                false
+            }
+            _ => false,
+        }
+    }
+    fn abort_execution(&self) -> bool {
+        let mut state = self.state_guard();
+        match state.lifecycle {
+            InFlightState::Dispatched | InFlightState::Cancelled(CancelPhase::AfterDispatch) => {
+                state.lifecycle = InFlightState::Completed;
+                true
+            }
+            _ => false,
+        }
+    }
+    fn can_cleanup_on_drop(&self) -> bool {
+        matches!(
+            self.state_guard().lifecycle,
+            InFlightState::Pending | InFlightState::Cancelled(CancelPhase::BeforeDispatch)
+        )
+    }
     fn cancel(&self, requested_connection_id: Option<&str>) -> Option<CancelPhase> {
         let phase = {
             let mut state = self.state_guard();
@@ -236,11 +311,12 @@ impl InFlightRegistry {
     fn register(
         self: &Arc<Self>,
         scope: &Scope,
+        context: &McpRequestContext,
         request_id: &str,
         connection_id: Option<String>,
     ) -> Result<InFlightRegistration, RegistrationError> {
         let key = RequestKey {
-            scope: ScopeKey::from_scope(scope),
+            scope: ScopeKey::from_scope(scope, context),
             request_id: request_id.to_owned(),
         };
         let mut entries = self.lock();
@@ -261,19 +337,16 @@ impl InFlightRegistry {
     fn cancel(
         &self,
         scope: &Scope,
+        context: &McpRequestContext,
         request_id: &str,
         connection_id: Option<&str>,
     ) -> Option<CancelPhase> {
         let key = RequestKey {
-            scope: ScopeKey::from_scope(scope),
+            scope: ScopeKey::from_scope(scope, context),
             request_id: request_id.to_owned(),
         };
         let entry = self.lock().get(&key).cloned()?;
-        let phase = entry.cancel(connection_id);
-        if phase.is_some() {
-            self.remove_if_same(&key, &entry);
-        }
-        phase
+        entry.cancel(connection_id)
     }
     fn remove_if_same(&self, key: &RequestKey, entry: &Arc<InFlightEntry>) {
         let mut entries = self.lock();
@@ -294,6 +367,7 @@ pub(crate) enum RegistrationError {
     Duplicate,
 }
 
+#[derive(Clone)]
 pub(crate) struct InFlightRegistration {
     registry: Arc<InFlightRegistry>,
     key: RequestKey,
@@ -316,13 +390,27 @@ impl InFlightRegistration {
         }
         completed
     }
+    pub(crate) fn finish_execution(&self) -> bool {
+        let accepted = self.entry.finish_execution();
+        if matches!(self.entry.state_guard().lifecycle, InFlightState::Completed) {
+            self.registry.remove_if_same(&self.key, &self.entry);
+        }
+        accepted
+    }
+    pub(crate) fn abort_execution(&self) {
+        if self.entry.abort_execution() {
+            self.registry.remove_if_same(&self.key, &self.entry);
+        }
+    }
     pub(crate) fn cancellation_phase(&self) -> Option<CancelPhase> {
         self.entry.cancellation_phase()
     }
 }
 impl Drop for InFlightRegistration {
     fn drop(&mut self) {
-        self.registry.remove_if_same(&self.key, &self.entry);
+        if self.entry.can_cleanup_on_drop() {
+            self.registry.remove_if_same(&self.key, &self.entry);
+        }
     }
 }
 #[derive(Clone, Debug)]

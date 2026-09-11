@@ -444,7 +444,7 @@ async fn mcp_test_call<L, E, U>(
 ) -> serde_json::Value
 where
     L: appcall_mcp::ConnectionLister,
-    E: appcall_mcp::ActionExecutor,
+    E: appcall_mcp::ActionExecutor + 'static,
     U: appcall_mcp::UsageRecorder,
 {
     server
@@ -812,6 +812,97 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
             .status,
         404
     );
+}
+
+#[tokio::test]
+async fn memory_mcp_raw_route_applies_protocol_and_origin_policy() {
+    use crate::Backend;
+
+    let (backend, _) = composition();
+    let backend = backend.with_mcp_transport_config(
+        appcall_mcp::McpTransportConfig::from_allowed_origins(["https://allowed.example"]).unwrap(),
+    );
+    let body = serde_json::json!({"jsonrpc":"2.0","id":1,"method":"tools/list"});
+
+    let mut allowed = api_request_for_account("POST", "/v1/mcp", body.clone(), "brand");
+    allowed.headers.push((
+        "MCP-Protocol-Version".into(),
+        appcall_mcp::PROTOCOL_VERSION.into(),
+    ));
+    allowed
+        .headers
+        .push(("Origin".into(), "https://allowed.example".into()));
+    let accepted = backend
+        .raw_route(&allowed)
+        .await
+        .unwrap()
+        .expect("MCP route must handle the request");
+    assert_eq!(accepted.status, 200);
+
+    let mut unsupported = api_request_for_account("POST", "/v1/mcp", body.clone(), "brand");
+    unsupported
+        .headers
+        .push(("MCP-Protocol-Version".into(), "1999-01-01".into()));
+    let response = backend
+        .raw_route(&unsupported)
+        .await
+        .unwrap()
+        .expect("MCP route must handle the request");
+    assert_eq!(response.status, 400);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&response.body).unwrap()["error"]["code"],
+        "MCP_PROTOCOL_VERSION_UNSUPPORTED"
+    );
+
+    let mut disallowed = api_request_for_account("POST", "/v1/mcp", body.clone(), "brand");
+    disallowed
+        .headers
+        .push(("Origin".into(), "https://evil.example".into()));
+    let response = backend
+        .raw_route(&disallowed)
+        .await
+        .unwrap()
+        .expect("MCP route must handle the request");
+    assert_eq!(response.status, 400);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&response.body).unwrap()["error"]["code"],
+        "MCP_ORIGIN_NOT_ALLOWED"
+    );
+
+    let mut malformed_origin = api_request_for_account("POST", "/v1/mcp", body, "brand");
+    malformed_origin
+        .headers
+        .push(("Origin".into(), "https://allowed.example/path".into()));
+    let response = backend
+        .raw_route(&malformed_origin)
+        .await
+        .unwrap()
+        .expect("MCP route must handle the request");
+    assert_eq!(response.status, 400);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&response.body).unwrap()["error"]["code"],
+        "MCP_ORIGIN_INVALID"
+    );
+
+    let mut duplicate_protocol = api_request_for_account(
+        "POST",
+        "/v1/mcp",
+        serde_json::json!({"jsonrpc":"2.0","id":2,"method":"ping"}),
+        "brand",
+    );
+    duplicate_protocol.headers.push((
+        "MCP-Protocol-Version".into(),
+        appcall_mcp::PROTOCOL_VERSION.into(),
+    ));
+    duplicate_protocol.headers.push((
+        "mcp-protocol-version".into(),
+        appcall_mcp::PROTOCOL_VERSION.into(),
+    ));
+    let error = backend
+        .raw_route(&duplicate_protocol)
+        .await
+        .expect_err("duplicate MCP protocol headers must be rejected");
+    assert_eq!(error.code, "INVALID_REQUEST");
 }
 
 #[tokio::test]

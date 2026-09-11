@@ -3,10 +3,173 @@ use crate::*;
 use appcall_connectors::Registry;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::{
+    collections::BTreeSet,
+    future::Future,
+    pin::Pin,
+    sync::Arc,
+    task::{Context, Poll},
+};
+use url::Url;
 
 pub const MAX_MCP_IN_FLIGHT_REQUESTS: usize = 128;
 const MAX_MCP_REQUEST_ID_BYTES: usize = 256;
+pub const MCP_PROTOCOL_VERSION_HEADER: &str = "MCP-Protocol-Version";
+
+#[derive(Clone, Debug, Default)]
+pub struct McpTransportConfig {
+    allowed_origins: BTreeSet<String>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TransportConfigError;
+impl McpTransportConfig {
+    pub fn from_allowed_origins<I, S>(origins: I) -> Result<Self, TransportConfigError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        let mut allowed_origins = BTreeSet::new();
+        for origin in origins {
+            allowed_origins.insert(canonical_origin(origin.as_ref(), false)?);
+        }
+        Ok(Self { allowed_origins })
+    }
+    fn validate_headers(&self, headers: &[(String, String)]) -> Result<(), TransportHeaderError> {
+        let protocol_values = header_values(headers, MCP_PROTOCOL_VERSION_HEADER);
+        match protocol_values.as_slice() {
+            [] => {}
+            [value] if *value == PROTOCOL_VERSION => {}
+            [value] if value.trim() != *value || value.is_empty() => {
+                return Err(TransportHeaderError::ProtocolInvalid)
+            }
+            [_] => return Err(TransportHeaderError::ProtocolUnsupported),
+            _ => return Err(TransportHeaderError::ProtocolInvalid),
+        }
+
+        let origin_values = header_values(headers, "Origin");
+        match origin_values.as_slice() {
+            [] => Ok(()),
+            [_] => {
+                let origin = canonical_origin(origin_values[0], true)
+                    .map_err(|_| TransportHeaderError::OriginInvalid)?;
+                if self.allowed_origins.contains(&origin) {
+                    Ok(())
+                } else {
+                    Err(TransportHeaderError::OriginNotAllowed)
+                }
+            }
+            _ => Err(TransportHeaderError::OriginInvalid),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TransportHeaderError {
+    ProtocolInvalid,
+    ProtocolUnsupported,
+    OriginInvalid,
+    OriginNotAllowed,
+}
+impl TransportHeaderError {
+    fn code(self) -> &'static str {
+        match self {
+            Self::ProtocolInvalid => "MCP_PROTOCOL_VERSION_INVALID",
+            Self::ProtocolUnsupported => "MCP_PROTOCOL_VERSION_UNSUPPORTED",
+            Self::OriginInvalid => "MCP_ORIGIN_INVALID",
+            Self::OriginNotAllowed => "MCP_ORIGIN_NOT_ALLOWED",
+        }
+    }
+    fn message(self) -> &'static str {
+        match self {
+            Self::ProtocolInvalid => {
+                "MCP-Protocol-Version must contain one valid protocol version."
+            }
+            Self::ProtocolUnsupported => "The requested MCP protocol version is not supported.",
+            Self::OriginInvalid => "Origin must contain one valid browser origin.",
+            Self::OriginNotAllowed => "The request Origin is not allowed for MCP transport.",
+        }
+    }
+}
+
+fn header_values<'a>(headers: &'a [(String, String)], name: &str) -> Vec<&'a str> {
+    headers
+        .iter()
+        .filter(|(header, _)| header.eq_ignore_ascii_case(name))
+        .map(|(_, value)| value.as_str())
+        .collect()
+}
+
+fn canonical_origin(raw: &str, request: bool) -> Result<String, TransportConfigError> {
+    if raw.is_empty()
+        || raw.trim() != raw
+        || raw.eq_ignore_ascii_case("null")
+        || raw.chars().any(char::is_control)
+    {
+        return Err(TransportConfigError);
+    }
+    let url = Url::parse(raw).map_err(|_| TransportConfigError)?;
+    if !matches!(url.scheme(), "http" | "https")
+        || url.host_str().is_none()
+        || url.username() != ""
+        || url.password().is_some()
+    {
+        return Err(TransportConfigError);
+    }
+    if request
+        && (url.path() != "" && url.path() != "/"
+            || url.query().is_some()
+            || url.fragment().is_some())
+    {
+        return Err(TransportConfigError);
+    }
+    Ok(url.origin().ascii_serialization())
+}
+
+struct ExecutionGuard {
+    registration: InFlightRegistration,
+    finished: bool,
+}
+impl ExecutionGuard {
+    fn new(registration: InFlightRegistration) -> Self {
+        Self {
+            registration,
+            finished: false,
+        }
+    }
+    fn finish_execution(&mut self) -> bool {
+        self.finished = true;
+        self.registration.finish_execution()
+    }
+}
+impl Drop for ExecutionGuard {
+    fn drop(&mut self) {
+        if !self.finished {
+            self.registration.abort_execution();
+        }
+    }
+}
+
+struct AbortOnDrop<T>(tokio::task::JoinHandle<T>);
+impl<T> AbortOnDrop<T> {
+    fn new(handle: tokio::task::JoinHandle<T>) -> Self {
+        Self(handle)
+    }
+    fn detach(self) {
+        std::mem::forget(self);
+    }
+}
+impl<T> Future for AbortOnDrop<T> {
+    type Output = Result<T, tokio::task::JoinError>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        Pin::new(&mut self.get_mut().0).poll(cx)
+    }
+}
+impl<T> Drop for AbortOnDrop<T> {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
 
 pub struct HttpResponse {
     pub status: u16,
@@ -16,21 +179,27 @@ pub struct HttpResponse {
 pub struct Server<L, E, U = ()> {
     registry: Registry,
     connections: L,
-    executor: E,
+    executor: Arc<E>,
     usage: U,
     in_flight: Arc<InFlightRegistry>,
     sessions: Arc<SessionRegistry>,
+    transport: McpTransportConfig,
 }
-impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
+impl<L: ConnectionLister, E: ActionExecutor + 'static, U: UsageRecorder> Server<L, E, U> {
     pub fn new(registry: Registry, connections: L, executor: E, usage: U) -> Self {
         Self {
             registry,
             connections,
-            executor,
+            executor: Arc::new(executor),
             usage,
             in_flight: Arc::new(InFlightRegistry::new(MAX_MCP_IN_FLIGHT_REQUESTS)),
             sessions: Arc::new(SessionRegistry::new(MAX_MCP_SESSIONS)),
+            transport: McpTransportConfig::default(),
         }
+    }
+    pub fn with_transport_config(mut self, transport: McpTransportConfig) -> Self {
+        self.transport = transport;
+        self
     }
     pub fn in_flight_len(&self) -> usize {
         self.in_flight.len()
@@ -45,11 +214,61 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         &self.usage
     }
     /// The host must bound reads to MAX_REQUEST_BYTES + 1 before buffering.
-    /// Dropping this future cancels in-flight action execution; its durable action
-    /// claim preserves the existing no-automatic-retry boundary after dispatch.
+    /// This compatibility path does not issue a server session because its
+    /// `Scope` has no session state. Session-aware hosts must use
+    /// `handle_http_with_headers` or `handle_http_with_context`.
     pub async fn handle_http(&self, method: &str, scope: &Scope, body: &[u8]) -> HttpResponse {
+        self.handle_http_with_context_inner(method, scope, &McpRequestContext::legacy_http(), body)
+            .await
+    }
+    pub async fn handle_http_with_headers(
+        &self,
+        method: &str,
+        scope: &Scope,
+        headers: &[(String, String)],
+        body: &[u8],
+    ) -> HttpResponse
+    where
+        E: 'static,
+    {
         if scope.project_id.is_empty() {
             return http_error(401, "UNAUTHORIZED", "Missing or invalid API key.");
+        }
+        if let Err(error) = self.transport.validate_headers(headers) {
+            return http_error(400, error.code(), error.message());
+        }
+        let context = McpRequestContext::from_headers(headers);
+        self.handle_http_with_context_inner(method, scope, &context, body)
+            .await
+    }
+    pub async fn handle_http_with_context(
+        &self,
+        method: &str,
+        scope: &Scope,
+        context: &McpRequestContext,
+        body: &[u8],
+    ) -> HttpResponse
+    where
+        E: 'static,
+    {
+        self.handle_http_with_context_inner(method, scope, context, body)
+            .await
+    }
+    async fn handle_http_with_context_inner(
+        &self,
+        method: &str,
+        scope: &Scope,
+        context: &McpRequestContext,
+        body: &[u8],
+    ) -> HttpResponse
+    where
+        E: 'static,
+    {
+        if scope.project_id.is_empty() {
+            return http_error(401, "UNAUTHORIZED", "Missing or invalid API key.");
+        }
+        if method == "DELETE" {
+            return self.close_session(scope, context);
         }
         if method != "POST" {
             return http_error(405, "METHOD_NOT_ALLOWED", "Use POST to send MCP requests.");
@@ -61,11 +280,26 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                 "Request body exceeded the configured size limit.",
             );
         }
-        let (scope, issued_session) = match self.bind_session(scope) {
-            Ok(bound) => bound,
-            Err(error) => return session_error(error),
-        };
-        let body = self.handle(&scope, body).await;
+        let admission = session_admission(body);
+        let mut context = context.clone();
+        let mut issued_session = None;
+        if !matches!(admission, SessionAdmission::Invalid) {
+            if let Some(session_id) = context.session_id() {
+                let binding = SessionBinding::from_scope(scope, &context);
+                if let Err(error) = self.sessions.validate(session_id, &binding) {
+                    return session_error(error);
+                }
+            } else if matches!(admission, SessionAdmission::Request) && context.admits_sessions() {
+                let binding = SessionBinding::from_scope(scope, &context);
+                let session_id = match self.sessions.issue(binding) {
+                    Ok(session_id) => session_id,
+                    Err(error) => return session_error(error),
+                };
+                context = context.with_session_id(&session_id);
+                issued_session = Some(session_id);
+            }
+        }
+        let body = self.handle_with_context(scope, &context, body).await;
         let headers = issued_session
             .map(|session_id| (MCP_SESSION_ID_HEADER.into(), session_id))
             .into_iter()
@@ -76,21 +310,33 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             body,
         }
     }
-    fn bind_session(&self, scope: &Scope) -> Result<(Scope, Option<String>), SessionError> {
-        let binding = SessionBinding::from_scope(scope);
-        match scope.incoming_session_id() {
-            Some(session_id) => {
-                self.sessions.validate(session_id, &binding)?;
-                Ok((scope.clone(), None))
-            }
-            None => {
-                let session_id = self.sessions.issue(binding)?;
-                let bound_scope = scope.clone().with_session_id(&session_id);
-                Ok((bound_scope, Some(session_id)))
-            }
+    fn close_session(&self, scope: &Scope, context: &McpRequestContext) -> HttpResponse {
+        let Some(session_id) = context.session_id() else {
+            return session_error(SessionError::Unknown);
+        };
+        let binding = SessionBinding::from_scope(scope, context);
+        match self.sessions.close(session_id, &binding) {
+            Ok(()) => HttpResponse {
+                status: 204,
+                headers: Vec::new(),
+                body: None,
+            },
+            Err(error) => session_error(error),
         }
     }
     pub async fn handle(&self, scope: &Scope, raw: &[u8]) -> Option<Value> {
+        self.handle_with_context(scope, &McpRequestContext::legacy_http(), raw)
+            .await
+    }
+    pub async fn handle_with_context(
+        &self,
+        scope: &Scope,
+        context: &McpRequestContext,
+        raw: &[u8],
+    ) -> Option<Value>
+    where
+        E: 'static,
+    {
         let request: Value = match serde_json::from_slice(raw) {
             Ok(v) => v,
             Err(_) => return Some(rpc_error(None, -32700, "Parse error.")),
@@ -126,7 +372,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         // Notifications never receive a response. Cancellation notifications do
         // update the process-local registry so a matching request can observe it.
         if method == "notifications/cancelled" {
-            self.cancel_request(scope, request.get("params").cloned());
+            self.cancel_request(scope, context, request.get("params").cloned());
             return None;
         }
         if method == "notifications/initialized" {
@@ -135,6 +381,9 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         let id = id?;
         let result = match method {
             "initialize" => {
+                if let Err(message) = validate_initialize_params(request.get("params")) {
+                    return Some(rpc_error(Some(id), -32602, message));
+                }
                 json!({"protocolVersion":PROTOCOL_VERSION,"capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"appcall-mcp-gateway","version":"0.1.0"}})
             }
             "ping" => json!({}),
@@ -164,6 +413,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                 match self
                     .call_tool_with_key(
                         scope,
+                        context,
                         &call.name,
                         call.arguments,
                         call.idempotency_key,
@@ -180,7 +430,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         };
         Some(json!({"jsonrpc":"2.0","id":id,"result":result}))
     }
-    fn cancel_request(&self, scope: &Scope, params: Option<Value>) {
+    fn cancel_request(&self, scope: &Scope, context: &McpRequestContext, params: Option<Value>) {
         let Some(params) =
             params.and_then(|params| serde_json::from_value::<CancellationParams>(params).ok())
         else {
@@ -198,7 +448,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         }
         let _ = self
             .in_flight
-            .cancel(scope, &request_id, params.connection_id.as_deref());
+            .cancel(scope, context, &request_id, params.connection_id.as_deref());
     }
     async fn scoped_connections(
         &self,
@@ -281,8 +531,12 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         scope: &Scope,
         name: &str,
         input: Value,
-    ) -> Result<Value, InfrastructureError> {
-        self.call_tool_with_key(scope, name, input, None, None, None)
+    ) -> Result<Value, InfrastructureError>
+    where
+        E: 'static,
+    {
+        let context = McpRequestContext::default();
+        self.call_tool_with_key(scope, &context, name, input, None, None, None)
             .await
     }
     pub async fn call_tool_for_connection(
@@ -291,9 +545,14 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         name: &str,
         connection_id: &str,
         input: Value,
-    ) -> Result<Value, InfrastructureError> {
+    ) -> Result<Value, InfrastructureError>
+    where
+        E: 'static,
+    {
+        let context = McpRequestContext::default();
         self.call_tool_with_key(
             scope,
+            &context,
             name,
             input,
             None,
@@ -302,9 +561,11 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         )
         .await
     }
+    #[allow(clippy::too_many_arguments)]
     async fn call_tool_with_key(
         &self,
         scope: &Scope,
+        context: &McpRequestContext,
         name: &str,
         input: Value,
         idempotency_key: Option<String>,
@@ -345,7 +606,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             Some(request_id) => {
                 match self
                     .in_flight
-                    .register(scope, &request_id, connection_id.clone())
+                    .register(scope, context, &request_id, connection_id.clone())
                 {
                     Ok(registration) => Some(registration),
                     Err(RegistrationError::Capacity) => {
@@ -405,6 +666,28 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             }
         }
         let execution = match registration.as_ref() {
+            Some(registration) if context.durable_cancellation() => {
+                let executor = Arc::clone(&self.executor);
+                let reservation = registration.clone();
+                let mut task = AbortOnDrop::new(tokio::task::spawn_local(async move {
+                    let mut guard = ExecutionGuard::new(reservation);
+                    let result = executor.execute(request).await;
+                    let accepted = guard.finish_execution();
+                    (accepted, result)
+                }));
+                tokio::select! {
+                    biased;
+                    _ = registration.wait_cancelled() => {
+                        task.detach();
+                        return Ok(cancellation_payload(registration));
+                    }
+                    joined = &mut task => match joined {
+                        Ok((true, result)) => result,
+                        Ok((false, _)) => return Ok(cancellation_payload(registration)),
+                        Err(_) => return Ok(tool_error("ACTION_FAILED", "Tool execution failed.")),
+                    }
+                }
+            }
             Some(registration) => {
                 tokio::select! {
                     biased;
@@ -572,8 +855,74 @@ struct CancellationParams {
     connection_id: Option<String>,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SessionAdmission {
+    Invalid,
+    Notification,
+    Request,
+}
+
+fn session_admission(raw: &[u8]) -> SessionAdmission {
+    let Ok(request) = serde_json::from_slice::<Value>(raw) else {
+        return SessionAdmission::Invalid;
+    };
+    let Some(object) = request.as_object() else {
+        return SessionAdmission::Invalid;
+    };
+    let Some(jsonrpc) = object.get("jsonrpc").and_then(Value::as_str) else {
+        return SessionAdmission::Invalid;
+    };
+    let Some(method) = object.get("method").and_then(Value::as_str) else {
+        return SessionAdmission::Invalid;
+    };
+    if jsonrpc != "2.0" || method.is_empty() {
+        return SessionAdmission::Invalid;
+    }
+    let Some(id) = object.get("id") else {
+        return SessionAdmission::Notification;
+    };
+    if bounded_request_id(id).is_none() {
+        return SessionAdmission::Invalid;
+    }
+    if method.starts_with("notifications/") {
+        return SessionAdmission::Notification;
+    }
+    if method == "initialize" && validate_initialize_params(object.get("params")).is_err() {
+        return SessionAdmission::Invalid;
+    }
+    if method == "tools/call"
+        && !object
+            .get("params")
+            .is_some_and(|params| valid_call_params(Some(params)))
+    {
+        return SessionAdmission::Invalid;
+    }
+    SessionAdmission::Request
+}
+
+fn validate_initialize_params(params: Option<&Value>) -> Result<(), &'static str> {
+    let Some(params) = params.filter(|params| !params.is_null()) else {
+        return Ok(());
+    };
+    let Some(params) = params.as_object() else {
+        return Err("Invalid initialize params.");
+    };
+    match params.get("protocolVersion") {
+        None => Ok(()),
+        Some(Value::String(version)) if version == PROTOCOL_VERSION => Ok(()),
+        Some(_) => Err("Unsupported MCP protocol version."),
+    }
+}
+
+fn valid_call_params(params: Option<&Value>) -> bool {
+    let Some(params) = params.filter(|params| !params.is_null()) else {
+        return false;
+    };
+    serde_json::from_value::<CallParams>(params.clone()).is_ok_and(|call| !call.name.is_empty())
+}
+
 fn bounded_request_id(id: &Value) -> Option<String> {
-    if !id.is_null() && !id.is_string() && !id.is_number() {
+    if !id.is_string() && !id.is_number() {
         return None;
     }
     let serialized = serde_json::to_string(id).ok()?;
@@ -787,7 +1136,7 @@ fn session_error(error: SessionError) -> HttpResponse {
         SessionError::Unknown | SessionError::Mismatch => {
             http_error(404, "MCP_SESSION_NOT_FOUND", "MCP session was not found.")
         }
-        SessionError::Capacity | SessionError::Unavailable => http_error(
+        SessionError::Capacity | SessionError::Quota | SessionError::Unavailable => http_error(
             503,
             "MCP_SESSION_UNAVAILABLE",
             "MCP session could not be established.",

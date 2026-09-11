@@ -676,6 +676,7 @@ pub fn validate_headers(headers: &[(String, String)]) -> Result<()> {
             "referer",
             "last-event-id",
             "mcp-session-id",
+            "mcp-protocol-version",
         ]
         .contains(&key.as_str())
             && !seen.insert(key)
