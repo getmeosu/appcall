@@ -107,13 +107,38 @@ fn server() -> (Server<Connections, Executor, MemoryUsage>, Executor) {
 fn scope() -> Scope {
     Scope::new("p", "brand")
         .with_profile("sena_mvt")
+        .with_auth_context_fingerprint("test-auth-context")
         .with_connector_token("SECRET")
 }
-fn session_scope(account: &str, session: &str) -> Scope {
+fn sessionless_scope(account: &str) -> Scope {
     Scope::new("p", account)
         .with_profile("future")
-        .with_session_id(session)
+        .with_auth_context_fingerprint("test-auth-context")
         .with_connector_token("SECRET")
+}
+fn response_header<'a>(response: &'a HttpResponse, name: &str) -> Option<&'a str> {
+    response
+        .headers
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case(name))
+        .map(|(_, value)| value.as_str())
+}
+async fn issued_scope<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder>(
+    server: &Server<L, E, U>,
+    scope: Scope,
+) -> Scope {
+    let response = server
+        .handle_http(
+            "POST",
+            &scope,
+            br#"{"jsonrpc":"2.0","id":0,"method":"initialize"}"#,
+        )
+        .await;
+    assert_eq!(response.status, 200);
+    let session_id = response_header(&response, MCP_SESSION_ID_HEADER)
+        .expect("authenticated session issuance must return a session header")
+        .to_owned();
+    scope.with_session_id(&session_id)
 }
 async fn rpc<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder>(
     s: &Server<L, E, U>,
@@ -124,6 +149,181 @@ async fn rpc<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder>(
         .await
         .body
         .unwrap()
+}
+
+#[tokio::test]
+async fn mcp_issues_and_reuses_server_sessions() {
+    let (server, _) = server();
+    let scope = scope();
+    let initialize = br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+
+    let first = server.handle_http("POST", &scope, initialize).await;
+    assert_eq!(first.status, 200);
+    let first_session = response_header(&first, MCP_SESSION_ID_HEADER)
+        .expect("first authenticated request must issue a session")
+        .to_owned();
+    assert!(!first_session.is_empty());
+    assert!(first_session
+        .bytes()
+        .all(|byte| (0x20..=0x7e).contains(&byte)));
+    assert_eq!(server.session_len(), 1);
+
+    let reused = server
+        .handle_http(
+            "POST",
+            &scope.clone().with_session_id(&first_session),
+            initialize,
+        )
+        .await;
+    assert_eq!(reused.status, 200);
+    assert!(response_header(&reused, MCP_SESSION_ID_HEADER).is_none());
+    assert_eq!(server.session_len(), 1);
+
+    let second = server.handle_http("POST", &scope, initialize).await;
+    let second_session = response_header(&second, MCP_SESSION_ID_HEADER)
+        .expect("each omitted session must receive a new session")
+        .to_owned();
+    assert_ne!(first_session, second_session);
+    assert_eq!(server.session_len(), 2);
+}
+
+#[tokio::test]
+async fn mcp_rejects_unknown_mismatched_and_invalid_sessions_without_rebinding() {
+    let (server, _) = server();
+    let scope = scope();
+    let initialize = br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+    let first = server.handle_http("POST", &scope, initialize).await;
+    let session_id = response_header(&first, MCP_SESSION_ID_HEADER)
+        .expect("session was not issued")
+        .to_owned();
+
+    let unknown = scope.clone().with_session_id(&"u".repeat(43));
+    let unknown_response = server.handle_http("POST", &unknown, initialize).await;
+    assert_eq!(unknown_response.status, 404);
+    assert_eq!(server.session_len(), 1);
+
+    let wrong_auth = scope
+        .clone()
+        .with_auth_context_fingerprint("different-auth-context")
+        .with_session_id(&session_id);
+    let wrong_auth_response = server.handle_http("POST", &wrong_auth, initialize).await;
+    assert_eq!(wrong_auth_response.status, 404);
+
+    let wrong_account = sessionless_scope("other-brand").with_session_id(&session_id);
+    let wrong_account_response = server.handle_http("POST", &wrong_account, initialize).await;
+    assert_eq!(wrong_account_response.status, 404);
+    assert_eq!(server.session_len(), 1);
+
+    let invalid = scope.with_session_id("invalid\nsession");
+    let invalid_response = server.handle_http("POST", &invalid, initialize).await;
+    assert_eq!(invalid_response.status, 400);
+    assert!(response_header(&invalid_response, MCP_SESSION_ID_HEADER).is_none());
+
+    let wrong_profile = server
+        .handle_http(
+            "POST",
+            &sessionless_scope("brand").with_session_id(&session_id),
+            initialize,
+        )
+        .await;
+    assert_eq!(wrong_profile.status, 404);
+    let correct = sessionless_scope("brand")
+        .with_profile("sena_mvt")
+        .with_session_id(&session_id);
+    assert_eq!(
+        server
+            .handle_http("POST", &correct, initialize)
+            .await
+            .status,
+        200
+    );
+}
+
+#[tokio::test]
+async fn mcp_same_account_sessions_cannot_cross_cancel() {
+    let connections = WaitingConnections {
+        started: Arc::new(Notify::new()),
+        release: Arc::new(Notify::new()),
+    };
+    let executor = CancellableExecutor::new();
+    let server = Server::new(registry(), connections.clone(), executor.clone(), ());
+    let session_a = issued_scope(&server, sessionless_scope("brand")).await;
+    let session_b = issued_scope(&server, sessionless_scope("brand")).await;
+    let request = serde_json::to_vec(&tools_call_request(46, "selected")).unwrap();
+    let mut call = Box::pin(server.handle_http("POST", &session_a, &request));
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = connections.started.notified() => {},
+            _ = &mut call => panic!("request completed before connection lookup"),
+        }
+    })
+    .await
+    .expect("connection lookup did not start");
+
+    let cross_cancel = server
+        .handle_http(
+            "POST",
+            &session_b,
+            &serde_json::to_vec(&cancelled_notification(46, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cross_cancel.status, 202);
+    assert!(tokio::time::timeout(Duration::from_millis(10), &mut call)
+        .await
+        .is_err());
+
+    let cancel = server
+        .handle_http(
+            "POST",
+            &session_a,
+            &serde_json::to_vec(&cancelled_notification(46, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cancel.status, 202);
+    connections.release.notify_one();
+    let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+        .await
+        .expect("cancelled request did not finish");
+    assert_eq!(
+        response.body.unwrap()["result"]["structuredContent"]["code"],
+        "MCP_REQUEST_CANCELLED"
+    );
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[tokio::test]
+async fn mcp_omitted_sessions_are_isolated_without_bypassing_in_flight_cap() {
+    let executor = CancellableExecutor::new();
+    let server = Arc::new(Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    ));
+    let scope = sessionless_scope("brand");
+    let request = serde_json::to_vec(&tools_call_request(47, "selected")).unwrap();
+    let mut calls = Vec::new();
+    for _ in 0..2 {
+        let server = server.clone();
+        let scope = scope.clone();
+        let request = request.clone();
+        calls.push(tokio::spawn(async move {
+            server.handle_http("POST", &scope, &request).await
+        }));
+    }
+    tokio::time::timeout(Duration::from_millis(100), async {
+        while executor.start_count.load(Ordering::SeqCst) < 2 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("omitted sessions shared a request namespace");
+    assert_eq!(server.in_flight_len(), 2);
+    assert_eq!(server.session_len(), 2);
+    executor.release.notify_waiters();
+    for call in calls {
+        assert_eq!(call.await.unwrap().status, 200);
+    }
 }
 #[tokio::test]
 async fn protocol_transport_and_notifications() {
@@ -1228,7 +1428,7 @@ async fn mcp_cancellation_before_dispatch_is_scope_bound_and_has_no_provider_eff
     let executor = CancellableExecutor::new();
     let server = Server::new(registry(), connections.clone(), executor.clone(), ());
     let request = serde_json::to_vec(&tools_call_request(41, "selected")).unwrap();
-    let request_scope = session_scope("brand", "voice-a");
+    let request_scope = issued_scope(&server, sessionless_scope("brand")).await;
     let mut call = Box::pin(server.handle_http("POST", &request_scope, &request));
     tokio::time::timeout(Duration::from_millis(100), async {
         tokio::select! {
@@ -1243,7 +1443,7 @@ async fn mcp_cancellation_before_dispatch_is_scope_bound_and_has_no_provider_eff
     let wrong_account = server
         .handle_http(
             "POST",
-            &session_scope("other-brand", "voice-a"),
+            &issued_scope(&server, sessionless_scope("other-brand")).await,
             &serde_json::to_vec(&cancelled_notification(41, Some("selected"))).unwrap(),
         )
         .await;
@@ -1295,7 +1495,7 @@ async fn mcp_cancellation_after_dispatch_reports_uncertainty_without_rollback_cl
         executor.clone(),
         (),
     );
-    let request_scope = session_scope("brand", "voice-a");
+    let request_scope = issued_scope(&server, sessionless_scope("brand")).await;
     let request = serde_json::to_vec(&tools_call_request(42, "selected")).unwrap();
     let mut call = Box::pin(server.handle_http("POST", &request_scope, &request));
     tokio::time::timeout(Duration::from_millis(100), async {
@@ -1352,7 +1552,8 @@ async fn mcp_wrong_connection_and_session_cancellation_leave_the_request_running
         executor.clone(),
         (),
     );
-    let request_scope = session_scope("brand", "voice-a");
+    let request_scope = issued_scope(&server, sessionless_scope("brand")).await;
+    let other_session_scope = issued_scope(&server, sessionless_scope("brand")).await;
     let request = serde_json::to_vec(&tools_call_request(43, "selected")).unwrap();
     let mut call = Box::pin(server.handle_http("POST", &request_scope, &request));
     tokio::time::timeout(Duration::from_millis(100), async {
@@ -1365,8 +1566,8 @@ async fn mcp_wrong_connection_and_session_cancellation_leave_the_request_running
     .expect("action dispatch did not start");
 
     for (scope, connection_id) in [
-        (session_scope("brand", "voice-a"), Some("wrong-connection")),
-        (session_scope("brand", "voice-b"), Some("selected")),
+        (request_scope.clone(), Some("wrong-connection")),
+        (other_session_scope, Some("selected")),
     ] {
         let notification = server
             .handle_http(
@@ -1401,7 +1602,7 @@ async fn mcp_completed_request_wins_a_late_cancellation_and_cleans_up() {
         executor,
         (),
     );
-    let request_scope = session_scope("brand", "voice-a");
+    let request_scope = issued_scope(&server, sessionless_scope("brand")).await;
     let result = server
         .handle_http(
             "POST",
@@ -1432,7 +1633,7 @@ async fn mcp_completion_and_cancellation_race_has_one_terminal_result() {
         executor.clone(),
         (),
     );
-    let request_scope = session_scope("brand", "voice-a");
+    let request_scope = issued_scope(&server, sessionless_scope("brand")).await;
     let request_body = serde_json::to_vec(&tools_call_request(45, "selected")).unwrap();
     let mut call = Box::pin(server.handle_http("POST", &request_scope, &request_body));
     tokio::time::timeout(Duration::from_millis(100), async {
@@ -1481,14 +1682,16 @@ async fn mcp_in_flight_registry_is_bounded_and_aborted_entries_are_cleaned() {
         executor.clone(),
         (),
     ));
+    let request_scope = issued_scope(server.as_ref(), sessionless_scope("brand")).await;
     let mut calls = Vec::new();
     for id in 0..MAX_MCP_IN_FLIGHT_REQUESTS {
         let server = server.clone();
+        let request_scope = request_scope.clone();
         calls.push(tokio::spawn(async move {
             server
                 .handle_http(
                     "POST",
-                    &session_scope("brand", "voice-a"),
+                    &request_scope,
                     &serde_json::to_vec(&tools_call_request(id, "selected")).unwrap(),
                 )
                 .await
@@ -1506,7 +1709,7 @@ async fn mcp_in_flight_registry_is_bounded_and_aborted_entries_are_cleaned() {
         Duration::from_millis(100),
         server.handle_http(
             "POST",
-            &session_scope("brand", "voice-a"),
+            &request_scope,
             &serde_json::to_vec(&tools_call_request(MAX_MCP_IN_FLIGHT_REQUESTS, "selected"))
                 .unwrap(),
         ),

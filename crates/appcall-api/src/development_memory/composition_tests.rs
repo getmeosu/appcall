@@ -783,6 +783,19 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
     let wire = String::from_utf8(mcp.body).unwrap();
     assert!(wire.contains("test__write"), "{wire}");
     assert!(!wire.contains("synthetic-secret"));
+    let session_header = mcp
+        .headers
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case("Mcp-Session-Id"));
+    assert!(
+        session_header.is_some(),
+        "MCP session header was not forwarded"
+    );
+    assert!(session_header
+        .unwrap()
+        .1
+        .bytes()
+        .all(|byte| (0x20..=0x7e).contains(&byte)));
     let mut forbidden = dashboard_request(DashboardOperation::Connections);
     forbidden.principal = appcall_auth::Principal::project("victim").unwrap();
     assert!(dashboard.execute(forbidden).await.is_err());
