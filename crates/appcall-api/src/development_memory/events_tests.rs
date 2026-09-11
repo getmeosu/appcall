@@ -1,13 +1,264 @@
 use super::*;
 use crate::Request;
 use appcall_auth::Principal;
+use appcall_connectors::OperationKind;
 use appcall_events::ParsedWebhook;
+use appcall_store::{AuthType, Connection, CredentialOwner, Status, TestStatus};
+
 fn parsed(id: &str, operation: &str) -> ParsedWebhook {
     ParsedWebhook {
         idempotency_key: id.into(),
         operation: operation.into(),
         sanitized: serde_json::json!({"text":"safe","apiKey":"never-retain"}),
     }
+}
+
+fn manifest_operation(
+    repo: &MemoryRepository,
+    connector: &str,
+    expected: &str,
+    kind: OperationKind,
+) -> String {
+    let operation = repo.registry().operation(connector, expected).unwrap();
+    assert_eq!(operation.kind, kind);
+    expected.into()
+}
+
+fn add_connection(repo: &MemoryRepository, id: &str, connector: &str) -> (Connection, u64) {
+    repo.create_connection(
+        Connection {
+            id: id.into(),
+            project_id: "proj_dev".into(),
+            connector: connector.into(),
+            auth_type: AuthType::ApiKey,
+            status: Status::Active,
+            secret_ref_id: String::new(),
+            last_test_status: TestStatus::Unknown,
+            external_account_id: "brand".into(),
+            credential_owner: CredentialOwner::Brand,
+        },
+        None,
+    )
+    .unwrap();
+    repo.get_connection("proj_dev", None, id).unwrap()
+}
+
+#[tokio::test]
+async fn event_only_manifest_webhooks_retain_operations_in_memory_history() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let apollo_operation = manifest_operation(
+        &repo,
+        "apollo",
+        "webhook.phone_revealed",
+        OperationKind::Webhook,
+    );
+    let rb2b_operation = manifest_operation(
+        &repo,
+        "rb2b",
+        "webhook.visitor_identified",
+        OperationKind::Webhook,
+    );
+    let cases = [
+        (
+            "apollo",
+            "apollo-event",
+            apollo_operation.as_str(),
+            serde_json::json!({"personId":"person-1","apiKey":"never-retain"}),
+        ),
+        (
+            "rb2b",
+            "rb2b-event",
+            rb2b_operation.as_str(),
+            serde_json::json!({"visitorId":"visitor-1","apiKey":"never-retain"}),
+        ),
+    ];
+    for (connector, id, operation, sanitized) in cases {
+        let (connection, revision) = add_connection(&repo, connector, connector);
+        let accepted = events
+            .accept(
+                &connection,
+                revision,
+                &ParsedWebhook {
+                    idempotency_key: id.into(),
+                    operation: operation.into(),
+                    sanitized,
+                },
+            )
+            .unwrap();
+        assert!(!accepted.duplicate);
+    }
+
+    let principal = Principal::project("proj_dev").unwrap();
+    let polled = events.poll(&principal, "").await.unwrap();
+    assert_eq!(polled.len(), 2);
+    for (id, operation) in [
+        ("apollo-event", apollo_operation.as_str()),
+        ("rb2b-event", rb2b_operation.as_str()),
+    ] {
+        let event = polled.iter().find(|event| event.id == id).unwrap();
+        assert_eq!(event.operation, operation);
+        assert!(!event.payload.to_string().contains("never-retain"));
+    }
+
+    let history = events
+        .handle(
+            Some(&principal),
+            &Request {
+                method: "GET".into(),
+                uri: "/v1/webhook-events".into(),
+                headers: vec![],
+                body: vec![],
+            },
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    for (id, operation) in [
+        ("apollo-event", apollo_operation.as_str()),
+        ("rb2b-event", rb2b_operation.as_str()),
+    ] {
+        let event = history.body["events"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["id"] == id)
+            .unwrap();
+        assert_eq!(event["operation"], operation);
+    }
+}
+
+#[tokio::test]
+async fn event_only_manifest_webhooks_support_filters_usage_replay_and_deduplication() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let apollo_operation = manifest_operation(
+        &repo,
+        "apollo",
+        "webhook.phone_revealed",
+        OperationKind::Webhook,
+    );
+    let rb2b_operation = manifest_operation(
+        &repo,
+        "rb2b",
+        "webhook.visitor_identified",
+        OperationKind::Webhook,
+    );
+    let (apollo, apollo_revision) = add_connection(&repo, "apollo", "apollo");
+    let (rb2b, rb2b_revision) = add_connection(&repo, "rb2b", "rb2b");
+    let apollo_event = parsed("apollo-event", &apollo_operation);
+    let rb2b_event = parsed("rb2b-event", &rb2b_operation);
+    events
+        .accept(&apollo, apollo_revision, &apollo_event)
+        .unwrap();
+    events.accept(&rb2b, rb2b_revision, &rb2b_event).unwrap();
+
+    let principal = Principal::project("proj_dev").unwrap();
+    for (connector, connection_id, operation, id) in [
+        (
+            "apollo",
+            "apollo",
+            apollo_operation.as_str(),
+            "apollo-event",
+        ),
+        ("rb2b", "rb2b", rb2b_operation.as_str(), "rb2b-event"),
+    ] {
+        let filtered = events
+            .poll_filtered(
+                &principal,
+                "",
+                &crate::streaming::EventFilters {
+                    connector: connector.into(),
+                    connection_id: connection_id.into(),
+                    operation: operation.into(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            filtered
+                .iter()
+                .map(|event| event.id.as_str())
+                .collect::<Vec<_>>(),
+            [id]
+        );
+        assert_eq!(filtered[0].operation, operation);
+    }
+
+    let usage = repo.list_usage_events("proj_dev", Some("brand")).unwrap();
+    assert_eq!(usage.len(), 2);
+    assert!(usage
+        .iter()
+        .all(|event| event.kind == "webhook_event" && event.quantity == 1));
+    assert_eq!(
+        repo.usage_monthly("proj_dev", Some("brand"), "").unwrap()["webhookEvents"],
+        2
+    );
+
+    let replay = events
+        .handle(
+            Some(&principal),
+            &Request {
+                method: "POST".into(),
+                uri: "/v1/webhook-events/apollo-event/replay".into(),
+                headers: vec![],
+                body: vec![],
+            },
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(replay.status, 202);
+    assert_eq!(replay.body["replayed"], true);
+
+    let duplicate = events
+        .accept(&apollo, apollo_revision, &apollo_event)
+        .unwrap();
+    assert!(duplicate.duplicate);
+    assert_eq!(events.poll(&principal, "").await.unwrap().len(), 2);
+    assert_eq!(
+        repo.list_usage_events("proj_dev", Some("brand"))
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(
+        repo.usage_monthly("proj_dev", Some("brand"), "").unwrap()["webhookEvents"],
+        2
+    );
+}
+
+#[tokio::test]
+async fn memory_api_rejects_manifest_sync_operations_without_mutation() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let operation = manifest_operation(&repo, "slack", "messages.list", OperationKind::Sync);
+    let principal = Principal::project("proj_dev").unwrap();
+    let error = events
+        .handle(
+            Some(&principal),
+            &Request {
+                method: "POST".into(),
+                uri: "/v1/connections/c/webhooks/slack".into(),
+                headers: vec![],
+                body: serde_json::to_vec(&serde_json::json!({
+                    "event_id":"sync-event",
+                    "operation":operation,
+                    "channel":"C123",
+                    "apiKey":"never-retain"
+                }))
+                .unwrap(),
+            },
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "WEBHOOK_SYNC_UNAVAILABLE");
+    assert!(events.poll(&principal, "").await.unwrap().is_empty());
+    assert!(repo
+        .list_usage_events("proj_dev", Some("brand"))
+        .unwrap()
+        .is_empty());
+    assert_eq!(repo.lock().unwrap().next_sequence, 0);
 }
 #[tokio::test]
 async fn events_are_scoped_sanitized_atomic_and_reject_sync_before_insert() {
