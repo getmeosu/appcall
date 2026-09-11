@@ -1,7 +1,11 @@
-use appcall_actions::{ActionError, ExecuteRequest, ExecuteResult};
+use appcall_actions::{
+    ActionDispatchOutcome, ActionError, ActionFailureEvidence, ActionFailureOrigin, ExecuteRequest,
+    ExecuteResult,
+};
 use appcall_connectors::{Connector, Registry};
 use appcall_mcp::*;
 use serde_json::{json, Value};
+use std::collections::VecDeque;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc, Mutex,
@@ -1114,5 +1118,224 @@ async fn action_failure_metadata_is_preserved_in_mcp_wire_result() {
     assert_eq!(
         detailed["structuredContent"]["message"],
         "Tool execution failed: NOTE_TOO_LONG: Please shorten the invitation note."
+    );
+}
+
+#[derive(Clone)]
+struct ScriptedEvidenceExecutor(
+    Arc<Mutex<VecDeque<std::result::Result<ExecuteResult, ActionError>>>>,
+);
+impl ScriptedEvidenceExecutor {
+    fn once(result: std::result::Result<ExecuteResult, ActionError>) -> Self {
+        Self(Arc::new(Mutex::new(VecDeque::from([result]))))
+    }
+}
+impl ActionExecutor for ScriptedEvidenceExecutor {
+    async fn execute(&self, _: ExecuteRequest) -> std::result::Result<ExecuteResult, ActionError> {
+        self.0
+            .lock()
+            .unwrap()
+            .pop_front()
+            .expect("unexpected scripted action execution")
+    }
+}
+fn action_error_with_evidence(
+    code: &str,
+    request_id: &str,
+    outcome: ActionDispatchOutcome,
+    origin: ActionFailureOrigin,
+    retry_after_seconds: Option<u64>,
+) -> ActionError {
+    let mut error = ActionError::new(code);
+    error.request_id = request_id.into();
+    error.evidence = Box::new(ActionFailureEvidence {
+        outcome,
+        origin,
+        retry_after_seconds,
+    });
+    error
+}
+
+#[tokio::test]
+async fn mcp_errors_keep_same_code_distinct_dispatch_evidence() {
+    let before_dispatch = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        ScriptedEvidenceExecutor::once(Err(action_error_with_evidence(
+            "CONNECTOR_UNAVAILABLE",
+            "req_before",
+            ActionDispatchOutcome::NotDispatched,
+            ActionFailureOrigin::LocalAdmission,
+            Some(7),
+        ))),
+        (),
+    );
+    let unknown_dispatch = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        ScriptedEvidenceExecutor::once(Err(action_error_with_evidence(
+            "CONNECTOR_UNAVAILABLE",
+            "req_unknown",
+            ActionDispatchOutcome::Unknown,
+            ActionFailureOrigin::Runner,
+            Some(u64::MAX),
+        ))),
+        (),
+    );
+
+    let before = rpc(
+        &before_dispatch,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "connectionId":"selected",
+                "idempotencyKey":"before-key",
+                "arguments":{}
+            }
+        }),
+    )
+    .await;
+    let unknown = rpc(
+        &unknown_dispatch,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":2,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "connectionId":"selected",
+                "idempotencyKey":"unknown-key",
+                "arguments":{}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(
+        before["result"]["structuredContent"]["code"],
+        unknown["result"]["structuredContent"]["code"]
+    );
+    assert_eq!(
+        before["result"]["_meta"]["appcall"],
+        json!({
+            "requestId":"req_before",
+            "idempotencyKey":"before-key",
+            "dispatch":{"outcome":"not_dispatched","origin":"local_admission"},
+            "retryAfterSeconds":7
+        })
+    );
+    assert_eq!(
+        unknown["result"]["_meta"]["appcall"],
+        json!({
+            "requestId":"req_unknown",
+            "idempotencyKey":"unknown-key",
+            "dispatch":{"outcome":"unknown","origin":"runner"},
+            "retryAfterSeconds":86400
+        })
+    );
+    assert_ne!(
+        before["result"]["_meta"]["appcall"]["dispatch"],
+        unknown["result"]["_meta"]["appcall"]["dispatch"]
+    );
+}
+
+#[tokio::test]
+async fn mcp_success_exposes_safe_correlation_without_changing_provider_output() {
+    let output = json!({"providerId":"provider-1","nested":{"ok":true}});
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        ScriptedEvidenceExecutor::once(Ok(ExecuteResult {
+            request_id: "req_success".into(),
+            output: output.clone(),
+            replay_log_id: "replay_success".into(),
+            usage_warning: false,
+            usage: Default::default(),
+        })),
+        (),
+    );
+
+    let result = rpc(
+        &server,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "connectionId":"selected",
+                "idempotencyKey":"success-key",
+                "arguments":{}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(result["result"]["isError"], false);
+    assert_eq!(result["result"]["structuredContent"], output);
+    assert!(result["result"]["structuredContent"].get("_meta").is_none());
+    assert_eq!(
+        result["result"]["_meta"]["appcall"],
+        json!({
+            "requestId":"req_success",
+            "replayLogId":"replay_success",
+            "idempotencyKey":"success-key"
+        })
+    );
+}
+
+#[tokio::test]
+async fn mcp_action_metadata_redacts_credentials_and_keeps_unknown_dispatch_explicit() {
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        ScriptedEvidenceExecutor::once(Err(action_error_with_evidence(
+            "password=SECRET",
+            "req_redacted",
+            ActionDispatchOutcome::Unknown,
+            ActionFailureOrigin::Unknown,
+            None,
+        ))),
+        (),
+    );
+
+    let result = rpc(
+        &server,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "connectionId":"selected",
+                "idempotencyKey":"redaction-key",
+                "arguments":{"authorization":"SECRET","token":"SECRET"}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(
+        result["result"]["structuredContent"]["code"],
+        "ACTION_FAILED"
+    );
+    assert_eq!(
+        result["result"]["_meta"]["appcall"]["dispatch"],
+        json!({"outcome":"unknown","origin":"unknown"})
+    );
+    assert!(result["result"]["_meta"]["appcall"]
+        .get("retryAfterSeconds")
+        .is_none());
+    assert!(!result.to_string().contains("SECRET"));
+    assert_ne!(
+        result["result"]["_meta"]["appcall"]["dispatch"]["outcome"],
+        "not_dispatched"
     );
 }
