@@ -35,8 +35,9 @@ impl<'a> PgEvents<'a> {
         let claims = verifier
             .verify_scoped(request.token, request.connector, request.connection_id)
             .map_err(|_| Error::Signature)?;
+        let expected_revision = connection_revision_snapshot(self.client, &claims)?;
         let parsed = parser.verify_and_parse(&claims.connector, request.headers, request.raw)?;
-        self.accept(&claims, &parsed)
+        self.accept_checked(&claims, &parsed, None, expected_revision)
     }
     /// Accept only a signature-verified parser result and token-derived scope.
     pub fn accept(
@@ -44,7 +45,7 @@ impl<'a> PgEvents<'a> {
         claims: &WebhookClaims,
         parsed: &ParsedWebhook,
     ) -> Result<IngestResult> {
-        self.accept_checked(claims, parsed, None)
+        self.accept_checked(claims, parsed, None, None)
     }
     /// Preserve the exact connection identity whose scope was checked before RPC.
     pub fn accept_for_connection(
@@ -52,14 +53,16 @@ impl<'a> PgEvents<'a> {
         claims: &WebhookClaims,
         parsed: &ParsedWebhook,
         expected: &appcall_store::Connection,
+        expected_revision: i64,
     ) -> Result<IngestResult> {
-        self.accept_checked(claims, parsed, Some(expected))
+        self.accept_checked(claims, parsed, Some(expected), Some(expected_revision))
     }
     fn accept_checked(
         &mut self,
         claims: &WebhookClaims,
         parsed: &ParsedWebhook,
         expected: Option<&appcall_store::Connection>,
+        expected_revision: Option<i64>,
     ) -> Result<IngestResult> {
         if !valid_id(&claims.project_id)
             || !valid_id(&claims.connection_id)
@@ -76,8 +79,23 @@ impl<'a> PgEvents<'a> {
             &[&claims.project_id],
         )
         .map_err(|_| Error::Storage)?;
-        let connection=tx.query_opt("SELECT coalesce(external_account_id,''),coalesce(secret_ref_id,''),auth_type,credential_owner FROM connections WHERE project_id=$1 AND id=$2 AND connector=$3 AND status='active' FOR SHARE",&[&claims.project_id,&claims.connection_id,&claims.connector]).map_err(|_|Error::Storage)?.ok_or(Error::NotFound)?;
+        let connection_revision_column = connection_revision_column_exists(&mut tx)?;
+        let event_revision_column = webhook_event_revision_column_exists(&mut tx)?;
+        if connection_revision_column != event_revision_column
+            || expected_revision.is_some() && !connection_revision_column
+        {
+            return Err(Error::Storage);
+        }
+        let connection = if connection_revision_column {
+            tx.query_opt("SELECT coalesce(external_account_id,''),coalesce(secret_ref_id,''),auth_type,credential_owner,connection_revision FROM connections WHERE project_id=$1 AND id=$2 AND connector=$3 AND status='active' FOR UPDATE",&[&claims.project_id,&claims.connection_id,&claims.connector]).map_err(|_|Error::Storage)?.ok_or(Error::NotFound)?
+        } else {
+            tx.query_opt("SELECT coalesce(external_account_id,''),coalesce(secret_ref_id,''),auth_type,credential_owner FROM connections WHERE project_id=$1 AND id=$2 AND connector=$3 AND status='active' FOR UPDATE",&[&claims.project_id,&claims.connection_id,&claims.connector]).map_err(|_|Error::Storage)?.ok_or(Error::NotFound)?
+        };
         let brand: String = connection.get(0);
+        let current_revision = connection_revision_column.then(|| connection.get::<_, i64>(4));
+        if expected_revision.is_some_and(|revision| current_revision != Some(revision)) {
+            return Err(Error::Conflict);
+        }
         if expected.is_some_and(|c| {
             c.project_id != claims.project_id
                 || c.id != claims.connection_id
@@ -98,8 +116,19 @@ impl<'a> PgEvents<'a> {
             return Err(Error::Storage);
         }
         if let Some(provider_event_key) = provider_event_key {
-            if let Some(prior) = tx
-                .query_opt(
+            let prior = if connection_revision_column {
+                tx.query_opt(
+                    "SELECT id,external_account_id FROM webhook_events WHERE project_id=$1 AND connector=$2 AND connection_id=$3 AND connection_revision=$5 AND provider_event_key=$4",
+                    &[
+                        &claims.project_id,
+                        &claims.connector,
+                        &claims.connection_id,
+                        &provider_event_key,
+                        &current_revision.ok_or(Error::Storage)?,
+                    ],
+                )
+            } else {
+                tx.query_opt(
                     "SELECT id,external_account_id FROM webhook_events WHERE project_id=$1 AND connector=$2 AND connection_id=$3 AND provider_event_key=$4",
                     &[
                         &claims.project_id,
@@ -108,8 +137,9 @@ impl<'a> PgEvents<'a> {
                         &provider_event_key,
                     ],
                 )
-                .map_err(|_| Error::Storage)?
-            {
+            }
+            .map_err(|_| Error::Storage)?;
+            if let Some(prior) = prior {
                 if prior.get::<_, String>(1) != brand {
                     return Err(Error::Conflict);
                 }
@@ -139,24 +169,60 @@ impl<'a> PgEvents<'a> {
         // Event.id is the opaque public resource identity. The raw provider
         // key is stored only in provider_event_key for scoped deduplication.
         let id = fresh_public_id(&mut tx, &claims.project_id)?;
-        let created = if scoped_dedup {
-            tx.execute(
-                "INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id,provider_event_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(project_id,id) DO NOTHING",
-                &[
-                    &id,
-                    &claims.project_id,
-                    &claims.connection_id,
-                    &claims.connector,
-                    &parsed.operation,
-                    &parsed.sanitized,
-                    &brand,
-                    &provider_event_key,
-                ],
-            )
-            .map_err(|_| Error::Storage)?
-                == 1
-        } else {
-            tx.execute("INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(project_id,id) DO NOTHING",&[&id,&claims.project_id,&claims.connection_id,&claims.connector,&parsed.operation,&parsed.sanitized,&brand]).map_err(|_|Error::Storage)?==1
+        let created = match (scoped_dedup, connection_revision_column) {
+            (true, true) => tx
+                .execute(
+                    "INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id,connection_revision,provider_event_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(project_id,id) DO NOTHING",
+                    &[
+                        &id,
+                        &claims.project_id,
+                        &claims.connection_id,
+                        &claims.connector,
+                        &parsed.operation,
+                        &parsed.sanitized,
+                        &brand,
+                        &current_revision.ok_or(Error::Storage)?,
+                        &provider_event_key,
+                    ],
+                )
+                .map_err(|_| Error::Storage)?
+                == 1,
+            (false, true) => tx
+                .execute(
+                    "INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id,connection_revision) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(project_id,id) DO NOTHING",
+                    &[
+                        &id,
+                        &claims.project_id,
+                        &claims.connection_id,
+                        &claims.connector,
+                        &parsed.operation,
+                        &parsed.sanitized,
+                        &brand,
+                        &current_revision.ok_or(Error::Storage)?,
+                    ],
+                )
+                .map_err(|_| Error::Storage)?
+                == 1,
+            (true, false) => tx
+                .execute(
+                    "INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id,provider_event_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(project_id,id) DO NOTHING",
+                    &[
+                        &id,
+                        &claims.project_id,
+                        &claims.connection_id,
+                        &claims.connector,
+                        &parsed.operation,
+                        &parsed.sanitized,
+                        &brand,
+                        &provider_event_key,
+                    ],
+                )
+                .map_err(|_| Error::Storage)?
+                == 1,
+            (false, false) => tx
+                .execute("INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(project_id,id) DO NOTHING",&[&id,&claims.project_id,&claims.connection_id,&claims.connector,&parsed.operation,&parsed.sanitized,&brand])
+                .map_err(|_| Error::Storage)?
+                == 1,
         };
         if created {
             tx.execute(
@@ -360,6 +426,49 @@ impl<'a> PgEvents<'a> {
         Ok(report)
     }
 }
+fn connection_revision_snapshot(
+    client: &mut Client,
+    claims: &WebhookClaims,
+) -> Result<Option<i64>> {
+    let exists = client
+        .query_one(
+            "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='connections' AND column_name='connection_revision')",
+            &[],
+        )
+        .map_err(|_| Error::Storage)?
+        .get::<_, bool>(0);
+    if !exists {
+        return Ok(None);
+    }
+    let revision = client
+        .query_opt(
+            "SELECT connection_revision FROM connections WHERE project_id=$1 AND id=$2 AND connector=$3 AND status='active'",
+            &[&claims.project_id, &claims.connection_id, &claims.connector],
+        )
+        .map_err(|_| Error::Storage)?
+        .ok_or(Error::NotFound)?
+        .get(0);
+    Ok(Some(revision))
+}
+
+fn connection_revision_column_exists(tx: &mut Transaction<'_>) -> Result<bool> {
+    tx.query_one(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='connections' AND column_name='connection_revision')",
+        &[],
+    )
+    .map(|row| row.get(0))
+    .map_err(|_| Error::Storage)
+}
+
+fn webhook_event_revision_column_exists(tx: &mut Transaction<'_>) -> Result<bool> {
+    tx.query_one(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='webhook_events' AND column_name='connection_revision')",
+        &[],
+    )
+    .map(|row| row.get(0))
+    .map_err(|_| Error::Storage)
+}
+
 fn provider_event_key_column_exists(tx: &mut Transaction<'_>) -> Result<bool> {
     tx.query_one(
         "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='webhook_events' AND column_name='provider_event_key')",

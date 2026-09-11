@@ -135,6 +135,7 @@ fn sync_runs_projection_is_scoped_and_uses_persisted_queue_evidence() {
         include_str!("../../../migrations/202605290003_usage_brand_dim.sql"),
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
         include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
         include_str!("../../../migrations/202609040001_sync_job_terminal_failure.sql"),
     ] {
@@ -948,6 +949,7 @@ fn webhook_replay_preserves_scope_and_rolls_back_failed_scheduling() {
         include_str!("../../../migrations/202605290001_connections_ownership.sql"),
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
         include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
     ] {
         client.batch_execute(sql).unwrap()
     }
@@ -1077,6 +1079,7 @@ fn webhook_public_ids_and_routes_are_connection_scoped_and_project_owned() {
         include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
         include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
     ] {
         client.batch_execute(sql).unwrap();
     }

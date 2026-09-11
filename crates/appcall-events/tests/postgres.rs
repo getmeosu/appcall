@@ -27,6 +27,7 @@ impl Db {
             include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
             include_str!("../../../migrations/202609070001_event_outbox.sql"),
             include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+            include_str!("../../../migrations/202609120001_connection_revision.sql"),
         ] {
             client.batch_execute(migration).unwrap();
         }
@@ -59,46 +60,6 @@ fn parsed(id: &str) -> ParsedWebhook {
     }
 }
 
-fn install_connection_revision_contract(client: &mut Client) {
-    client
-        .batch_execute(
-            r#"
-            ALTER TABLE connections
-                ADD COLUMN connection_revision bigint NOT NULL DEFAULT 1;
-            ALTER TABLE webhook_events
-                ADD COLUMN connection_revision bigint NOT NULL DEFAULT 1;
-            DROP INDEX webhook_events_provider_event_identity;
-            CREATE UNIQUE INDEX webhook_events_provider_event_revision_identity
-                ON webhook_events(project_id, connector, connection_id,
-                                  connection_revision, provider_event_key)
-                WHERE provider_event_key IS NOT NULL AND provider_event_key <> '';
-            CREATE OR REPLACE FUNCTION test_bump_connection_revision()
-            RETURNS trigger
-            LANGUAGE plpgsql
-            AS $function$
-            BEGIN
-                IF OLD.status IS DISTINCT FROM NEW.status
-                    OR OLD.secret_ref_id IS DISTINCT FROM NEW.secret_ref_id
-                    OR OLD.auth_type IS DISTINCT FROM NEW.auth_type
-                    OR OLD.last_test_status IS DISTINCT FROM NEW.last_test_status
-                    OR OLD.connector IS DISTINCT FROM NEW.connector
-                    OR OLD.external_account_id IS DISTINCT FROM NEW.external_account_id
-                    OR OLD.credential_owner IS DISTINCT FROM NEW.credential_owner
-                THEN
-                    NEW.connection_revision := OLD.connection_revision + 1;
-                END IF;
-                RETURN NEW;
-            END
-            $function$;
-            DROP TRIGGER IF EXISTS test_connection_revision ON connections;
-            CREATE TRIGGER test_connection_revision
-                BEFORE UPDATE ON connections
-                FOR EACH ROW
-                EXECUTE FUNCTION test_bump_connection_revision();
-            "#,
-        )
-        .unwrap();
-}
 fn brand(name: &str) -> Principal {
     let mut p = Principal::project("p").unwrap();
     p.brand_id = Some(name.into());
@@ -382,7 +343,6 @@ fn connection_scoped_identity_keeps_public_delivery_and_usage_keys_consistent() 
 #[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
 fn provider_dedup_is_scoped_to_connection_revision() {
     let mut db = Db::new();
-    install_connection_revision_contract(&mut db.client);
     let first = PgEvents::new(&mut db.client)
         .accept(&claims("a"), &parsed("generation-key"))
         .unwrap();
@@ -1136,6 +1096,14 @@ fn acceptance_commit_order_prevents_stream_gaps() {
 #[ignore = "requires explicit isolated PostgreSQL"]
 fn acceptance_fences_connection_identity_verified_before_provider_rpc() {
     let mut db = Db::new();
+    let revision = db
+        .client
+        .query_one(
+            "SELECT connection_revision FROM connections WHERE project_id='p' AND id='a'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0);
     let mut snapshot = appcall_store::Connection {
         id: "a".into(),
         project_id: "p".into(),
@@ -1152,7 +1120,8 @@ fn acceptance_fences_connection_identity_verified_before_provider_rpc() {
         PgEvents::new(&mut db.client).accept_for_connection(
             &claims("a"),
             &parsed("late"),
-            &snapshot
+            &snapshot,
+            revision,
         ),
         Err(Error::Conflict)
     );
@@ -1169,12 +1138,13 @@ fn acceptance_fences_connection_identity_verified_before_provider_rpc() {
         PgEvents::new(&mut db.client).accept_for_connection(
             &claims("a"),
             &parsed("late-secret"),
-            &snapshot
+            &snapshot,
+            revision,
         ),
         Err(Error::Conflict)
     );
     snapshot.secret_ref_id = String::new();
     assert!(PgEvents::new(&mut db.client)
-        .accept_for_connection(&claims("a"), &parsed("fresh"), &snapshot)
+        .accept_for_connection(&claims("a"), &parsed("fresh"), &snapshot, revision)
         .is_ok());
 }

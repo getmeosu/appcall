@@ -236,22 +236,22 @@ impl EventRoutes {
         }
         let p = principal.cloned();
         let scope_claims = claims.clone();
-        let expected = self
+        let (expected, expected_revision) = self
             .database(move |db| {
                 let scope = Scope::new(&scope_claims.project_id, None)
                     .map_err(|_| ApiError::new("UNAUTHORIZED"))?;
                 let c = db
                     .connections
-                    .get(&scope, &scope_claims.connection_id)
+                    .get_with_revision(&scope, &scope_claims.connection_id)
                     .map_err(|_| ApiError::new("CONNECTION_NOT_FOUND"))?;
-                if c.status != Status::Active || c.connector != scope_claims.connector {
+                if c.0.status != Status::Active || c.0.connector != scope_claims.connector {
                     return Err(ApiError::new("CONNECTION_NOT_FOUND"));
                 }
                 if p.is_some_and(|p| {
-                    !p.allowed_brands.permits(&c.external_account_id)
+                    !p.allowed_brands.permits(&c.0.external_account_id)
                         || p.brand_id
                             .as_ref()
-                            .is_some_and(|b| *b != c.external_account_id)
+                            .is_some_and(|b| *b != c.0.external_account_id)
                 }) {
                     return Err(ApiError::new("FORBIDDEN"));
                 }
@@ -312,6 +312,7 @@ impl EventRoutes {
                         sanitized: parsed.sanitized,
                     },
                     &expected,
+                    expected_revision,
                 )
                 .map_err(|e| match e {
                     appcall_events::Error::Invalid => ApiError::new("INVALID_WEBHOOK_PAYLOAD"),

@@ -183,39 +183,14 @@ fn connection_revision_advances_for_all_stale_snapshot_mutations() {
         include_str!("../../../migrations/202605140001_init.sql"),
         include_str!("../../../migrations/202605290001_connections_ownership.sql"),
         include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
     ] {
         client.batch_execute(sql).unwrap();
     }
     client
-        .batch_execute(
-            r#"
-            ALTER TABLE connections
-                ADD COLUMN connection_revision bigint NOT NULL DEFAULT 1;
-            CREATE OR REPLACE FUNCTION test_bump_connection_revision()
-            RETURNS trigger
-            LANGUAGE plpgsql
-            AS $function$
-            BEGIN
-                IF OLD.status IS DISTINCT FROM NEW.status
-                    OR OLD.secret_ref_id IS DISTINCT FROM NEW.secret_ref_id
-                    OR OLD.auth_type IS DISTINCT FROM NEW.auth_type
-                    OR OLD.last_test_status IS DISTINCT FROM NEW.last_test_status
-                    OR OLD.connector IS DISTINCT FROM NEW.connector
-                    OR OLD.external_account_id IS DISTINCT FROM NEW.external_account_id
-                    OR OLD.credential_owner IS DISTINCT FROM NEW.credential_owner
-                THEN
-                    NEW.connection_revision := OLD.connection_revision + 1;
-                END IF;
-                RETURN NEW;
-            END
-            $function$;
-            CREATE TRIGGER test_connection_revision
-                BEFORE UPDATE ON connections
-                FOR EACH ROW
-                EXECUTE FUNCTION test_bump_connection_revision();
-            INSERT INTO projects(id,name) VALUES ('p','test');
-            "#,
-        )
+        .batch_execute("INSERT INTO projects(id,name) VALUES ('p','test');")
         .unwrap();
     let mut store = Store::new(client, LocalProvider::new(&[7; 32]).unwrap());
     let scope = Scope::new("p", None).unwrap();
@@ -234,7 +209,9 @@ fn connection_revision_advances_for_all_stale_snapshot_mutations() {
     let revision = |store: &mut Store| store.get_with_revision(&scope, "conn").unwrap().1;
     let initial = revision(&mut store);
     assert_eq!(initial, 1);
-    store.update_status(&scope, "conn", Status::Disconnected).unwrap();
+    store
+        .update_status(&scope, "conn", Status::Disconnected)
+        .unwrap();
     let after_disconnect = revision(&mut store);
     assert_eq!(after_disconnect, initial + 1);
     store.update_status(&scope, "conn", Status::Active).unwrap();
@@ -256,7 +233,9 @@ fn connection_revision_advances_for_all_stale_snapshot_mutations() {
         .unwrap();
     let after_credentials = revision(&mut store);
     assert_eq!(after_credentials, after_secret + 1);
-    store.update_status(&scope, "conn", Status::Authorizing).unwrap();
+    store
+        .update_status(&scope, "conn", Status::Authorizing)
+        .unwrap();
     let before_cleanup = revision(&mut store);
     assert_eq!(before_cleanup, after_credentials + 1);
     assert_eq!(
