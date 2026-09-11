@@ -99,12 +99,13 @@ impl Page {
             return Err(Error::InvalidPage);
         }
         for m in &self.records {
+            // Providers use an explicit empty string when sender information is absent;
+            // serde decoding above still rejects missing or non-string sender identities.
             if [
                 &m.id,
                 &m.provider,
                 &m.provider_message_id,
                 &m.channel_id,
-                &m.sender_id,
                 &m.model_version,
             ]
             .iter()
