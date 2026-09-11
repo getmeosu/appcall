@@ -34,19 +34,17 @@ impl PostgresStore {
             .get(0);
         let recovery_ids: Vec<String> = tx
             .query(
-                "SELECT id,wakeup,record FROM appcall_workflow_runs WHERE state='running'",
+                "SELECT id,record FROM appcall_workflow_runs WHERE state='running'",
                 &[],
             )
             .map_err(safe)?
             .into_iter()
             .filter_map(|row| {
                 let id: String = row.get(0);
-                let wakeup: Option<i64> = row.get(1);
-                let record: Vec<u8> = row.get(2);
-                let recover = wakeup.is_none()
-                    && serde_json::from_slice::<RunRecord>(&record)
-                        .map(|run| requires_recovery(&run))
-                        .unwrap_or(false);
+                let record: Vec<u8> = row.get(1);
+                let recover = serde_json::from_slice::<RunRecord>(&record)
+                    .map(|run| requires_recovery(&run))
+                    .unwrap_or(false);
                 recover.then_some(id)
             })
             .collect();

@@ -424,6 +424,24 @@ impl<S: Store> Engine<S> {
                     .retry_policy
                     .unwrap_or(self.retry_policy);
                 retry_policy.validate()?;
+                let retry_deadline = r.tasks[index]
+                    .attempt
+                    .retry_policy
+                    .filter(|_| r.tasks[index].attempt.attempt > 0)
+                    .map(|_| {
+                        elapsed_retry_deadline(
+                            r.tasks[index].attempt.retry_started_at_ms,
+                            retry_policy,
+                        )
+                    });
+                if retry_deadline.is_some_and(|deadline| now_ms >= deadline) {
+                    r.tasks[index].state = TaskState::Ready;
+                    r.state = RunState::Failed;
+                    r.failure_reason = Some(RunFailure::RetryExhausted);
+                    r.wakeup = None;
+                    self.save(&mut r, &children)?;
+                    return Ok(DriveOutcome::Suspended(RunState::Failed));
+                }
                 if r.tasks[index].attempt.attempt >= retry_policy.max_attempts {
                     r.tasks[index].state = TaskState::Ready;
                     r.state = RunState::Failed;
@@ -477,9 +495,7 @@ impl<S: Store> Engine<S> {
                 continue;
             };
             retry.policy.validate()?;
-            let elapsed_deadline = retry
-                .retry_started_at_ms
-                .saturating_add(retry.policy.max_elapsed_ms);
+            let elapsed_deadline = elapsed_retry_deadline(retry.retry_started_at_ms, retry.policy);
             if now_ms >= elapsed_deadline {
                 task.state = TaskState::Ready;
                 exhausted = true;
@@ -953,15 +969,16 @@ fn retry_wakeup(r: &RunRecord) -> Option<i64> {
             let TaskState::Retrying(retry) = &task.state else {
                 return None;
             };
-            Some(
-                retry.next_attempt_at_ms.min(
-                    retry
-                        .retry_started_at_ms
-                        .saturating_add(retry.policy.max_elapsed_ms),
-                ),
-            )
+            Some(retry.next_attempt_at_ms.min(elapsed_retry_deadline(
+                retry.retry_started_at_ms,
+                retry.policy,
+            )))
         })
         .min()
+}
+
+fn elapsed_retry_deadline(retry_started_at_ms: i64, policy: RetryPolicy) -> i64 {
+    retry_started_at_ms.saturating_add(policy.max_elapsed_ms)
 }
 
 fn backoff_ms(policy: RetryPolicy, attempt: u64) -> i64 {

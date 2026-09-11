@@ -64,19 +64,17 @@ impl SqliteStore {
             UPDATE engine_owner SET epoch=epoch+1 WHERE id=1;
             CREATE TABLE IF NOT EXISTS engine_runs (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, state TEXT NOT NULL, wakeup INTEGER, record BLOB NOT NULL);
             CREATE INDEX IF NOT EXISTS engine_runs_wakeup ON engine_runs(state,wakeup);")?;
-        // A NULL wakeup identifies interrupted work that recovery must inspect.
-        // Keep the old restart behavior for runs with an in-flight native
-        // attempt, but preserve scheduled retry deadlines and timers.
+        // A recoverable task can share a run's future timer wakeup. Inspect
+        // durable task state rather than using wakeup as a recovery filter so
+        // ready work is requeued promptly while passive waits stay asleep.
         let recovery_ids: Vec<String> = {
-            let mut statement = connection
-                .prepare("SELECT id,wakeup,record FROM engine_runs WHERE state='running'")?;
+            let mut statement =
+                connection.prepare("SELECT id,record FROM engine_runs WHERE state='running'")?;
             let rows = statement.query_map([], |row| {
                 let id: String = row.get(0)?;
-                let wakeup: Option<i64> = row.get(1)?;
-                let recover = wakeup.is_none()
-                    && serde_json::from_slice::<RunRecord>(&row.get::<_, Vec<u8>>(2)?)
-                        .map(|run| requires_recovery(&run))
-                        .unwrap_or(false);
+                let recover = serde_json::from_slice::<RunRecord>(&row.get::<_, Vec<u8>>(1)?)
+                    .map(|run| requires_recovery(&run))
+                    .unwrap_or(false);
                 Ok((id, recover))
             })?;
             rows.collect::<std::result::Result<Vec<_>, _>>()?
