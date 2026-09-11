@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import docCreateFixture from "../fixtures/doc_create.json";
 import rateLimitedFixture from "../fixtures/rate_limited.json";
 import { createDocsClient, validateCreateDocumentInput } from "../src/docs";
-import { parseGoogleRetryAfter } from "../src/http";
+import { parseGoogleRateLimitMetadata, parseGoogleRetryAfter } from "../src/http";
 
-const docsOperations: Array<(client: ReturnType<typeof createDocsClient>) => Promise<unknown>> = [
-  (client) => client.getDocument({ documentId: "doc-id" }),
-  (client) => client.createDocument({ title: "Test" }),
+const docsOperations: Array<{ name: string; invoke: (client: ReturnType<typeof createDocsClient>) => Promise<unknown> }> = [
+  { name: "docs.get", invoke: (client) => client.getDocument({ documentId: "doc-id" }) },
+  { name: "docs.create", invoke: (client) => client.createDocument({ title: "Test" }) },
 ];
 
 describe("google-workspace Docs extended actions", () => {
@@ -60,7 +60,7 @@ describe("google-workspace Docs extended actions", () => {
   });
 
   test("all Docs operations preserve rate-limit codes and valid Retry-After", async () => {
-    for (const operation of docsOperations) {
+    for (const { invoke } of docsOperations) {
       const client = createDocsClient({
         accessToken: "token",
         fetch: async () => new Response(JSON.stringify(rateLimitedFixture), {
@@ -69,10 +69,25 @@ describe("google-workspace Docs extended actions", () => {
         }),
       });
 
-      await expect(operation(client)).rejects.toMatchObject({
+      await expect(invoke(client)).rejects.toMatchObject({
         ok: false,
         code: "CONNECTOR_RATE_LIMITED",
         retryAfterSeconds: 37,
+      });
+    }
+  });
+
+  test("all Docs operations preserve body-only Google retry hints", async () => {
+    for (const { invoke } of docsOperations) {
+      const client = createDocsClient({
+        accessToken: "token",
+        fetch: async () => new Response(JSON.stringify(rateLimitedFixture), { status: 429 }),
+      });
+
+      await expect(invoke(client)).rejects.toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+        retryAfterSeconds: 30,
       });
     }
   });
@@ -82,9 +97,24 @@ describe("google-workspace Docs extended actions", () => {
     expect(parseGoogleRetryAfter("Wed, 21 Oct 2015 07:29:00 GMT", now)).toBe(60);
   });
 
+  test("shared Google rate-limit metadata rejects expired and overlong hints safely", () => {
+    expect(parseGoogleRateLimitMetadata(429, { "Retry-After": "3600" })).toEqual({
+      limited: true,
+      retryAfterSeconds: 3600,
+    });
+    expect(parseGoogleRateLimitMetadata(429, { "Retry-After": "3601" })).toEqual({
+      limited: true,
+      retryAfterSeconds: 10,
+    });
+    expect(parseGoogleRateLimitMetadata(429, { "Retry-After": "Wed, 21 Oct 2015 07:28:00 GMT" })).toEqual({
+      limited: true,
+      retryAfterSeconds: 10,
+    });
+  });
+
   test("all Docs operations honor a future HTTP-date Retry-After", async () => {
     const retryAfter = new Date(Date.now() + 120_000).toUTCString();
-    for (const operation of docsOperations) {
+    for (const { invoke } of docsOperations) {
       const client = createDocsClient({
         accessToken: "token",
         fetch: async () => new Response(JSON.stringify({
@@ -95,7 +125,7 @@ describe("google-workspace Docs extended actions", () => {
         }),
       });
 
-      const error = await operation(client).catch((value: unknown) => value as Record<string, unknown>);
+      const error = await invoke(client).catch((value: unknown) => value as Record<string, unknown>);
       expect(error).toMatchObject({
         ok: false,
         code: "CONNECTOR_RATE_LIMITED",
@@ -105,9 +135,30 @@ describe("google-workspace Docs extended actions", () => {
     }
   });
 
+  test("all Docs operations use a safe fallback for an expired HTTP-date Retry-After", async () => {
+    for (const { invoke } of docsOperations) {
+      const client = createDocsClient({
+        accessToken: "token",
+        fetch: async () => new Response(JSON.stringify({
+          error: { code: 429, message: "Rate Limit Exceeded" },
+        }), {
+          status: 429,
+          headers: { "Retry-After": "Wed, 21 Oct 2015 07:28:00 GMT" },
+        }),
+      });
+
+      const error = await invoke(client).catch((value: unknown) => value as Record<string, unknown>);
+      expect(error).toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+        retryAfterSeconds: 10,
+      });
+    }
+  });
+
   test("all Docs operations use a safe fallback for malformed Retry-After", async () => {
     for (const retryAfter of ["not-a-number", "0", "-5", "999999999"]) {
-      for (const operation of docsOperations) {
+      for (const { invoke } of docsOperations) {
         const client = createDocsClient({
           accessToken: "token",
           fetch: async () => new Response(JSON.stringify({
@@ -118,7 +169,7 @@ describe("google-workspace Docs extended actions", () => {
           }),
         });
 
-        const error = await operation(client).catch((value: unknown) => value as Record<string, unknown>);
+        const error = await invoke(client).catch((value: unknown) => value as Record<string, unknown>);
         expect(error).toMatchObject({
           ok: false,
           code: "CONNECTOR_RATE_LIMITED",
@@ -130,7 +181,7 @@ describe("google-workspace Docs extended actions", () => {
 
   test("all Docs operations keep 400 and 401 as non-retryable upstream errors", async () => {
     for (const status of [400, 401]) {
-      for (const operation of docsOperations) {
+      for (const { invoke } of docsOperations) {
         const client = createDocsClient({
           accessToken: "token",
           fetch: async () => new Response(JSON.stringify({
@@ -138,7 +189,7 @@ describe("google-workspace Docs extended actions", () => {
           }), { status }),
         });
 
-        const error = await operation(client).catch((value: unknown) => value as Record<string, unknown>);
+        const error = await invoke(client).catch((value: unknown) => value as Record<string, unknown>);
         expect(error).toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
         expect(error).not.toHaveProperty("retryAfterSeconds");
       }
