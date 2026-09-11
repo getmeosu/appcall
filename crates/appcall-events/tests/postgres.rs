@@ -238,6 +238,40 @@ fn event_only_webhooks_retain_usage_and_replay_without_sync_jobs() {
             .get::<_, i64>(0),
         0
     );
+    assert_eq!(
+        db.client
+            .query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT sum(quantity)::bigint FROM usage_monthly_rollups WHERE kind='webhook_event'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    assert_eq!(
+        db.client
+            .query_one("SELECT count(*) FROM webhook_outbox", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT count(*) FROM webhook_outbox WHERE dispatched_at IS NULL",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
 }
 
 #[test]
