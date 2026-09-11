@@ -2,8 +2,10 @@ use appcall_worker::*;
 use postgres::{Client, NoTls};
 use serde_json::{json, Value};
 use std::{
-    io::{Read, Write},
-    sync::{Arc, Mutex},
+    future::Future,
+    io::{BufRead, BufReader, Read, Write},
+    process::{Child, Command, Stdio},
+    sync::{mpsc, Arc, Mutex},
     time::Duration,
 };
 fn client(schema: Option<&str>) -> Client {
@@ -48,9 +50,126 @@ fn fixture() -> (Client, String) {
     ] {
         db.batch_execute(migration).unwrap();
     }
-    db.batch_execute("INSERT INTO projects(id,name) VALUES('p','p');INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id) VALUES('c','p','slack','api_key','active','brand','brand')").unwrap();
+    db.batch_execute("INSERT INTO projects(id,name) VALUES('p','p');INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id) VALUES('c','p','slack','api_key','active','brand','brand'),('apollo','p','apollo','api_key','active','brand','brand'),('rb2b','p','rb2b','api_key','active','brand','brand')").unwrap();
     (db, schema)
 }
+
+struct NeverCredentials;
+impl appcall_sync::CredentialResolver for NeverCredentials {
+    fn resolve(
+        &self,
+        _: appcall_store::Connection,
+    ) -> impl Future<Output = appcall_sync::Result<appcall_sync::ResolvedCredentials>> + Send {
+        std::future::ready(Err(appcall_sync::Error::Unavailable))
+    }
+}
+
+struct BunRunner {
+    child: Child,
+    url: String,
+}
+
+impl BunRunner {
+    fn start() -> Self {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let entry = root.join("runner/bun/src/index.ts");
+        let mut child = Command::new("bun")
+            .current_dir(&root)
+            .args(["run", entry.to_str().unwrap()])
+            .env("APPCALL_RUNNER_HOST", "127.0.0.1")
+            .env("APPCALL_RUNNER_PORT", "0")
+            .env("APPCALL_RUNNER_TOKEN", "runner-token")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("Bun is required for the parser/RPC integration test");
+        let stdout = match child.stdout.take() {
+            Some(stdout) => stdout,
+            None => {
+                let _ = child.kill();
+                let _ = child.wait();
+                panic!("Bun runner stdout must be piped for readiness");
+            }
+        };
+        let (ready_tx, ready_rx) = mpsc::sync_channel(1);
+        let reader = std::thread::spawn(move || {
+            for line in BufReader::new(stdout).lines() {
+                let line = match line {
+                    Ok(line) => line,
+                    Err(error) => {
+                        let _ =
+                            ready_tx.send(Err(format!("failed to read Bun readiness: {error}")));
+                        return;
+                    }
+                };
+                let Some(message) = serde_json::from_str::<Value>(&line).ok() else {
+                    continue;
+                };
+                if message.get("event").and_then(Value::as_str) != Some("started") {
+                    continue;
+                }
+                if message.get("component").and_then(Value::as_str) != Some("runner") {
+                    let _ = ready_tx.send(Err("Bun started event has an invalid component".into()));
+                    return;
+                }
+                let host = message
+                    .get("hostname")
+                    .or_else(|| message.get("host"))
+                    .and_then(Value::as_str);
+                if host != Some("127.0.0.1") {
+                    let _ = ready_tx.send(Err("Bun started event has an invalid host".into()));
+                    return;
+                }
+                let port = message
+                    .get("port")
+                    .and_then(Value::as_u64)
+                    .and_then(|port| u16::try_from(port).ok())
+                    .filter(|port| *port != 0);
+                match port {
+                    Some(port) => {
+                        let _ = ready_tx.send(Ok(port));
+                    }
+                    None => {
+                        let _ = ready_tx.send(Err(
+                            "Bun started event has an invalid nonzero u16 port".into(),
+                        ));
+                    }
+                }
+                return;
+            }
+            let _ = ready_tx.send(Err("Bun runner exited before readiness".into()));
+        });
+        match ready_rx.recv_timeout(Duration::from_secs(10)) {
+            Ok(Ok(port)) => {
+                let _ = reader.join();
+                Self {
+                    child,
+                    url: format!("http://127.0.0.1:{port}"),
+                }
+            }
+            Ok(Err(error)) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = reader.join();
+                panic!("Bun runner failed to become ready: {error}");
+            }
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = reader.join();
+                panic!("Bun runner did not become ready: {error}");
+            }
+        }
+    }
+}
+
+impl Drop for BunRunner {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
 #[test]
 #[ignore = "requires explicit PostgreSQL and local HTTP"]
 fn accepted_event_reaches_runner_and_atomic_records() {
@@ -100,6 +219,140 @@ impl appcall_oauth::TokenProvider for RefreshProvider {
 fn maximum_provider_event_id_reaches_durable_sync() {
     run_event(4);
 }
+
+#[test]
+#[ignore = "requires explicit PostgreSQL and Bun runner"]
+fn parser_rpc_outbox_worker_retains_event_only_deliveries_after_disconnect() {
+    let (mut db, schema) = fixture();
+    let bun = BunRunner::start();
+    let runner =
+        appcall_runner_client::RunnerClient::new(&bun.url, "runner-token", Default::default())
+            .unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    for (connection, connector, payload, operation) in [
+        (
+            "apollo",
+            "apollo",
+            json!({
+                "event_id":"evt_phone_1",
+                "person_id":"person-1",
+                "sanitized_number":"+15550001111"
+            }),
+            "webhook.phone_revealed",
+        ),
+        (
+            "rb2b",
+            "rb2b",
+            serde_json::from_str::<Value>(include_str!(
+                "../../../runner/connectors/rb2b/fixtures/visitor_identified.json"
+            ))
+            .unwrap(),
+            "webhook.visitor_identified",
+        ),
+    ] {
+        let context = appcall_runner_client::RequestContext {
+            request_id: format!("webhook-parse-{connector}"),
+            deadline_unix_ms: None,
+        };
+        assert!(
+            rt.block_on(runner.webhook_verify(
+                &context,
+                appcall_runner_client::WebhookVerifyRequest {
+                    connector_key: connector.into(),
+                    headers: Default::default(),
+                    payload: payload.clone(),
+                },
+            ))
+            .unwrap()
+            .verified
+        );
+        let parsed = rt
+            .block_on(runner.webhook_parse(
+                &context,
+                appcall_runner_client::WebhookParseRequest {
+                    connector_key: connector.into(),
+                    payload,
+                },
+            ))
+            .unwrap();
+        assert_eq!(parsed.operation, operation);
+        assert!(!parsed.idempotency_key.is_empty());
+        appcall_events::PgEvents::new(&mut db)
+            .accept(
+                &appcall_auth::WebhookClaims {
+                    project_id: "p".into(),
+                    connection_id: connection.into(),
+                    connector: connector.into(),
+                },
+                &appcall_events::ParsedWebhook {
+                    idempotency_key: parsed.idempotency_key,
+                    operation: parsed.operation,
+                    sanitized: parsed.sanitized,
+                },
+            )
+            .unwrap();
+    }
+    db.batch_execute("UPDATE connections SET status='disconnected' WHERE id IN ('apollo','rb2b')")
+        .unwrap();
+    let service = appcall_sync::Service::new(
+        appcall_sync::Repository::new(client(Some(&schema))),
+        appcall_store::Store::new(
+            client(Some(&schema)),
+            appcall_store::LocalProvider::new(&[1; 32]).unwrap(),
+        ),
+        appcall_connectors::Registry::default(),
+        runner.clone(),
+        NeverCredentials,
+        Default::default(),
+    )
+    .unwrap();
+    let worker = Worker::new(
+        client(Some(&schema)),
+        service,
+        TickLimits { outbox: 2, jobs: 1 },
+    )
+    .unwrap();
+    let report = rt.block_on(worker.tick("worker")).unwrap();
+    assert_eq!(report.outbox_completed, 2);
+    assert_eq!(report.outbox_failed, 0);
+    assert_eq!(report.pages_completed, 0);
+    assert!(report.job_failures.is_empty());
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM sync_jobs", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        db.query_one("SELECT count(*) FROM webhook_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT count(*) FROM webhook_outbox WHERE dispatched_at IS NULL",
+            &[]
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT sum(quantity)::bigint FROM usage_monthly_rollups WHERE kind='webhook_event'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        2
+    );
+    drop(worker);
+    drop(rt);
+    db.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
 fn run_event(mode: u8) {
     let disconnect = mode == 1 || mode == 3;
     let managed = mode == 2 || mode == 3;

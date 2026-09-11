@@ -40,6 +40,13 @@ describe("parseWebhook", () => {
     expect(result.idempotencyKey).toBe("rb2b-wh:unknown");
     expect(result.sanitized).toEqual({});
   });
+
+  test("classifies a visitor delivery as a webhook event for independent retention", () => {
+    const result = parseWebhook({ ...partialFixture, event_id: "evt_visitor_1" });
+    expect(result.operation).toBe("webhook.visitor_identified");
+    expect(result.idempotencyKey).toBe("rb2b-wh:evt_visitor_1");
+    expect(result.sanitized).toMatchObject({ provider: "rb2b" });
+  });
 });
 
 describe("verifyWebhook", () => {

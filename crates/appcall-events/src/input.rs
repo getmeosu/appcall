@@ -1,5 +1,33 @@
 use crate::{Error, Event, ParsedWebhook, Result};
 use serde_json::{json, Value};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum DispatchKind {
+    Sync,
+    EventOnly,
+}
+
+/// Classify against the sync operations the worker can execute. This mirrors
+/// the current `appcall_sync::Service::fetch` contract: messages.list for
+/// these four connectors. Webhook operations remain durable events even when
+/// they have no sync equivalent.
+pub(super) fn classify_dispatch(connector: &str, operation: &str) -> DispatchKind {
+    if operation == "messages.list"
+        && matches!(
+            connector,
+            "slack" | "telegram" | "google-workspace" | "microsoft-365"
+        )
+    {
+        DispatchKind::Sync
+    } else {
+        DispatchKind::EventOnly
+    }
+}
+
+pub fn is_sync_operation(connector: &str, operation: &str) -> bool {
+    classify_dispatch(connector, operation) == DispatchKind::Sync
+}
+
 pub fn sync_input(connector: &str, operation: &str, payload: &Value) -> Result<Value> {
     if connector != "slack" || operation != "messages.list" {
         return Ok(json!({}));
@@ -48,18 +76,23 @@ pub fn validate_parsed(connector: &str, p: &ParsedWebhook) -> Result<()> {
     {
         return Err(Error::TooLarge);
     }
-    sync_input(connector, &p.operation, &p.sanitized)?;
+    if classify_dispatch(connector, &p.operation) == DispatchKind::Sync {
+        sync_input(connector, &p.operation, &p.sanitized)?;
+    }
     Ok(())
 }
-pub(super) fn event_job(e: &Event, dedup_key: String) -> Result<crate::SyncJob> {
-    Ok(crate::SyncJob {
+pub(super) fn event_job(e: &Event, dedup_key: String) -> Result<Option<crate::SyncJob>> {
+    if classify_dispatch(&e.connector, &e.operation) == DispatchKind::EventOnly {
+        return Ok(None);
+    }
+    Ok(Some(crate::SyncJob {
         event_id: e.id.clone(),
         project_id: e.project_id.clone(),
         connection_id: e.connection_id.clone(),
         operation: e.operation.clone(),
         dedup_key,
         input: sync_input(&e.connector, &e.operation, &e.payload)?,
-    })
+    }))
 }
 pub(super) fn valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 1024 && !id.chars().any(char::is_control)
@@ -110,5 +143,58 @@ mod tests {
             Err(Error::TooLarge)
         );
         assert!(validate_parsed("other", &p(json!({}))).is_ok());
+    }
+
+    #[test]
+    fn classifies_only_worker_supported_syncs() {
+        for connector in ["slack", "telegram", "google-workspace", "microsoft-365"] {
+            assert_eq!(
+                classify_dispatch(connector, "messages.list"),
+                DispatchKind::Sync
+            );
+        }
+        for (connector, operation) in [
+            ("apollo", "webhook.phone_revealed"),
+            ("rb2b", "webhook.visitor_identified"),
+            ("slack", "webhook.message_received"),
+            ("other", "messages.list"),
+        ] {
+            assert_eq!(
+                classify_dispatch(connector, operation),
+                DispatchKind::EventOnly
+            );
+        }
+    }
+
+    #[test]
+    fn event_job_is_optional_for_event_only_webhooks() {
+        let event = |connector: &str, operation: &str, payload| Event {
+            id: "event".into(),
+            project_id: "project".into(),
+            connection_id: "connection".into(),
+            external_account_id: "account".into(),
+            connector: connector.into(),
+            operation: operation.into(),
+            payload,
+            created_at: chrono::Utc::now(),
+            stream_position: 1,
+        };
+
+        assert!(event_job(
+            &event(
+                "apollo",
+                "webhook.phone_revealed",
+                json!({"personId":"person","phone":"+15550001111"})
+            ),
+            "webhook:event".into()
+        )
+        .unwrap()
+        .is_none());
+        assert!(event_job(
+            &event("slack", "messages.list", json!({"channel":"C123"})),
+            "webhook:event".into()
+        )
+        .unwrap()
+        .is_some());
     }
 }
