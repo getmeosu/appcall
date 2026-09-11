@@ -1,4 +1,4 @@
-use appcall_actions::{Connection, CredentialResolver, LifecycleCredentialResolver};
+use appcall_actions::{Attempt, Connection, CredentialResolver, LifecycleCredentialResolver};
 use appcall_connectors::{Connector, OAuthConfig, Registry};
 use appcall_oauth::{AppCredentials, Lifecycle, StateSigner, TokenProvider, TokenSet};
 use appcall_store::{AuthType, CredentialOwner, LocalProvider, Scope, Status, Store, TestStatus};
@@ -114,7 +114,19 @@ fn dropping_action_resolution_while_store_is_locked_never_rotates_token() {
     let held = store.lock().unwrap();
     let runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(async {
-        let pending=resolver.resolve_tracked(&connection,"");tokio::pin!(pending);
+        let attempt = Attempt {
+            request_id: "request".into(),
+            project_id: "p".into(),
+            connection_id: "c".into(),
+            connector: "google-workspace".into(),
+            external_account_id: String::new(),
+            action: "healthcheck".into(),
+            key: "key".into(),
+            input_hash: "hash".into(),
+            lease_ms: 1_000,
+        };
+        let pending = resolver.resolve_for_attempt(&attempt, &connection, "");
+        tokio::pin!(pending);
         tokio::select! {biased; _=tokio::time::sleep(Duration::from_millis(25))=>{}, _=&mut pending=>panic!("resolution escaped held mutex")}
     });
     drop(held);

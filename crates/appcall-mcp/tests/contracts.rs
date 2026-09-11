@@ -10,6 +10,8 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc, Mutex,
 };
+use std::time::Duration;
+use tokio::sync::Notify;
 #[derive(Clone)]
 struct Connections(Vec<Connection>);
 impl ConnectionLister for Connections {
@@ -105,6 +107,12 @@ fn server() -> (Server<Connections, Executor, MemoryUsage>, Executor) {
 fn scope() -> Scope {
     Scope::new("p", "brand")
         .with_profile("sena_mvt")
+        .with_connector_token("SECRET")
+}
+fn session_scope(account: &str, session: &str) -> Scope {
+    Scope::new("p", account)
+        .with_profile("future")
+        .with_session_id(session)
         .with_connector_token("SECRET")
 }
 async fn rpc<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder>(
@@ -1119,6 +1127,387 @@ async fn action_failure_metadata_is_preserved_in_mcp_wire_result() {
         detailed["structuredContent"]["message"],
         "Tool execution failed: NOTE_TOO_LONG: Please shorten the invitation note."
     );
+}
+
+#[derive(Clone)]
+struct CancellableExecutor {
+    started: Arc<Notify>,
+    start_count: Arc<AtomicUsize>,
+    dispatched: Arc<AtomicUsize>,
+    provider_effects: Arc<AtomicUsize>,
+    release: Arc<Notify>,
+}
+impl CancellableExecutor {
+    fn new() -> Self {
+        Self {
+            started: Arc::new(Notify::new()),
+            start_count: Arc::new(AtomicUsize::new(0)),
+            dispatched: Arc::new(AtomicUsize::new(0)),
+            provider_effects: Arc::new(AtomicUsize::new(0)),
+            release: Arc::new(Notify::new()),
+        }
+    }
+}
+impl ActionExecutor for CancellableExecutor {
+    async fn execute(&self, _: ExecuteRequest) -> Result<ExecuteResult, ActionError> {
+        self.start_count.fetch_add(1, Ordering::SeqCst);
+        self.dispatched.fetch_add(1, Ordering::SeqCst);
+        self.started.notify_one();
+        self.release.notified().await;
+        self.provider_effects.fetch_add(1, Ordering::SeqCst);
+        Ok(ExecuteResult {
+            request_id: "req_cancellable".into(),
+            output: json!({"ok":true}),
+            replay_log_id: String::new(),
+            usage_warning: false,
+            usage: Default::default(),
+        })
+    }
+}
+
+#[derive(Clone)]
+struct WaitingConnections {
+    started: Arc<Notify>,
+    release: Arc<Notify>,
+}
+impl ConnectionLister for WaitingConnections {
+    async fn list(&self, _: &str) -> Result<Vec<Connection>, InfrastructureError> {
+        self.started.notify_one();
+        self.release.notified().await;
+        Ok(vec![connection("selected", "p", "brand")])
+    }
+}
+
+fn tools_call_request(id: impl serde::Serialize, connection_id: &str) -> Value {
+    json!({
+        "jsonrpc":"2.0",
+        "id":id,
+        "method":"tools/call",
+        "params":{
+            "name":"apollo__people__search",
+            "connectionId":connection_id,
+            "arguments":{}
+        }
+    })
+}
+fn cancelled_notification(id: impl serde::Serialize, connection_id: Option<&str>) -> Value {
+    let mut params = json!({"requestId":id});
+    if let Some(connection_id) = connection_id {
+        params["connectionId"] = json!(connection_id);
+    }
+    json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":params})
+}
+
+#[tokio::test]
+async fn mcp_cancellation_before_dispatch_is_scope_bound_and_has_no_provider_effect() {
+    let connections = WaitingConnections {
+        started: Arc::new(Notify::new()),
+        release: Arc::new(Notify::new()),
+    };
+    let executor = CancellableExecutor::new();
+    let server = Server::new(registry(), connections.clone(), executor.clone(), ());
+    let request = serde_json::to_vec(&tools_call_request(41, "selected")).unwrap();
+    let request_scope = session_scope("brand", "voice-a");
+    let mut call = Box::pin(server.handle_http("POST", &request_scope, &request));
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = connections.started.notified() => {},
+            _ = &mut call => panic!("request completed before connection lookup"),
+        }
+    })
+    .await
+    .expect("connection lookup did not start");
+    assert_eq!(server.in_flight_len(), 1);
+
+    let wrong_account = server
+        .handle_http(
+            "POST",
+            &session_scope("other-brand", "voice-a"),
+            &serde_json::to_vec(&cancelled_notification(41, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(wrong_account.status, 202);
+    assert!(wrong_account.body.is_none());
+    assert!(tokio::time::timeout(Duration::from_millis(10), &mut call)
+        .await
+        .is_err());
+
+    let cancelled = server
+        .handle_http(
+            "POST",
+            &request_scope,
+            &serde_json::to_vec(&cancelled_notification(41, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cancelled.status, 202);
+    assert!(cancelled.body.is_none());
+    connections.release.notify_one();
+
+    let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+        .await
+        .expect("cancelled request did not finish");
+    let body = response.body.unwrap();
+    assert_eq!(body["result"]["isError"], true);
+    assert_eq!(
+        body["result"]["structuredContent"]["code"],
+        "MCP_REQUEST_CANCELLED"
+    );
+    assert_eq!(
+        body["result"]["_meta"]["appcall"]["dispatch"]["outcome"],
+        "not_dispatched"
+    );
+    assert_eq!(
+        body["result"]["_meta"]["appcall"]["cancellation"]["phase"],
+        "before_dispatch"
+    );
+    assert_eq!(executor.dispatched.load(Ordering::SeqCst), 0);
+    assert_eq!(executor.provider_effects.load(Ordering::SeqCst), 0);
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[tokio::test]
+async fn mcp_cancellation_after_dispatch_reports_uncertainty_without_rollback_claim() {
+    let executor = CancellableExecutor::new();
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    );
+    let request_scope = session_scope("brand", "voice-a");
+    let request = serde_json::to_vec(&tools_call_request(42, "selected")).unwrap();
+    let mut call = Box::pin(server.handle_http("POST", &request_scope, &request));
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = executor.started.notified() => {},
+            _ = &mut call => panic!("request completed before action dispatch"),
+        }
+    })
+    .await
+    .expect("action dispatch did not start");
+    assert_eq!(server.in_flight_len(), 1);
+
+    let notification = server
+        .handle_http(
+            "POST",
+            &request_scope,
+            &serde_json::to_vec(&cancelled_notification(42, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(notification.status, 202);
+    assert!(notification.body.is_none());
+
+    let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+        .await
+        .expect("cancelled request did not finish");
+    let body = response.body.unwrap();
+    assert_eq!(body["result"]["isError"], true);
+    assert_eq!(
+        body["result"]["structuredContent"]["code"],
+        "MCP_REQUEST_CANCELLED"
+    );
+    assert_eq!(
+        body["result"]["_meta"]["appcall"]["dispatch"]["outcome"],
+        "unknown"
+    );
+    assert_eq!(
+        body["result"]["_meta"]["appcall"]["cancellation"],
+        json!({"phase":"after_dispatch","rollback":"not_attempted"})
+    );
+    assert!(body["result"]["_meta"]["appcall"]
+        .get("rolledBack")
+        .is_none());
+    assert_eq!(executor.dispatched.load(Ordering::SeqCst), 1);
+    assert_eq!(executor.provider_effects.load(Ordering::SeqCst), 0);
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[tokio::test]
+async fn mcp_wrong_connection_and_session_cancellation_leave_the_request_running() {
+    let executor = CancellableExecutor::new();
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    );
+    let request_scope = session_scope("brand", "voice-a");
+    let request = serde_json::to_vec(&tools_call_request(43, "selected")).unwrap();
+    let mut call = Box::pin(server.handle_http("POST", &request_scope, &request));
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = executor.started.notified() => {},
+            _ = &mut call => panic!("request completed before action dispatch"),
+        }
+    })
+    .await
+    .expect("action dispatch did not start");
+
+    for (scope, connection_id) in [
+        (session_scope("brand", "voice-a"), Some("wrong-connection")),
+        (session_scope("brand", "voice-b"), Some("selected")),
+    ] {
+        let notification = server
+            .handle_http(
+                "POST",
+                &scope,
+                &serde_json::to_vec(&cancelled_notification(43, connection_id)).unwrap(),
+            )
+            .await;
+        assert_eq!(notification.status, 202);
+        assert!(notification.body.is_none());
+        assert!(tokio::time::timeout(Duration::from_millis(10), &mut call)
+            .await
+            .is_err());
+    }
+
+    executor.release.notify_one();
+    let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+        .await
+        .expect("authorized request did not complete");
+    let body = response.body.unwrap();
+    assert_eq!(body["result"]["isError"], false);
+    assert_eq!(executor.provider_effects.load(Ordering::SeqCst), 1);
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[tokio::test]
+async fn mcp_completed_request_wins_a_late_cancellation_and_cleans_up() {
+    let executor = Executor::default();
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor,
+        (),
+    );
+    let request_scope = session_scope("brand", "voice-a");
+    let result = server
+        .handle_http(
+            "POST",
+            &request_scope,
+            &serde_json::to_vec(&tools_call_request(44, "selected")).unwrap(),
+        )
+        .await;
+    assert_eq!(result.status, 200);
+    assert_eq!(server.in_flight_len(), 0);
+
+    let notification = server
+        .handle_http(
+            "POST",
+            &request_scope,
+            &serde_json::to_vec(&cancelled_notification(44, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(notification.status, 202);
+    assert!(notification.body.is_none());
+}
+
+#[tokio::test]
+async fn mcp_completion_and_cancellation_race_has_one_terminal_result() {
+    let executor = CancellableExecutor::new();
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    );
+    let request_scope = session_scope("brand", "voice-a");
+    let request_body = serde_json::to_vec(&tools_call_request(45, "selected")).unwrap();
+    let mut call = Box::pin(server.handle_http("POST", &request_scope, &request_body));
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = executor.started.notified() => {},
+            _ = &mut call => panic!("request completed before the race"),
+        }
+    })
+    .await
+    .expect("action dispatch did not start");
+
+    executor.release.notify_one();
+    let cancellation_body =
+        serde_json::to_vec(&cancelled_notification(45, Some("selected"))).unwrap();
+    let cancellation = server.handle_http("POST", &request_scope, &cancellation_body);
+    let (response, notification) = tokio::join!(&mut call, cancellation);
+    assert_eq!(notification.status, 202);
+    assert!(notification.body.is_none());
+    let body = response.body.unwrap();
+    let cancelled = body["result"]["isError"] == json!(true);
+    if cancelled {
+        assert_eq!(
+            body["result"]["structuredContent"]["code"],
+            "MCP_REQUEST_CANCELLED"
+        );
+        assert_eq!(
+            body["result"]["_meta"]["appcall"]["dispatch"]["outcome"],
+            "unknown"
+        );
+    } else {
+        assert_eq!(body["result"]["isError"], false);
+    }
+    assert_eq!(
+        executor.provider_effects.load(Ordering::SeqCst),
+        usize::from(!cancelled)
+    );
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[tokio::test]
+async fn mcp_in_flight_registry_is_bounded_and_aborted_entries_are_cleaned() {
+    let executor = CancellableExecutor::new();
+    let server = Arc::new(Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    ));
+    let mut calls = Vec::new();
+    for id in 0..MAX_MCP_IN_FLIGHT_REQUESTS {
+        let server = server.clone();
+        calls.push(tokio::spawn(async move {
+            server
+                .handle_http(
+                    "POST",
+                    &session_scope("brand", "voice-a"),
+                    &serde_json::to_vec(&tools_call_request(id, "selected")).unwrap(),
+                )
+                .await
+        }));
+    }
+    tokio::time::timeout(Duration::from_secs(1), async {
+        while executor.start_count.load(Ordering::SeqCst) < MAX_MCP_IN_FLIGHT_REQUESTS {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("registry capacity was not reached");
+    assert_eq!(server.in_flight_len(), MAX_MCP_IN_FLIGHT_REQUESTS);
+    let extra = tokio::time::timeout(
+        Duration::from_millis(100),
+        server.handle_http(
+            "POST",
+            &session_scope("brand", "voice-a"),
+            &serde_json::to_vec(&tools_call_request(MAX_MCP_IN_FLIGHT_REQUESTS, "selected"))
+                .unwrap(),
+        ),
+    )
+    .await
+    .expect("bounded registry did not reject excess work");
+    let body = extra.body.unwrap();
+    assert_eq!(body["result"]["isError"], true);
+    assert_eq!(
+        body["result"]["structuredContent"]["code"],
+        "MCP_REQUEST_CAPACITY"
+    );
+    assert_eq!(
+        executor.start_count.load(Ordering::SeqCst),
+        MAX_MCP_IN_FLIGHT_REQUESTS
+    );
+
+    for call in calls {
+        call.abort();
+        let _ = call.await;
+    }
+    assert_eq!(server.in_flight_len(), 0);
 }
 
 #[derive(Clone)]

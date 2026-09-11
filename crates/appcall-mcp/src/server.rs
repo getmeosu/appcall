@@ -2,7 +2,10 @@ use crate::*;
 use appcall_connectors::Registry;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::collections::BTreeMap;
+use std::sync::Arc;
+
+pub const MAX_MCP_IN_FLIGHT_REQUESTS: usize = 128;
+const MAX_MCP_REQUEST_ID_BYTES: usize = 256;
 
 pub struct HttpResponse {
     pub status: u16,
@@ -13,6 +16,7 @@ pub struct Server<L, E, U = ()> {
     connections: L,
     executor: E,
     usage: U,
+    in_flight: Arc<InFlightRegistry>,
 }
 impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
     pub fn new(registry: Registry, connections: L, executor: E, usage: U) -> Self {
@@ -21,7 +25,11 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             connections,
             executor,
             usage,
+            in_flight: Arc::new(InFlightRegistry::new(MAX_MCP_IN_FLIGHT_REQUESTS)),
         }
+    }
+    pub fn in_flight_len(&self) -> usize {
+        self.in_flight.len()
     }
     pub fn database_health(&self) -> Option<bool> {
         self.connections.database_health()
@@ -79,15 +87,21 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         if request.get("jsonrpc").and_then(Value::as_str) != Some("2.0") || method.is_empty() {
             return id.map(|id| rpc_error(Some(id), -32600, "Invalid request."));
         }
-        // No notification dispatches side effects. Cancellation notifications are
-        // accepted without a response, matching the stateless Go gateway.
+        // Notifications never receive a response. Cancellation notifications do
+        // update the process-local registry so a matching request can observe it.
+        if method == "notifications/cancelled" {
+            self.cancel_request(scope, request.get("params").cloned());
+            return None;
+        }
+        if method == "notifications/initialized" {
+            return None;
+        }
         let id = id?;
         let result = match method {
             "initialize" => {
                 json!({"protocolVersion":PROTOCOL_VERSION,"capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"appcall-mcp-gateway","version":"0.1.0"}})
             }
             "ping" => json!({}),
-            "notifications/initialized" | "notifications/cancelled" => return None,
             "tools/list" => match self.list_tools(scope).await {
                 Ok(tools) => json!({"tools":tools}),
                 Err(_) => return Some(rpc_error(Some(id), -32603, "Tools could not be listed.")),
@@ -118,6 +132,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                         call.arguments,
                         call.idempotency_key,
                         call.connection_id,
+                        Some(id.clone()),
                     )
                     .await
                 {
@@ -128,6 +143,26 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             _ => return Some(rpc_error(Some(id), -32601, "Method not found.")),
         };
         Some(json!({"jsonrpc":"2.0","id":id,"result":result}))
+    }
+    fn cancel_request(&self, scope: &Scope, params: Option<Value>) {
+        let Some(params) =
+            params.and_then(|params| serde_json::from_value::<CancellationParams>(params).ok())
+        else {
+            return;
+        };
+        let Some(request_id) = bounded_request_id(&params.request_id) else {
+            return;
+        };
+        if params
+            .connection_id
+            .as_deref()
+            .is_some_and(|id| !valid_connection_id(id))
+        {
+            return;
+        }
+        let _ = self
+            .in_flight
+            .cancel(scope, &request_id, params.connection_id.as_deref());
     }
     async fn scoped_connections(
         &self,
@@ -211,7 +246,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         name: &str,
         input: Value,
     ) -> Result<Value, InfrastructureError> {
-        self.call_tool_with_key(scope, name, input, None, None)
+        self.call_tool_with_key(scope, name, input, None, None, None)
             .await
     }
     pub async fn call_tool_for_connection(
@@ -221,8 +256,15 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         connection_id: &str,
         input: Value,
     ) -> Result<Value, InfrastructureError> {
-        self.call_tool_with_key(scope, name, input, None, Some(connection_id.to_owned()))
-            .await
+        self.call_tool_with_key(
+            scope,
+            name,
+            input,
+            None,
+            Some(connection_id.to_owned()),
+            None,
+        )
+        .await
     }
     async fn call_tool_with_key(
         &self,
@@ -231,6 +273,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         input: Value,
         idempotency_key: Option<String>,
         connection_id: Option<String>,
+        request_id: Option<Value>,
     ) -> Result<Value, InfrastructureError> {
         if scope.project_id.is_empty() {
             return Ok(tool_error("UNAUTHORIZED", "Missing or invalid API key."));
@@ -262,13 +305,53 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                 "Tool is not allowed for this capability profile.",
             ));
         }
-        let connection = match self
-            .select_connection(scope, connector, connection_id.as_deref())
-            .await?
-        {
+        let registration = match request_id.as_ref().and_then(bounded_request_id) {
+            Some(request_id) => {
+                match self
+                    .in_flight
+                    .register(scope, &request_id, connection_id.clone())
+                {
+                    Ok(registration) => Some(registration),
+                    Err(RegistrationError::Capacity) => {
+                        return Ok(tool_error(
+                            "MCP_REQUEST_CAPACITY",
+                            "Too many MCP tool requests are in flight; retry shortly.",
+                        ));
+                    }
+                    Err(RegistrationError::Duplicate) => {
+                        return Ok(tool_error(
+                            "MCP_REQUEST_IN_FLIGHT",
+                            "An MCP tool request with this ID is already in flight.",
+                        ));
+                    }
+                }
+            }
+            None => None,
+        };
+        let selected = match registration.as_ref() {
+            Some(registration) => {
+                tokio::select! {
+                    biased;
+                    _ = registration.wait_cancelled() => {
+                        return Ok(cancellation_payload(registration));
+                    }
+                    selected = self.select_connection(scope, connector, connection_id.as_deref()) => selected,
+                }
+            }
+            None => {
+                self.select_connection(scope, connector, connection_id.as_deref())
+                    .await
+            }
+        }?;
+        let connection = match selected {
             Ok(connection) => connection,
             Err(error) => return Ok(tool_error(error.code(), error.message())),
         };
+        if let Some(registration) = registration.as_ref() {
+            if !registration.set_connection(&connection.id) {
+                return Ok(cancellation_payload(registration));
+            }
+        }
         let idempotency_key = idempotency_key.unwrap_or_default();
         let request = appcall_actions::ExecuteRequest {
             project_id: scope.project_id.clone(),
@@ -280,7 +363,29 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             input,
             caller_credential: scope.connector_token.clone(),
         };
-        match self.executor.execute(request).await {
+        if let Some(registration) = registration.as_ref() {
+            if !registration.begin_dispatch() {
+                return Ok(cancellation_payload(registration));
+            }
+        }
+        let execution = match registration.as_ref() {
+            Some(registration) => {
+                tokio::select! {
+                    biased;
+                    _ = registration.wait_cancelled() => {
+                        return Ok(cancellation_payload(registration));
+                    }
+                    result = self.executor.execute(request) => {
+                        if !registration.complete() {
+                            return Ok(cancellation_payload(registration));
+                        }
+                        result
+                    }
+                }
+            }
+            None => self.executor.execute(request).await,
+        };
+        match execution {
             Ok(result) => {
                 let _ =
                     self.usage
@@ -418,6 +523,24 @@ impl Default for CallParams {
         }
     }
 }
+
+#[derive(Deserialize)]
+struct CancellationParams {
+    #[serde(rename = "requestId")]
+    request_id: Value,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_present_connection_id",
+        rename = "connectionId"
+    )]
+    connection_id: Option<String>,
+}
+
+fn bounded_request_id(id: &Value) -> Option<String> {
+    let serialized = serde_json::to_string(id).ok()?;
+    (serialized.len() <= MAX_MCP_REQUEST_ID_BYTES).then_some(serialized)
+}
+
 fn valid_idempotency_key(key: &str) -> bool {
     !key.is_empty() && key.len() <= 128 && key.bytes().all(|b| (33..=126).contains(&b))
 }
@@ -560,6 +683,35 @@ fn gate_message(code: &str) -> &'static str {
 }
 fn tool_error(code: &str, message: &str) -> Value {
     tool_error_with_metadata(code, message, None)
+}
+fn cancellation_payload(registration: &InFlightRegistration) -> Value {
+    cancellation_error(
+        registration
+            .cancellation_phase()
+            .unwrap_or(CancelPhase::AfterDispatch),
+    )
+}
+fn cancellation_error(phase: CancelPhase) -> Value {
+    let (dispatch_outcome, phase_name, message) = match phase {
+        CancelPhase::BeforeDispatch => (
+            "not_dispatched",
+            "before_dispatch",
+            "MCP request was cancelled before dispatch; no provider effect was attempted.",
+        ),
+        CancelPhase::AfterDispatch => (
+            "unknown",
+            "after_dispatch",
+            "MCP request was cancelled after dispatch began; provider effect is unknown and was not rolled back.",
+        ),
+    };
+    tool_error_with_metadata(
+        "MCP_REQUEST_CANCELLED",
+        message,
+        Some(json!({
+            "dispatch":{"outcome":dispatch_outcome,"origin":if phase == CancelPhase::BeforeDispatch { "local_admission" } else { "unknown" }},
+            "cancellation":{"phase":phase_name,"rollback":"not_attempted"}
+        })),
+    )
 }
 fn tool_error_with_metadata(code: &str, message: &str, metadata: Option<Value>) -> Value {
     let mut payload = json!({"content":[{"type":"text","text":message}],"isError":true,"structuredContent":{"code":code,"message":message}});
