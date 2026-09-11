@@ -188,3 +188,66 @@ fn whitespace_only_required_secret_is_rejected_explicitly() {
         );
     }
 }
+
+#[test]
+fn optional_basic_derive_sources_must_both_be_present_and_nonempty() {
+    let setup = SetupConfig {
+        fields: vec![
+            SetupField {
+                key: "username".into(),
+                required: false,
+                secret: false,
+                ..Default::default()
+            },
+            SetupField {
+                key: "password".into(),
+                required: false,
+                secret: true,
+                ..Default::default()
+            },
+        ],
+        derive: vec![DeriveField {
+            field: "basicAuth".into(),
+            kind: "basic".into(),
+            from: vec!["username".into(), "password".into()],
+        }],
+        ..Default::default()
+    };
+    let expected = |key: &str| Error::MissingDeclaredField(DeclaredFieldKey::new(key).unwrap());
+    for (input, missing_key) in [
+        (
+            BTreeMap::from([(String::from("username"), String::from("user"))]),
+            "password",
+        ),
+        (
+            BTreeMap::from([
+                (String::from("username"), String::from("user")),
+                (String::from("password"), String::new()),
+            ]),
+            "password",
+        ),
+        (
+            BTreeMap::from([
+                (String::from("username"), String::from("user")),
+                (String::from("password"), String::from(" \t\u{2003} ")),
+            ]),
+            "password",
+        ),
+        (
+            BTreeMap::from([(String::from("password"), String::from("secret"))]),
+            "username",
+        ),
+        (
+            BTreeMap::from([
+                (String::from("username"), String::from(" \t\u{2003} ")),
+                (String::from("password"), String::from("secret")),
+            ]),
+            "username",
+        ),
+    ] {
+        assert_eq!(
+            collect_fields(&setup, "", &input).unwrap_err(),
+            expected(missing_key)
+        );
+    }
+}
