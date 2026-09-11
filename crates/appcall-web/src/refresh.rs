@@ -8,10 +8,12 @@ use std::{
 const HANDOFF_TTL: Duration = Duration::from_secs(30);
 struct Entry {
     created: Instant,
-    tokens: tokio::sync::Mutex<Option<(String, String)>>,
+    result: tokio::sync::Mutex<Option<Result<(String, String), Error>>>,
 }
 /// Short-lived handoff cache collapses simultaneous browser requests carrying
-/// the same pre-rotation cookie. Bounded and keyed only by a one-way token hash.
+/// the same pre-rotation cookie. Successful rotations and unavailable refresh
+/// outcomes are retained for the handoff window, so recovery cannot retry a
+/// consumed token. Bounded and keyed only by a one-way token hash.
 #[derive(Default)]
 pub(crate) struct RefreshCache {
     entries: Mutex<HashMap<[u8; 32], Arc<Entry>>>,
@@ -47,29 +49,35 @@ impl RefreshCache {
                 }
                 let entry = Arc::new(Entry {
                     created: Instant::now(),
-                    tokens: tokio::sync::Mutex::new(None),
+                    result: tokio::sync::Mutex::new(None),
                 });
                 entries.insert(key, entry.clone());
                 entry
             }
         };
-        let mut cached = entry.tokens.lock().await;
-        if let Some(tokens) = cached.as_ref() {
-            return Ok(tokens.clone());
+        let mut cached = entry.result.lock().await;
+        if let Some(result) = cached.as_ref() {
+            return result.clone();
         }
         let result = broker
             .auth(
                 "/api/auth/refresh",
                 serde_json::json!({"refreshToken":token}),
             )
-            .await?;
-        if result.mfa_required || result.access_token.is_empty() || result.refresh_token.is_empty()
-        {
-            return Err(Error::Unauthorized);
+            .await
+            .and_then(|result| {
+                if result.mfa_required
+                    || result.access_token.is_empty()
+                    || result.refresh_token.is_empty()
+                {
+                    return Err(Error::Unauthorized);
+                }
+                Ok((result.access_token, result.refresh_token))
+            });
+        if matches!(&result, Ok(_) | Err(Error::Unavailable)) {
+            *cached = Some(result.clone());
         }
-        let tokens = (result.access_token, result.refresh_token);
-        *cached = Some(tokens.clone());
-        Ok(tokens)
+        result
     }
 }
 
@@ -136,5 +144,50 @@ mod tests {
         );
         server.await.unwrap();
         assert_eq!(calls.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn unavailable_refresh_is_not_retried_inside_the_handoff_window() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut bytes = [0; 8192];
+            let count = stream.read(&mut bytes).await.unwrap();
+            assert!(String::from_utf8_lossy(&bytes[..count]).starts_with("POST /api/auth/refresh "));
+            stream
+                .write_all(
+                    b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}",
+                )
+                .await
+                .unwrap();
+
+            assert!(
+                tokio::time::timeout(Duration::from_millis(100), listener.accept())
+                    .await
+                    .is_err(),
+                "a cached refresh failure must not retry the broker"
+            );
+        });
+        let broker = Broker::new(&format!("http://{address}"), "appcall").unwrap();
+        let cache = RefreshCache::default();
+        let first = Instant::now();
+        assert_eq!(
+            cache
+                .rotate_at(&broker, "unavailable-single-use", first)
+                .await,
+            Err(Error::Unavailable)
+        );
+        assert_eq!(
+            cache
+                .rotate_at(
+                    &broker,
+                    "unavailable-single-use",
+                    first + Duration::from_secs(1)
+                )
+                .await,
+            Err(Error::Unavailable)
+        );
+        server.await.unwrap();
     }
 }

@@ -99,11 +99,42 @@ impl Dashboard<'_> {
                 )
             }
         };
+        let access_token_expired = matches!(
+            self.browser
+                .identity
+                .jwt
+                .verify(&session.access_token, r.now),
+            Err(appcall_auth::AuthError::Expired)
+        );
         let previous_session = session.clone();
         let (session, principal) = match self.browser.identity.refresh(&session, r.now).await {
             Ok(pair) => pair,
             Err(Error::Unavailable) => {
-                return Some(Response::new(503, "Identity service unavailable".into()))
+                let response = Response::new(503, "Identity service unavailable".into());
+                if access_token_expired {
+                    // The refresh cache returns the completed rotation, or the
+                    // cached failure, without retrying a single-use token here.
+                    if let Ok((access_token, refresh_token)) = self
+                        .browser
+                        .identity
+                        .broker
+                        .refresh_tokens(&previous_session.refresh_token)
+                        .await
+                    {
+                        let handoff = Session {
+                            access_token,
+                            refresh_token,
+                            ..previous_session.clone()
+                        };
+                        if handoff != previous_session {
+                            return Some(match self.browser.codec.session_cookie(&handoff) {
+                                Ok(cookie) => response.cookie(cookie),
+                                Err(_) => response,
+                            });
+                        }
+                    }
+                }
+                return Some(response);
             }
             Err(_) => {
                 return Some(
@@ -122,7 +153,6 @@ impl Dashboard<'_> {
         let result = DashboardRenderer { data: self.data }
             .render(r, operation, &session, principal)
             .await;
-        let rendered = result.is_ok();
         let response = match result {
             Ok(response) => response,
             Err(e) => Response::new(
@@ -140,12 +170,6 @@ impl Dashboard<'_> {
         };
         if let Some(cookie) = rotated_session_cookie {
             return Some(response.cookie(cookie));
-        }
-        if rendered {
-            return Some(match self.browser.codec.session_cookie(&session) {
-                Ok(cookie) => response.cookie(cookie),
-                Err(_) => Response::new(503, "Session unavailable".into()),
-            });
         }
         Some(response)
     }
