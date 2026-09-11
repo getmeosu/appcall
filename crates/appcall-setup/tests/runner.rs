@@ -61,16 +61,17 @@ fn validator_checks_provider_provenance_and_forwards_fields() {
             registry.clone(),
             runtime.handle().clone(),
         );
+        let credential = " \u{2003}synthetic\u{2003} ";
         let credentials = collect_fields(
             &registry.connector("brevo").unwrap().manifest().auth.setup,
             "",
-            &BTreeMap::from([("apiKey".into(), "synthetic".into())]),
+            &BTreeMap::from([("apiKey".into(), credential.into())]),
         )
         .unwrap();
         let result = validator.validate("p", "brevo", &credentials);
         assert_eq!(result.is_ok(), source == "provider");
         let request = thread.join().unwrap();
-        assert_eq!(request["params"]["input"]["apiKey"], "synthetic");
+        assert_eq!(request["params"]["input"]["apiKey"], credential);
     }
 }
 #[test]

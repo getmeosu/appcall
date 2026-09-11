@@ -69,17 +69,19 @@ pub fn collect_fields(
     }
     let mut result = Credentials(BTreeMap::new());
     for field in fields {
-        let value = input
-            .get(&field.key)
-            .map(String::as_str)
-            .unwrap_or("")
-            .trim();
-        if field.required && value.is_empty() {
+        let raw_value = input.get(&field.key).map(String::as_str).unwrap_or("");
+        let is_empty = raw_value.trim().is_empty();
+        if field.required && is_empty {
             return Err(DeclaredFieldKey::new(&field.key)
                 .map(Error::MissingDeclaredField)
                 .unwrap_or(Error::MissingField));
         }
-        if !value.is_empty() {
+        if !is_empty {
+            let value = if field.secret {
+                raw_value
+            } else {
+                raw_value.trim()
+            };
             result.0.insert(field.key.clone(), value.to_owned());
         }
     }
@@ -87,19 +89,22 @@ pub fn collect_fields(
         if derive.kind != "basic" || derive.from.len() != 2 {
             return Err(Error::Unsupported);
         }
-        let mut raw = format!(
-            "{}:{}",
-            result
-                .0
-                .get(&derive.from[0])
-                .map(String::as_str)
-                .unwrap_or(""),
-            result
-                .0
-                .get(&derive.from[1])
-                .map(String::as_str)
-                .unwrap_or("")
-        );
+        let missing_field = |key: &str| {
+            DeclaredFieldKey::new(key)
+                .map(Error::MissingDeclaredField)
+                .unwrap_or(Error::MissingField)
+        };
+        let first = result
+            .0
+            .get(&derive.from[0])
+            .map(String::as_str)
+            .ok_or_else(|| missing_field(&derive.from[0]))?;
+        let second = result
+            .0
+            .get(&derive.from[1])
+            .map(String::as_str)
+            .ok_or_else(|| missing_field(&derive.from[1]))?;
+        let mut raw = format!("{}:{}", first, second);
         result
             .0
             .insert(derive.field.clone(), STANDARD.encode(raw.as_bytes()));
