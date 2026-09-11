@@ -7,11 +7,20 @@ use std::{sync::Mutex, time::Duration};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-#[derive(Default)]
 struct Fixture {
     inputs: Mutex<Vec<Value>>,
     executions: Mutex<Vec<(String, String, bool, String)>>,
-    stream_senders: Mutex<Vec<tokio::sync::mpsc::Sender<Vec<u8>>>>,
+    stream_shutdown: tokio::sync::watch::Sender<bool>,
+}
+impl Default for Fixture {
+    fn default() -> Self {
+        let (stream_shutdown, _) = tokio::sync::watch::channel(false);
+        Self {
+            inputs: Mutex::new(Vec::new()),
+            executions: Mutex::new(Vec::new()),
+            stream_shutdown,
+        }
+    }
 }
 impl Backend for Fixture {
     async fn authorize(&self, h: &[(String, String)]) -> Result<Identity> {
@@ -79,7 +88,14 @@ impl Backend for Fixture {
         }
         let (tx, receiver) = tokio::sync::mpsc::channel(1);
         tx.try_send(b": fixture stream\n\n".to_vec()).unwrap();
-        self.stream_senders.lock().unwrap().push(tx);
+        let mut shutdown = self.stream_shutdown.subscribe();
+        tokio::spawn(async move {
+            tokio::select! {
+                _ = shutdown.changed() => {}
+                _ = tx.closed() => {}
+            }
+            drop(tx);
+        });
         Ok(Some(streaming::StreamResponse {
             receiver,
             headers: vec![],
@@ -237,6 +253,31 @@ async fn send_request(address: std::net::SocketAddr, request: &[u8]) -> Vec<u8> 
     bytes
 }
 
+async fn open_stream(address: std::net::SocketAddr) -> (TcpStream, String) {
+    let mut stream = TcpStream::connect(address).await.unwrap();
+    stream
+        .write_all(b"GET /v1/events HTTP/1.1\r\nHost: localhost\r\nX-API-Key: fixture-key\r\n\r\n")
+        .await
+        .unwrap();
+    let response = read_headers(&mut stream).await;
+    (stream, String::from_utf8_lossy(&response).into_owned())
+}
+
+async fn saturate_streams(address: std::net::SocketAddr) -> Vec<TcpStream> {
+    let mut admitted = Vec::new();
+    for _ in 0..64 {
+        let (stream, response) = open_stream(address).await;
+        if response.contains(" 200 ") {
+            admitted.push(stream);
+        } else {
+            assert!(response.contains(" 503 Service Unavailable"), "{response}");
+        }
+    }
+    assert!(!admitted.is_empty());
+    assert!(admitted.len() < 64, "all streams were admitted");
+    admitted
+}
+
 #[tokio::test]
 #[ignore = "opens local TCP sockets"]
 async fn persistent_stream_saturation_reserves_health_readiness_and_action_capacity() {
@@ -253,23 +294,7 @@ async fn persistent_stream_saturation_reserves_health_readiness_and_action_capac
                     let _ = shutdown.await;
                 },
             ));
-            let mut admitted = Vec::new();
-            for _ in 0..64 {
-                let mut stream = TcpStream::connect(address).await.unwrap();
-                stream
-                    .write_all(b"GET /v1/events HTTP/1.1\r\nHost: localhost\r\nX-API-Key: fixture-key\r\n\r\n")
-                    .await
-                    .unwrap();
-                let response = read_headers(&mut stream).await;
-                let response = String::from_utf8_lossy(&response);
-                if response.contains(" 200 ") {
-                    admitted.push(stream);
-                } else {
-                    assert!(response.contains(" 503 Service Unavailable"), "{response}");
-                }
-            }
-            assert!(!admitted.is_empty());
-            assert!(admitted.len() < 64, "all streams were admitted");
+            let admitted = saturate_streams(address).await;
 
             let health = send_request(
                 address,
@@ -297,6 +322,80 @@ async fn persistent_stream_saturation_reserves_health_readiness_and_action_capac
                 .unwrap()
                 .unwrap()
                 .unwrap();
+        })
+        .await;
+}
+
+#[tokio::test]
+#[ignore = "opens local TCP sockets"]
+async fn persistent_stream_disconnect_releases_admission() {
+    let local = tokio::task::LocalSet::new();
+    local
+        .run_until(async {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let (stop, shutdown) = tokio::sync::oneshot::channel();
+            let server_api = std::rc::Rc::new(api());
+            let server = tokio::task::spawn_local(serve(listener, server_api, async {
+                let _ = shutdown.await;
+            }));
+
+            let mut admitted = saturate_streams(address).await;
+            drop(admitted.pop().expect("at least one admitted stream"));
+            let mut replacement = None;
+            for _ in 0..40 {
+                let (stream, response) = open_stream(address).await;
+                if response.contains(" 200 ") {
+                    replacement = Some(stream);
+                    break;
+                }
+                assert!(response.contains(" 503 Service Unavailable"), "{response}");
+                drop(stream);
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+            admitted.push(replacement.expect("a disconnected stream releases its slot"));
+
+            drop(admitted);
+            stop.send(()).unwrap();
+            tokio::time::timeout(Duration::from_secs(2), server)
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+        })
+        .await;
+}
+
+#[tokio::test]
+#[ignore = "opens local TCP sockets"]
+async fn persistent_stream_shutdown_closes_admitted_connections() {
+    let local = tokio::task::LocalSet::new();
+    local
+        .run_until(async {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let (stop, shutdown) = tokio::sync::oneshot::channel();
+            let server_api = std::rc::Rc::new(api());
+            let shutdown_streams = server_api.backend.stream_shutdown.clone();
+            let server = tokio::task::spawn_local(serve(listener, server_api, async {
+                let _ = shutdown.await;
+            }));
+
+            let mut admitted = saturate_streams(address).await;
+            shutdown_streams.send_replace(true);
+            stop.send(()).unwrap();
+            tokio::time::timeout(Duration::from_secs(2), server)
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            for stream in &mut admitted {
+                let mut bytes = Vec::new();
+                tokio::time::timeout(Duration::from_secs(2), stream.read_to_end(&mut bytes))
+                    .await
+                    .unwrap()
+                    .unwrap();
+            }
         })
         .await;
 }

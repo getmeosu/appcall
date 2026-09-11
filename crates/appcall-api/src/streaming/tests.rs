@@ -18,6 +18,22 @@ async fn body_streams_separate_frames_and_receiver_drop_closes_sender() {
     drop(body);
     tx.closed().await;
 }
+
+#[test]
+fn stream_admission_is_bounded_and_released_with_the_response_body() {
+    let admission = StreamAdmission::new();
+    let mut permits = Vec::new();
+    for _ in 0..MAX_STREAMS {
+        permits.push(admission.try_acquire().expect("stream slot"));
+    }
+    assert!(admission.try_acquire().is_none());
+
+    let (_tx, receiver) = mpsc::channel(1);
+    let response = response_with_permit(receiver, permits.pop().unwrap());
+    assert!(admission.try_acquire().is_none());
+    drop(response);
+    assert!(admission.try_acquire().is_some());
+}
 struct Source {
     events: std::sync::Mutex<Vec<Event>>,
     polls: std::sync::atomic::AtomicUsize,
