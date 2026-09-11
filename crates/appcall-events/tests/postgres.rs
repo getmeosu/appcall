@@ -634,16 +634,35 @@ fn event_only_webhooks_retain_usage_and_replay_without_sync_jobs() {
             .get::<_, i64>(0),
         2
     );
-    assert_eq!(
-        db.client
-            .query_one(
-                "SELECT count(*) FROM webhook_events WHERE provider_event_key='same-provider-key' AND id <> provider_event_key",
-                &[],
+    let stored_provider_identities = db
+        .client
+        .query(
+            "SELECT provider_event_key,id FROM webhook_events WHERE project_id='p' ORDER BY provider_event_key",
+            &[],
+        )
+        .unwrap()
+        .into_iter()
+        .map(|row| {
+            (
+                row.get::<_, Option<String>>(0),
+                row.get::<_, String>(1),
             )
-            .unwrap()
-            .get::<_, i64>(0),
-        2
-    );
+        })
+        .collect::<Vec<_>>();
+    let expected_provider_identities = cases
+        .iter()
+        .zip(&accepted_ids)
+        .map(|((_, provider_event_key, _, _), event_id)| {
+            (Some((*provider_event_key).to_owned()), event_id.clone())
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(stored_provider_identities, expected_provider_identities);
+    assert!(expected_provider_identities
+        .iter()
+        .all(
+            |(provider_event_key, event_id)| provider_event_key.as_deref()
+                != Some(event_id.as_str())
+        ));
     assert_eq!(
         db.client
             .query_one(
