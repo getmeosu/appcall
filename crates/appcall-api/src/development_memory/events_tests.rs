@@ -345,16 +345,17 @@ async fn history_snapshot_cursor_delivers_only_events_after_the_snapshot() {
         .to_owned();
 
     assert!(events.poll(&principal, &cursor).await.unwrap().is_empty());
-    events
+    let after_id = events
         .accept(&expected, revision, &parsed("after-snapshot", ""))
-        .unwrap();
+        .unwrap()
+        .event_id;
     let delivered = events.poll(&principal, &cursor).await.unwrap();
     assert_eq!(
         delivered
             .iter()
             .map(|event| event.id.as_str())
             .collect::<Vec<_>>(),
-        ["after-snapshot"]
+        [after_id.as_str()]
     );
 }
 
@@ -381,20 +382,22 @@ async fn filtered_stream_delivers_matching_new_events_only() {
         .unwrap()
         .unwrap();
     let cursor = history.body["streamCursor"].as_str().unwrap().to_owned();
-    events
+    let matching_id = events
         .accept(&expected, revision, &parsed("matching-after", ""))
-        .unwrap();
-    events
+        .unwrap()
+        .event_id;
+    let nonmatching_id = events
         .accept(&expected, revision, &parsed("nonmatching-operation", ""))
-        .unwrap();
+        .unwrap()
+        .event_id;
     {
         let mut data = repo.lock().unwrap();
         data.events
-            .get_mut(&("proj_dev".into(), "matching-after".into()))
+            .get_mut(&("proj_dev".into(), matching_id.clone()))
             .unwrap()
             .operation = "messages.list".into();
         data.events
-            .get_mut(&("proj_dev".into(), "nonmatching-operation".into()))
+            .get_mut(&("proj_dev".into(), nonmatching_id))
             .unwrap()
             .operation = "messages.send".into();
     }
@@ -412,7 +415,7 @@ async fn filtered_stream_delivers_matching_new_events_only() {
             .iter()
             .map(|event| event.id.as_str())
             .collect::<Vec<_>>(),
-        ["matching-after"]
+        [matching_id.as_str()]
     );
     for filters in [
         crate::streaming::EventFilters {
@@ -459,13 +462,14 @@ async fn event_inserted_between_snapshot_and_stream_open_is_delivered() {
         .unwrap()
         .unwrap();
     let cursor = history.body["streamCursor"].as_str().unwrap().to_owned();
-    events
+    let between_id = events
         .accept(
             &expected,
             revision,
             &parsed("between-snapshot-and-open", ""),
         )
-        .unwrap();
+        .unwrap()
+        .event_id;
     let expected_principal = principal.clone();
     let verify: crate::streaming::SessionVerifier = std::sync::Arc::new(move || {
         let expected_principal = expected_principal.clone();
@@ -489,7 +493,7 @@ async fn event_inserted_between_snapshot_and_stream_open_is_delivered() {
         .unwrap()
         .unwrap();
     let frame = String::from_utf8(frame).unwrap();
-    assert!(frame.contains("between-snapshot-and-open"));
+    assert!(frame.contains(&between_id));
     assert!(!frame.contains("before-open"));
 }
 
@@ -502,9 +506,10 @@ async fn shared_stream_backfill_live_revalidation_and_drain() {
     let repo = super::history_tests::fixture();
     let events = MemoryEvents::new(repo.clone(), None, None);
     let (expected, revision) = repo.get_connection("proj_dev", None, "c").unwrap();
-    events
+    let backfill_id = events
         .accept(&expected, revision, &parsed("backfill", ""))
-        .unwrap();
+        .unwrap()
+        .event_id;
     let p = Principal::project("proj_dev").unwrap();
     let live = Arc::new(AtomicBool::new(true));
     let allowed = live.clone();
@@ -529,10 +534,11 @@ async fn shared_stream_backfill_live_revalidation_and_drain() {
     let first = String::from_utf8(receiver.recv().await.unwrap()).unwrap();
     assert_eq!(first, ": connected\n\n");
     let backfill = String::from_utf8(receiver.recv().await.unwrap()).unwrap();
-    assert!(backfill.contains("backfill"));
-    events
+    assert!(backfill.contains(&backfill_id));
+    let live_id = events
         .accept(&expected, revision, &parsed("live", ""))
-        .unwrap();
+        .unwrap()
+        .event_id;
     let next = tokio::time::timeout(std::time::Duration::from_secs(3), async {
         loop {
             let frame = receiver.recv().await.unwrap();
@@ -543,7 +549,7 @@ async fn shared_stream_backfill_live_revalidation_and_drain() {
     })
     .await
     .unwrap();
-    assert!(String::from_utf8(next).unwrap().contains("live"));
+    assert!(String::from_utf8(next).unwrap().contains(&live_id));
     live.store(false, Ordering::Release);
     tokio::time::timeout(std::time::Duration::from_secs(3), async {
         while let Some(frame) = receiver.recv().await {
@@ -738,7 +744,9 @@ async fn no_runner_local_webhook_keeps_api_auth_and_sanitized_simulation() {
     );
     let accepted = events.handle(Some(&p), &r).await.unwrap().unwrap();
     assert_eq!(accepted.status, 202);
-    assert_eq!(accepted.body["eventId"], "local");
+    let event_id = accepted.body["eventId"].as_str().unwrap().to_owned();
+    assert!(event_id.starts_with("wh_"));
+    assert_ne!(event_id, "local");
     let visible = events.poll(&p, "").await.unwrap();
     assert_eq!(visible.len(), 1);
     assert!(!visible[0].payload.to_string().contains("private-fixture"));
@@ -761,13 +769,14 @@ async fn event_detail_replay_and_stream_disconnect_preserve_scope() {
     let repo = super::history_tests::fixture();
     let events = MemoryEvents::new(repo.clone(), None, None);
     let (expected, revision) = repo.get_connection("proj_dev", None, "c").unwrap();
-    events
+    let event_id = events
         .accept(&expected, revision, &parsed("e", ""))
-        .unwrap();
+        .unwrap()
+        .event_id;
     let p = Principal::project("proj_dev").unwrap();
     let mut request = Request {
         method: "GET".into(),
-        uri: "/v1/webhook-events/e".into(),
+        uri: format!("/v1/webhook-events/{event_id}"),
         headers: vec![],
         body: vec![],
     };
@@ -778,7 +787,7 @@ async fn event_detail_replay_and_stream_disconnect_preserve_scope() {
             .unwrap()
             .unwrap()
             .body["id"],
-        "e"
+        event_id.as_str()
     );
     assert_eq!(
         events
