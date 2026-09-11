@@ -34,9 +34,24 @@ test('RPC preserves provider retry hints and caller cancellation at dispatch bou
  defaultConnectorRegistry.executeAction=()=>({ok:true,output:Promise.reject({code:'CONNECTOR_RATE_LIMITED',message:'slow',retryAfterSeconds:17})});
  const request=(signal?:AbortSignal)=>new Request('http://local/rpc',{method:'POST',signal,body:JSON.stringify({id:'rpc-test',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
  try{
- const response=await handleRPC(request());expect((await response.json()).error.retryAfterSeconds).toBe(17);
+ const response=await handleRPC(request());
+ expect(response.status).toBe(429);
+ expect(await response.json()).toMatchObject({ok:false,error:{code:'CONNECTOR_RATE_LIMITED',retryAfterSeconds:17}});
  let dispatched=false;defaultConnectorRegistry.executeAction=()=>{dispatched=true;return {ok:true,output:{}}};
  expect((await handleRPC(request(AbortSignal.abort()))).status).toBe(504);expect(dispatched).toBe(false);
+ }finally{defaultConnectorRegistry.executeAction=original;}
+});
+test('RPC keeps definitive upstream failures non-retryable without a retry hint',async()=>{
+ const original=defaultConnectorRegistry.executeAction;
+ try{
+  for(const status of [400,401]){
+   defaultConnectorRegistry.executeAction=()=>({ok:true,output:Promise.reject({code:'CONNECTOR_UPSTREAM_ERROR',message:status===400?'bad request':'unauthorized'})});
+   const response=await handleRPC(new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:`rpc-${status}`,method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})}));
+   expect(response.status).toBe(502);
+   const body=await response.json() as {error:Record<string,unknown>};
+   expect(body.error).toMatchObject({code:'CONNECTOR_UPSTREAM_ERROR'});
+   expect(body.error).not.toHaveProperty('retryAfterSeconds');
+  }
  }finally{defaultConnectorRegistry.executeAction=original;}
 });
 test('admission limits reject overflow and recycle only after accepted work drains',async()=>{

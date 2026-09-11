@@ -29,11 +29,18 @@ fn deadline() -> u64 {
         + 5000
 }
 #[test]
-#[ignore = "opens local runner sockets"]
 fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_responses() {
     use std::io::{Read, Write};
     let rt = tokio::runtime::Runtime::new().unwrap();
-    for mode in ["success", "rate", "busy", "malformed", "oversized"] {
+    for mode in [
+        "success",
+        "rate",
+        "busy",
+        "upstream",
+        "unauthorized",
+        "malformed",
+        "oversized",
+    ] {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let thread = std::thread::spawn(move || {
@@ -66,8 +73,10 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
             assert_eq!(request["method"], "connector.action.execute");
             let (status, body)=match mode {
                 "success"=>(200,json!({"id":request["id"],"ok":true,"result":{"output":{"sent":true}}}).to_string()),
-                "rate"=>(200,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_RATE_LIMITED","message":"provider detail runtime/key runtime%2Fkey","retryAfterSeconds":7}}).to_string()),
+                "rate"=>(429,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_RATE_LIMITED","message":"provider detail runtime/key runtime%2Fkey","retryAfterSeconds":7}}).to_string()),
                 "busy"=>(503,json!({"id":request["id"],"ok":false,"error":{"code":"RUNNER_BUSY","message":"Runner admission limit reached."}}).to_string()),
+                "upstream"=>(400,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_UPSTREAM_ERROR","message":"Bad Request"}}).to_string()),
+                "unauthorized"=>(401,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_UPSTREAM_ERROR","message":"Unauthorized"}}).to_string()),
                 "oversized"=>(200,"x".repeat(4000)),
                 _=>(200,"not json".into()),
             };
@@ -82,10 +91,15 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
             },
         )
         .unwrap();
+        let input = if matches!(mode, "upstream" | "unauthorized") {
+            json!((0..130).map(|n| format!("value-{n}")).collect::<Vec<_>>())
+        } else {
+            json!({"text":"hi","dsn":"runtime/key"})
+        };
         let result = rt.block_on(ActionRunner::execute(
             &runner,
             &attempt(),
-            json!({"text":"hi","dsn":"runtime/key"}),
+            input,
             deadline(),
         ));
         thread.join().unwrap();
@@ -96,6 +110,7 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
                 assert_eq!(e.code, "CONNECTOR_RATE_LIMITED");
                 assert!(e.transient);
                 assert_eq!(e.retry_after_ms, 7000);
+                assert_eq!(e.outcome, ActionDispatchOutcome::ResponseReceived);
                 let message = e.detail.unwrap().safe_message.unwrap();
                 assert!(message.contains("provider detail"));
                 assert!(!message.contains("runtime"));
@@ -105,6 +120,13 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
                 assert_eq!(e.code, "RUNNER_BUSY");
                 assert!(e.transient);
                 assert_eq!(e.outcome, ActionDispatchOutcome::NotDispatched);
+            }
+            "upstream" | "unauthorized" => {
+                let e = result.unwrap_err();
+                assert_eq!(e.code, "CONNECTOR_UPSTREAM_ERROR");
+                assert!(!e.transient);
+                assert_eq!(e.retry_after_seconds, None);
+                assert_eq!(e.outcome, ActionDispatchOutcome::ResponseReceived);
             }
             "oversized" => assert_eq!(result.unwrap_err().code, "ACTION_RESPONSE_TOO_LARGE"),
             _ => {

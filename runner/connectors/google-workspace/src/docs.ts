@@ -1,4 +1,4 @@
-import { createGoogleClient } from "./http";
+import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
 
 export type GetDocumentInput = {
@@ -72,8 +72,9 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
         },
       );
       const body = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Docs API rejected the request", providerError: String(body) };
+      const parsedError = parseGoogleError(body);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Docs API rejected the request");
       }
       return parseDocumentResponse(body);
     },
@@ -89,8 +90,9 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
         },
       );
       const body = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Docs API rejected the create request", providerError: String(body) };
+      const parsedError = parseGoogleError(body);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Docs API rejected the create request");
       }
       return {
         documentId: requireString(body.documentId, "documentId"),
@@ -141,4 +143,34 @@ function readJsonObject(bodyText: string): Record<string, unknown> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+type GoogleResponse = {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+};
+
+function throwGoogleResponseError(
+  response: GoogleResponse,
+  parsedError: ConnectorError | null,
+  fallbackMessage: string,
+): never {
+  const rateLimit = parseGoogleRateLimitMetadata(
+    parsedError?.code === "CONNECTOR_RATE_LIMITED" ? 429 : response.status,
+    response.headers,
+    parsedError?.retryAfterSeconds,
+  );
+  if (rateLimit.limited) {
+    throw {
+      ok: false,
+      code: "CONNECTOR_RATE_LIMITED",
+      message: "Docs API rate limit exceeded.",
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
+    };
+  }
+  throw {
+    ok: false,
+    ...(parsedError ?? { code: "CONNECTOR_UPSTREAM_ERROR", message: fallbackMessage }),
+  };
 }

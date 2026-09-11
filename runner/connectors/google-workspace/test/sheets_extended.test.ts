@@ -11,6 +11,21 @@ import {
   validateBatchUpdateSpreadsheetInput,
 } from "../src/sheets";
 
+const sheetsOperations: Array<{ name: string; invoke: (client: ReturnType<typeof createSheetsClient>) => Promise<unknown> }> = [
+  { name: "sheets.values.get", invoke: (client) => client.getValues({ spreadsheetId: "spreadsheet-id", range: "Sheet1!A1" }) },
+  { name: "sheets.values.append", invoke: (client) => client.appendValues({ spreadsheetId: "spreadsheet-id", range: "Sheet1!A1", values: [["value"]] }) },
+  { name: "sheets.values.update", invoke: (client) => client.updateValues({ spreadsheetId: "spreadsheet-id", range: "Sheet1!A1", values: [["value"]] }) },
+  { name: "sheets.values.clear", invoke: (client) => client.clearValues({ spreadsheetId: "spreadsheet-id", range: "Sheet1!A1" }) },
+  { name: "sheets.spreadsheets.create", invoke: (client) => client.createSpreadsheet({ title: "Test" }) },
+  {
+    name: "sheets.spreadsheets.batchUpdate",
+    invoke: (client) => client.batchUpdateSpreadsheet({
+      spreadsheetId: "spreadsheet-id",
+      requests: [{ freezeRows: { sheetId: 0, rowCount: 1 } }],
+    }),
+  },
+];
+
 describe("google-workspace Sheets extended actions", () => {
   // ─── sheets.values.update ───────────────────────────────────────────────
 
@@ -312,5 +327,122 @@ describe("google-workspace Sheets extended actions", () => {
     await expect(
       client.batchUpdateSpreadsheet({ spreadsheetId: "s", requests: [{ freezeRows: { sheetId: 0, rowCount: 1 } }] })
     ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  test("all Sheets operations preserve rate-limit codes and valid Retry-After", async () => {
+    for (const { invoke } of sheetsOperations) {
+      const client = createSheetsClient({
+        accessToken: "token",
+        fetch: async () => new Response(JSON.stringify(rateLimitedFixture), {
+          status: 429,
+          headers: { "Retry-After": "37" },
+        }),
+      });
+
+      await expect(invoke(client)).rejects.toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+        retryAfterSeconds: 37,
+      });
+    }
+  });
+
+  for (const { name, invoke } of sheetsOperations) {
+    test(`${name} preserves body-only Google retry hints`, async () => {
+      const client = createSheetsClient({
+        accessToken: "token",
+        fetch: async () => new Response(JSON.stringify(rateLimitedFixture), { status: 429 }),
+      });
+
+      await expect(invoke(client)).rejects.toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+        retryAfterSeconds: 30,
+      });
+    });
+  }
+
+  test("all Sheets operations honor a future HTTP-date Retry-After", async () => {
+    const retryAfter = new Date(Date.now() + 120_000).toUTCString();
+    for (const { invoke } of sheetsOperations) {
+      const client = createSheetsClient({
+        accessToken: "token",
+        fetch: async () => new Response(JSON.stringify({
+          error: { code: 429, message: "Rate Limit Exceeded" },
+        }), {
+          status: 429,
+          headers: { "Retry-After": retryAfter },
+        }),
+      });
+
+      const error = await invoke(client).catch((value: unknown) => value as Record<string, unknown>);
+      expect(error).toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+      });
+      expect(error.retryAfterSeconds).toBeGreaterThan(100);
+      expect(error.retryAfterSeconds).toBeLessThanOrEqual(120);
+    }
+  });
+
+  for (const { name, invoke } of sheetsOperations) {
+    test(`${name} uses a safe fallback for an expired HTTP-date Retry-After`, async () => {
+      const client = createSheetsClient({
+        accessToken: "token",
+        fetch: async () => new Response(JSON.stringify({
+          error: { code: 429, message: "Rate Limit Exceeded" },
+        }), {
+          status: 429,
+          headers: { "Retry-After": "Wed, 21 Oct 2015 07:28:00 GMT" },
+        }),
+      });
+
+      const error = await invoke(client).catch((value: unknown) => value as Record<string, unknown>);
+      expect(error).toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+        retryAfterSeconds: 10,
+      });
+    });
+  }
+
+  test("all Sheets operations use a safe fallback for malformed Retry-After", async () => {
+    for (const retryAfter of ["not-a-number", "0", "-5", "999999999"]) {
+      for (const { invoke } of sheetsOperations) {
+        const client = createSheetsClient({
+          accessToken: "token",
+          fetch: async () => new Response(JSON.stringify({
+            error: { code: 429, message: "Rate Limit Exceeded" },
+          }), {
+            status: 429,
+            headers: { "Retry-After": retryAfter },
+          }),
+        });
+
+        const error = await invoke(client).catch((value: unknown) => value as Record<string, unknown>);
+        expect(error).toMatchObject({
+          ok: false,
+          code: "CONNECTOR_RATE_LIMITED",
+          retryAfterSeconds: 10,
+        });
+      }
+    }
+  });
+
+  test("all Sheets operations keep 400 and 401 as non-retryable upstream errors", async () => {
+    for (const status of [400, 401]) {
+      for (const { invoke } of sheetsOperations) {
+        const client = createSheetsClient({
+          accessToken: "token",
+          fetch: async () => new Response(JSON.stringify({
+            error: { code: status, status, message: status === 400 ? "Bad Request" : "Unauthorized" },
+          }), { status }),
+        });
+
+        const error = await invoke(client).catch((value: unknown) => value as Record<string, unknown>);
+        expect(error).toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+        expect(error).not.toHaveProperty("retryAfterSeconds");
+      }
+    }
   });
 });

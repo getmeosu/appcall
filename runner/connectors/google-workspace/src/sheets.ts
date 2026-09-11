@@ -1,4 +1,4 @@
-import { createGoogleClient } from "./http";
+import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
@@ -150,8 +150,9 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
         },
       );
       const body = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Sheets API rejected the request", providerError: String(body) };
+      const parsedError = parseGoogleError(body);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Sheets API rejected the request");
       }
       return {
         spreadsheetId: String(body.spreadsheetId ?? payload.spreadsheetId),
@@ -177,8 +178,9 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
         },
       );
       const body = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Sheets API rejected the append request", providerError: String(body) };
+      const parsedError = parseGoogleError(body);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Sheets API rejected the append request");
       }
       const updates = isRecord(body.updates) ? body.updates : {};
       return {
@@ -205,8 +207,9 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
         },
       );
       const body = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Sheets API rejected the update request", providerError: String(body) };
+      const parsedError = parseGoogleError(body);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Sheets API rejected the update request");
       }
       return {
         spreadsheetId: String(body.spreadsheetId ?? payload.spreadsheetId),
@@ -228,8 +231,9 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
         },
       );
       const body = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Sheets API rejected the clear request", providerError: String(body) };
+      const parsedError = parseGoogleError(body);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Sheets API rejected the clear request");
       }
       return {
         spreadsheetId: String(body.spreadsheetId ?? payload.spreadsheetId),
@@ -254,8 +258,9 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
         },
       );
       const respBody = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Sheets API rejected the create spreadsheet request", providerError: String(respBody) };
+      const parsedError = parseGoogleError(respBody);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Sheets API rejected the create spreadsheet request");
       }
       const properties = isRecord(respBody.properties) ? respBody.properties : {};
       return {
@@ -277,8 +282,9 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
         },
       );
       const respBody = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Sheets API rejected the batch update request", providerError: String(respBody) };
+      const parsedError = parseGoogleError(respBody);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Sheets API rejected the batch update request");
       }
       return {
         spreadsheetId: String(respBody.spreadsheetId ?? payload.spreadsheetId),
@@ -551,4 +557,34 @@ function readJsonObject(bodyText: string): Record<string, unknown> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+type GoogleResponse = {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+};
+
+function throwGoogleResponseError(
+  response: GoogleResponse,
+  parsedError: ConnectorError | null,
+  fallbackMessage: string,
+): never {
+  const rateLimit = parseGoogleRateLimitMetadata(
+    parsedError?.code === "CONNECTOR_RATE_LIMITED" ? 429 : response.status,
+    response.headers,
+    parsedError?.retryAfterSeconds,
+  );
+  if (rateLimit.limited) {
+    throw {
+      ok: false,
+      code: "CONNECTOR_RATE_LIMITED",
+      message: "Sheets API rate limit exceeded.",
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
+    };
+  }
+  throw {
+    ok: false,
+    ...(parsedError ?? { code: "CONNECTOR_UPSTREAM_ERROR", message: fallbackMessage }),
+  };
 }
