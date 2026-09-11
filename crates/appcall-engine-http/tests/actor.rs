@@ -496,3 +496,92 @@ fn blocked_workflow_fails_closed_without_stopping_actor_or_replaying_after_resta
     assert!(reopened_client.is_alive());
     reopened_host.shutdown().unwrap();
 }
+
+#[test]
+fn authenticated_resume_rechecks_persisted_input_after_restart() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    struct RestoredPayload(AtomicBool);
+    impl PayloadResolver for RestoredPayload {
+        fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+            if self.0.load(Ordering::Acquire) {
+                Ok(Some(b"restored input".to_vec()))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut initial = Engine::open(&db).unwrap();
+    initial
+        .register_workflow("input", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    initial
+        .start(
+            "r",
+            "input",
+            "v1",
+            PayloadRef::ephemeral("cache-key").unwrap(),
+        )
+        .unwrap();
+    assert!(matches!(
+        initial
+            .drive_with_resolver("r", 0, &MissingPayloads)
+            .unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsInput)
+    ));
+    drop(initial);
+
+    let resolver = Arc::new(RestoredPayload(AtomicBool::new(false)));
+    let mut recovered = Engine::open(&db).unwrap();
+    recovered
+        .register_workflow("input", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    let host = EngineHost::spawn(
+        HttpAdapter::new(recovered, TOKEN).unwrap(),
+        resolver.clone(),
+    )
+    .unwrap();
+    resolver.0.store(true, Ordering::Release);
+    let client = host.client();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let authorization = format!("Bearer {TOKEN}");
+
+    runtime.block_on(async {
+        let response = client
+            .request(
+                "POST".into(),
+                "/runs/r/resume".into(),
+                authorization.clone(),
+                vec![],
+                Duration::from_secs(2),
+            )
+            .await;
+        assert_eq!(response.status, 202);
+        for _ in 0..100 {
+            let response = client
+                .request(
+                    "GET".into(),
+                    "/runs/r".into(),
+                    authorization.clone(),
+                    vec![],
+                    Duration::from_secs(2),
+                )
+                .await;
+            if String::from_utf8(response.body)
+                .unwrap()
+                .contains("\"state\":\"Completed\"")
+            {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!("persisted NeedsInput run did not complete after authenticated resume");
+    });
+    host.shutdown().unwrap();
+}

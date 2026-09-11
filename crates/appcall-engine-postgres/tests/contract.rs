@@ -179,3 +179,122 @@ fn postgres_atomic_replay_ownership_and_parent_wakeup() {
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
 }
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_persisted_blocked_runs_resume_after_registration_and_input_restore() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_resume_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut c = Client::connect(&url, NoTls).unwrap();
+        c.batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        c
+    };
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.start(
+        "implementation",
+        "late-workflow",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("implementation", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsImplementation)
+    ));
+    let history = serde_json::to_value(e.history("implementation").unwrap()).unwrap();
+    drop(e);
+
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.register_workflow("late-workflow", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+    e.resume("implementation").unwrap();
+    assert_eq!(
+        serde_json::to_value(e.history("implementation").unwrap()).unwrap(),
+        history
+    );
+    e.resume("implementation").unwrap();
+    assert_eq!(e.runnable(0, 10).unwrap(), vec!["implementation"]);
+    assert!(matches!(
+        e.drive("implementation", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+
+    e.register_workflow("input", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.start(
+        "input",
+        "input",
+        "v1",
+        PayloadRef::ephemeral("cache-key").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("input", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsInput)
+    ));
+    drop(e);
+
+    struct Restored;
+    impl PayloadResolver for Restored {
+        fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+            Ok(Some(b"restored input".to_vec()))
+        }
+    }
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.register_workflow("input", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.resume("input").unwrap();
+    assert!(matches!(
+        e.drive_with_resolver("input", 0, &Restored).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+
+    e.register_workflow("unknown", "v1", one_unknown).unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    e.start(
+        "unknown",
+        "unknown",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    let attempt = match e.drive("unknown", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("{other:?}"),
+    };
+    drop(e);
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.register_workflow("unknown", "v1", one_unknown).unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    assert!(matches!(
+        e.drive("unknown", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::OutcomeUnknown)
+    ));
+    assert!(matches!(e.resume("unknown"), Err(Error::Conflict)));
+    assert!(e
+        .complete(&attempt, PayloadRef::durable("late").unwrap())
+        .is_err());
+
+    drop(e);
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+fn one_unknown(c: &mut Context) -> WorkflowResult {
+    c.activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)
+}

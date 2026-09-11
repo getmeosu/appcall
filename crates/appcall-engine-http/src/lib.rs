@@ -133,6 +133,13 @@ impl<S: Store> HttpAdapter<S> {
                 self.engine.cancel(&self.run_id(id))?;
                 Ok((202, json!({"id":id})))
             }
+            ("POST", ["", "runs", id, "resume"]) => {
+                if !body.is_empty() && body != b"{}" {
+                    return Err(Error::Invalid("unexpected body"));
+                }
+                self.engine.resume(&self.run_id(id))?;
+                Ok((202, json!({"id":id})))
+            }
             _ => Err(Error::NotFound),
         }
     }

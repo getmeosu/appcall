@@ -43,6 +43,42 @@ fn exclusive_owner_and_pinned_version() {
         DriveOutcome::Suspended(RunState::NeedsImplementation)
     ));
 }
+#[test]
+fn persisted_missing_workflow_can_be_resumed_after_registration_without_a_duplicate() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.start(
+        "r",
+        "late-workflow",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsImplementation)
+    ));
+    let history = serde_json::to_value(e.history("r").unwrap()).unwrap();
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("late-workflow", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+    e.resume("r").unwrap();
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        history
+    );
+    assert!(e.runnable(0, 10).unwrap().contains(&"r".to_string()));
+    e.resume("r").unwrap();
+    assert_eq!(e.runnable(0, 10).unwrap(), vec!["r"]);
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
 fn one(c: &mut Context) -> WorkflowResult {
     c.activity("lookup", "v1", c.input().clone(), EffectPolicy::Unknown)
 }
@@ -70,6 +106,8 @@ fn ambiguous_effect_requires_reconciliation_and_late_attempt_is_fenced() {
         e.drive("r", 0).unwrap(),
         DriveOutcome::Suspended(RunState::OutcomeUnknown)
     ));
+    assert!(matches!(e.resume("r"), Err(Error::Conflict)));
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
     assert!(e
         .complete(&old, PayloadRef::durable("late").unwrap())
         .is_err());
@@ -173,6 +211,41 @@ fn missing_ephemeral_input_suspends_and_payload_content_is_not_persisted() {
     assert!(matches!(
         e.drive("r", 0).unwrap(),
         DriveOutcome::Suspended(RunState::NeedsInput)
+    ));
+}
+#[test]
+fn restored_ephemeral_input_requeues_persisted_needs_input_after_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.start(
+        "r",
+        "one",
+        "v1",
+        PayloadRef::ephemeral("cache-key").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsInput)
+    ));
+    let history = serde_json::to_value(e.history("r").unwrap()).unwrap();
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+    e.resume("r").unwrap();
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        history
+    );
+    assert!(matches!(
+        e.drive_with_resolver("r", 0, &Local).unwrap(),
+        DriveOutcome::Completed(_)
     ));
 }
 struct Local;
