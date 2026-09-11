@@ -1018,6 +1018,27 @@ async fn go_compatible_typed_json_request_errors() {
         assert_eq!(result["error"]["code"], -32700);
     }
 }
+
+#[tokio::test]
+async fn mcp_rejects_oversized_and_invalid_request_ids_before_action_dispatch() {
+    let (s, executor) = server();
+    let invalid_ids = [
+        json!("x".repeat(257)),
+        json!(true),
+        json!({"invalid":"id"}),
+        json!(["invalid"]),
+    ];
+
+    for id in invalid_ids {
+        let result = rpc(&s, &scope(), tools_call_request(id, "b")).await;
+        assert_eq!(result["error"]["code"], -32600);
+        assert_eq!(result["error"]["message"], "Invalid request ID.");
+    }
+
+    assert!(executor.0.lock().unwrap().is_empty());
+    assert_eq!(s.in_flight_len(), 0);
+}
+
 struct NoStorage;
 impl appcall_actions::ActionRepository for NoStorage {
     async fn record_replay(
