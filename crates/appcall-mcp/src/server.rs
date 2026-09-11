@@ -112,7 +112,13 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                     ));
                 }
                 match self
-                    .call_tool_with_key(scope, &call.name, call.arguments, call.idempotency_key)
+                    .call_tool_with_key(
+                        scope,
+                        &call.name,
+                        call.arguments,
+                        call.idempotency_key,
+                        call.connection_id,
+                    )
                     .await
                 {
                     Ok(result) => result,
@@ -138,9 +144,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             .filter(|c| {
                 c.project_id == scope.project_id
                     && c.status == "active"
-                    && (scope.account_id.is_empty()
-                        || c.external_account_id.is_empty()
-                        || c.external_account_id == scope.account_id)
+                    && connection_visible_to_scope(scope, c)
             })
             .collect())
     }
@@ -186,7 +190,8 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         name: &str,
         input: Value,
     ) -> Result<Value, InfrastructureError> {
-        self.call_tool_with_key(scope, name, input, None).await
+        self.call_tool_with_key(scope, name, input, None, None)
+            .await
     }
     async fn call_tool_with_key(
         &self,
@@ -194,9 +199,13 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         name: &str,
         input: Value,
         idempotency_key: Option<String>,
+        connection_id: Option<String>,
     ) -> Result<Value, InfrastructureError> {
         if !idempotency_key.as_deref().is_none_or(valid_idempotency_key) {
             return Ok(tool_error("INVALID_TOOL_INPUT", "Invalid idempotency key."));
+        }
+        if !connection_id.as_deref().is_none_or(valid_connection_id) {
+            return Ok(tool_error("INVALID_TOOL_INPUT", "Invalid connection ID."));
         }
         let Some((connector, operation)) = decode_tool_name(name) else {
             return Ok(tool_error("UNKNOWN_TOOL", "Unknown tool."));
@@ -213,24 +222,12 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                 "Tool is not allowed for this capability profile.",
             ));
         }
-        let mut connections: Vec<_> = self
-            .scoped_connections(scope)
+        let connection = match self
+            .select_connection(scope, connector, connection_id.as_deref())
             .await?
-            .into_iter()
-            .filter(|c| c.connector == connector)
-            .collect();
-        connections.sort_by(|a, b| {
-            let a_fallback =
-                !scope.account_id.is_empty() && a.external_account_id != scope.account_id;
-            let b_fallback =
-                !scope.account_id.is_empty() && b.external_account_id != scope.account_id;
-            (a_fallback, &a.id).cmp(&(b_fallback, &b.id))
-        });
-        let Some(connection) = connections.first() else {
-            return Ok(tool_error(
-                "CONNECTION_REQUIRED",
-                "No active connection for this connector. Connect it first.",
-            ));
+        {
+            Ok(connection) => connection,
+            Err(error) => return Ok(tool_error(error.code(), error.message())),
         };
         let request = appcall_actions::ExecuteRequest {
             project_id: scope.project_id.clone(),
@@ -264,6 +261,61 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             }
         }
     }
+    async fn select_connection(
+        &self,
+        scope: &Scope,
+        connector: &str,
+        requested_id: Option<&str>,
+    ) -> Result<Result<Connection, ConnectionSelectionError>, InfrastructureError> {
+        let connections = self.connections.list(&scope.project_id).await?;
+        if let Some(requested_id) = requested_id {
+            let Some(connection) = connections.iter().find(|c| c.id == requested_id) else {
+                return Ok(Err(ConnectionSelectionError::NotFound));
+            };
+            if connection.project_id != scope.project_id
+                || connection.connector != connector
+                || !connection_visible_to_scope(scope, connection)
+            {
+                return Ok(Err(ConnectionSelectionError::NotFound));
+            }
+            if connection.status != "active" {
+                return Ok(Err(ConnectionSelectionError::Disconnected));
+            }
+            return Ok(Ok(connection.clone()));
+        }
+
+        let connections: Vec<_> = connections
+            .into_iter()
+            .filter(|c| {
+                c.project_id == scope.project_id
+                    && c.connector == connector
+                    && c.status == "active"
+                    && connection_visible_to_scope(scope, c)
+            })
+            .collect();
+        let preferred: Vec<_> = if scope.account_id.is_empty() {
+            connections
+        } else {
+            let own: Vec<_> = connections
+                .iter()
+                .filter(|c| c.external_account_id == scope.account_id)
+                .cloned()
+                .collect();
+            if own.is_empty() {
+                connections
+                    .into_iter()
+                    .filter(|c| c.external_account_id.is_empty())
+                    .collect()
+            } else {
+                own
+            }
+        };
+        match preferred.as_slice() {
+            [] => Ok(Err(ConnectionSelectionError::Required)),
+            [connection] => Ok(Ok(connection.clone())),
+            _ => Ok(Err(ConnectionSelectionError::Ambiguous)),
+        }
+    }
 }
 #[derive(Deserialize)]
 struct CallParams {
@@ -277,11 +329,23 @@ struct CallParams {
         rename = "idempotencyKey"
     )]
     idempotency_key: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_present_connection_id",
+        rename = "connectionId"
+    )]
+    connection_id: Option<String>,
 }
 fn empty_arguments() -> Value {
     json!({})
 }
 fn deserialize_present_idempotency_key<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    String::deserialize(deserializer).map(Some)
+}
+fn deserialize_present_connection_id<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -293,11 +357,47 @@ impl Default for CallParams {
             name: String::new(),
             arguments: empty_arguments(),
             idempotency_key: None,
+            connection_id: None,
         }
     }
 }
 fn valid_idempotency_key(key: &str) -> bool {
     !key.is_empty() && key.len() <= 128 && key.bytes().all(|b| (33..=126).contains(&b))
+}
+fn valid_connection_id(id: &str) -> bool {
+    !id.is_empty() && id.len() <= 256 && !id.chars().any(|c| c.is_control() || c.is_whitespace())
+}
+fn connection_visible_to_scope(scope: &Scope, connection: &Connection) -> bool {
+    scope.account_id.is_empty()
+        || connection.external_account_id.is_empty()
+        || connection.external_account_id == scope.account_id
+}
+#[derive(Clone, Copy)]
+enum ConnectionSelectionError {
+    Required,
+    Ambiguous,
+    NotFound,
+    Disconnected,
+}
+impl ConnectionSelectionError {
+    fn code(self) -> &'static str {
+        match self {
+            Self::Required => "CONNECTION_REQUIRED",
+            Self::Ambiguous => "CONNECTION_AMBIGUOUS",
+            Self::NotFound => "CONNECTION_NOT_FOUND",
+            Self::Disconnected => "CONNECTION_DISCONNECTED",
+        }
+    }
+    fn message(self) -> &'static str {
+        match self {
+            Self::Required => "No active connection for this connector. Connect it first.",
+            Self::Ambiguous => {
+                "Multiple active connections match this connector. Specify connectionId."
+            }
+            Self::NotFound => "The selected connection is not available for this scope.",
+            Self::Disconnected => "The selected connection is disconnected.",
+        }
+    }
 }
 fn safe_code(code: &str) -> bool {
     !code.is_empty()

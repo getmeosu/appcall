@@ -45,14 +45,23 @@ fn registry() -> Registry {
     Registry::from_connectors([Connector::from_bytes(&serde_json::to_vec(&v).unwrap()).unwrap()])
         .unwrap()
 }
-fn connection(id: &str, project: &str, account: &str) -> Connection {
+fn connection_with(
+    id: &str,
+    project: &str,
+    account: &str,
+    connector: &str,
+    status: &str,
+) -> Connection {
     Connection {
         id: id.into(),
         project_id: project.into(),
         external_account_id: account.into(),
-        connector: "apollo".into(),
-        status: "active".into(),
+        connector: connector.into(),
+        status: status.into(),
     }
+}
+fn connection(id: &str, project: &str, account: &str) -> Connection {
+    connection_with(id, project, account, "apollo", "active")
 }
 fn server() -> (Server<Connections, Executor, MemoryUsage>, Executor) {
     let e = Executor::default();
@@ -171,6 +180,291 @@ async fn schemas_profile_scope_dispatch_and_redaction() {
         "ACTION_FAILED"
     );
     assert_eq!(s.usage().list("p", "brand").unwrap()[0].count, 1);
+}
+
+#[tokio::test]
+async fn mcp_rejects_ambiguous_default_connection_before_dispatch() {
+    let executor = Executor::default();
+    let server = Server::new(
+        registry(),
+        Connections(vec![
+            connection("first", "p", "brand"),
+            connection("second", "p", "brand"),
+        ]),
+        executor.clone(),
+        (),
+    );
+
+    let result = rpc(
+        &server,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{"name":"apollo__people__search","arguments":{}}
+        }),
+    )
+    .await;
+
+    assert_eq!(result["result"]["isError"], true);
+    assert_eq!(
+        result["result"]["structuredContent"]["code"],
+        "CONNECTION_AMBIGUOUS"
+    );
+    assert!(executor.0.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn mcp_explicit_connection_id_targets_only_the_selected_connection() {
+    let executor = Executor::default();
+    let server = Server::new(
+        registry(),
+        Connections(vec![
+            connection("first", "p", "brand"),
+            connection("second", "p", "brand"),
+        ]),
+        executor.clone(),
+        (),
+    );
+
+    let result = rpc(
+        &server,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "connectionId":"second",
+                "arguments":{"query":"Ada"}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(result["result"]["isError"], false);
+    let calls = executor.0.lock().unwrap();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].connection_id, "second");
+    assert_eq!(calls[0].input, json!({"query":"Ada"}));
+}
+
+#[tokio::test]
+async fn mcp_prefers_one_own_brand_connection_over_platform_fallback() {
+    let executor = Executor::default();
+    let server = Server::new(
+        registry(),
+        Connections(vec![
+            connection("platform", "p", ""),
+            connection("brand", "p", "brand"),
+        ]),
+        executor.clone(),
+        (),
+    );
+
+    let result = rpc(
+        &server,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{"name":"apollo__people__search","arguments":{}}
+        }),
+    )
+    .await;
+
+    assert_eq!(result["result"]["isError"], false);
+    assert_eq!(executor.0.lock().unwrap()[0].connection_id, "brand");
+}
+
+#[tokio::test]
+async fn mcp_brand_scope_can_explicitly_target_platform_connection() {
+    let executor = Executor::default();
+    let server = Server::new(
+        registry(),
+        Connections(vec![
+            connection("platform", "p", ""),
+            connection("brand", "p", "brand"),
+        ]),
+        executor.clone(),
+        (),
+    );
+
+    let result = rpc(
+        &server,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "connectionId":"platform",
+                "arguments":{}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(result["result"]["isError"], false);
+    assert_eq!(executor.0.lock().unwrap()[0].connection_id, "platform");
+}
+
+#[tokio::test]
+async fn mcp_platform_scope_can_target_a_brand_connection() {
+    let executor = Executor::default();
+    let server = Server::new(
+        registry(),
+        Connections(vec![
+            connection("brand", "p", "brand"),
+            connection("platform", "p", ""),
+        ]),
+        executor.clone(),
+        (),
+    );
+
+    let result = rpc(
+        &server,
+        &Scope::new("p", ""),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "connectionId":"brand",
+                "arguments":{}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(result["result"]["isError"], false);
+    assert_eq!(executor.0.lock().unwrap()[0].connection_id, "brand");
+}
+
+#[tokio::test]
+async fn mcp_rejects_foreign_wrong_connector_disconnected_and_stale_targets() {
+    let cases = [
+        (
+            "foreign-project",
+            connection("foreign-project", "other-project", "brand"),
+            "CONNECTION_NOT_FOUND",
+        ),
+        (
+            "foreign-brand",
+            connection("foreign-brand", "p", "other-brand"),
+            "CONNECTION_NOT_FOUND",
+        ),
+        (
+            "wrong-connector",
+            connection_with("wrong-connector", "p", "brand", "other", "active"),
+            "CONNECTION_NOT_FOUND",
+        ),
+        (
+            "disconnected",
+            connection_with("disconnected", "p", "brand", "apollo", "disconnected"),
+            "CONNECTION_DISCONNECTED",
+        ),
+        (
+            "stale",
+            connection("unused", "other-project", "brand"),
+            "CONNECTION_NOT_FOUND",
+        ),
+    ];
+
+    for (target, candidate, expected_code) in cases {
+        let executor = Executor::default();
+        let connections = if target == "stale" {
+            vec![connection("fallback", "p", "brand")]
+        } else {
+            vec![candidate, connection("fallback", "p", "brand")]
+        };
+        let server = Server::new(registry(), Connections(connections), executor.clone(), ());
+        let result = rpc(
+            &server,
+            &scope(),
+            json!({
+                "jsonrpc":"2.0",
+                "id":1,
+                "method":"tools/call",
+                "params":{
+                    "name":"apollo__people__search",
+                    "connectionId":target,
+                    "arguments":{}
+                }
+            }),
+        )
+        .await;
+
+        assert_eq!(result["result"]["isError"], true, "target: {target}");
+        assert_eq!(
+            result["result"]["structuredContent"]["code"], expected_code,
+            "target: {target}"
+        );
+        assert!(executor.0.lock().unwrap().is_empty(), "target: {target}");
+    }
+}
+
+#[tokio::test]
+async fn mcp_requires_a_string_connection_id_when_the_field_is_present() {
+    let (server, executor) = server();
+    for connection_id in [json!(42), Value::Null] {
+        let result = rpc(
+            &server,
+            &scope(),
+            json!({
+                "jsonrpc":"2.0",
+                "id":1,
+                "method":"tools/call",
+                "params":{
+                    "name":"apollo__people__search",
+                    "connectionId":connection_id,
+                    "arguments":{}
+                }
+            }),
+        )
+        .await;
+
+        assert_eq!(result["error"]["code"], -32600);
+        assert!(executor.0.lock().unwrap().is_empty());
+    }
+}
+
+#[tokio::test]
+async fn mcp_rejects_empty_connection_id_before_dispatch() {
+    let executor = Executor::default();
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("brand", "p", "brand")]),
+        executor.clone(),
+        (),
+    );
+    let result = rpc(
+        &server,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "connectionId":"",
+                "arguments":{}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(result["result"]["isError"], true);
+    assert_eq!(
+        result["result"]["structuredContent"]["code"],
+        "INVALID_TOOL_INPUT"
+    );
+    assert!(executor.0.lock().unwrap().is_empty());
 }
 
 #[tokio::test]
