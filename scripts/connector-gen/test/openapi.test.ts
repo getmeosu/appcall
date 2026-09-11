@@ -225,6 +225,35 @@ const ambiguousParameterSpec = {
   },
 };
 
+const bodyRoutingCollisionSpec = {
+  openapi: "3.0.3",
+  info: { title: "Body Routing Collision API", version: "1.0.0" },
+  servers: [{ url: "https://api.body-routing-collision.test" }],
+  paths: {
+    "/records/{id}": {
+      patch: {
+        operationId: "updateRecord",
+        tags: ["Records"],
+        summary: "Update record",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" }, description: "Record identifier." }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["id"],
+                properties: { id: { type: "integer" } },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "updated" } },
+      },
+    },
+  },
+};
+
 const pathItemRefSpec = {
   openapi: "3.0.3",
   info: { title: "Path Item Ref API", version: "1.0.0" },
@@ -422,6 +451,21 @@ describe("generateManifest", () => {
     expect(operation.request.parameters).toEqual([
       { wireName: "trace", inputName: "traceHeader", in: "header", style: "simple", explode: false, allowReserved: false },
       { wireName: "trace", inputName: "traceQuery", in: "query", style: "form", explode: true, allowReserved: false },
+    ]);
+  });
+
+  it("isolates mixed-type path and body inputs while preserving wire names and constraints", () => {
+    const operation = generateManifest(bodyRoutingCollisionSpec, options).operations["records.update"]!;
+
+    expect(operation.inputSchema.properties).toEqual({
+      idPath: { type: "string", description: "Record identifier." },
+      idBody: { type: "integer" },
+    });
+    expect(operation.inputSchema.required).toEqual(["idPath", "idBody"]);
+    expect(operation.request.path).toBe("/records/{{idPath}}");
+    expect(operation.request.body).toEqual({ id: "{{idBody}}" });
+    expect(operation.request.parameters).toEqual([
+      { wireName: "id", inputName: "idPath", in: "path", style: "simple", explode: false, allowReserved: false },
     ]);
   });
 
