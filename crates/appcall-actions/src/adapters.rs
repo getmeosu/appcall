@@ -159,6 +159,7 @@ fn known_safe_runner_code(code: &str) -> bool {
         "CONNECTOR_ACCOUNT_RESTRICTED"
             | "CONNECTOR_ACTION_NOT_PERMITTED"
             | "CONNECTOR_RATE_LIMITED"
+            | "CONNECTOR_UPSTREAM_ERROR"
             | "CONNECTOR_UNAVAILABLE"
             | "RUNNER_BUSY"
             | "RUNNER_UNAVAILABLE"

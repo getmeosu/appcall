@@ -1,5 +1,8 @@
-import { createGoogleClient } from "./http";
+import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
+
+const DEFAULT_RETRY_AFTER_SECONDS = 10;
+const MAX_RETRY_AFTER_SECONDS = 3600;
 
 export type GetDocumentInput = {
   documentId: string;
@@ -72,8 +75,9 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
         },
       );
       const body = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Docs API rejected the request", providerError: String(body) };
+      const parsedError = parseGoogleError(body);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Docs API rejected the request");
       }
       return parseDocumentResponse(body);
     },
@@ -89,8 +93,9 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
         },
       );
       const body = readJsonObject(response.body);
-      if (response.status >= 400) {
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "Docs API rejected the create request", providerError: String(body) };
+      const parsedError = parseGoogleError(body);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Docs API rejected the create request");
       }
       return {
         documentId: requireString(body.documentId, "documentId"),
@@ -141,4 +146,44 @@ function readJsonObject(bodyText: string): Record<string, unknown> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+type GoogleResponse = {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+};
+
+function throwGoogleResponseError(
+  response: GoogleResponse,
+  parsedError: ConnectorError | null,
+  fallbackMessage: string,
+): never {
+  if (parseGoogleRateLimitMetadata(response.status, response.headers).limited || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+    throw {
+      ok: false,
+      code: "CONNECTOR_RATE_LIMITED",
+      message: "Docs API rate limit exceeded.",
+      retryAfterSeconds: safeRetryAfterSeconds(response, parsedError),
+    };
+  }
+  throw {
+    ok: false,
+    ...(parsedError ?? { code: "CONNECTOR_UPSTREAM_ERROR", message: fallbackMessage }),
+  };
+}
+
+function safeRetryAfterSeconds(response: GoogleResponse, parsedError: ConnectorError | null): number {
+  const header = Object.entries(response.headers).find(([key]) => key.toLowerCase() === "retry-after")?.[1];
+  return parseSafeRetryAfter(header)
+    ?? parseSafeRetryAfter(parsedError?.retryAfterSeconds)
+    ?? DEFAULT_RETRY_AFTER_SECONDS;
+}
+
+function parseSafeRetryAfter(value: unknown): number | undefined {
+  const seconds = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > MAX_RETRY_AFTER_SECONDS) {
+    return undefined;
+  }
+  return Math.ceil(seconds);
 }

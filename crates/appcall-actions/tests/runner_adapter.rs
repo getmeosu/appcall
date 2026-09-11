@@ -73,7 +73,7 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
             assert_eq!(request["method"], "connector.action.execute");
             let (status, body)=match mode {
                 "success"=>(200,json!({"id":request["id"],"ok":true,"result":{"output":{"sent":true}}}).to_string()),
-                "rate"=>(200,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_RATE_LIMITED","message":"provider detail runtime/key runtime%2Fkey","retryAfterSeconds":7}}).to_string()),
+                "rate"=>(429,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_RATE_LIMITED","message":"provider detail runtime/key runtime%2Fkey","retryAfterSeconds":7}}).to_string()),
                 "busy"=>(503,json!({"id":request["id"],"ok":false,"error":{"code":"RUNNER_BUSY","message":"Runner admission limit reached."}}).to_string()),
                 "upstream"=>(400,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_UPSTREAM_ERROR","message":"Bad Request"}}).to_string()),
                 "unauthorized"=>(401,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_UPSTREAM_ERROR","message":"Unauthorized"}}).to_string()),
