@@ -77,8 +77,8 @@ describe("google-workspace Docs extended actions", () => {
     }
   });
 
-  test("all Docs operations preserve body-only Google retry hints", async () => {
-    for (const { invoke } of docsOperations) {
+  for (const { name, invoke } of docsOperations) {
+    test(`${name} preserves body-only Google retry hints`, async () => {
       const client = createDocsClient({
         accessToken: "token",
         fetch: async () => new Response(JSON.stringify(rateLimitedFixture), { status: 429 }),
@@ -89,8 +89,8 @@ describe("google-workspace Docs extended actions", () => {
         code: "CONNECTOR_RATE_LIMITED",
         retryAfterSeconds: 30,
       });
-    }
-  });
+    });
+  }
 
   test("parses an HTTP-date Retry-After relative to the supplied clock", () => {
     const now = Date.parse("Wed, 21 Oct 2015 07:28:00 GMT");
@@ -135,8 +135,8 @@ describe("google-workspace Docs extended actions", () => {
     }
   });
 
-  test("all Docs operations use a safe fallback for an expired HTTP-date Retry-After", async () => {
-    for (const { invoke } of docsOperations) {
+  for (const { name, invoke } of docsOperations) {
+    test(`${name} uses a safe fallback for an expired HTTP-date Retry-After`, async () => {
       const client = createDocsClient({
         accessToken: "token",
         fetch: async () => new Response(JSON.stringify({
@@ -153,8 +153,8 @@ describe("google-workspace Docs extended actions", () => {
         code: "CONNECTOR_RATE_LIMITED",
         retryAfterSeconds: 10,
       });
-    }
-  });
+    });
+  }
 
   test("all Docs operations use a safe fallback for malformed Retry-After", async () => {
     for (const retryAfter of ["not-a-number", "0", "-5", "999999999"]) {

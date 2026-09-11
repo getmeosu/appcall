@@ -347,8 +347,8 @@ describe("google-workspace Sheets extended actions", () => {
     }
   });
 
-  test("all Sheets operations preserve body-only Google retry hints", async () => {
-    for (const { invoke } of sheetsOperations) {
+  for (const { name, invoke } of sheetsOperations) {
+    test(`${name} preserves body-only Google retry hints`, async () => {
       const client = createSheetsClient({
         accessToken: "token",
         fetch: async () => new Response(JSON.stringify(rateLimitedFixture), { status: 429 }),
@@ -359,8 +359,8 @@ describe("google-workspace Sheets extended actions", () => {
         code: "CONNECTOR_RATE_LIMITED",
         retryAfterSeconds: 30,
       });
-    }
-  });
+    });
+  }
 
   test("all Sheets operations honor a future HTTP-date Retry-After", async () => {
     const retryAfter = new Date(Date.now() + 120_000).toUTCString();
@@ -385,8 +385,8 @@ describe("google-workspace Sheets extended actions", () => {
     }
   });
 
-  test("all Sheets operations use a safe fallback for an expired HTTP-date Retry-After", async () => {
-    for (const { invoke } of sheetsOperations) {
+  for (const { name, invoke } of sheetsOperations) {
+    test(`${name} uses a safe fallback for an expired HTTP-date Retry-After`, async () => {
       const client = createSheetsClient({
         accessToken: "token",
         fetch: async () => new Response(JSON.stringify({
@@ -403,8 +403,8 @@ describe("google-workspace Sheets extended actions", () => {
         code: "CONNECTOR_RATE_LIMITED",
         retryAfterSeconds: 10,
       });
-    }
-  });
+    });
+  }
 
   test("all Sheets operations use a safe fallback for malformed Retry-After", async () => {
     for (const retryAfter of ["not-a-number", "0", "-5", "999999999"]) {
