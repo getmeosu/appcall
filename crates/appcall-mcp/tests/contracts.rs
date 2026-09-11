@@ -314,15 +314,21 @@ async fn mcp_brand_scope_can_explicitly_target_platform_connection() {
 }
 
 #[tokio::test]
-async fn mcp_platform_scope_can_target_a_brand_connection() {
-    let executor = Executor::default();
+async fn mcp_platform_scope_cannot_target_a_brand_connection_without_account_scope() {
+    let actions = appcall_actions::Service::new(
+        NoStorage,
+        registry(),
+        NoCredentials,
+        NoRunner,
+        appcall_actions::ReadOnlyPolicy,
+    );
     let server = Server::new(
         registry(),
         Connections(vec![
             connection("brand", "p", "brand"),
             connection("platform", "p", ""),
         ]),
-        executor.clone(),
+        actions,
         (),
     );
 
@@ -342,8 +348,11 @@ async fn mcp_platform_scope_can_target_a_brand_connection() {
     )
     .await;
 
-    assert_eq!(result["result"]["isError"], false);
-    assert_eq!(executor.0.lock().unwrap()[0].connection_id, "brand");
+    assert_eq!(result["result"]["isError"], true);
+    assert_eq!(
+        result["result"]["structuredContent"]["code"],
+        "MISSING_ACCOUNT_SCOPE"
+    );
 }
 
 #[tokio::test]
