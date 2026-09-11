@@ -292,6 +292,49 @@ async fn mcp_same_account_sessions_cannot_cross_cancel() {
 }
 
 #[tokio::test]
+async fn mcp_registered_session_cancellation_works_across_independent_http_scopes() {
+    let connections = WaitingConnections {
+        started: Arc::new(Notify::new()),
+        release: Arc::new(Notify::new()),
+    };
+    let executor = CancellableExecutor::new();
+    let server = Server::new(registry(), connections.clone(), executor.clone(), ());
+    let issued = issued_scope(&server, sessionless_scope("brand")).await;
+    let session_id = issued.session_id.clone();
+    let request_scope = sessionless_scope("brand").with_session_id(&session_id);
+    let cancellation_scope = sessionless_scope("brand").with_session_id(&session_id);
+    let request = serde_json::to_vec(&tools_call_request(48, "selected")).unwrap();
+    let mut call = Box::pin(server.handle_http("POST", &request_scope, &request));
+
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = connections.started.notified() => {},
+            _ = &mut call => panic!("request completed before connection lookup"),
+        }
+    })
+    .await
+    .expect("connection lookup did not start");
+
+    let cancellation = server
+        .handle_http(
+            "POST",
+            &cancellation_scope,
+            &serde_json::to_vec(&cancelled_notification(48, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cancellation.status, 202);
+    let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+        .await
+        .expect("registered session cancellation did not finish");
+    assert_eq!(
+        response.body.unwrap()["result"]["structuredContent"]["code"],
+        "MCP_REQUEST_CANCELLED"
+    );
+    assert_eq!(executor.start_count.load(Ordering::SeqCst), 0);
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[tokio::test]
 async fn mcp_omitted_sessions_are_isolated_without_bypassing_in_flight_cap() {
     let executor = CancellableExecutor::new();
     let server = Arc::new(Server::new(
