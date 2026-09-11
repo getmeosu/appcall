@@ -269,13 +269,14 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             Ok(connection) => connection,
             Err(error) => return Ok(tool_error(error.code(), error.message())),
         };
+        let idempotency_key = idempotency_key.unwrap_or_default();
         let request = appcall_actions::ExecuteRequest {
             project_id: scope.project_id.clone(),
             connection_id: connection.id.clone(),
             external_account_id: scope.account_id.clone(),
             admin_scope: false,
             action: operation.clone(),
-            idempotency_key: idempotency_key.unwrap_or_default(),
+            idempotency_key: idempotency_key.clone(),
             input,
             caller_credential: scope.connector_token.clone(),
         };
@@ -284,10 +285,19 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                 let _ =
                     self.usage
                         .record(&scope.project_id, &scope.account_id, connector, &operation);
-                let mut payload = json!({"content":[{"type":"text","text":result.output.to_string()}],"isError":false});
-                if result.output.is_object() {
-                    payload["structuredContent"] = result.output
+                let metadata = action_metadata(
+                    Some(&result.request_id),
+                    Some(&result.replay_log_id),
+                    Some(&idempotency_key),
+                    None,
+                );
+                let output = result.output;
+                let mut payload =
+                    json!({"content":[{"type":"text","text":output.to_string()}],"isError":false});
+                if output.is_object() {
+                    payload["structuredContent"] = output
                 }
+                attach_action_metadata(&mut payload, Some(metadata));
                 Ok(payload)
             }
             Err(error) => {
@@ -297,7 +307,14 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                     c if safe_code(c) => c,
                     _ => "ACTION_FAILED",
                 };
-                Ok(tool_error(code, &failure_message(&error, code)))
+                let message = failure_message(&error, code);
+                let metadata = action_metadata(
+                    Some(&error.request_id),
+                    None,
+                    Some(&idempotency_key),
+                    Some(error.evidence.as_ref()),
+                );
+                Ok(tool_error_with_metadata(code, &message, Some(metadata)))
             }
         }
     }
@@ -446,6 +463,67 @@ fn safe_code(code: &str) -> bool {
             .bytes()
             .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')
 }
+const MAX_MCP_RETRY_AFTER_SECONDS: u64 = 86_400;
+const MAX_MCP_METADATA_ID_BYTES: usize = 256;
+fn action_metadata(
+    request_id: Option<&str>,
+    replay_log_id: Option<&str>,
+    idempotency_key: Option<&str>,
+    evidence: Option<&appcall_actions::ActionFailureEvidence>,
+) -> Value {
+    let mut metadata = json!({});
+    if let Some(request_id) = request_id.and_then(bounded_metadata_id) {
+        metadata["requestId"] = json!(request_id);
+    }
+    if let Some(replay_log_id) = replay_log_id
+        .filter(|id| !id.is_empty())
+        .and_then(bounded_metadata_id)
+    {
+        metadata["replayLogId"] = json!(replay_log_id);
+    }
+    if let Some(idempotency_key) = idempotency_key.and_then(bounded_idempotency_key) {
+        metadata["idempotencyKey"] = json!(idempotency_key);
+    }
+    if let Some(evidence) = evidence {
+        metadata["dispatch"] = json!({
+            "outcome": dispatch_outcome(evidence.outcome),
+            "origin": failure_origin(evidence.origin),
+        });
+        if let Some(seconds) = evidence
+            .retry_after_seconds
+            .map(|seconds| seconds.min(MAX_MCP_RETRY_AFTER_SECONDS))
+        {
+            metadata["retryAfterSeconds"] = json!(seconds);
+        }
+    }
+    metadata
+}
+fn bounded_metadata_id(value: &str) -> Option<&str> {
+    (!value.is_empty()
+        && value.len() <= MAX_MCP_METADATA_ID_BYTES
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':')))
+    .then_some(value)
+}
+fn bounded_idempotency_key(value: &str) -> Option<&str> {
+    valid_idempotency_key(value).then_some(value)
+}
+fn dispatch_outcome(outcome: appcall_actions::ActionDispatchOutcome) -> &'static str {
+    match outcome {
+        appcall_actions::ActionDispatchOutcome::NotDispatched => "not_dispatched",
+        appcall_actions::ActionDispatchOutcome::ResponseReceived => "response_received",
+        appcall_actions::ActionDispatchOutcome::Unknown => "unknown",
+    }
+}
+fn failure_origin(origin: appcall_actions::ActionFailureOrigin) -> &'static str {
+    match origin {
+        appcall_actions::ActionFailureOrigin::Unknown => "unknown",
+        appcall_actions::ActionFailureOrigin::LocalAdmission => "local_admission",
+        appcall_actions::ActionFailureOrigin::LocalValidation => "local_validation",
+        appcall_actions::ActionFailureOrigin::Runner => "runner",
+    }
+}
 fn failure_message(error: &appcall_actions::ActionError, code: &str) -> String {
     if let Some(size) = error.detail.as_ref().and_then(|d| d.response_size.as_ref()) {
         return format!("Result too large: {} bytes exceeds the {}-byte limit. The full result was withheld (truncated, not delivered) — narrow the query or paginate.", size.actual_bytes, size.limit_bytes);
@@ -481,7 +559,22 @@ fn gate_message(code: &str) -> &'static str {
     }
 }
 fn tool_error(code: &str, message: &str) -> Value {
-    json!({"content":[{"type":"text","text":message}],"isError":true,"structuredContent":{"code":code,"message":message}})
+    tool_error_with_metadata(code, message, None)
+}
+fn tool_error_with_metadata(code: &str, message: &str, metadata: Option<Value>) -> Value {
+    let mut payload = json!({"content":[{"type":"text","text":message}],"isError":true,"structuredContent":{"code":code,"message":message}});
+    attach_action_metadata(&mut payload, metadata);
+    payload
+}
+fn attach_action_metadata(payload: &mut Value, metadata: Option<Value>) {
+    if let Some(metadata) = metadata {
+        if metadata
+            .as_object()
+            .is_some_and(|object| !object.is_empty())
+        {
+            payload["_meta"] = json!({"appcall": metadata});
+        }
+    }
 }
 fn rpc_error(id: Option<Value>, code: i32, message: &str) -> Value {
     let mut v = json!({"jsonrpc":"2.0","error":{"code":code,"message":message}});
