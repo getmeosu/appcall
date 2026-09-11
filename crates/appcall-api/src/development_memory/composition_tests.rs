@@ -326,6 +326,251 @@ fn api_request(method: &str, uri: &str, body: serde_json::Value) -> crate::Reque
     }
 }
 
+type TestMcpActions<R> = appcall_actions::Service<
+    MemoryRepository,
+    appcall_connectors::Registry,
+    MemoryCredentials,
+    R,
+    DevelopmentPolicy,
+>;
+type TestMcpServer<R> = appcall_mcp::Server<
+    MemoryConnectionLister,
+    Arc<TestMcpActions<R>>,
+    Arc<appcall_mcp::MemoryUsage>,
+>;
+
+fn mcp_test_server<R>(runner: R) -> (TestMcpServer<R>, MemoryRepository)
+where
+    R: appcall_actions::ActionRunner + 'static,
+{
+    let manifest = serde_json::json!({
+        "key":"test",
+        "name":"Test",
+        "version":"1",
+        "runtime":"bun",
+        "models":["item"],
+        "auth":{"type":"none"},
+        "network":{"egress":"none"},
+        "operations":{
+            "write":{
+                "kind":"action",
+                "timeoutMs":1000,
+                "maxInputBytes":1024,
+                "maxResponseBytes":1024,
+                "sideEffect":"write",
+                "description":"Synthetic write action",
+                "inputSchema":{"type":"object"}
+            }
+        }
+    });
+    let registry =
+        appcall_connectors::Registry::from_connectors([appcall_connectors::Connector::from_bytes(
+            &serde_json::to_vec(&manifest).unwrap(),
+        )
+        .unwrap()])
+        .unwrap();
+    let repository = MemoryRepository::new(
+        DevelopmentPermit::validate(false, None).unwrap(),
+        Arc::new(registry.clone()),
+        MemoryLimits::default(),
+    )
+    .unwrap();
+    repository
+        .create_connection(
+            Connection {
+                id: "mcp-test-connection".into(),
+                project_id: "proj_dev".into(),
+                external_account_id: "brand".into(),
+                connector: "test".into(),
+                auth_type: AuthType::ApiKey,
+                status: Status::Active,
+                secret_ref_id: String::new(),
+                last_test_status: TestStatus::Unknown,
+                credential_owner: CredentialOwner::Brand,
+            },
+            None,
+        )
+        .unwrap();
+    let oauth = Arc::new(
+        MemoryOAuth::new(repository.clone(), Default::default(), Arc::new(NoTokens)).unwrap(),
+    );
+    let actions = Arc::new(appcall_actions::Service::new(
+        repository.clone(),
+        registry.clone(),
+        MemoryCredentials::new(repository.clone(), oauth),
+        runner,
+        DevelopmentPolicy::new(repository.clone(), Default::default()).unwrap(),
+    ));
+    let server = appcall_mcp::Server::new(
+        registry,
+        MemoryConnectionLister::new(repository.clone()),
+        actions,
+        Arc::new(appcall_mcp::MemoryUsage::default()),
+    );
+    (server, repository)
+}
+
+fn mcp_wire_call(id: u64, key: &str, arguments: serde_json::Value) -> Vec<u8> {
+    serde_json::to_vec(&serde_json::json!({
+        "jsonrpc":"2.0",
+        "id":id,
+        "method":"tools/call",
+        "params":{
+            "name":"test__write",
+            "idempotencyKey":key,
+            "arguments":arguments
+        }
+    }))
+    .unwrap()
+}
+
+async fn mcp_test_call<L, E, U>(
+    server: &appcall_mcp::Server<L, E, U>,
+    id: u64,
+    key: &str,
+    arguments: serde_json::Value,
+) -> serde_json::Value
+where
+    L: appcall_mcp::ConnectionLister,
+    E: appcall_mcp::ActionExecutor,
+    U: appcall_mcp::UsageRecorder,
+{
+    server
+        .handle(
+            &appcall_mcp::Scope::new("proj_dev", "brand"),
+            &mcp_wire_call(id, key, arguments),
+        )
+        .await
+        .unwrap()
+}
+
+struct CountingMcpRunner(std::sync::Arc<std::sync::atomic::AtomicUsize>);
+impl appcall_actions::ActionRunner for CountingMcpRunner {
+    async fn execute(
+        &self,
+        _: &appcall_actions::Attempt,
+        _: serde_json::Value,
+        _: u64,
+    ) -> std::result::Result<serde_json::Value, appcall_actions::RunnerFailure> {
+        self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Ok(serde_json::json!({"ok":true}))
+    }
+}
+
+struct BlockingMcpRunner {
+    calls: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    started: std::sync::Arc<tokio::sync::Notify>,
+    release: std::sync::Arc<tokio::sync::Notify>,
+}
+impl appcall_actions::ActionRunner for BlockingMcpRunner {
+    async fn execute(
+        &self,
+        _: &appcall_actions::Attempt,
+        _: serde_json::Value,
+        _: u64,
+    ) -> std::result::Result<serde_json::Value, appcall_actions::RunnerFailure> {
+        self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.started.notify_one();
+        self.release.notified().await;
+        Ok(serde_json::json!({"ok":true}))
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn mcp_concurrent_same_key_dispatches_once_and_replays_stored_result() {
+    let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let started = std::sync::Arc::new(tokio::sync::Notify::new());
+    let release = std::sync::Arc::new(tokio::sync::Notify::new());
+    let runner = BlockingMcpRunner {
+        calls: calls.clone(),
+        started: started.clone(),
+        release: release.clone(),
+    };
+    let (server, repository) = mcp_test_server(runner);
+    let server = Arc::new(server);
+    let first_server = server.clone();
+    let first = tokio::spawn(async move {
+        mcp_test_call(&first_server, 1, "same-key", serde_json::json!({"value":1})).await
+    });
+    started.notified().await;
+
+    let concurrent = mcp_test_call(&server, 2, "same-key", serde_json::json!({"value":1})).await;
+    assert_eq!(
+        concurrent["result"]["structuredContent"]["code"],
+        "IDEMPOTENCY_IN_PROGRESS"
+    );
+    release.notify_one();
+
+    let first = first.await.unwrap();
+    assert_eq!(first["result"]["isError"], false);
+    let replay = mcp_test_call(&server, 3, "same-key", serde_json::json!({"value":1})).await;
+    assert_eq!(replay["result"]["isError"], false);
+    assert_eq!(
+        replay["result"]["structuredContent"],
+        serde_json::json!({"ok":true})
+    );
+    assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+    let data = repository.lock().unwrap();
+    assert_eq!(data.replay_logs.len(), 1);
+    assert_eq!(data.usage_events.len(), 1);
+}
+
+#[tokio::test]
+async fn mcp_same_key_conflicting_input_is_rejected_by_the_action_store() {
+    let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let (server, repository) = mcp_test_server(CountingMcpRunner(calls.clone()));
+    let first = mcp_test_call(&server, 1, "conflict-key", serde_json::json!({"value":1})).await;
+    assert_eq!(first["result"]["isError"], false);
+
+    let conflict = mcp_test_call(&server, 2, "conflict-key", serde_json::json!({"value":2})).await;
+    assert_eq!(
+        conflict["result"]["structuredContent"]["code"],
+        "IDEMPOTENCY_CONFLICT"
+    );
+    assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+    let data = repository.lock().unwrap();
+    assert_eq!(data.replay_logs.len(), 1);
+    assert_eq!(data.usage_events.len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn mcp_cancellation_after_dispatch_keeps_uncertain_key_fenced() {
+    let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let started = std::sync::Arc::new(tokio::sync::Notify::new());
+    let runner = BlockingMcpRunner {
+        calls: calls.clone(),
+        started: started.clone(),
+        release: std::sync::Arc::new(tokio::sync::Notify::new()),
+    };
+    let (server, repository) = mcp_test_server(runner);
+    let server = Arc::new(server);
+    let first_server = server.clone();
+    let first = tokio::spawn(async move {
+        mcp_test_call(
+            &first_server,
+            1,
+            "uncertain-key",
+            serde_json::json!({"value":1}),
+        )
+        .await
+    });
+    started.notified().await;
+    first.abort();
+    assert!(first.await.unwrap_err().is_cancelled());
+
+    let retry = mcp_test_call(&server, 2, "uncertain-key", serde_json::json!({"value":1})).await;
+    assert_eq!(
+        retry["result"]["structuredContent"]["code"],
+        "IDEMPOTENCY_IN_PROGRESS"
+    );
+    assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+    let data = repository.lock().unwrap();
+    assert_eq!(data.action_claims.len(), 1);
+    assert_eq!(data.replay_logs.len(), 0);
+    assert_eq!(data.usage_reserved.len(), 1);
+    assert_eq!(data.active_effects, 1);
+}
+
 #[tokio::test]
 async fn overview_memory_shared_platform_does_not_leak_foreign_account_logs() {
     use appcall_web::{DashboardData, DashboardOperation, DashboardRequest};

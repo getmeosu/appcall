@@ -111,7 +111,10 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                         "tools/call requires a tool name.",
                     ));
                 }
-                match self.call_tool(scope, &call.name, call.arguments).await {
+                match self
+                    .call_tool_with_key(scope, &call.name, call.arguments, call.idempotency_key)
+                    .await
+                {
                     Ok(result) => result,
                     Err(_) => return Some(rpc_error(Some(id), -32603, "Tool execution failed.")),
                 }
@@ -183,6 +186,18 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         name: &str,
         input: Value,
     ) -> Result<Value, InfrastructureError> {
+        self.call_tool_with_key(scope, name, input, None).await
+    }
+    async fn call_tool_with_key(
+        &self,
+        scope: &Scope,
+        name: &str,
+        input: Value,
+        idempotency_key: Option<String>,
+    ) -> Result<Value, InfrastructureError> {
+        if !idempotency_key.as_deref().is_none_or(valid_idempotency_key) {
+            return Ok(tool_error("INVALID_TOOL_INPUT", "Invalid idempotency key."));
+        }
         let Some((connector, operation)) = decode_tool_name(name) else {
             return Ok(tool_error("UNKNOWN_TOOL", "Unknown tool."));
         };
@@ -223,7 +238,7 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             external_account_id: scope.account_id.clone(),
             admin_scope: false,
             action: operation.clone(),
-            idempotency_key: String::new(),
+            idempotency_key: idempotency_key.unwrap_or_default(),
             input,
             caller_credential: scope.connector_token.clone(),
         };
@@ -256,17 +271,33 @@ struct CallParams {
     name: String,
     #[serde(default = "empty_arguments")]
     arguments: Value,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_present_idempotency_key",
+        rename = "idempotencyKey"
+    )]
+    idempotency_key: Option<String>,
 }
 fn empty_arguments() -> Value {
     json!({})
+}
+fn deserialize_present_idempotency_key<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    String::deserialize(deserializer).map(Some)
 }
 impl Default for CallParams {
     fn default() -> Self {
         Self {
             name: String::new(),
             arguments: empty_arguments(),
+            idempotency_key: None,
         }
     }
+}
+fn valid_idempotency_key(key: &str) -> bool {
+    !key.is_empty() && key.len() <= 128 && key.bytes().all(|b| (33..=126).contains(&b))
 }
 fn safe_code(code: &str) -> bool {
     !code.is_empty()
