@@ -49,6 +49,12 @@ pub fn run(env: BTreeMap<String, String>) -> Result<()> {
     if !address.ip().is_loopback() {
         return Err("memory listener must be loopback".into());
     }
+    let mut mcp_origins = appcall_runtime::mcp_allowed_origins_from_map(&env)?;
+    if mcp_origins.is_empty() {
+        mcp_origins.push(format!("http://{address}"));
+    }
+    let mcp_transport = appcall_mcp::McpTransportConfig::from_allowed_origins(&mcp_origins)
+        .map_err(|_| "invalid MCP transport origin configuration")?;
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .max_blocking_threads(32)
@@ -158,11 +164,10 @@ pub fn run(env: BTreeMap<String, String>) -> Result<()> {
             )?;
             (
                 registry,
-                MemoryHost(Some(MemoryBackend::new(
-                    core,
-                    Some(Arc::new(key)),
-                    Some(Arc::new(browser)),
-                ))),
+                MemoryHost(Some(
+                    MemoryBackend::new(core, Some(Arc::new(key)), Some(Arc::new(browser)))
+                        .with_mcp_transport_config(mcp_transport),
+                )),
             )
         }
         _ => {

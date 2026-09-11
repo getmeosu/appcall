@@ -158,3 +158,38 @@ fn policy_defaults_and_invalid_numbers_match_go() {
         );
     }
 }
+
+#[test]
+fn mcp_origin_allowlist_is_explicit_and_falls_back_to_public_base_url() {
+    let mut e = env();
+    e.insert(
+        "APPCALL_PUBLIC_BASE_URL".into(),
+        "https://dashboard.example/".into(),
+    );
+    assert_eq!(
+        Config::from_map(&e).unwrap().mcp_allowed_origins(),
+        &["https://dashboard.example/".to_owned()]
+    );
+
+    e.insert(
+        "APPCALL_MCP_ALLOWED_ORIGINS".into(),
+        "https://one.example, https://two.example".into(),
+    );
+    assert_eq!(
+        Config::from_map(&e).unwrap().mcp_allowed_origins(),
+        &[
+            "https://one.example".to_owned(),
+            "https://two.example".to_owned()
+        ]
+    );
+}
+
+#[test]
+fn malformed_mcp_origin_allowlist_fails_closed() {
+    let mut e = env();
+    e.insert(
+        "APPCALL_MCP_ALLOWED_ORIGINS".into(),
+        "https://one.example,".into(),
+    );
+    assert!(Config::from_map(&e).is_err());
+}

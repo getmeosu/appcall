@@ -10,6 +10,8 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc, Mutex,
 };
+use std::time::Duration;
+use tokio::sync::Notify;
 #[derive(Clone)]
 struct Connections(Vec<Connection>);
 impl ConnectionLister for Connections {
@@ -107,7 +109,53 @@ fn scope() -> Scope {
         .with_profile("sena_mvt")
         .with_connector_token("SECRET")
 }
-async fn rpc<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder>(
+
+fn context() -> McpRequestContext {
+    McpRequestContext::new().with_auth_context_fingerprint("test-auth-context")
+}
+
+#[test]
+fn scope_old_struct_literal_remains_source_compatible() {
+    let _scope = Scope {
+        project_id: "p".into(),
+        account_id: "brand".into(),
+        profile: "future".into(),
+        connector_token: "SECRET".into(),
+    };
+}
+
+fn sessionless_scope(account: &str) -> Scope {
+    Scope::new("p", account)
+        .with_profile("future")
+        .with_connector_token("SECRET")
+}
+fn response_header<'a>(response: &'a HttpResponse, name: &str) -> Option<&'a str> {
+    response
+        .headers
+        .iter()
+        .find(|(key, _)| key.eq_ignore_ascii_case(name))
+        .map(|(_, value)| value.as_str())
+}
+async fn issued_context<L: ConnectionLister, E: ActionExecutor + 'static, U: UsageRecorder>(
+    server: &Server<L, E, U>,
+    scope: &Scope,
+) -> McpRequestContext {
+    let context = context();
+    let response = server
+        .handle_http_with_context(
+            "POST",
+            scope,
+            &context,
+            br#"{"jsonrpc":"2.0","id":0,"method":"initialize"}"#,
+        )
+        .await;
+    assert_eq!(response.status, 200);
+    let session_id = response_header(&response, MCP_SESSION_ID_HEADER)
+        .expect("authenticated session issuance must return a session header")
+        .to_owned();
+    context.with_session_id(&session_id)
+}
+async fn rpc<L: ConnectionLister, E: ActionExecutor + 'static, U: UsageRecorder>(
     s: &Server<L, E, U>,
     scope: &Scope,
     req: Value,
@@ -117,6 +165,504 @@ async fn rpc<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder>(
         .body
         .unwrap()
 }
+
+#[tokio::test]
+async fn mcp_issues_and_reuses_server_sessions() {
+    let (server, _) = server();
+    let scope = scope();
+    let context = context();
+    let initialize = br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+
+    let first = server
+        .handle_http_with_context("POST", &scope, &context, initialize)
+        .await;
+    assert_eq!(first.status, 200);
+    let first_session = response_header(&first, MCP_SESSION_ID_HEADER)
+        .expect("first authenticated request must issue a session")
+        .to_owned();
+    assert!(!first_session.is_empty());
+    assert!(first_session
+        .bytes()
+        .all(|byte| (0x20..=0x7e).contains(&byte)));
+    assert_eq!(server.session_len(), 1);
+
+    let reused = server
+        .handle_http_with_context(
+            "POST",
+            &scope,
+            &context.clone().with_session_id(&first_session),
+            initialize,
+        )
+        .await;
+    assert_eq!(reused.status, 200);
+    assert!(response_header(&reused, MCP_SESSION_ID_HEADER).is_none());
+    assert_eq!(server.session_len(), 1);
+
+    let second = server
+        .handle_http_with_context("POST", &scope, &context, initialize)
+        .await;
+    let second_session = response_header(&second, MCP_SESSION_ID_HEADER)
+        .expect("each omitted session must receive a new session")
+        .to_owned();
+    assert_ne!(first_session, second_session);
+    assert_eq!(server.session_len(), 2);
+}
+
+#[tokio::test]
+async fn mcp_rejects_unknown_mismatched_and_invalid_sessions_without_rebinding() {
+    let (server, _) = server();
+    let scope = scope();
+    let initial_context = context();
+    let initialize = br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+    let first = server
+        .handle_http_with_context("POST", &scope, &initial_context, initialize)
+        .await;
+    let session_id = response_header(&first, MCP_SESSION_ID_HEADER)
+        .expect("session was not issued")
+        .to_owned();
+
+    let unknown = initial_context.clone().with_session_id(&"u".repeat(43));
+    let unknown_response = server
+        .handle_http_with_context("POST", &scope, &unknown, initialize)
+        .await;
+    assert_eq!(unknown_response.status, 404);
+    assert_eq!(server.session_len(), 1);
+
+    let wrong_auth = context()
+        .with_auth_context_fingerprint("different-auth-context")
+        .with_session_id(&session_id);
+    let wrong_auth_response = server
+        .handle_http_with_context("POST", &scope, &wrong_auth, initialize)
+        .await;
+    assert_eq!(wrong_auth_response.status, 404);
+
+    let wrong_account = context().with_session_id(&session_id);
+    let wrong_account_response = server
+        .handle_http_with_context(
+            "POST",
+            &sessionless_scope("other-brand"),
+            &wrong_account,
+            initialize,
+        )
+        .await;
+    assert_eq!(wrong_account_response.status, 404);
+    assert_eq!(server.session_len(), 1);
+
+    let invalid = context().with_session_id("invalid\nsession");
+    let invalid_response = server
+        .handle_http_with_context("POST", &scope, &invalid, initialize)
+        .await;
+    assert_eq!(invalid_response.status, 400);
+    assert!(response_header(&invalid_response, MCP_SESSION_ID_HEADER).is_none());
+
+    let wrong_profile = server
+        .handle_http_with_context(
+            "POST",
+            &sessionless_scope("brand"),
+            &context().with_session_id(&session_id),
+            initialize,
+        )
+        .await;
+    assert_eq!(wrong_profile.status, 404);
+    let correct_scope = sessionless_scope("brand").with_profile("sena_mvt");
+    let correct_context = context().with_session_id(&session_id);
+    assert_eq!(
+        server
+            .handle_http_with_context("POST", &correct_scope, &correct_context, initialize)
+            .await
+            .status,
+        200
+    );
+}
+
+#[tokio::test]
+async fn mcp_same_account_sessions_cannot_cross_cancel() {
+    let connections = WaitingConnections {
+        started: Arc::new(Notify::new()),
+        release: Arc::new(Notify::new()),
+    };
+    let executor = CancellableExecutor::new();
+    let server = Server::new(registry(), connections.clone(), executor.clone(), ());
+    let scope_a = sessionless_scope("brand");
+    let scope_b = sessionless_scope("brand");
+    let context_a = issued_context(&server, &scope_a).await;
+    let context_b = issued_context(&server, &scope_b).await;
+    let request = serde_json::to_vec(&tools_call_request(46, "selected")).unwrap();
+    let mut call =
+        Box::pin(server.handle_http_with_context("POST", &scope_a, &context_a, &request));
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = connections.started.notified() => {},
+            _ = &mut call => panic!("request completed before connection lookup"),
+        }
+    })
+    .await
+    .expect("connection lookup did not start");
+
+    let cross_cancel = server
+        .handle_http_with_context(
+            "POST",
+            &scope_b,
+            &context_b,
+            &serde_json::to_vec(&cancelled_notification(46, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cross_cancel.status, 202);
+    assert!(tokio::time::timeout(Duration::from_millis(10), &mut call)
+        .await
+        .is_err());
+
+    let cancel = server
+        .handle_http_with_context(
+            "POST",
+            &scope_a,
+            &context_a,
+            &serde_json::to_vec(&cancelled_notification(46, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cancel.status, 202);
+    connections.release.notify_one();
+    let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+        .await
+        .expect("cancelled request did not finish");
+    assert_eq!(
+        response.body.unwrap()["result"]["structuredContent"]["code"],
+        "MCP_REQUEST_CANCELLED"
+    );
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[tokio::test]
+async fn mcp_registered_session_cancellation_works_across_independent_http_scopes() {
+    let connections = WaitingConnections {
+        started: Arc::new(Notify::new()),
+        release: Arc::new(Notify::new()),
+    };
+    let executor = CancellableExecutor::new();
+    let server = Server::new(registry(), connections.clone(), executor.clone(), ());
+    let request_scope = sessionless_scope("brand");
+    let request_context = issued_context(&server, &request_scope).await;
+    let request = serde_json::to_vec(&tools_call_request(48, "selected")).unwrap();
+    let mut call = Box::pin(server.handle_http_with_context(
+        "POST",
+        &request_scope,
+        &request_context,
+        &request,
+    ));
+
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = connections.started.notified() => {},
+            _ = &mut call => panic!("request completed before connection lookup"),
+        }
+    })
+    .await
+    .expect("connection lookup did not start");
+
+    let cancellation = server
+        .handle_http_with_context(
+            "POST",
+            &request_scope,
+            &request_context,
+            &serde_json::to_vec(&cancelled_notification(48, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cancellation.status, 202);
+    let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+        .await
+        .expect("registered session cancellation did not finish");
+    assert_eq!(
+        response.body.unwrap()["result"]["structuredContent"]["code"],
+        "MCP_REQUEST_CANCELLED"
+    );
+    assert_eq!(executor.start_count.load(Ordering::SeqCst), 0);
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[test]
+fn mcp_auth_fingerprint_ignores_execution_secrets() {
+    let first = vec![
+        ("X-API-Key".into(), "api-key".into()),
+        ("X-Connector-Token".into(), "secret-a".into()),
+    ];
+    let second = vec![
+        ("X-API-Key".into(), "api-key".into()),
+        ("X-Connector-Token".into(), "secret-b".into()),
+    ];
+
+    assert_eq!(
+        auth_context_fingerprint(&first),
+        auth_context_fingerprint(&second),
+        "execution credentials must not become session authorization"
+    );
+}
+
+#[tokio::test]
+async fn mcp_omitted_sessions_are_isolated_without_bypassing_in_flight_cap() {
+    let executor = CancellableExecutor::new();
+    let server = Arc::new(Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    ));
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let scope = sessionless_scope("brand");
+            let request = serde_json::to_vec(&tools_call_request(47, "selected")).unwrap();
+            let mut calls = Vec::new();
+            for _ in 0..2 {
+                let server = server.clone();
+                let scope = scope.clone();
+                let context = context();
+                let request = request.clone();
+                calls.push(tokio::task::spawn_local(async move {
+                    server
+                        .handle_http_with_context("POST", &scope, &context, &request)
+                        .await
+                }));
+            }
+            tokio::time::timeout(Duration::from_millis(100), async {
+                while executor.start_count.load(Ordering::SeqCst) < 2 {
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .expect("omitted sessions shared a request namespace");
+            assert_eq!(server.in_flight_len(), 2);
+            assert_eq!(server.session_len(), 2);
+            executor.release.notify_waiters();
+            for call in calls {
+                assert_eq!(call.await.unwrap().status, 200);
+            }
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn mcp_session_registry_fails_closed_at_its_bounded_capacity() {
+    let (server, _) = server();
+    let scope = scope();
+    let initialize = br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+
+    for index in 0..1024 {
+        let context = McpRequestContext::new()
+            .with_auth_context_fingerprint(&format!("capacity-principal-{index}"));
+        let response = server
+            .handle_http_with_context("POST", &scope, &context, initialize)
+            .await;
+        assert_eq!(response.status, 200);
+        assert!(response_header(&response, MCP_SESSION_ID_HEADER).is_some());
+    }
+    assert_eq!(server.session_len(), 1024);
+
+    let exhausted = server
+        .handle_http_with_context("POST", &scope, &context(), initialize)
+        .await;
+    assert_eq!(exhausted.status, 503);
+    assert_eq!(
+        exhausted.body.as_ref().unwrap()["error"]["code"],
+        "MCP_SESSION_UNAVAILABLE"
+    );
+    assert!(response_header(&exhausted, MCP_SESSION_ID_HEADER).is_none());
+    assert_eq!(server.session_len(), 1024);
+}
+
+#[tokio::test]
+async fn malformed_mcp_requests_do_not_consume_session_capacity() {
+    let (server, _) = server();
+    let scope = scope();
+    let context = context();
+
+    for _ in 0..1024 {
+        let response = server
+            .handle_http_with_context("POST", &scope, &context, b"{")
+            .await;
+        assert_eq!(response.status, 200);
+        assert_eq!(response.body.unwrap()["error"]["code"], -32700);
+    }
+    assert_eq!(server.session_len(), 0);
+
+    let initialized = server
+        .handle_http_with_context(
+            "POST",
+            &scope,
+            &context,
+            br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#,
+        )
+        .await;
+    assert_eq!(initialized.status, 200);
+    assert!(response_header(&initialized, MCP_SESSION_ID_HEADER).is_some());
+    assert_eq!(server.session_len(), 1);
+}
+
+#[tokio::test]
+async fn mcp_notifications_do_not_consume_session_capacity() {
+    let (server, _) = server();
+    let scope = scope();
+    for notification in [
+        json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":1}}),
+    ] {
+        let response = server
+            .handle_http_with_context(
+                "POST",
+                &scope,
+                &context(),
+                &serde_json::to_vec(&notification).unwrap(),
+            )
+            .await;
+        assert_eq!(response.status, 202);
+        assert!(response.body.is_none());
+        assert!(response_header(&response, MCP_SESSION_ID_HEADER).is_none());
+    }
+    assert_eq!(server.session_len(), 0);
+}
+
+#[tokio::test]
+async fn mcp_sessions_enforce_a_bounded_authenticated_principal_quota() {
+    let (server, _) = server();
+    let scope = scope();
+    let initialize = br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+
+    for _ in 0..16 {
+        assert_eq!(
+            server
+                .handle_http_with_context("POST", &scope, &context(), initialize)
+                .await
+                .status,
+            200
+        );
+    }
+    let exhausted = server
+        .handle_http_with_context("POST", &scope, &context(), initialize)
+        .await;
+    assert_eq!(exhausted.status, 503);
+    assert_eq!(
+        exhausted.body.unwrap()["error"]["code"],
+        "MCP_SESSION_UNAVAILABLE"
+    );
+    assert_eq!(server.session_len(), 16);
+}
+
+#[tokio::test]
+async fn mcp_session_close_reclaims_bounded_capacity() {
+    let (server, _) = server();
+    let scope = scope();
+    let initialize = br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+    let initial_context = context();
+    let response = server
+        .handle_http_with_context("POST", &scope, &initial_context, initialize)
+        .await;
+    let session_id = response_header(&response, MCP_SESSION_ID_HEADER)
+        .expect("session was not issued")
+        .to_owned();
+    let session_context = initial_context.with_session_id(&session_id);
+
+    let closed = server
+        .handle_http_with_context("DELETE", &scope, &session_context, b"")
+        .await;
+    assert_eq!(closed.status, 204);
+    assert!(closed.body.is_none());
+    assert_eq!(server.session_len(), 0);
+    assert_eq!(
+        server
+            .handle_http_with_context("POST", &scope, &session_context, initialize)
+            .await
+            .status,
+        404
+    );
+}
+
+#[tokio::test]
+async fn unsupported_initialize_protocol_is_rejected_before_session_admission() {
+    let (server, _) = server();
+    let response = server
+        .handle_http_with_context(
+            "POST",
+            &scope(),
+            &context(),
+            &serde_json::to_vec(&json!({
+                "jsonrpc":"2.0",
+                "id":1,
+                "method":"initialize",
+                "params":{"protocolVersion":"1999-01-01"}
+            }))
+            .unwrap(),
+        )
+        .await;
+    assert_eq!(response.status, 200);
+    assert_eq!(response.body.unwrap()["error"]["code"], -32602);
+    assert_eq!(server.session_len(), 0);
+}
+
+#[tokio::test]
+async fn mcp_transport_validates_protocol_and_origin_headers() {
+    let (server, _) = server();
+    let server = server.with_transport_config(
+        McpTransportConfig::from_allowed_origins(["https://allowed.example"]).unwrap(),
+    );
+    let scope = scope();
+    let initialize = br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+    let allowed = vec![
+        (MCP_PROTOCOL_VERSION_HEADER.into(), PROTOCOL_VERSION.into()),
+        ("Origin".into(), "https://allowed.example".into()),
+    ];
+    let accepted = server
+        .handle_http_with_headers("POST", &scope, &allowed, initialize)
+        .await;
+    assert_eq!(accepted.status, 200);
+
+    for (headers, code) in [
+        (
+            vec![(MCP_PROTOCOL_VERSION_HEADER.into(), "1999-01-01".into())],
+            "MCP_PROTOCOL_VERSION_UNSUPPORTED",
+        ),
+        (
+            vec![
+                (MCP_PROTOCOL_VERSION_HEADER.into(), PROTOCOL_VERSION.into()),
+                ("Origin".into(), "https://evil.example".into()),
+            ],
+            "MCP_ORIGIN_NOT_ALLOWED",
+        ),
+        (
+            vec![
+                (MCP_PROTOCOL_VERSION_HEADER.into(), PROTOCOL_VERSION.into()),
+                ("Origin".into(), "https://".into()),
+            ],
+            "MCP_ORIGIN_INVALID",
+        ),
+    ] {
+        let rejected = server
+            .handle_http_with_headers("POST", &scope, &headers, initialize)
+            .await;
+        assert_eq!(rejected.status, 400);
+        assert_eq!(rejected.body.unwrap()["error"]["code"], code);
+    }
+}
+
+#[tokio::test]
+async fn mcp_transport_rejects_duplicate_protocol_values() {
+    let (server, _) = server();
+    let headers = vec![
+        (MCP_PROTOCOL_VERSION_HEADER.into(), PROTOCOL_VERSION.into()),
+        (MCP_PROTOCOL_VERSION_HEADER.into(), PROTOCOL_VERSION.into()),
+    ];
+    let response = server
+        .handle_http_with_headers(
+            "POST",
+            &scope(),
+            &headers,
+            br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#,
+        )
+        .await;
+    assert_eq!(response.status, 400);
+    assert_eq!(
+        response.body.unwrap()["error"]["code"],
+        "MCP_PROTOCOL_VERSION_INVALID"
+    );
+}
+
 #[tokio::test]
 async fn protocol_transport_and_notifications() {
     let (s, e) = server();
@@ -1010,6 +1556,52 @@ async fn go_compatible_typed_json_request_errors() {
         assert_eq!(result["error"]["code"], -32700);
     }
 }
+
+#[tokio::test]
+async fn mcp_rejects_oversized_and_invalid_request_ids_before_action_dispatch() {
+    let (s, executor) = server();
+    let invalid_ids = [
+        Value::Null,
+        json!("x".repeat(257)),
+        json!(true),
+        json!({"invalid":"id"}),
+        json!(["invalid"]),
+    ];
+
+    for id in invalid_ids {
+        let result = rpc(&s, &scope(), tools_call_request(id, "b")).await;
+        assert_eq!(result["error"]["code"], -32600);
+        assert_eq!(result["error"]["message"], "Invalid request ID.");
+    }
+
+    assert!(executor.0.lock().unwrap().is_empty());
+    assert_eq!(s.in_flight_len(), 0);
+}
+
+#[tokio::test]
+async fn null_request_ids_never_dispatch_or_cancel() {
+    let (server, executor) = server();
+    let request = tools_call_request(Value::Null, "b");
+    let response = server
+        .handle_http("POST", &scope(), &serde_json::to_vec(&request).unwrap())
+        .await;
+    assert_eq!(response.status, 200);
+    assert_eq!(response.body.unwrap()["error"]["code"], -32600);
+    assert!(executor.0.lock().unwrap().is_empty());
+    assert_eq!(server.in_flight_len(), 0);
+
+    let cancellation = server
+        .handle_http(
+            "POST",
+            &scope(),
+            &serde_json::to_vec(&cancelled_notification(Value::Null, Some("b"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cancellation.status, 202);
+    assert!(cancellation.body.is_none());
+    assert_eq!(server.in_flight_len(), 0);
+}
+
 struct NoStorage;
 impl appcall_actions::ActionRepository for NoStorage {
     async fn record_replay(
@@ -1119,6 +1711,597 @@ async fn action_failure_metadata_is_preserved_in_mcp_wire_result() {
         detailed["structuredContent"]["message"],
         "Tool execution failed: NOTE_TOO_LONG: Please shorten the invitation note."
     );
+}
+
+#[derive(Clone)]
+struct CancellableExecutor {
+    started: Arc<Notify>,
+    start_count: Arc<AtomicUsize>,
+    dispatched: Arc<AtomicUsize>,
+    provider_effects: Arc<AtomicUsize>,
+    release: Arc<Notify>,
+}
+impl CancellableExecutor {
+    fn new() -> Self {
+        Self {
+            started: Arc::new(Notify::new()),
+            start_count: Arc::new(AtomicUsize::new(0)),
+            dispatched: Arc::new(AtomicUsize::new(0)),
+            provider_effects: Arc::new(AtomicUsize::new(0)),
+            release: Arc::new(Notify::new()),
+        }
+    }
+}
+impl ActionExecutor for CancellableExecutor {
+    async fn execute(&self, _: ExecuteRequest) -> Result<ExecuteResult, ActionError> {
+        self.start_count.fetch_add(1, Ordering::SeqCst);
+        self.dispatched.fetch_add(1, Ordering::SeqCst);
+        self.started.notify_one();
+        self.release.notified().await;
+        self.provider_effects.fetch_add(1, Ordering::SeqCst);
+        Ok(ExecuteResult {
+            request_id: "req_cancellable".into(),
+            output: json!({"ok":true}),
+            replay_log_id: String::new(),
+            usage_warning: false,
+            usage: Default::default(),
+        })
+    }
+}
+
+#[derive(Clone)]
+struct WaitingConnections {
+    started: Arc<Notify>,
+    release: Arc<Notify>,
+}
+impl ConnectionLister for WaitingConnections {
+    async fn list(&self, _: &str) -> Result<Vec<Connection>, InfrastructureError> {
+        self.started.notify_one();
+        self.release.notified().await;
+        Ok(vec![connection("selected", "p", "brand")])
+    }
+}
+
+fn tools_call_request(id: impl serde::Serialize, connection_id: &str) -> Value {
+    json!({
+        "jsonrpc":"2.0",
+        "id":id,
+        "method":"tools/call",
+        "params":{
+            "name":"apollo__people__search",
+            "connectionId":connection_id,
+            "arguments":{}
+        }
+    })
+}
+fn cancelled_notification(id: impl serde::Serialize, connection_id: Option<&str>) -> Value {
+    let mut params = json!({"requestId":id});
+    if let Some(connection_id) = connection_id {
+        params["connectionId"] = json!(connection_id);
+    }
+    json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":params})
+}
+
+#[tokio::test]
+async fn mcp_cancellation_before_dispatch_is_scope_bound_and_has_no_provider_effect() {
+    let connections = WaitingConnections {
+        started: Arc::new(Notify::new()),
+        release: Arc::new(Notify::new()),
+    };
+    let executor = CancellableExecutor::new();
+    let server = Server::new(registry(), connections.clone(), executor.clone(), ());
+    let request = serde_json::to_vec(&tools_call_request(41, "selected")).unwrap();
+    let request_scope = sessionless_scope("brand");
+    let request_context = issued_context(&server, &request_scope).await;
+    let mut call = Box::pin(server.handle_http_with_context(
+        "POST",
+        &request_scope,
+        &request_context,
+        &request,
+    ));
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = connections.started.notified() => {},
+            _ = &mut call => panic!("request completed before connection lookup"),
+        }
+    })
+    .await
+    .expect("connection lookup did not start");
+    assert_eq!(server.in_flight_len(), 1);
+
+    let wrong_account_scope = sessionless_scope("other-brand");
+    let wrong_account_context = issued_context(&server, &wrong_account_scope).await;
+    let wrong_account = server
+        .handle_http_with_context(
+            "POST",
+            &wrong_account_scope,
+            &wrong_account_context,
+            &serde_json::to_vec(&cancelled_notification(41, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(wrong_account.status, 202);
+    assert!(wrong_account.body.is_none());
+    assert!(tokio::time::timeout(Duration::from_millis(10), &mut call)
+        .await
+        .is_err());
+
+    let cancelled = server
+        .handle_http_with_context(
+            "POST",
+            &request_scope,
+            &request_context,
+            &serde_json::to_vec(&cancelled_notification(41, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cancelled.status, 202);
+    assert!(cancelled.body.is_none());
+    connections.release.notify_one();
+
+    let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+        .await
+        .expect("cancelled request did not finish");
+    let body = response.body.unwrap();
+    assert_eq!(body["result"]["isError"], true);
+    assert_eq!(
+        body["result"]["structuredContent"]["code"],
+        "MCP_REQUEST_CANCELLED"
+    );
+    assert_eq!(
+        body["result"]["_meta"]["appcall"]["dispatch"]["outcome"],
+        "not_dispatched"
+    );
+    assert_eq!(
+        body["result"]["_meta"]["appcall"]["cancellation"]["phase"],
+        "before_dispatch"
+    );
+    assert_eq!(executor.dispatched.load(Ordering::SeqCst), 0);
+    assert_eq!(executor.provider_effects.load(Ordering::SeqCst), 0);
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[tokio::test]
+async fn legacy_http_cancellation_keeps_same_scope_identity() {
+    let connections = WaitingConnections {
+        started: Arc::new(Notify::new()),
+        release: Arc::new(Notify::new()),
+    };
+    let executor = CancellableExecutor::new();
+    let server = Server::new(registry(), connections.clone(), executor.clone(), ());
+    let scope = scope();
+    let request = serde_json::to_vec(&tools_call_request(40, "selected")).unwrap();
+    let mut call = Box::pin(server.handle_http("POST", &scope, &request));
+    tokio::time::timeout(Duration::from_millis(100), async {
+        tokio::select! {
+            _ = connections.started.notified() => {},
+            _ = &mut call => panic!("request completed before connection lookup"),
+        }
+    })
+    .await
+    .expect("connection lookup did not start");
+
+    let cancellation = server
+        .handle_http(
+            "POST",
+            &scope,
+            &serde_json::to_vec(&cancelled_notification(40, Some("selected"))).unwrap(),
+        )
+        .await;
+    assert_eq!(cancellation.status, 202);
+    connections.release.notify_one();
+    let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+        .await
+        .expect("legacy cancellation did not finish");
+    assert_eq!(
+        response.body.unwrap()["result"]["structuredContent"]["code"],
+        "MCP_REQUEST_CANCELLED"
+    );
+    assert_eq!(executor.dispatched.load(Ordering::SeqCst), 0);
+    assert_eq!(server.in_flight_len(), 0);
+}
+
+#[tokio::test]
+async fn mcp_cancellation_after_dispatch_reports_uncertainty_without_rollback_claim() {
+    let executor = CancellableExecutor::new();
+    let server = Arc::new(Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    ));
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let request_scope = sessionless_scope("brand");
+            let request_context = issued_context(&server, &request_scope).await;
+            let request = serde_json::to_vec(&tools_call_request(42, "selected")).unwrap();
+            let mut call = Box::pin(server.handle_http_with_context(
+                "POST",
+                &request_scope,
+                &request_context,
+                &request,
+            ));
+            tokio::time::timeout(Duration::from_millis(100), async {
+                tokio::select! {
+                    _ = executor.started.notified() => {},
+                    _ = &mut call => panic!("request completed before action dispatch"),
+                }
+            })
+            .await
+            .expect("action dispatch did not start");
+            assert_eq!(server.in_flight_len(), 1);
+
+            let notification = server
+                .handle_http_with_context(
+                    "POST",
+                    &request_scope,
+                    &request_context,
+                    &serde_json::to_vec(&cancelled_notification(42, Some("selected"))).unwrap(),
+                )
+                .await;
+            assert_eq!(notification.status, 202);
+            assert!(notification.body.is_none());
+
+            let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+                .await
+                .expect("cancelled request did not finish");
+            let body = response.body.unwrap();
+            assert_eq!(body["result"]["isError"], true);
+            assert_eq!(
+                body["result"]["structuredContent"]["code"],
+                "MCP_REQUEST_CANCELLED"
+            );
+            assert_eq!(
+                body["result"]["_meta"]["appcall"]["dispatch"]["outcome"],
+                "unknown"
+            );
+            assert_eq!(
+                body["result"]["_meta"]["appcall"]["cancellation"],
+                json!({"phase":"after_dispatch","rollback":"not_attempted"})
+            );
+            assert!(body["result"]["_meta"]["appcall"]
+                .get("rolledBack")
+                .is_none());
+            assert_eq!(executor.dispatched.load(Ordering::SeqCst), 1);
+            assert_eq!(executor.provider_effects.load(Ordering::SeqCst), 0);
+            assert_eq!(server.in_flight_len(), 1);
+            executor.release.notify_one();
+            tokio::time::timeout(Duration::from_millis(100), async {
+                while server.in_flight_len() != 0 {
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .expect("detached execution did not release the request reservation");
+            assert_eq!(executor.provider_effects.load(Ordering::SeqCst), 1);
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn mcp_cancelled_dispatch_reserves_id_until_detached_execution_finishes() {
+    let executor = CancellableExecutor::new();
+    let server = Arc::new(Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    ));
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let scope = sessionless_scope("brand");
+            let context = issued_context(server.as_ref(), &scope).await;
+            let request = serde_json::to_vec(&tools_call_request(91, "selected")).unwrap();
+            let mut call =
+                Box::pin(server.handle_http_with_context("POST", &scope, &context, &request));
+            tokio::time::timeout(Duration::from_millis(100), async {
+                tokio::select! {
+                    _ = executor.started.notified() => {},
+                    _ = &mut call => panic!("request completed before action dispatch"),
+                }
+            })
+            .await
+            .expect("action dispatch did not start");
+
+            let cancellation = server
+                .handle_http_with_context(
+                    "POST",
+                    &scope,
+                    &context,
+                    &serde_json::to_vec(&cancelled_notification(91, Some("selected"))).unwrap(),
+                )
+                .await;
+            assert_eq!(cancellation.status, 202);
+            let cancelled = call.await;
+            assert_eq!(
+                cancelled.body.unwrap()["result"]["structuredContent"]["code"],
+                "MCP_REQUEST_CANCELLED"
+            );
+
+            let retry = server
+                .handle_http_with_context("POST", &scope, &context, &request)
+                .await;
+            assert_eq!(retry.status, 200);
+            assert_eq!(
+                retry.body.unwrap()["result"]["structuredContent"]["code"],
+                "MCP_REQUEST_IN_FLIGHT"
+            );
+            assert_eq!(executor.provider_effects.load(Ordering::SeqCst), 0);
+
+            executor.release.notify_one();
+            tokio::time::timeout(Duration::from_millis(100), async {
+                while server.in_flight_len() != 0 {
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .expect("detached action did not finish and release its reservation");
+
+            let retry_server = server.clone();
+            let retry_scope = scope.clone();
+            let retry_context = context.clone();
+            let retry_request = request.clone();
+            let retry = tokio::task::spawn_local(async move {
+                retry_server
+                    .handle_http_with_context("POST", &retry_scope, &retry_context, &retry_request)
+                    .await
+            });
+            tokio::time::timeout(Duration::from_millis(100), async {
+                while executor.start_count.load(Ordering::SeqCst) < 2 {
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .expect("same request ID was not reusable after completion");
+            executor.release.notify_one();
+            assert_eq!(retry.await.unwrap().status, 200);
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn mcp_wrong_connection_and_session_cancellation_leave_the_request_running() {
+    let executor = CancellableExecutor::new();
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    );
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let request_scope = sessionless_scope("brand");
+            let request_context = issued_context(&server, &request_scope).await;
+            let other_session_scope = sessionless_scope("brand");
+            let other_session_context = issued_context(&server, &other_session_scope).await;
+            let request = serde_json::to_vec(&tools_call_request(43, "selected")).unwrap();
+            let mut call = Box::pin(server.handle_http_with_context(
+                "POST",
+                &request_scope,
+                &request_context,
+                &request,
+            ));
+            tokio::time::timeout(Duration::from_millis(100), async {
+                tokio::select! {
+                    _ = executor.started.notified() => {},
+                    _ = &mut call => panic!("request completed before action dispatch"),
+                }
+            })
+            .await
+            .expect("action dispatch did not start");
+
+            for (scope, context, connection_id) in [
+                (&request_scope, &request_context, Some("wrong-connection")),
+                (
+                    &other_session_scope,
+                    &other_session_context,
+                    Some("selected"),
+                ),
+            ] {
+                let notification = server
+                    .handle_http_with_context(
+                        "POST",
+                        scope,
+                        context,
+                        &serde_json::to_vec(&cancelled_notification(43, connection_id)).unwrap(),
+                    )
+                    .await;
+                assert_eq!(notification.status, 202);
+                assert!(notification.body.is_none());
+                assert!(tokio::time::timeout(Duration::from_millis(10), &mut call)
+                    .await
+                    .is_err());
+            }
+
+            executor.release.notify_one();
+            let response = tokio::time::timeout(Duration::from_millis(100), &mut call)
+                .await
+                .expect("authorized request did not complete");
+            let body = response.body.unwrap();
+            assert_eq!(body["result"]["isError"], false);
+            assert_eq!(executor.provider_effects.load(Ordering::SeqCst), 1);
+            assert_eq!(server.in_flight_len(), 0);
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn mcp_completed_request_wins_a_late_cancellation_and_cleans_up() {
+    let executor = Executor::default();
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor,
+        (),
+    );
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let request_scope = sessionless_scope("brand");
+            let request_context = issued_context(&server, &request_scope).await;
+            let result = server
+                .handle_http_with_context(
+                    "POST",
+                    &request_scope,
+                    &request_context,
+                    &serde_json::to_vec(&tools_call_request(44, "selected")).unwrap(),
+                )
+                .await;
+            assert_eq!(result.status, 200);
+            assert_eq!(server.in_flight_len(), 0);
+
+            let notification = server
+                .handle_http_with_context(
+                    "POST",
+                    &request_scope,
+                    &request_context,
+                    &serde_json::to_vec(&cancelled_notification(44, Some("selected"))).unwrap(),
+                )
+                .await;
+            assert_eq!(notification.status, 202);
+            assert!(notification.body.is_none());
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn mcp_completion_and_cancellation_race_has_one_terminal_result() {
+    let executor = CancellableExecutor::new();
+    let server = Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    );
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let request_scope = sessionless_scope("brand");
+            let request_context = issued_context(&server, &request_scope).await;
+            let request_body = serde_json::to_vec(&tools_call_request(45, "selected")).unwrap();
+            let mut call = Box::pin(server.handle_http_with_context(
+                "POST",
+                &request_scope,
+                &request_context,
+                &request_body,
+            ));
+            tokio::time::timeout(Duration::from_millis(100), async {
+                tokio::select! {
+                    _ = executor.started.notified() => {},
+                    _ = &mut call => panic!("request completed before the race"),
+                }
+            })
+            .await
+            .expect("action dispatch did not start");
+
+            executor.release.notify_one();
+            let cancellation_body =
+                serde_json::to_vec(&cancelled_notification(45, Some("selected"))).unwrap();
+            let cancellation = server.handle_http_with_context(
+                "POST",
+                &request_scope,
+                &request_context,
+                &cancellation_body,
+            );
+            let (response, notification) = tokio::join!(&mut call, cancellation);
+            assert_eq!(notification.status, 202);
+            assert!(notification.body.is_none());
+            let body = response.body.unwrap();
+            let cancelled = body["result"]["isError"] == json!(true);
+            if cancelled {
+                assert_eq!(
+                    body["result"]["structuredContent"]["code"],
+                    "MCP_REQUEST_CANCELLED"
+                );
+                assert_eq!(
+                    body["result"]["_meta"]["appcall"]["dispatch"]["outcome"],
+                    "unknown"
+                );
+            } else {
+                assert_eq!(body["result"]["isError"], false);
+            }
+            let provider_effects = executor.provider_effects.load(Ordering::SeqCst);
+            assert!(provider_effects <= 1);
+            if !cancelled {
+                assert_eq!(provider_effects, 1);
+            }
+            assert_eq!(server.in_flight_len(), 0);
+        })
+        .await;
+}
+
+#[tokio::test]
+async fn mcp_in_flight_registry_is_bounded_and_aborted_entries_are_cleaned() {
+    let executor = CancellableExecutor::new();
+    let server = Arc::new(Server::new(
+        registry(),
+        Connections(vec![connection("selected", "p", "brand")]),
+        executor.clone(),
+        (),
+    ));
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let request_scope = sessionless_scope("brand");
+            let request_context = issued_context(server.as_ref(), &request_scope).await;
+            let mut calls = Vec::new();
+            for id in 0..MAX_MCP_IN_FLIGHT_REQUESTS {
+                let server = server.clone();
+                let request_scope = request_scope.clone();
+                let request_context = request_context.clone();
+                calls.push(tokio::task::spawn_local(async move {
+                    server
+                        .handle_http_with_context(
+                            "POST",
+                            &request_scope,
+                            &request_context,
+                            &serde_json::to_vec(&tools_call_request(id, "selected")).unwrap(),
+                        )
+                        .await
+                }));
+            }
+            tokio::time::timeout(Duration::from_secs(1), async {
+                while executor.start_count.load(Ordering::SeqCst) < MAX_MCP_IN_FLIGHT_REQUESTS {
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .expect("registry capacity was not reached");
+            assert_eq!(server.in_flight_len(), MAX_MCP_IN_FLIGHT_REQUESTS);
+            let extra = tokio::time::timeout(
+                Duration::from_millis(100),
+                server.handle_http_with_context(
+                    "POST",
+                    &request_scope,
+                    &request_context,
+                    &serde_json::to_vec(&tools_call_request(
+                        MAX_MCP_IN_FLIGHT_REQUESTS,
+                        "selected",
+                    ))
+                    .unwrap(),
+                ),
+            )
+            .await
+            .expect("bounded registry did not reject excess work");
+            let body = extra.body.unwrap();
+            assert_eq!(body["result"]["isError"], true);
+            assert_eq!(
+                body["result"]["structuredContent"]["code"],
+                "MCP_REQUEST_CAPACITY"
+            );
+            assert_eq!(
+                executor.start_count.load(Ordering::SeqCst),
+                MAX_MCP_IN_FLIGHT_REQUESTS
+            );
+
+            for call in calls {
+                call.abort();
+                let _ = call.await;
+            }
+            tokio::time::timeout(Duration::from_millis(100), async {
+                while server.in_flight_len() != 0 {
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .expect("aborted action reservations were not cleaned up");
+        })
+        .await;
 }
 
 #[derive(Clone)]

@@ -160,12 +160,16 @@ impl Application {
             None
         };
         let mcp_database = Arc::new(Mutex::new(config.connect()?));
+        let mcp_transport =
+            appcall_mcp::McpTransportConfig::from_allowed_origins(config.mcp_allowed_origins())
+                .map_err(|_| "invalid MCP transport origin configuration")?;
         let mcp = appcall_mcp::Server::new(
             registry,
             appcall_mcp::PgConnections::new(mcp_database.clone()),
             executor,
             shared.mcp_usage.clone(),
-        );
+        )
+        .with_transport_config(mcp_transport);
         let verifier = if policy_config.webhook_secret.is_empty() {
             None
         } else {
@@ -456,16 +460,27 @@ impl Backend for Application {
         if request_url(r)?.path() != "/v1/mcp" {
             return Ok(None);
         }
+        appcall_api::validate_headers(&r.headers)?;
         let identity = self.authorize(&r.headers).await?;
         let token = header(r, "X-Connector-Token");
         let scope = appcall_mcp::Scope::new(&identity.project_id, &identity.account_id)
             .with_profile(header(r, "X-Capability-Profile"))
             .with_connector_token(token.strip_prefix("Bearer ").unwrap_or(token));
-        let response = self.mcp.handle_http(&r.method, &scope, &r.body).await;
+        let response = self
+            .mcp
+            .handle_http_with_headers(&r.method, &scope, &r.headers, &r.body)
+            .await;
+        let appcall_mcp::HttpResponse {
+            status,
+            headers: mcp_headers,
+            body,
+        } = response;
+        let mut headers = vec![("content-type".into(), "application/json".into())];
+        headers.extend(mcp_headers);
         Ok(Some(RawResponse {
-            status: response.status,
-            headers: vec![("content-type".into(), "application/json".into())],
-            body: match response.body {
+            status,
+            headers,
+            body: match body {
                 Some(v) => serde_json::to_vec(&v).map_err(|_| ApiError::new("INVALID_RESPONSE"))?,
                 None => vec![],
             },

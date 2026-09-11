@@ -40,6 +40,7 @@ pub struct Config {
     vault_key: Zeroizing<Vec<u8>>,
     state_key: Zeroizing<Vec<u8>>,
     apps: BTreeMap<String, AppCredentials>,
+    mcp_allowed_origins: Vec<String>,
     pub connector_dir: String,
     pub runner_url: String,
     runner_token: Zeroizing<String>,
@@ -93,6 +94,7 @@ impl Config {
             vault_key: Zeroizing::new(vault),
             state_key: Zeroizing::new(state),
             apps,
+            mcp_allowed_origins: mcp_allowed_origins_from_map(e)?,
             connector_dir: if value("APPCALL_CONNECTOR_DIR").is_empty() {
                 "runner/connectors".into()
             } else {
@@ -135,6 +137,9 @@ impl Config {
     }
     pub fn oauth_apps(&self) -> &BTreeMap<String, AppCredentials> {
         &self.apps
+    }
+    pub fn mcp_allowed_origins(&self) -> &[String] {
+        &self.mcp_allowed_origins
     }
     pub fn registry(&self) -> Result<Registry> {
         Registry::load(&self.connector_dir).map_err(|_| Error::Registry)
@@ -308,6 +313,26 @@ pub fn policy_from_map(e: &BTreeMap<String, String>) -> Result<appcall_actions::
             invite_noted_monthly_cap: nonnegative(e, "APPCALL_LINKEDIN_INVITE_NOTED_MONTHLY_CAP")?,
         },
     })
+}
+
+pub fn mcp_allowed_origins_from_map(e: &BTreeMap<String, String>) -> Result<Vec<String>> {
+    let configured = e
+        .get("APPCALL_MCP_ALLOWED_ORIGINS")
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty());
+    let raw = configured.or_else(|| {
+        e.get("APPCALL_PUBLIC_BASE_URL")
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+    });
+    let Some(raw) = raw else {
+        return Ok(Vec::new());
+    };
+    let origins = raw.split(',').map(str::trim).collect::<Vec<_>>();
+    if origins.iter().any(|origin| origin.is_empty()) {
+        return Err(Error::Configuration);
+    }
+    Ok(origins.into_iter().map(str::to_owned).collect())
 }
 
 /// Parse connector OAuth app settings independently of the storage backend.
