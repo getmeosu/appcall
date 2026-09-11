@@ -60,6 +60,28 @@ describe("outbound request deadline", () => {
     await expect(pending).rejects.toThrow("aborted by caller");
   });
 
+  test("cancels a stalled response body when the outbound deadline expires", async () => {
+    let canceled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("first chunk"));
+      },
+      cancel() {
+        canceled = true;
+      },
+    });
+    const client = createConnectorHttpClient({
+      allowedHosts: ["api.example.com"],
+      maxResponseBytes: 65_536,
+      timeoutMs: 20,
+      fetch: async () => new Response(body),
+    });
+
+    await expect(client.fetchText("https://api.example.com/slow-body"))
+      .rejects.toMatchObject({ code: "OUTBOUND_TIMEOUT" });
+    expect(canceled).toBe(true);
+  });
+
   test("falls back to the default deadline when none is given", () => {
     expect(defaultOutboundTimeoutMs).toBe(300_000);
     const client = createConnectorHttpClient({

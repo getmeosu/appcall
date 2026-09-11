@@ -1,4 +1,6 @@
+import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
 import { isRecord } from "./http";
+import manifest from "../manifest.json";
 
 // Static result returned by the no-credential setup-validation path (the
 // connector is registered and reachable as code, but no provider call is made).
@@ -27,13 +29,20 @@ export function healthcheck(input?: unknown): HealthcheckResult | Promise<Provid
 }
 
 async function verifyApiKey(apiKey: string, fetchFn: typeof fetch): Promise<ProviderHealthcheckResult> {
-  let response: Response;
+  const httpClient = createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts,
+    maxResponseBytes: manifest.operations.healthcheck.maxResponseBytes,
+    timeoutMs: manifest.operations.healthcheck.timeoutMs,
+    fetch: fetchFn,
+  });
+  let response: { status: number; body: string };
   try {
-    response = await fetchFn("https://api.apollo.io/api/v1/auth/health", {
+    response = await httpClient.fetchText("https://api.apollo.io/api/v1/auth/health", {
       method: "GET",
       headers: { "X-Api-Key": apiKey },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof ConnectorHttpError) throw error;
     throw { ok: false, code: "CONNECTOR_UNAVAILABLE", message: "Apollo could not be reached." };
   }
   if (response.status < 200 || response.status >= 300) {
@@ -41,7 +50,7 @@ async function verifyApiKey(apiKey: string, fetchFn: typeof fetch): Promise<Prov
   }
   let body: unknown;
   try {
-    body = await response.json();
+    body = JSON.parse(response.body);
   } catch {
     body = undefined;
   }

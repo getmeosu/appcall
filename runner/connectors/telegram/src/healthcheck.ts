@@ -1,3 +1,6 @@
+import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
+import manifest from "../manifest.json";
+
 export type HealthcheckResult = {
   connector: "telegram";
   status: "ok";
@@ -30,18 +33,25 @@ export function healthcheck(input?: unknown): HealthcheckResult | Promise<Provid
 }
 
 async function verifyBotToken(botToken: string, fetchFn: typeof fetch): Promise<ProviderHealthcheckResult> {
-  let response: Response;
+  const httpClient = createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts,
+    maxResponseBytes: manifest.operations.healthcheck.maxResponseBytes,
+    timeoutMs: manifest.operations.healthcheck.timeoutMs,
+    fetch: fetchFn,
+  });
+  let response: { status: number; body: string };
   try {
-    response = await fetchFn(`https://api.telegram.org/bot${botToken}/getMe`, {
+    response = await httpClient.fetchText(`https://api.telegram.org/bot${botToken}/getMe`, {
       method: "GET",
       headers: {},
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof ConnectorHttpError) throw error;
     throw { ok: false, code: "CONNECTOR_UNAVAILABLE", message: "Telegram could not be reached." };
   }
   let body: unknown;
   try {
-    body = await response.json();
+    body = JSON.parse(response.body);
   } catch {
     body = undefined;
   }
