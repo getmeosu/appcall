@@ -97,6 +97,51 @@ fn resume_running_does_not_bypass_a_future_timer() {
     assert_eq!(e.next_wakeup().unwrap(), Some(100));
     assert!(e.runnable(0, 10).unwrap().is_empty());
 }
+
+#[test]
+fn resume_reopens_stale_read_and_idempotent_attempts_without_drive() {
+    for (workflow, policy) in [
+        ("read-restart", EffectPolicy::Read),
+        ("idempotent-restart", EffectPolicy::Idempotent),
+    ] {
+        let d = tempfile::tempdir().unwrap();
+        let db = d.path().join("db");
+        let mut initial = Engine::open(&db).unwrap();
+        initial
+            .register_workflow(workflow, "v1", move |c| {
+                c.activity("lookup", "v1", c.input().clone(), policy)
+            })
+            .unwrap();
+        initial.register_activity("lookup", "v1").unwrap();
+        initial
+            .start(
+                workflow,
+                workflow,
+                "v1",
+                PayloadRef::durable("input").unwrap(),
+            )
+            .unwrap();
+        let stale = match initial.drive(workflow, 0).unwrap() {
+            DriveOutcome::Activity(attempt) => attempt,
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(initial.status(workflow).unwrap(), RunState::Running);
+        drop(initial);
+
+        let mut reopened = Engine::open(&db).unwrap();
+        reopened.resume(workflow).unwrap();
+        drop(reopened);
+
+        let store = SqliteStore::open(&db).unwrap();
+        let run = store.load(workflow).unwrap();
+        assert_eq!(run.state, RunState::Running);
+        assert_eq!(run.wakeup, Some(0));
+        assert_eq!(run.tasks.len(), 1);
+        assert_eq!(run.tasks[0].attempt, stale);
+        assert!(matches!(run.tasks[0].state, TaskState::Ready));
+    }
+}
+
 fn one(c: &mut Context) -> WorkflowResult {
     c.activity("lookup", "v1", c.input().clone(), EffectPolicy::Unknown)
 }

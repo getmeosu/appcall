@@ -1,7 +1,21 @@
 use appcall_engine::*;
 use appcall_engine_http::*;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        mpsc, Arc,
+    },
+    time::Duration,
+};
 const TOKEN: &str = "actor-test-token-at-least-thirty-two-bytes";
+
+struct DurableInput;
+impl PayloadResolver for DurableInput {
+    fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+        Ok(Some(b"input".to_vec()))
+    }
+}
+
 #[test]
 fn one_exhausted_or_external_only_run_does_not_stop_other_workflows() {
     let d = tempfile::tempdir().unwrap();
@@ -74,6 +88,97 @@ fn one_exhausted_or_external_only_run_does_not_stop_other_workflows() {
     host.shutdown().unwrap();
     assert!(!client.is_alive());
 }
+
+#[test]
+fn reopened_host_auto_recovers_stale_read_and_idempotent_attempts() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    for (workflow, policy) in [
+        ("read-restart", EffectPolicy::Read),
+        ("idempotent-restart", EffectPolicy::Idempotent),
+    ] {
+        let d = tempfile::tempdir().unwrap();
+        let db = d.path().join("db");
+        let mut initial = Engine::open(&db).unwrap();
+        initial
+            .register_workflow(workflow, "v1", move |c| {
+                c.activity("lookup", "v1", c.input().clone(), policy)
+            })
+            .unwrap();
+        initial.register_activity("lookup", "v1").unwrap();
+        initial
+            .start(
+                workflow,
+                workflow,
+                "v1",
+                PayloadRef::durable("input").unwrap(),
+            )
+            .unwrap();
+        let stale = match initial.drive(workflow, 0).unwrap() {
+            DriveOutcome::Activity(attempt) => attempt,
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(initial.status(workflow).unwrap(), RunState::Running);
+        assert_eq!(stale.attempt, 1);
+        drop(initial);
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let callback_calls = calls.clone();
+        let (invoked_tx, invoked_rx) = mpsc::channel();
+        let stale_epoch = stale.owner_epoch;
+        let mut reopened = Engine::open(&db).unwrap();
+        reopened
+            .register_workflow(workflow, "v1", move |c| {
+                c.activity("lookup", "v1", c.input().clone(), policy)
+            })
+            .unwrap();
+        reopened
+            .register_activity_fn("lookup", "v1", move |attempt, bytes| {
+                assert_eq!(attempt.policy, policy);
+                assert_eq!(attempt.attempt, 2);
+                assert!(attempt.owner_epoch > stale_epoch);
+                assert_eq!(bytes, b"input");
+                assert_eq!(callback_calls.fetch_add(1, Ordering::SeqCst), 0);
+                invoked_tx.send(()).unwrap();
+                Ok(PayloadRef::durable("output").unwrap())
+            })
+            .unwrap();
+        let host = EngineHost::spawn(
+            HttpAdapter::new(reopened, TOKEN).unwrap(),
+            Arc::new(DurableInput),
+        )
+        .unwrap();
+        let client = host.client();
+        invoked_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+
+        let body = runtime.block_on(async {
+            for _ in 0..100 {
+                let response = client
+                    .request(
+                        "GET".into(),
+                        format!("/runs/{workflow}"),
+                        format!("Bearer {TOKEN}"),
+                        vec![],
+                        Duration::from_secs(2),
+                    )
+                    .await;
+                assert_eq!(response.status, 200);
+                let body = String::from_utf8(response.body).unwrap();
+                if body.contains("Completed") {
+                    return body;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+            panic!("reopened host did not complete {workflow}");
+        });
+        assert!(body.contains("Completed"));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        host.shutdown().unwrap();
+    }
+}
+
 #[test]
 fn repeated_cancellation_retains_physical_native_capacity_until_callback_returns() {
     use std::sync::{
