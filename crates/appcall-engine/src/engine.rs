@@ -176,13 +176,13 @@ impl<S: Store> Engine<S> {
     pub fn runnable(&self, now_ms: i64, limit: usize) -> Result<Vec<String>> {
         self.store.runnable(now_ms, limit)
     }
-    /// Requeue one persisted prerequisite-blocked run for a bounded recheck.
+    /// Requeue one persisted run for a bounded recheck.
     ///
     /// This operation never changes the serialized command history or effect
-    /// fences. In particular, an unknown outcome must be reconciled explicitly
-    /// before any further execution can be scheduled. A retry that observes a
-    /// running run is an idempotent no-op, so a lost HTTP response cannot cause
-    /// a second run to be created.
+    /// fences. A restarted in-flight attempt is recovered according to its
+    /// effect policy before the run is requeued. In particular, an unknown
+    /// outcome must be reconciled explicitly before any further execution can
+    /// be scheduled.
     pub fn resume(&mut self, id: &str) -> Result<()> {
         let mut run = self.store.load(id)?;
         match run.state {
@@ -191,7 +191,13 @@ impl<S: Store> Engine<S> {
                 run.wakeup = Some(0);
                 self.save(&mut run, &[])
             }
-            RunState::Running => Ok(()),
+            RunState::Running => {
+                self.recover(&mut run)?;
+                if run.state != RunState::Running {
+                    return Err(Error::Conflict);
+                }
+                Ok(())
+            }
             _ => Err(Error::Conflict),
         }
     }

@@ -79,6 +79,24 @@ fn persisted_missing_workflow_can_be_resumed_after_registration_without_a_duplic
         DriveOutcome::Completed(_)
     ));
 }
+#[test]
+fn resume_running_does_not_bypass_a_future_timer() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("timer", "v1", |c| {
+        c.timer(100)?;
+        Ok(c.input().clone())
+    })
+    .unwrap();
+    e.start("r", "timer", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    assert_eq!(e.next_wakeup().unwrap(), Some(100));
+    e.resume("r").unwrap();
+    assert_eq!(e.next_wakeup().unwrap(), Some(100));
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+}
 fn one(c: &mut Context) -> WorkflowResult {
     c.activity("lookup", "v1", c.input().clone(), EffectPolicy::Unknown)
 }

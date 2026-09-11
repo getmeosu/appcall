@@ -105,6 +105,48 @@ fn authenticated_resume_cannot_bypass_persisted_unknown_outcome() {
         RunState::OutcomeUnknown
     );
 }
+
+#[test]
+fn authenticated_resume_recovers_restarted_in_flight_unknown_attempt_without_drive() {
+    fn unknown(c: &mut Context) -> WorkflowResult {
+        c.activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)
+    }
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut initial = Engine::open(&db).unwrap();
+    initial.register_workflow("unknown", "v1", unknown).unwrap();
+    initial.register_activity("unknown", "v1").unwrap();
+    initial
+        .start("r", "unknown", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let attempt = match initial.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("{other:?}"),
+    };
+    assert_eq!(initial.status("r").unwrap(), RunState::Running);
+    drop(initial);
+
+    let mut recovered = Engine::open(&db).unwrap();
+    recovered
+        .register_workflow("unknown", "v1", unknown)
+        .unwrap();
+    recovered.register_activity("unknown", "v1").unwrap();
+    assert_eq!(recovered.runnable(0, 10).unwrap(), vec!["r"]);
+    let mut api = HttpAdapter::new(recovered, TOKEN).unwrap();
+    let auth = format!("Bearer {TOKEN}");
+    assert_eq!(api.handle("POST", "/runs/r/resume", &auth, b"").status, 409);
+    assert_eq!(
+        api.engine_mut().status("r").unwrap(),
+        RunState::OutcomeUnknown
+    );
+    assert!(api.engine_mut().runnable(0, 10).unwrap().is_empty());
+    assert!(api
+        .engine_mut()
+        .complete(&attempt, PayloadRef::durable("late").unwrap())
+        .is_err());
+}
+
 #[test]
 fn deployment_scope_cannot_be_changed_by_client_ids() {
     let d = tempfile::tempdir().unwrap();
