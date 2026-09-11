@@ -839,3 +839,151 @@ fn explicit_failure_reports_retry_safely_fence_stale_attempts_and_release_capaci
         .unwrap();
     assert_eq!(e.status("unknown").unwrap(), RunState::OutcomeUnknown);
 }
+
+fn rewrite_persisted_revision(db: &std::path::Path, id: &str, revision: u64) {
+    let connection = rusqlite::Connection::open(db).unwrap();
+    let bytes: Vec<u8> = connection
+        .query_row("SELECT record FROM engine_runs WHERE id=?1", [id], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    let mut record: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    record["revision"] = serde_json::json!(revision);
+    connection
+        .execute(
+            "UPDATE engine_runs SET record=?1 WHERE id=?2",
+            rusqlite::params![serde_json::to_vec(&record).unwrap(), id],
+        )
+        .unwrap();
+}
+
+#[test]
+fn cancellation_preserves_outcome_unknown_and_allows_reconciliation() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let attempt = attempt(&mut e, "r");
+    e.fail(&attempt, ActivityFailure::OutcomeUnknown).unwrap();
+
+    e.cancel("r").unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    e.reconcile("r", &attempt.effect_id, None).unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::Running);
+}
+
+#[test]
+fn cancellation_preserves_failed_terminal_identity() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    e.reject_run("r", RunFailure::ResourceLimit).unwrap();
+
+    e.cancel("r").unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::Failed);
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::ResourceLimit)
+    );
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::Failed)
+    ));
+}
+
+#[test]
+fn cancellation_preserves_nondeterminism_terminal_identity() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("bad", "v1", |_| Err(WorkflowError::Invalid))
+        .unwrap();
+    e.start("r", "bad", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::Nondeterminism)
+    ));
+
+    e.cancel("r").unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::Nondeterminism);
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::Nondeterminism)
+    ));
+}
+
+#[test]
+fn engine_save_at_max_revision_returns_limit_without_panicking() {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    drop(e);
+    rewrite_persisted_revision(&db, "r", u64::MAX);
+
+    let mut e = Engine::open(&db).unwrap();
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        e.signal("r", "wake", PayloadRef::durable("value").unwrap())
+    }));
+    assert!(result.is_ok(), "revision overflow must not panic");
+    assert!(matches!(result.unwrap(), Err(Error::Limit)));
+}
+
+#[test]
+fn sqlite_commit_with_max_expected_returns_conflict_without_panicking() {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    drop(e);
+
+    let mut store = SqliteStore::open(&db).unwrap();
+    let original = store.load("r").unwrap();
+    let mut changed = original.clone();
+    changed.revision += 1;
+    changed.state = RunState::Cancelled;
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        store.commit(u64::MAX, &changed, &[])
+    }));
+
+    assert!(result.is_ok(), "revision successor overflow must not panic");
+    assert!(matches!(result.unwrap(), Err(Error::Conflict)));
+    assert_eq!(store.load("r").unwrap().revision, original.revision);
+}
+
+#[test]
+fn sqlite_signed_revision_overflow_returns_limit_for_insert_and_commit() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    drop(e);
+
+    let mut store = SqliteStore::open(&db).unwrap();
+    let original = store.load("r").unwrap();
+
+    let mut max_insert = original.clone();
+    max_insert.id = "max-insert".into();
+    max_insert.revision = u64::MAX;
+    assert!(matches!(store.insert(&max_insert), Err(Error::Limit)));
+
+    let mut max_successor = original.clone();
+    max_successor.revision = u64::MAX;
+    assert!(matches!(
+        store.commit(u64::MAX - 1, &max_successor, &[]),
+        Err(Error::Limit)
+    ));
+}
