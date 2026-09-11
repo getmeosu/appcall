@@ -71,91 +71,95 @@ struct BunRunner {
 
 impl BunRunner {
     fn start() -> Self {
-        const MAX_START_ATTEMPTS: usize = 8;
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let entry = root.join("runner/bun/src/index.ts");
-        for attempt in 1..=MAX_START_ATTEMPTS {
-            let reservation = std::net::TcpListener::bind("127.0.0.1:0")
-                .expect("failed to reserve a local port for the Bun runner");
-            let port = reservation
-                .local_addr()
-                .expect("reserved Bun runner listener must have an address")
-                .port();
-            drop(reservation);
-            let address = format!("127.0.0.1:{port}");
-            let mut child = Command::new("bun")
-                .current_dir(&root)
-                .args(["run", entry.to_str().unwrap()])
-                .env("APPCALL_RUNNER_HOST", "127.0.0.1")
-                .env("APPCALL_RUNNER_PORT", port.to_string())
-                .env("APPCALL_RUNNER_TOKEN", "runner-token")
-                .stdout(Stdio::piped())
-                .stderr(Stdio::null())
-                .spawn()
-                .expect("Bun is required for the parser/RPC integration test");
-            let stdout = match child.stdout.take() {
-                Some(stdout) => stdout,
-                None => {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    panic!("Bun runner stdout must be piped for readiness");
-                }
-            };
-            let (ready_tx, ready_rx) = mpsc::sync_channel(1);
-            let reader = std::thread::spawn(move || {
-                for line in BufReader::new(stdout).lines() {
-                    let line = match line {
-                        Ok(line) => line,
-                        Err(error) => {
-                            let _ = ready_tx
-                                .send(Err(format!("failed to read Bun readiness: {error}")));
-                            return;
-                        }
-                    };
-                    let started =
-                        serde_json::from_str::<Value>(&line)
-                            .ok()
-                            .is_some_and(|message| {
-                                message.get("component").and_then(Value::as_str) == Some("runner")
-                                    && message.get("event").and_then(Value::as_str)
-                                        == Some("started")
-                                    && message.get("port").and_then(Value::as_u64)
-                                        == Some(port.into())
-                            });
-                    if started {
-                        let _ = ready_tx.send(Ok(()));
+        let mut child = Command::new("bun")
+            .current_dir(&root)
+            .args(["run", entry.to_str().unwrap()])
+            .env("APPCALL_RUNNER_HOST", "127.0.0.1")
+            .env("APPCALL_RUNNER_PORT", "0")
+            .env("APPCALL_RUNNER_TOKEN", "runner-token")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("Bun is required for the parser/RPC integration test");
+        let stdout = match child.stdout.take() {
+            Some(stdout) => stdout,
+            None => {
+                let _ = child.kill();
+                let _ = child.wait();
+                panic!("Bun runner stdout must be piped for readiness");
+            }
+        };
+        let (ready_tx, ready_rx) = mpsc::sync_channel(1);
+        let reader = std::thread::spawn(move || {
+            for line in BufReader::new(stdout).lines() {
+                let line = match line {
+                    Ok(line) => line,
+                    Err(error) => {
+                        let _ =
+                            ready_tx.send(Err(format!("failed to read Bun readiness: {error}")));
                         return;
                     }
+                };
+                let Some(message) = serde_json::from_str::<Value>(&line).ok() else {
+                    continue;
+                };
+                if message.get("event").and_then(Value::as_str) != Some("started") {
+                    continue;
                 }
-                let _ = ready_tx.send(Err("Bun runner exited before readiness".into()));
-            });
-            match ready_rx.recv_timeout(Duration::from_secs(10)) {
-                Ok(Ok(())) => {
-                    let _ = reader.join();
-                    return Self {
-                        child,
-                        url: format!("http://{address}"),
-                    };
+                if message.get("component").and_then(Value::as_str) != Some("runner") {
+                    let _ = ready_tx.send(Err("Bun started event has an invalid component".into()));
+                    return;
                 }
-                Ok(Err(error)) => {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    let _ = reader.join();
-                    if attempt == MAX_START_ATTEMPTS {
-                        panic!(
-                            "Bun runner failed to become ready after {attempt} attempts: {error}"
-                        );
+                let host = message
+                    .get("hostname")
+                    .or_else(|| message.get("host"))
+                    .and_then(Value::as_str);
+                if host != Some("127.0.0.1") {
+                    let _ = ready_tx.send(Err("Bun started event has an invalid host".into()));
+                    return;
+                }
+                let port = message
+                    .get("port")
+                    .and_then(Value::as_u64)
+                    .and_then(|port| u16::try_from(port).ok())
+                    .filter(|port| *port != 0);
+                match port {
+                    Some(port) => {
+                        let _ = ready_tx.send(Ok(port));
+                    }
+                    None => {
+                        let _ = ready_tx.send(Err(
+                            "Bun started event has an invalid nonzero u16 port".into(),
+                        ));
                     }
                 }
-                Err(error) => {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    let _ = reader.join();
-                    panic!("Bun runner did not become ready: {error}");
+                return;
+            }
+            let _ = ready_tx.send(Err("Bun runner exited before readiness".into()));
+        });
+        match ready_rx.recv_timeout(Duration::from_secs(10)) {
+            Ok(Ok(port)) => {
+                let _ = reader.join();
+                Self {
+                    child,
+                    url: format!("http://127.0.0.1:{port}"),
                 }
             }
+            Ok(Err(error)) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = reader.join();
+                panic!("Bun runner failed to become ready: {error}");
+            }
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = reader.join();
+                panic!("Bun runner did not become ready: {error}");
+            }
         }
-        unreachable!("Bun runner startup attempts must return or panic");
     }
 }
 

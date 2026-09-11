@@ -28,7 +28,7 @@ console.info(
     component: "runner",
     event: "started",
     hostname,
-    port,
+    port: server.port,
     tokenRequired: Boolean(token),
   }),
 );
