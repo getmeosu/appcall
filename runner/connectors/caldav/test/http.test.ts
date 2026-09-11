@@ -35,12 +35,22 @@ describe("buildBasicAuth", () => {
     expect(decoded).toBe("user+1@icloud.com:p@ss!word=");
   });
 
-  test("preserves surrounding ASCII and Unicode whitespace", () => {
+  test("preserves surrounding ASCII and Unicode whitespace as UTF-8", () => {
     const username = " user@example.com ";
     const password = "\u00a0app-password\u00a0";
     const auth = buildBasicAuth(username, password);
+    const decodedBytes = Uint8Array.from(atob(auth.slice(6)), (character) => character.charCodeAt(0));
 
-    expect(atob(auth.slice(6))).toBe(`${username}:${password}`);
+    expect([...decodedBytes]).toEqual([...new TextEncoder().encode(`${username}:${password}`)]);
+  });
+
+  test("preserves U+2003 secret whitespace in decoded UTF-8 bytes", () => {
+    const username = "user@example.com";
+    const password = "\u{2003}app-password\u{2003}";
+    const auth = buildBasicAuth(username, password);
+    const decodedBytes = Uint8Array.from(atob(auth.slice(6)), (character) => character.charCodeAt(0));
+
+    expect([...decodedBytes]).toEqual([...new TextEncoder().encode(`${username}:${password}`)]);
   });
 });
 
