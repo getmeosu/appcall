@@ -325,6 +325,18 @@ fn api_request(method: &str, uri: &str, body: serde_json::Value) -> crate::Reque
         body: serde_json::to_vec(&body).unwrap(),
     }
 }
+fn api_request_for_account(
+    method: &str,
+    uri: &str,
+    body: serde_json::Value,
+    account_id: &str,
+) -> crate::Request {
+    let mut request = api_request(method, uri, body);
+    request
+        .headers
+        .push(("X-External-Account-Id".into(), account_id.into()));
+    request
+}
 
 type TestMcpActions<R> = appcall_actions::Service<
     MemoryRepository,
@@ -689,19 +701,17 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
     use crate::Backend;
     use appcall_web::{DashboardData, DashboardOperation, DashboardRequest};
     let (backend, dashboard) = composition();
-    let identity = backend
-        .authorize(&api_request("GET", "/v1/connections", serde_json::Value::Null).headers)
-        .await
-        .unwrap();
+    let account_id = "brand";
+    let setup_request = api_request_for_account(
+        "POST",
+        "/v1/connectors/test/setup/api-key",
+        serde_json::json!({"fields":{"apiKey":"synthetic-secret"},"projectId":"victim"}),
+        account_id,
+    );
+    let identity = backend.authorize(&setup_request.headers).await.unwrap();
+    assert_eq!(identity.account_id, account_id);
     let setup = backend
-        .auxiliary_route(
-            &identity,
-            &api_request(
-                "POST",
-                "/v1/connectors/test/setup/api-key",
-                serde_json::json!({"fields":{"apiKey":"synthetic-secret"},"projectId":"victim"}),
-            ),
-        )
+        .auxiliary_route(&identity, &setup_request)
         .await
         .unwrap()
         .unwrap();
@@ -709,14 +719,15 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
     let connections = backend.connections(&identity).await.unwrap();
     assert_eq!(connections.len(), 1);
     assert_eq!(connections[0].project_id, "proj_dev");
+    assert_eq!(connections[0].external_account_id, account_id);
     assert_eq!(setup.body["connection"]["id"], connections[0].id);
     assert!(setup.body.get("id").is_none());
     let result = backend
         .execute(appcall_actions::ExecuteRequest {
             project_id: "proj_dev".into(),
             connection_id: connections[0].id.clone(),
-            external_account_id: String::new(),
-            admin_scope: true,
+            external_account_id: account_id.into(),
+            admin_scope: false,
             action: "write".into(),
             idempotency_key: "same-key".into(),
             input: serde_json::json!({}),
@@ -729,7 +740,7 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
         principal: appcall_auth::Principal::project("proj_dev").unwrap(),
         operation,
         resource: None,
-        account_id: None,
+        account_id: Some(account_id.into()),
         fields: Default::default(),
         form_values: Default::default(),
     };
@@ -760,10 +771,11 @@ async fn setup_action_dashboard_mcp_logs_and_usage_share_memory() {
         .unwrap();
     assert!(triggers["events"].as_array().unwrap().is_empty());
     let mcp = backend
-        .raw_route(&api_request(
+        .raw_route(&api_request_for_account(
             "POST",
             "/v1/mcp",
             serde_json::json!({"jsonrpc":"2.0","id":1,"method":"tools/list"}),
+            account_id,
         ))
         .await
         .unwrap()

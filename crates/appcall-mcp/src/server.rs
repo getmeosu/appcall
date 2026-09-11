@@ -232,6 +232,9 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         idempotency_key: Option<String>,
         connection_id: Option<String>,
     ) -> Result<Value, InfrastructureError> {
+        if scope.project_id.is_empty() {
+            return Ok(tool_error("UNAUTHORIZED", "Missing or invalid API key."));
+        }
         if scope.account_id.is_empty() {
             return Ok(tool_error(
                 "MISSING_ACCOUNT_SCOPE",

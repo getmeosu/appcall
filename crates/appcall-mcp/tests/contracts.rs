@@ -2,7 +2,10 @@ use appcall_actions::{ActionError, ExecuteRequest, ExecuteResult};
 use appcall_connectors::{Connector, Registry};
 use appcall_mcp::*;
 use serde_json::{json, Value};
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc, Mutex,
+};
 #[derive(Clone)]
 struct Connections(Vec<Connection>);
 impl ConnectionLister for Connections {
@@ -15,6 +18,14 @@ struct MutableConnections(Arc<Mutex<Vec<Connection>>>);
 impl ConnectionLister for MutableConnections {
     async fn list(&self, _: &str) -> Result<Vec<Connection>, InfrastructureError> {
         Ok(self.0.lock().unwrap().clone())
+    }
+}
+#[derive(Clone)]
+struct CountingConnections(Arc<AtomicUsize>);
+impl ConnectionLister for CountingConnections {
+    async fn list(&self, _: &str) -> Result<Vec<Connection>, InfrastructureError> {
+        self.0.fetch_add(1, Ordering::SeqCst);
+        Ok(vec![connection("selected", "", "brand")])
     }
 }
 #[derive(Clone, Default)]
@@ -294,6 +305,35 @@ async fn empty_account_scope_rejects_before_a_permissive_executor() {
 
     assert_eq!(result["isError"], true);
     assert_eq!(result["structuredContent"]["code"], "MISSING_ACCOUNT_SCOPE");
+    assert!(executor.0.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn empty_project_scope_rejects_both_public_call_paths_before_targeting() {
+    let list_calls = Arc::new(AtomicUsize::new(0));
+    let executor = Executor::default();
+    let server = Server::new(
+        registry(),
+        CountingConnections(list_calls.clone()),
+        executor.clone(),
+        (),
+    );
+    let scope = Scope::new("", "brand");
+
+    let default_result = server
+        .call_tool(&scope, "apollo__people__search", json!({}))
+        .await
+        .unwrap();
+    let selected_result = server
+        .call_tool_for_connection(&scope, "apollo__people__search", "selected", json!({}))
+        .await
+        .unwrap();
+
+    for result in [default_result, selected_result] {
+        assert_eq!(result["isError"], true);
+        assert_eq!(result["structuredContent"]["code"], "UNAUTHORIZED");
+    }
+    assert_eq!(list_calls.load(Ordering::SeqCst), 0);
     assert!(executor.0.lock().unwrap().is_empty());
 }
 
