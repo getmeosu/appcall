@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { runExecution } from "../../../bun/src/execution";
+import { ConnectorHttpError } from "../../../bun/src/http";
 import { defaultConnectorRegistry } from "../../../bun/src/registry";
 import { healthcheck } from "../src/healthcheck";
 
@@ -47,6 +48,22 @@ describe("apollo connector healthcheck", () => {
       apiKey: "bad_key",
       fetch: async () => new Response("Invalid access credentials.", { status: 401 }),
     })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  test("preserves the shared outbound timeout code", async () => {
+    await expect(healthcheck({
+      apiKey: "good_key",
+      fetch: async () => {
+        throw new ConnectorHttpError(
+          "OUTBOUND_TIMEOUT",
+          "Outbound request exceeded the connector HTTP timeout.",
+        );
+      },
+    })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_TIMEOUT",
+      message: "Outbound request exceeded the connector HTTP timeout.",
+    });
   });
 
   test("rejects a provider redirect before the API key can cross origins", async () => {
