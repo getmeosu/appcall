@@ -248,8 +248,8 @@ impl<'a> PgEvents<'a> {
             format!("webhook-replay:{}:{}", e.id, Uuid::new_v4().simple()),
         )?;
         let mut tx = self.client.transaction().map_err(|_| Error::Storage)?;
-        ensure_current_connection(&mut tx, &e)?;
         if let Some(job) = job {
+            ensure_current_connection(&mut tx, &e)?;
             sink.schedule(&mut tx, &job)?;
         }
         tx.commit().map_err(|_| Error::Storage)
@@ -319,8 +319,8 @@ fn ensure_current_connection(tx: &mut Transaction<'_>, e: &Event) -> Result<()> 
     Ok(())
 }
 fn dispatch(tx: &mut Transaction<'_>, e: &Event, sink: &mut impl DispatchSink) -> Result<()> {
-    ensure_current_connection(tx, e)?;
     if let Some(job) = input::event_job(e, format!("webhook:{}", e.id))? {
+        ensure_current_connection(tx, e)?;
         sink.schedule(tx, &job)?;
     }
     let id = format!("usage_{}", Uuid::new_v4().simple());

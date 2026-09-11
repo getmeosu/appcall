@@ -170,6 +170,12 @@ fn event_only_webhooks_retain_usage_and_replay_without_sync_jobs() {
                 )
                 .unwrap();
         }
+    }
+    db.client
+        .batch_execute("UPDATE connections SET status='disconnected' WHERE id IN ('apollo','rb2b')")
+        .unwrap();
+    {
+        let mut store = PgEvents::new(&mut db.client);
         assert_eq!(
             store
                 .dispatch_pending(2, &mut Sink { fail: false })

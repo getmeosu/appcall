@@ -4,8 +4,10 @@ use serde_json::{json, Value};
 use std::{
     future::Future,
     io::{Read, Write},
+    net::TcpStream,
+    process::{Child, Command, Stdio},
     sync::{Arc, Mutex},
-    time::Duration,
+    time::{Duration, Instant},
 };
 fn client(schema: Option<&str>) -> Client {
     let mut c = Client::connect(
@@ -62,6 +64,58 @@ impl appcall_sync::CredentialResolver for NeverCredentials {
         std::future::ready(Err(appcall_sync::Error::Unavailable))
     }
 }
+
+struct BunRunner {
+    child: Child,
+    url: String,
+}
+
+impl BunRunner {
+    fn start() -> Self {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        drop(listener);
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let entry = root.join("runner/bun/src/index.ts");
+        let mut child = Command::new("bun")
+            .current_dir(&root)
+            .args(["run", entry.to_str().unwrap()])
+            .env("APPCALL_RUNNER_HOST", "127.0.0.1")
+            .env("APPCALL_RUNNER_PORT", address.port().to_string())
+            .env("APPCALL_RUNNER_TOKEN", "runner-token")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("Bun is required for the parser/RPC integration test");
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if TcpStream::connect_timeout(&address, Duration::from_millis(100)).is_ok() {
+                break;
+            }
+            if let Some(status) = child.try_wait().unwrap() {
+                panic!("Bun runner exited before becoming ready: {status}");
+            }
+            if Instant::now() >= deadline {
+                let _ = child.kill();
+                let _ = child.wait();
+                panic!("Bun runner did not become ready within 10 seconds");
+            }
+            std::thread::sleep(Duration::from_millis(25));
+        }
+        Self {
+            child,
+            url: format!("http://{address}"),
+        }
+    }
+}
+
+impl Drop for BunRunner {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
 #[test]
 #[ignore = "requires explicit PostgreSQL and local HTTP"]
 fn accepted_event_reaches_runner_and_atomic_records() {
@@ -113,25 +167,62 @@ fn maximum_provider_event_id_reaches_durable_sync() {
 }
 
 #[test]
-#[ignore = "requires explicit PostgreSQL"]
-fn unsupported_webhook_events_do_not_create_sync_jobs() {
+#[ignore = "requires explicit PostgreSQL and Bun runner"]
+fn parser_rpc_outbox_worker_retains_event_only_deliveries_after_disconnect() {
     let (mut db, schema) = fixture();
-    for (connection, connector, event_id, operation, payload) in [
+    let bun = BunRunner::start();
+    let runner =
+        appcall_runner_client::RunnerClient::new(&bun.url, "runner-token", Default::default())
+            .unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    for (connection, connector, payload, operation) in [
         (
             "apollo",
             "apollo",
-            "apollo-event",
+            json!({
+                "event_id":"evt_phone_1",
+                "person_id":"person-1",
+                "sanitized_number":"+15550001111"
+            }),
             "webhook.phone_revealed",
-            json!({"personId":"person-1","phone":"+15550001111"}),
         ),
         (
             "rb2b",
             "rb2b",
-            "rb2b-event",
+            serde_json::from_str::<Value>(include_str!(
+                "../../../runner/connectors/rb2b/fixtures/visitor_identified.json"
+            ))
+            .unwrap(),
             "webhook.visitor_identified",
-            json!({"provider":"rb2b","id":"visitor-1"}),
         ),
     ] {
+        let context = appcall_runner_client::RequestContext {
+            request_id: format!("webhook-parse-{connector}"),
+            deadline_unix_ms: None,
+        };
+        assert!(
+            rt.block_on(runner.webhook_verify(
+                &context,
+                appcall_runner_client::WebhookVerifyRequest {
+                    connector_key: connector.into(),
+                    headers: Default::default(),
+                    payload: payload.clone(),
+                },
+            ))
+            .unwrap()
+            .verified
+        );
+        let parsed = rt
+            .block_on(runner.webhook_parse(
+                &context,
+                appcall_runner_client::WebhookParseRequest {
+                    connector_key: connector.into(),
+                    payload,
+                },
+            ))
+            .unwrap();
+        assert_eq!(parsed.operation, operation);
+        assert!(!parsed.idempotency_key.is_empty());
         appcall_events::PgEvents::new(&mut db)
             .accept(
                 &appcall_auth::WebhookClaims {
@@ -140,19 +231,15 @@ fn unsupported_webhook_events_do_not_create_sync_jobs() {
                     connector: connector.into(),
                 },
                 &appcall_events::ParsedWebhook {
-                    idempotency_key: event_id.into(),
-                    operation: operation.into(),
-                    sanitized: payload,
+                    idempotency_key: parsed.idempotency_key,
+                    operation: parsed.operation,
+                    sanitized: parsed.sanitized,
                 },
             )
             .unwrap();
     }
-    let runner = appcall_runner_client::RunnerClient::new(
-        "http://127.0.0.1:1",
-        "runner-token",
-        Default::default(),
-    )
-    .unwrap();
+    db.batch_execute("UPDATE connections SET status='disconnected' WHERE id IN ('apollo','rb2b')")
+        .unwrap();
     let service = appcall_sync::Service::new(
         appcall_sync::Repository::new(client(Some(&schema))),
         appcall_store::Store::new(
@@ -160,7 +247,7 @@ fn unsupported_webhook_events_do_not_create_sync_jobs() {
             appcall_store::LocalProvider::new(&[1; 32]).unwrap(),
         ),
         appcall_connectors::Registry::default(),
-        runner,
+        runner.clone(),
         NeverCredentials,
         Default::default(),
     )
@@ -171,7 +258,6 @@ fn unsupported_webhook_events_do_not_create_sync_jobs() {
         TickLimits { outbox: 2, jobs: 1 },
     )
     .unwrap();
-    let rt = tokio::runtime::Runtime::new().unwrap();
     let report = rt.block_on(worker.tick("worker")).unwrap();
     assert_eq!(report.outbox_completed, 2);
     assert_eq!(report.outbox_failed, 0);
