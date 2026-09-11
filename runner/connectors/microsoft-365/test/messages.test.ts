@@ -34,6 +34,19 @@ describe("microsoft-365 messages", () => {
     expect(message.threadId).toBe("");
   });
 
+  test("normalizes a mixed Outlook page without inventing a missing sender", () => {
+    const parsed = parseMessagesResponse({
+      value: [
+        messagesListFixture.value[0],
+        { id: "senderless-id", conversationId: "senderless-thread", subject: "Automated notice" },
+      ],
+    });
+    const messages = parsed.messages.map(normalizeOutlookMessage);
+
+    expect(messages.map((message) => message.senderId)).toEqual(["sender@example.com", ""]);
+    expect(messages[1].threadId).toBe("senderless-thread");
+  });
+
   test("parses messages list response with nextLink", () => {
     const parsed = parseMessagesResponse(messagesListFixture);
 

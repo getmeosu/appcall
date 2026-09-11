@@ -513,6 +513,59 @@ fn concurrent_control_and_worker_claim_cannot_claim_a_locked_cancelled_job() {
 fn page(cursor: &str) -> Page {
     Page::decode(json!({"items":[{"id":"m","provider":"slack","providerMessageId":"1","channelId":"C123","senderId":"U1","text":"hello","modelVersion":"2026-05-14","raw":{}}],"cursor":cursor})).unwrap()
 }
+
+fn mixed_sender_page() -> Page {
+    Page::decode(json!({
+        "items":[
+            {"id":"gmail:1","provider":"google-workspace","providerMessageId":"1","channelId":"gmail-thread","senderId":"sender@example.com","text":"hello","modelVersion":"2026-05-16","raw":{}},
+            {"id":"outlook:2","provider":"microsoft-365","providerMessageId":"2","channelId":"outlook-thread","senderId":"","text":"automated notice","modelVersion":"2026-05-16","raw":{}}
+        ]
+    }))
+    .unwrap()
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn commit_page_persists_mixed_senderless_messages() {
+    let (c, schema) = fixture();
+    let mut repo = Repository::new(c);
+    repo.enqueue(&request("senderless")).unwrap();
+    let claim = repo
+        .claim("worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+
+    repo.commit_page(&claim, "", &mixed_sender_page()).unwrap();
+
+    let mut client = repo.into_client();
+    let records: Vec<(String, String)> = client
+        .query(
+            "SELECT provider,sender_id FROM synced_messages ORDER BY id",
+            &[],
+        )
+        .unwrap()
+        .into_iter()
+        .map(|row| (row.get(0), row.get(1)))
+        .collect();
+    assert_eq!(
+        records,
+        vec![
+            ("google-workspace".into(), "sender@example.com".into()),
+            ("microsoft-365".into(), "".into()),
+        ]
+    );
+    assert_eq!(
+        client
+            .query_one("SELECT status FROM sync_jobs WHERE id='senderless'", &[])
+            .unwrap()
+            .get::<_, String>(0),
+        "succeeded"
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
 #[test]
 #[ignore = "requires explicit local PostgreSQL"]
 fn atomic_page_retry_fencing_and_input_scope() {

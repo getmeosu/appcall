@@ -51,6 +51,32 @@ test("Gmail hydrates list IDs before normalizing a durable message", async () =>
   expect(calls).toBe(2);
 });
 
+test("Gmail and Microsoft message pages preserve the explicit senderless sentinel", async () => {
+  let gmailCalls = 0;
+  const gmail = await rpcFixture("google-workspace", { accessToken: "stored", limit: 2 }, (url, init) => {
+    gmailCalls++;
+    expect(new Headers(init.headers).get("authorization")).toBe("Bearer stored");
+    if (gmailCalls === 1) {
+      return Response.json({ messages: [{ id: "gmail-valid", threadId: "gmail-thread" }, { id: "gmail-senderless", threadId: "gmail-thread" }] });
+    }
+    if (gmailCalls === 2) {
+      return Response.json({ id: "gmail-valid", threadId: "gmail-thread", payload: { headers: [{ name: "From", value: "sender@example.com" }] } });
+    }
+    return Response.json({ id: "gmail-senderless", threadId: "gmail-thread", snippet: "Automated notice" });
+  });
+  expect(gmail.ok).toBe(true);
+  expect(gmail.result.output.items.map((item: Record<string, unknown>) => item.senderId)).toEqual(["sender@example.com", ""]);
+
+  const outlook = await rpcFixture("microsoft-365", { accessToken: "stored" }, () => Response.json({
+    value: [
+      { id: "outlook-valid", conversationId: "outlook-thread", from: { emailAddress: { address: "sender@example.com" } } },
+      { id: "outlook-senderless", conversationId: "outlook-thread", subject: "Automated notice" },
+    ],
+  }));
+  expect(outlook.ok).toBe(true);
+  expect(outlook.result.output.items.map((item: Record<string, unknown>) => item.senderId)).toEqual(["sender@example.com", ""]);
+});
+
 test("Microsoft preserves provider next-link paging and normalized conversation", async () => {
   const cursor = "https://graph.microsoft.com/v1.0/me/messages?$skip=2";
   const result = await rpcFixture("microsoft-365", { accessToken: "stored", cursor }, url => {

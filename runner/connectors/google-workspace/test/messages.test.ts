@@ -118,6 +118,13 @@ describe("google-workspace messages", () => {
     expect(message.senderId).toBe("john@example.com");
   });
 
+  test("normalizes a mixed Gmail page without inventing a missing sender", () => {
+    const messages = [messagesListFixture.messages[0], messagesListFixture.messages[1]].map(normalizeGmailMessage);
+
+    expect(messages.map((message) => message.senderId)).toEqual(["sender@example.com", ""]);
+    expect(messages[1].id).toBe("gmail:18e4a3c29a8d7a7f");
+  });
+
   test("extracts next page token from response", () => {
     expect(parseNextPageToken(messagesListFixture)).toBe("page_token_abc123");
     expect(parseNextPageToken(messagesNoPageFixture)).toBeNull();
