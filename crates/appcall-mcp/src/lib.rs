@@ -4,11 +4,13 @@
 mod adapters;
 mod profile;
 mod server;
+mod session;
 mod usage;
 pub use adapters::*;
 use appcall_actions::{ActionError, ExecuteRequest, ExecuteResult};
 pub use profile::*;
 pub use server::*;
+pub use session::{auth_context_fingerprint, MAX_MCP_SESSION_ID_BYTES, MCP_SESSION_ID_HEADER};
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -20,15 +22,32 @@ pub const MAX_REQUEST_BYTES: usize = 1 << 20;
 pub const PROTOCOL_VERSION: &str = "2025-06-18";
 /// Construct only from authenticated HTTP context, never tool arguments.
 /// Deliberately not Debug or Serialize because it carries a caller credential.
-#[derive(Default)]
+#[derive(Clone)]
 pub struct Scope {
     pub project_id: String,
     pub account_id: String,
-    /// Stable authenticated identity for the MCP session that owns requests.
-    /// Hosts should set this when more than one session can share an account.
+    /// Server-issued identity for the MCP session that owns requests.
+    /// HTTP hosts must pass the incoming `Mcp-Session-Id` through the builder.
     pub session_id: String,
     pub profile: String,
     pub connector_token: String,
+    pub(crate) auth_context_fingerprint: String,
+    session_header_present: bool,
+    legacy_scope_id: u64,
+}
+impl Default for Scope {
+    fn default() -> Self {
+        Self {
+            project_id: String::new(),
+            account_id: String::new(),
+            session_id: String::new(),
+            profile: String::new(),
+            connector_token: String::new(),
+            auth_context_fingerprint: String::new(),
+            session_header_present: false,
+            legacy_scope_id: session::next_legacy_scope_id(),
+        }
+    }
 }
 impl Scope {
     pub fn new(project: &str, account: &str) -> Self {
@@ -42,9 +61,17 @@ impl Scope {
         self.profile = profile.into();
         self
     }
-    pub fn with_session_id(mut self, session_id: &str) -> Self {
-        self.session_id = session_id.into();
+    pub fn with_auth_context_fingerprint(mut self, fingerprint: &str) -> Self {
+        self.auth_context_fingerprint = fingerprint.into();
         self
+    }
+    pub fn with_session_header(mut self, session_id: Option<&str>) -> Self {
+        self.session_header_present = session_id.is_some();
+        self.session_id = session_id.unwrap_or_default().into();
+        self
+    }
+    pub fn with_session_id(self, session_id: &str) -> Self {
+        self.with_session_header(Some(session_id))
     }
     pub fn with_session(self, session_id: &str) -> Self {
         self.with_session_id(session_id)
@@ -52,6 +79,10 @@ impl Scope {
     pub fn with_connector_token(mut self, token: &str) -> Self {
         self.connector_token = token.into();
         self
+    }
+    pub(crate) fn incoming_session_id(&self) -> Option<&str> {
+        self.session_header_present
+            .then_some(self.session_id.as_str())
     }
 }
 
@@ -61,6 +92,7 @@ struct ScopeKey {
     account_id: String,
     profile: String,
     session_id: String,
+    legacy_scope_id: u64,
 }
 impl ScopeKey {
     fn from_scope(scope: &Scope) -> Self {
@@ -69,6 +101,11 @@ impl ScopeKey {
             account_id: scope.account_id.clone(),
             profile: scope.profile.clone(),
             session_id: scope.session_id.clone(),
+            legacy_scope_id: if scope.incoming_session_id().is_some() {
+                0
+            } else {
+                scope.legacy_scope_id
+            },
         }
     }
 }

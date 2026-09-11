@@ -1,3 +1,4 @@
+use crate::session::{SessionBinding, SessionError, SessionRegistry, MAX_MCP_SESSIONS};
 use crate::*;
 use appcall_connectors::Registry;
 use serde::Deserialize;
@@ -9,6 +10,7 @@ const MAX_MCP_REQUEST_ID_BYTES: usize = 256;
 
 pub struct HttpResponse {
     pub status: u16,
+    pub headers: Vec<(String, String)>,
     pub body: Option<Value>,
 }
 pub struct Server<L, E, U = ()> {
@@ -17,6 +19,7 @@ pub struct Server<L, E, U = ()> {
     executor: E,
     usage: U,
     in_flight: Arc<InFlightRegistry>,
+    sessions: Arc<SessionRegistry>,
 }
 impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
     pub fn new(registry: Registry, connections: L, executor: E, usage: U) -> Self {
@@ -26,10 +29,14 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             executor,
             usage,
             in_flight: Arc::new(InFlightRegistry::new(MAX_MCP_IN_FLIGHT_REQUESTS)),
+            sessions: Arc::new(SessionRegistry::new(MAX_MCP_SESSIONS)),
         }
     }
     pub fn in_flight_len(&self) -> usize {
         self.in_flight.len()
+    }
+    pub fn session_len(&self) -> usize {
+        self.sessions.len()
     }
     pub fn database_health(&self) -> Option<bool> {
         self.connections.database_health()
@@ -54,10 +61,33 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                 "Request body exceeded the configured size limit.",
             );
         }
-        let body = self.handle(scope, body).await;
+        let (scope, issued_session) = match self.bind_session(scope) {
+            Ok(bound) => bound,
+            Err(error) => return session_error(error),
+        };
+        let body = self.handle(&scope, body).await;
+        let headers = issued_session
+            .map(|session_id| (MCP_SESSION_ID_HEADER.into(), session_id))
+            .into_iter()
+            .collect();
         HttpResponse {
             status: if body.is_some() { 200 } else { 202 },
+            headers,
             body,
+        }
+    }
+    fn bind_session(&self, scope: &Scope) -> Result<(Scope, Option<String>), SessionError> {
+        let binding = SessionBinding::from_scope(scope);
+        match scope.incoming_session_id() {
+            Some(session_id) => {
+                self.sessions.validate(session_id, &binding)?;
+                Ok((scope.clone(), None))
+            }
+            None => {
+                let session_id = self.sessions.issue(binding)?;
+                let bound_scope = scope.clone().with_session_id(&session_id);
+                Ok((bound_scope, Some(session_id)))
+            }
         }
     }
     pub async fn handle(&self, scope: &Scope, raw: &[u8]) -> Option<Value> {
@@ -747,6 +777,20 @@ fn rpc_error(id: Option<Value>, code: i32, message: &str) -> Value {
 fn http_error(status: u16, code: &str, message: &str) -> HttpResponse {
     HttpResponse {
         status,
+        headers: Vec::new(),
         body: Some(json!({"error":{"code":code,"message":message}})),
+    }
+}
+fn session_error(error: SessionError) -> HttpResponse {
+    match error {
+        SessionError::Invalid => http_error(400, "MCP_SESSION_INVALID", "Invalid MCP session."),
+        SessionError::Unknown | SessionError::Mismatch => {
+            http_error(404, "MCP_SESSION_NOT_FOUND", "MCP session was not found.")
+        }
+        SessionError::Capacity | SessionError::Unavailable => http_error(
+            503,
+            "MCP_SESSION_UNAVAILABLE",
+            "MCP session could not be established.",
+        ),
     }
 }

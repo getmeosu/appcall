@@ -646,7 +646,7 @@ fn validate_request_uri(uri: &str) -> Result<url::Url> {
         .map_err(|_| ApiError::new("INVALID_REQUEST"))
 }
 
-fn validate_headers(headers: &[(String, String)]) -> Result<()> {
+pub fn validate_headers(headers: &[(String, String)]) -> Result<()> {
     if headers.len() > 64
         || headers
             .iter()
@@ -675,6 +675,7 @@ fn validate_headers(headers: &[(String, String)]) -> Result<()> {
             "origin",
             "referer",
             "last-event-id",
+            "mcp-session-id",
         ]
         .contains(&key.as_str())
             && !seen.insert(key)

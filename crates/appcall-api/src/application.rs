@@ -456,16 +456,32 @@ impl Backend for Application {
         if request_url(r)?.path() != "/v1/mcp" {
             return Ok(None);
         }
+        appcall_api::validate_headers(&r.headers)?;
         let identity = self.authorize(&r.headers).await?;
         let token = header(r, "X-Connector-Token");
+        let session_id = r
+            .headers
+            .iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case(appcall_mcp::MCP_SESSION_ID_HEADER))
+            .map(|(_, value)| value.as_str());
+        let auth_context_fingerprint = appcall_mcp::auth_context_fingerprint(&r.headers);
         let scope = appcall_mcp::Scope::new(&identity.project_id, &identity.account_id)
             .with_profile(header(r, "X-Capability-Profile"))
+            .with_auth_context_fingerprint(&auth_context_fingerprint)
+            .with_session_header(session_id)
             .with_connector_token(token.strip_prefix("Bearer ").unwrap_or(token));
         let response = self.mcp.handle_http(&r.method, &scope, &r.body).await;
+        let appcall_mcp::HttpResponse {
+            status,
+            headers: mcp_headers,
+            body,
+        } = response;
+        let mut headers = vec![("content-type".into(), "application/json".into())];
+        headers.extend(mcp_headers);
         Ok(Some(RawResponse {
-            status: response.status,
-            headers: vec![("content-type".into(), "application/json".into())],
-            body: match response.body {
+            status,
+            headers,
+            body: match body {
                 Some(v) => serde_json::to_vec(&v).map_err(|_| ApiError::new("INVALID_RESPONSE"))?,
                 None => vec![],
             },
