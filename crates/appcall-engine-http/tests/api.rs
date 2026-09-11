@@ -1,6 +1,12 @@
 use appcall_engine::*;
 use appcall_engine_http::*;
+use serde_json::Value;
 const TOKEN: &str = "test-token-is-at-least-thirty-two-bytes";
+
+fn body(response: ApiResponse) -> Value {
+    serde_json::from_slice(&response.body).unwrap()
+}
+
 #[test]
 fn authenticated_api_runs_same_core_and_rejects_content() {
     let d = tempfile::tempdir().unwrap();
@@ -168,5 +174,204 @@ fn deployment_scope_cannot_be_changed_by_client_ids() {
         api.handle("GET", "/runs/..%2Fother%2Frun", &auth, b"")
             .status,
         404
+    );
+}
+
+#[test]
+fn pure_workflow_result_returns_durable_reference_without_history_or_payload() {
+    let d = tempfile::tempdir().unwrap();
+    let mut engine = Engine::open(d.path().join("db")).unwrap();
+    engine
+        .register_workflow("pure", "v1", |_| {
+            Ok(PayloadRef::durable("durable-result").unwrap())
+        })
+        .unwrap();
+    engine
+        .start("run", "pure", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(
+        engine.drive("run", 0).unwrap(),
+        DriveOutcome::Completed(output) if output == PayloadRef::durable("durable-result").unwrap()
+    ));
+    assert!(engine.history("run").unwrap().is_empty());
+
+    let mut api = HttpAdapter::new(engine, TOKEN).unwrap();
+    let result = body(api.handle("GET", "/runs/run/result", &format!("Bearer {TOKEN}"), b""));
+    assert_eq!(result["success"], true);
+    assert_eq!(result["data"]["id"], "run");
+    assert_eq!(result["data"]["outcome"], "completed");
+    assert_eq!(result["data"]["output"]["key"], "durable-result");
+    assert_eq!(result["data"]["output"]["ephemeral"], false);
+    assert!(!result.to_string().contains("raw payload contents"));
+}
+
+#[test]
+fn result_endpoint_reports_pending_without_an_output_reference() {
+    let d = tempfile::tempdir().unwrap();
+    let mut engine = Engine::open(d.path().join("db")).unwrap();
+    engine
+        .register_workflow("pending", "v1", |context| {
+            context.timer(i64::MAX)?;
+            Ok(context.input().clone())
+        })
+        .unwrap();
+    engine
+        .start(
+            "run",
+            "pending",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    let mut api = HttpAdapter::new(engine, TOKEN).unwrap();
+
+    let result = body(api.handle("GET", "/runs/run/result", &format!("Bearer {TOKEN}"), b""));
+    assert_eq!(result["data"]["outcome"], "pending");
+    assert!(result["data"].get("output").is_none());
+}
+
+#[test]
+fn result_endpoint_reports_failed_and_cancelled_runs_without_output() {
+    let d = tempfile::tempdir().unwrap();
+    let mut engine = Engine::open(d.path().join("db")).unwrap();
+    engine
+        .register_workflow("cancelled", "v1", |context| {
+            context.timer(i64::MAX)?;
+            Ok(context.input().clone())
+        })
+        .unwrap();
+    for (id, workflow) in [("failed-run", "failed"), ("cancelled-run", "cancelled")] {
+        engine
+            .start(id, workflow, "v1", PayloadRef::durable("input").unwrap())
+            .unwrap();
+    }
+    engine
+        .reject_run("failed-run", RunFailure::InvalidCommand)
+        .unwrap();
+    engine.cancel("cancelled-run").unwrap();
+    let mut api = HttpAdapter::new(engine, TOKEN).unwrap();
+    let auth = format!("Bearer {TOKEN}");
+
+    let failed = body(api.handle("GET", "/runs/failed-run/result", &auth, b""));
+    assert_eq!(failed["data"]["outcome"], "failed");
+    assert_eq!(failed["data"]["failure_reason"], "InvalidCommand");
+    assert!(failed["data"].get("output").is_none());
+
+    let cancelled = body(api.handle("GET", "/runs/cancelled-run/result", &auth, b""));
+    assert_eq!(cancelled["data"]["outcome"], "cancelled");
+    assert!(cancelled["data"].get("output").is_none());
+}
+
+#[test]
+fn result_endpoint_reports_unknown_outcome_and_missing_runs_safely() {
+    let d = tempfile::tempdir().unwrap();
+    let mut engine = Engine::open(d.path().join("db")).unwrap();
+    engine
+        .register_workflow("unknown", "v1", |context| {
+            context.activity(
+                "unknown",
+                "v1",
+                context.input().clone(),
+                EffectPolicy::Unknown,
+            )
+        })
+        .unwrap();
+    engine.register_activity("unknown", "v1").unwrap();
+    engine
+        .start(
+            "unknown-run",
+            "unknown",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    let attempt = match engine.drive("unknown-run", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("unexpected drive outcome: {other:?}"),
+    };
+    engine
+        .fail(&attempt, ActivityFailure::OutcomeUnknown)
+        .unwrap();
+    let mut api = HttpAdapter::new(engine, TOKEN).unwrap();
+    let auth = format!("Bearer {TOKEN}");
+
+    let unknown = body(api.handle("GET", "/runs/unknown-run/result", &auth, b""));
+    assert_eq!(unknown["data"]["outcome"], "unknown");
+    assert!(unknown["data"].get("output").is_none());
+    assert_eq!(
+        api.handle("GET", "/runs/missing-run/result", &auth, b"")
+            .status,
+        404
+    );
+    assert_eq!(
+        api.handle("GET", "/runs/unknown-run/result", "Bearer wrong", b"")
+            .status,
+        401
+    );
+}
+
+#[test]
+fn result_endpoint_preserves_completed_reference_after_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut initial = Engine::open(&db).unwrap();
+    initial
+        .register_workflow("pure", "v1", |_| {
+            Ok(PayloadRef::durable("persisted-result").unwrap())
+        })
+        .unwrap();
+    initial
+        .start("run", "pure", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(
+        initial.drive("run", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+    drop(initial);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened
+        .register_workflow("pure", "v1", |_| {
+            Ok(PayloadRef::durable("persisted-result").unwrap())
+        })
+        .unwrap();
+    let mut api = HttpAdapter::new(reopened, TOKEN).unwrap();
+    let result = body(api.handle("GET", "/runs/run/result", &format!("Bearer {TOKEN}"), b""));
+    assert_eq!(result["data"]["outcome"], "completed");
+    assert_eq!(result["data"]["output"]["key"], "persisted-result");
+}
+
+#[test]
+fn result_endpoint_respects_namespace_and_authentication() {
+    let d = tempfile::tempdir().unwrap();
+    let mut api =
+        HttpAdapter::with_scope(Engine::open(d.path().join("db")).unwrap(), TOKEN, "tenant")
+            .unwrap();
+    let auth = format!("Bearer {TOKEN}");
+    let start_body =
+        br#"{"id":"run","workflow":"pure","version":"v1","input":{"key":"input","ephemeral":false}}"#;
+    assert_eq!(api.handle("POST", "/runs", &auth, start_body).status, 201);
+    api.engine_mut()
+        .register_workflow("pure", "v1", |_| {
+            Ok(PayloadRef::durable("tenant-result").unwrap())
+        })
+        .unwrap();
+    assert!(matches!(
+        api.engine_mut().drive("tenant/run", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+
+    let result = body(api.handle("GET", "/runs/run/result", &auth, b""));
+    assert_eq!(result["data"]["outcome"], "completed");
+    assert_eq!(result["data"]["output"]["key"], "tenant-result");
+    assert_eq!(
+        api.handle("GET", "/runs/other%2Frun/result", &auth, b"")
+            .status,
+        404
+    );
+    assert_eq!(
+        api.handle("GET", "/runs/run/result", "Bearer wrong", b"")
+            .status,
+        401
     );
 }
