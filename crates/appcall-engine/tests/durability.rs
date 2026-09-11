@@ -1,4 +1,5 @@
 use appcall_engine::*;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 fn flow(c: &mut Context) -> WorkflowResult {
     let result = c.activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)?;
     c.timer(100)?;
@@ -142,14 +143,598 @@ fn resume_reopens_stale_read_and_idempotent_attempts_without_drive() {
     }
 }
 
+#[test]
+fn reopen_keeps_passive_signal_wait_asleep() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("signal-wait", "v1", |c| {
+        c.select(vec![WaitSource::Signal("go".into())])?;
+        Ok(c.input().clone())
+    })
+    .unwrap();
+    e.start(
+        "signal-wait",
+        "signal-wait",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("signal-wait", 0).unwrap(),
+        DriveOutcome::Waiting
+    ));
+    assert_eq!(e.next_wakeup().unwrap(), None);
+    drop(e);
+
+    let e = Engine::open(&db).unwrap();
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+    assert_eq!(e.next_wakeup().unwrap(), None);
+}
+
+#[test]
+fn reopen_keeps_passive_child_wait_asleep() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("parent-wait", "v1", |c| {
+        let child = c.child("timer-child", "v1", c.input().clone())?;
+        c.join_child(child)
+    })
+    .unwrap();
+    e.register_workflow("timer-child", "v1", |c| {
+        c.timer(100)?;
+        Ok(c.input().clone())
+    })
+    .unwrap();
+    e.start(
+        "parent-wait",
+        "parent-wait",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("parent-wait", 0).unwrap(),
+        DriveOutcome::Waiting
+    ));
+    assert!(matches!(
+        e.drive("parent-wait:c:0", 0).unwrap(),
+        DriveOutcome::Waiting
+    ));
+    assert_eq!(e.next_wakeup().unwrap(), Some(100));
+    drop(e);
+
+    let e = Engine::open(&db).unwrap();
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+    assert_eq!(e.next_wakeup().unwrap(), Some(100));
+}
+
+#[test]
+fn reopen_requeues_ready_task_with_null_wakeup() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.set_dispatch_limit(1).unwrap();
+    e.register_workflow("ready-one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    for id in ["ready-a", "ready-b"] {
+        e.start(id, "ready-one", "v1", PayloadRef::durable("input").unwrap())
+            .unwrap();
+    }
+    let _a = attempt_at(&mut e, "ready-a", 0);
+    assert!(matches!(
+        e.drive("ready-b", 0).unwrap(),
+        DriveOutcome::Waiting
+    ));
+    assert_eq!(e.next_wakeup().unwrap(), None);
+    drop(e);
+
+    let e = Engine::open(&db).unwrap();
+    assert!(e.runnable(0, 10).unwrap().contains(&"ready-b".to_string()));
+}
+
+#[test]
+fn reopen_fails_stale_safe_attempt_at_persisted_elapsed_deadline() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let policy = retry_policy(5, 25, 10, 10);
+    let mut initial = Engine::open(&db).unwrap();
+    initial.set_retry_policy(policy).unwrap();
+    initial.register_workflow("one", "v1", read_one).unwrap();
+    initial.register_activity("lookup", "v1").unwrap();
+    initial
+        .start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    let first = attempt_at(&mut initial, "r", 100);
+    assert_eq!(first.retry_started_at_ms, 100);
+    assert_eq!(first.retry_policy, Some(policy));
+    drop(initial);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened.register_workflow("one", "v1", read_one).unwrap();
+    reopened.register_activity("lookup", "v1").unwrap();
+    assert!(reopened
+        .runnable(125, 10)
+        .unwrap()
+        .contains(&"r".to_string()));
+    assert!(matches!(
+        reopened.drive("r", 125).unwrap(),
+        DriveOutcome::Suspended(RunState::Failed)
+    ));
+    assert_eq!(
+        reopened.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    assert_eq!(reopened.next_wakeup().unwrap(), None);
+    assert!(reopened.runnable(125, 10).unwrap().is_empty());
+    drop(reopened);
+
+    let store = SqliteStore::open(&db).unwrap();
+    let run = store.load("r").unwrap();
+    assert_eq!(run.tasks[0].attempt.attempt, first.attempt);
+    assert!(matches!(run.tasks[0].state, TaskState::Ready));
+}
+
+#[test]
+fn reopen_requeues_ready_task_with_future_timer_wakeup() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut initial = Engine::open(&db).unwrap();
+    initial.set_dispatch_limit(1).unwrap();
+    initial.register_workflow("busy", "v1", read_one).unwrap();
+    initial
+        .register_workflow("parked", "v1", detached_read_with_timer)
+        .unwrap();
+    initial.register_activity("lookup", "v1").unwrap();
+    initial
+        .start("busy", "busy", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    initial
+        .start(
+            "parked",
+            "parked",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+
+    let _busy = attempt_at(&mut initial, "busy", 0);
+    assert!(matches!(
+        initial.drive("parked", 0).unwrap(),
+        DriveOutcome::Waiting
+    ));
+    assert_eq!(initial.next_wakeup().unwrap(), Some(50));
+    drop(initial);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened.register_workflow("busy", "v1", read_one).unwrap();
+    reopened
+        .register_workflow("parked", "v1", detached_read_with_timer)
+        .unwrap();
+    reopened.register_activity("lookup", "v1").unwrap();
+    assert!(reopened
+        .runnable(0, 10)
+        .unwrap()
+        .contains(&"parked".to_string()));
+
+    let parked = attempt_at(&mut reopened, "parked", 0);
+    assert_eq!(parked.attempt, 1);
+    assert!(!reopened
+        .runnable(49, 10)
+        .unwrap()
+        .contains(&"parked".to_string()));
+    assert!(reopened
+        .runnable(50, 10)
+        .unwrap()
+        .contains(&"parked".to_string()));
+}
+
 fn one(c: &mut Context) -> WorkflowResult {
     c.activity("lookup", "v1", c.input().clone(), EffectPolicy::Unknown)
 }
+fn read_one(c: &mut Context) -> WorkflowResult {
+    c.activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)
+}
 fn attempt(e: &mut Engine, id: &str) -> ActivityAttempt {
-    match e.drive(id, 0).unwrap() {
+    attempt_at(e, id, 0)
+}
+fn attempt_at(e: &mut Engine, id: &str, now_ms: i64) -> ActivityAttempt {
+    match e.drive(id, now_ms).unwrap() {
         DriveOutcome::Activity(a) => a,
         o => panic!("{o:?}"),
     }
+}
+fn retry_policy(
+    max_attempts: u64,
+    max_elapsed_ms: i64,
+    base_delay_ms: i64,
+    max_delay_ms: i64,
+) -> RetryPolicy {
+    RetryPolicy::new(max_attempts, max_elapsed_ms, base_delay_ms, max_delay_ms).unwrap()
+}
+fn strip_issue_93_attempt_fields(db: &std::path::Path) {
+    let connection = rusqlite::Connection::open(db).unwrap();
+    let bytes: Vec<u8> = connection
+        .query_row("SELECT record FROM engine_runs WHERE id=?1", ["r"], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    let mut record: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    let attempt = record["tasks"][0]["attempt"].as_object_mut().unwrap();
+    for field in ["started_at_ms", "retry_started_at_ms", "retry_policy"] {
+        assert!(attempt.remove(field).is_some(), "missing field {field}");
+    }
+    connection
+        .execute(
+            "UPDATE engine_runs SET record=?1 WHERE id=?2",
+            rusqlite::params![serde_json::to_vec(&record).unwrap(), "r"],
+        )
+        .unwrap();
+}
+fn rewrite_issue_93_legacy_attempt_at(db: &std::path::Path, attempt_number: u64) {
+    let connection = rusqlite::Connection::open(db).unwrap();
+    let bytes: Vec<u8> = connection
+        .query_row("SELECT record FROM engine_runs WHERE id=?1", ["r"], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    let mut record: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    let attempt = record["tasks"][0]["attempt"].as_object_mut().unwrap();
+    attempt.insert("attempt".into(), serde_json::json!(attempt_number));
+    for field in ["started_at_ms", "retry_started_at_ms", "retry_policy"] {
+        assert!(attempt.remove(field).is_some(), "missing field {field}");
+    }
+    connection
+        .execute(
+            "UPDATE engine_runs SET record=?1 WHERE id=?2",
+            rusqlite::params![serde_json::to_vec(&record).unwrap(), "r"],
+        )
+        .unwrap();
+}
+fn unix_time_ms() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as i64
+}
+fn detached_read_with_timer(c: &mut Context) -> WorkflowResult {
+    c.spawn_activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)?;
+    c.timer(50)?;
+    Ok(c.input().clone())
+}
+fn two_detached_reads_with_timer(c: &mut Context) -> WorkflowResult {
+    c.spawn_activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)?;
+    c.spawn_activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)?;
+    c.timer(100)?;
+    Ok(c.input().clone())
+}
+#[test]
+fn legacy_issue_92_in_flight_record_starts_retry_budget_after_recovery() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let policy = retry_policy(3, 100, 10, 10);
+    let mut initial = Engine::open(&db).unwrap();
+    initial.set_retry_policy(policy).unwrap();
+    initial.register_workflow("one", "v1", read_one).unwrap();
+    initial.register_activity("lookup", "v1").unwrap();
+    initial
+        .start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let first = attempt_at(&mut initial, "r", 100);
+    assert_eq!(first.attempt, 1);
+    drop(initial);
+
+    strip_issue_93_attempt_fields(&db);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened.set_retry_policy(policy).unwrap();
+    reopened.register_workflow("one", "v1", read_one).unwrap();
+    reopened.register_activity("lookup", "v1").unwrap();
+    let recovered = attempt_at(&mut reopened, "r", 5_000);
+    assert_eq!(recovered.attempt, 2);
+    reopened
+        .fail_at(&recovered, ActivityFailure::Retryable, 5_000)
+        .unwrap();
+    assert_eq!(reopened.next_wakeup().unwrap(), Some(5_010));
+    assert!(reopened.runnable(5_009, 10).unwrap().is_empty());
+    let retry = attempt_at(&mut reopened, "r", 5_010);
+    assert_eq!(retry.attempt, 3);
+}
+#[test]
+fn epoch_zero_retry_policy_preserves_elapsed_budget_after_recovery() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let policy = retry_policy(3, 100, 10, 10);
+    let mut initial = Engine::open(&db).unwrap();
+    initial.set_retry_policy(policy).unwrap();
+    initial.register_workflow("one", "v1", read_one).unwrap();
+    initial.register_activity("lookup", "v1").unwrap();
+    initial
+        .start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    // Current-schema attempts may legitimately start at epoch zero; this is
+    // distinct from a #92 record whose retry fields are absent.
+    let first = attempt_at(&mut initial, "r", 0);
+    assert_eq!(first.attempt, 1);
+    assert_eq!(first.started_at_ms, 0);
+    assert_eq!(first.retry_started_at_ms, 0);
+    assert_eq!(first.retry_policy, Some(policy));
+    drop(initial);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened.register_workflow("one", "v1", read_one).unwrap();
+    reopened.register_activity("lookup", "v1").unwrap();
+    let recovered = attempt_at(&mut reopened, "r", 10);
+    assert_eq!(recovered.attempt, 2);
+    assert_eq!(recovered.retry_started_at_ms, 0);
+    assert_eq!(recovered.retry_policy, Some(policy));
+    reopened
+        .fail_at(&recovered, ActivityFailure::Retryable, 10)
+        .unwrap();
+    assert_eq!(reopened.next_wakeup().unwrap(), Some(20));
+
+    assert!(matches!(
+        reopened.drive("r", 100).unwrap(),
+        DriveOutcome::Suspended(RunState::Failed)
+    ));
+    assert_eq!(
+        reopened.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+}
+#[test]
+fn legacy_max_attempt_in_flight_recovers_as_exhausted_without_dispatch_or_capacity_leak() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let policy = retry_policy(2, 1_000, 10, 10);
+    let mut initial = Engine::open(&db).unwrap();
+    initial.set_dispatch_limit(1).unwrap();
+    initial.set_retry_policy(policy).unwrap();
+    initial.register_workflow("one", "v1", read_one).unwrap();
+    initial.register_activity("lookup", "v1").unwrap();
+    initial
+        .start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let first = attempt_at(&mut initial, "r", 100);
+    assert_eq!(first.attempt, 1);
+    drop(initial);
+
+    // This is the #92-shaped record: stale safe-effect InFlight with the
+    // effective attempt budget reached and the #93 fields absent.
+    rewrite_issue_93_legacy_attempt_at(&db, policy.max_attempts);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened.set_dispatch_limit(1).unwrap();
+    reopened.set_retry_policy(policy).unwrap();
+    reopened.register_workflow("one", "v1", read_one).unwrap();
+    reopened.register_activity("lookup", "v1").unwrap();
+    assert!(matches!(
+        reopened.drive("r", 5_000).unwrap(),
+        DriveOutcome::Suspended(RunState::Failed)
+    ));
+    assert_eq!(reopened.status("r").unwrap(), RunState::Failed);
+    assert_eq!(
+        reopened.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    assert_eq!(reopened.next_wakeup().unwrap(), None);
+    assert!(reopened.runnable(5_000, 10).unwrap().is_empty());
+
+    // A terminal recovered run must not consume the only native dispatch slot.
+    reopened
+        .start("other", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(
+        reopened.drive("other", 5_000).unwrap(),
+        DriveOutcome::Activity(attempt) if attempt.attempt == 1
+    ));
+}
+#[test]
+fn retryable_failure_backoff_starts_at_actual_failure_time() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    let delay_ms = 200;
+    e.set_retry_policy(retry_policy(3, 10_000, delay_ms, delay_ms))
+        .unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    let first = attempt_at(&mut e, "r", unix_time_ms());
+    std::thread::sleep(Duration::from_millis(50));
+    let failure_before = unix_time_ms();
+    e.fail(&first, ActivityFailure::Retryable).unwrap();
+    let failure_after = unix_time_ms();
+    let deadline = e.next_wakeup().unwrap().unwrap();
+
+    assert!(
+        deadline >= failure_before.saturating_add(delay_ms),
+        "retry deadline {deadline} preceded failure-time backoff from {failure_before}"
+    );
+    assert!(
+        deadline <= failure_after.saturating_add(delay_ms),
+        "retry deadline {deadline} was not anchored near failure time {failure_after}"
+    );
+}
+#[test]
+fn retry_failure_preserves_an_earlier_timer_wakeup() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_retry_policy(retry_policy(3, 1_000, 100, 100))
+        .unwrap();
+    e.register_workflow("detached", "v1", detached_read_with_timer)
+        .unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "detached", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    let attempt = attempt_at(&mut e, "r", 0);
+    assert_eq!(e.next_wakeup().unwrap(), Some(50));
+    e.fail_at(&attempt, ActivityFailure::Retryable, 0).unwrap();
+    assert_eq!(e.next_wakeup().unwrap(), Some(50));
+    assert!(e.runnable(49, 10).unwrap().is_empty());
+    assert_eq!(e.runnable(50, 10).unwrap(), vec!["r"]);
+}
+#[test]
+fn retry_failure_preserves_an_already_due_ready_activity_wakeup() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_retry_policy(retry_policy(3, 1_000, 100, 100))
+        .unwrap();
+    e.register_workflow("detached", "v1", two_detached_reads_with_timer)
+        .unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "detached", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    let first = attempt_at(&mut e, "r", 0);
+    assert_eq!(first.effect_id, "r:a:0");
+    assert_eq!(e.next_wakeup().unwrap(), Some(0));
+    e.fail_at(&first, ActivityFailure::Retryable, 0).unwrap();
+    assert_eq!(e.next_wakeup().unwrap(), Some(0));
+    assert_eq!(e.runnable(0, 10).unwrap(), vec!["r"]);
+    let second = attempt_at(&mut e, "r", 0);
+    assert_eq!(second.effect_id, "r:a:1");
+}
+#[test]
+fn retryable_failure_persists_deadline_and_bounded_attempts() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_retry_policy(retry_policy(3, 1_000, 10, 40)).unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    let first = attempt_at(&mut e, "r", 100);
+    e.fail_at(&first, ActivityFailure::Retryable, 100).unwrap();
+    assert!(e.runnable(109, 10).unwrap().is_empty());
+    assert_eq!(e.next_wakeup().unwrap(), Some(110));
+    assert!(matches!(e.drive("r", 109).unwrap(), DriveOutcome::Waiting));
+
+    let second = attempt_at(&mut e, "r", 110);
+    assert_eq!(second.attempt, 2);
+    e.fail_at(&second, ActivityFailure::Retryable, 110).unwrap();
+    assert_eq!(e.next_wakeup().unwrap(), Some(130));
+}
+#[test]
+fn retry_backoff_deadline_and_policy_survive_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.set_retry_policy(retry_policy(3, 1_000, 10, 40)).unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let first = attempt_at(&mut e, "r", 100);
+    e.fail_at(&first, ActivityFailure::Retryable, 100).unwrap();
+    assert_eq!(e.next_wakeup().unwrap(), Some(110));
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    assert!(e.runnable(109, 10).unwrap().is_empty());
+    assert_eq!(e.next_wakeup().unwrap(), Some(110));
+    assert!(matches!(e.drive("r", 109).unwrap(), DriveOutcome::Waiting));
+    let second = attempt_at(&mut e, "r", 110);
+    assert_eq!(second.attempt, 2);
+}
+#[test]
+fn cancellation_during_retry_backoff_removes_future_wakeup() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_retry_policy(retry_policy(3, 1_000, 100, 100))
+        .unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let first = attempt_at(&mut e, "r", 100);
+    e.fail_at(&first, ActivityFailure::Retryable, 100).unwrap();
+    assert_eq!(e.next_wakeup().unwrap(), Some(200));
+
+    e.cancel("r").unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::Cancelled);
+    assert_eq!(e.next_wakeup().unwrap(), None);
+    assert!(e.runnable(200, 10).unwrap().is_empty());
+    assert!(matches!(
+        e.drive("r", 200).unwrap(),
+        DriveOutcome::Suspended(RunState::Cancelled)
+    ));
+}
+#[test]
+fn retry_attempt_budget_reports_bounded_exhaustion() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_retry_policy(retry_policy(2, 1_000, 10, 10)).unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let first = attempt_at(&mut e, "r", 100);
+    e.fail_at(&first, ActivityFailure::Retryable, 100).unwrap();
+    let second = attempt_at(&mut e, "r", 110);
+    e.fail_at(&second, ActivityFailure::Retryable, 110).unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::Failed);
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    assert!(matches!(
+        e.drive("r", 110).unwrap(),
+        DriveOutcome::Suspended(RunState::Failed)
+    ));
+}
+#[test]
+fn retry_elapsed_budget_exhausts_before_an_extra_dispatch() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_retry_policy(retry_policy(5, 25, 30, 30)).unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let first = attempt_at(&mut e, "r", 100);
+    e.fail_at(&first, ActivityFailure::Retryable, 100).unwrap();
+    assert!(e.runnable(124, 10).unwrap().is_empty());
+    assert!(matches!(e.drive("r", 124).unwrap(), DriveOutcome::Waiting));
+    assert!(matches!(
+        e.drive("r", 125).unwrap(),
+        DriveOutcome::Suspended(RunState::Failed)
+    ));
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+}
+#[test]
+fn retrying_run_does_not_starve_unrelated_ready_work() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_dispatch_limit(1).unwrap();
+    e.set_retry_policy(retry_policy(3, 1_000, 100, 100))
+        .unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("retry", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let first = attempt_at(&mut e, "retry", 0);
+    e.fail_at(&first, ActivityFailure::Retryable, 0).unwrap();
+    e.start("other", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    assert_eq!(e.runnable(0, 10).unwrap(), vec!["other"]);
+    assert!(matches!(
+        e.drive("other", 0).unwrap(),
+        DriveOutcome::Activity(_)
+    ));
 }
 #[test]
 fn ambiguous_effect_requires_reconciliation_and_late_attempt_is_fenced() {
@@ -810,19 +1395,19 @@ fn explicit_failure_reports_retry_safely_fence_stale_attempts_and_release_capaci
         e.drive("unknown", 0).unwrap(),
         DriveOutcome::Waiting
     ));
-    e.fail(&read, ActivityFailure::Retryable).unwrap();
+    e.fail_at(&read, ActivityFailure::Retryable, 0).unwrap();
     let unknown = attempt(&mut e, "unknown");
-    e.fail(&unknown, ActivityFailure::Retryable).unwrap();
+    e.fail_at(&unknown, ActivityFailure::Retryable, 0).unwrap();
     assert_eq!(e.status("unknown").unwrap(), RunState::OutcomeUnknown);
     assert!(matches!(
         e.drive("unknown", 0).unwrap(),
         DriveOutcome::Suspended(RunState::OutcomeUnknown)
     ));
-    let retried = attempt(&mut e, "read");
+    let retried = attempt_at(&mut e, "read", 1_000);
     assert_eq!(read.effect_id, retried.effect_id);
     assert_eq!(retried.attempt, read.attempt + 1);
     assert!(matches!(
-        e.fail(&read, ActivityFailure::Retryable),
+        e.fail_at(&read, ActivityFailure::Retryable, 1_000),
         Err(Error::Conflict)
     ));
     e.reconcile("unknown", &unknown.effect_id, None).unwrap();
@@ -835,7 +1420,7 @@ fn explicit_failure_reports_retry_safely_fence_stale_attempts_and_release_capaci
     let reconciled = attempt(&mut e, "unknown");
     assert_eq!(reconciled.effect_id, unknown.effect_id);
     assert_eq!(reconciled.attempt, unknown.attempt + 1);
-    e.fail(&reconciled, ActivityFailure::OutcomeUnknown)
+    e.fail_at(&reconciled, ActivityFailure::OutcomeUnknown, 0)
         .unwrap();
     assert_eq!(e.status("unknown").unwrap(), RunState::OutcomeUnknown);
 }

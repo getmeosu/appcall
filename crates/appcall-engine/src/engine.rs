@@ -4,6 +4,7 @@ use std::{
     panic::{catch_unwind, AssertUnwindSafe},
     path::Path,
     sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
 };
 type Workflow = Arc<dyn Fn(&mut Context) -> WorkflowResult + Send + Sync>;
 pub(crate) type Activity = Arc<
@@ -17,6 +18,7 @@ pub struct Engine<S: Store = SqliteStore> {
     workflows: HashMap<(String, String), Workflow>,
     activities: HashMap<(String, String), Option<Activity>>,
     dispatch_limit: usize,
+    retry_policy: RetryPolicy,
     dispatched: HashMap<(String, u64, u64), ActivityAttempt>,
     parked: HashSet<String>,
 }
@@ -32,6 +34,7 @@ impl<S: Store> Engine<S> {
             workflows: HashMap::new(),
             activities: HashMap::new(),
             dispatch_limit: 8,
+            retry_policy: RetryPolicy::default(),
             dispatched: HashMap::new(),
             parked: HashSet::new(),
         }
@@ -42,6 +45,14 @@ impl<S: Store> Engine<S> {
             return Err(Error::Limit);
         }
         self.dispatch_limit = limit;
+        Ok(())
+    }
+    /// Configure bounded native retries for attempts that have not failed yet.
+    /// The effective policy is copied into each attempt before dispatch so a
+    /// retry keeps the same budget after the engine is restarted.
+    pub fn set_retry_policy(&mut self, policy: RetryPolicy) -> Result<()> {
+        policy.validate()?;
+        self.retry_policy = policy;
         Ok(())
     }
     fn release_dispatch(&mut self, attempt: &ActivityAttempt) -> Result<()> {
@@ -295,6 +306,9 @@ impl<S: Store> Engine<S> {
         }
         r.state = RunState::Running;
         r.failure_reason = None;
+        if let Some(outcome) = self.advance_retries(&mut r, now_ms)? {
+            return Ok(outcome);
+        }
         for _ in 0..128 {
             let mut ctx = Context {
                 input: r.input.clone(),
@@ -368,6 +382,7 @@ impl<S: Store> Engine<S> {
             let command = r.history[index].command.clone();
             let mut children = vec![];
             let value = self.evaluate(&mut r, index, &command, now_ms, &mut children)?;
+            merge_retry_wakeup(&mut r);
             if let Some(value) = value {
                 r.history[index].value = Some(value);
                 r.wakeup = Some(0);
@@ -392,19 +407,45 @@ impl<S: Store> Engine<S> {
                 self.save(&mut r, &children)?;
                 return Ok(DriveOutcome::Waiting);
             }
-            if let Some(task) = r
+            if let Some(index) = r
                 .tasks
-                .iter_mut()
-                .find(|t| matches!(t.state, TaskState::Ready))
+                .iter()
+                .position(|t| matches!(t.state, TaskState::Ready))
             {
-                if !self
-                    .activities
-                    .contains_key(&(task.attempt.name.clone(), task.attempt.version.clone()))
-                {
+                let activity_key = (
+                    r.tasks[index].attempt.name.clone(),
+                    r.tasks[index].attempt.version.clone(),
+                );
+                if !self.activities.contains_key(&activity_key) {
                     return self.suspend(&mut r, RunState::NeedsImplementation);
                 }
-                task.attempt.attempt += 1;
+                let retry_policy = r.tasks[index]
+                    .attempt
+                    .retry_policy
+                    .unwrap_or(self.retry_policy);
+                retry_policy.validate()?;
+                if r.tasks[index].attempt.attempt >= retry_policy.max_attempts {
+                    r.tasks[index].state = TaskState::Ready;
+                    r.state = RunState::Failed;
+                    r.failure_reason = Some(RunFailure::RetryExhausted);
+                    r.wakeup = None;
+                    self.save(&mut r, &children)?;
+                    return Ok(DriveOutcome::Suspended(RunState::Failed));
+                }
+                let task = &mut r.tasks[index];
+                let retry_state_missing = task.attempt.retry_policy.is_none();
+                task.attempt.attempt = task.attempt.attempt.checked_add(1).ok_or(Error::Limit)?;
                 task.attempt.owner_epoch = self.store.owner_epoch();
+                if task.attempt.attempt == 1 {
+                    task.attempt.retry_started_at_ms = now_ms;
+                }
+                task.attempt.started_at_ms = now_ms;
+                if retry_state_missing {
+                    task.attempt.retry_policy = Some(self.retry_policy);
+                    if task.attempt.attempt > 1 {
+                        task.attempt.retry_started_at_ms = now_ms;
+                    }
+                }
                 task.state = TaskState::InFlight;
                 let attempt = task.attempt.clone();
                 if r.tasks.iter().any(|t| matches!(t.state, TaskState::Ready)) {
@@ -427,6 +468,48 @@ impl<S: Store> Engine<S> {
         r.wakeup = None;
         self.save(r, &[])?;
         Ok(DriveOutcome::Suspended(state))
+    }
+    fn advance_retries(&mut self, r: &mut RunRecord, now_ms: i64) -> Result<Option<DriveOutcome>> {
+        let mut changed = false;
+        let mut exhausted = false;
+        for task in &mut r.tasks {
+            let TaskState::Retrying(retry) = &task.state else {
+                continue;
+            };
+            retry.policy.validate()?;
+            let elapsed_deadline = retry
+                .retry_started_at_ms
+                .saturating_add(retry.policy.max_elapsed_ms);
+            if now_ms >= elapsed_deadline {
+                task.state = TaskState::Ready;
+                exhausted = true;
+                break;
+            }
+            if now_ms >= retry.next_attempt_at_ms {
+                task.attempt.retry_policy = Some(retry.policy);
+                task.state = TaskState::Ready;
+                changed = true;
+            }
+        }
+        if exhausted {
+            r.state = RunState::Failed;
+            r.failure_reason = Some(RunFailure::RetryExhausted);
+            r.wakeup = None;
+            self.save(r, &[])?;
+            return Ok(Some(DriveOutcome::Suspended(RunState::Failed)));
+        }
+        if changed {
+            r.wakeup = Some(0);
+            self.save(r, &[])?;
+            return Ok(None);
+        }
+        if let Some(wakeup) = retry_wakeup(r) {
+            if r.wakeup != Some(wakeup) {
+                r.wakeup = Some(wakeup);
+                self.save(r, &[])?;
+            }
+        }
+        Ok(None)
     }
     fn evaluate(
         &self,
@@ -459,6 +542,9 @@ impl<S: Store> Engine<S> {
                             version: version.clone(),
                             input: input.clone(),
                             policy: *policy,
+                            started_at_ms: 0,
+                            retry_started_at_ms: 0,
+                            retry_policy: None,
                         },
                         state: TaskState::Ready,
                     });
@@ -604,11 +690,25 @@ impl<S: Store> Engine<S> {
         self.save(&mut r, &[])
     }
     pub fn fail(&mut self, attempt: &ActivityAttempt, failure: ActivityFailure) -> Result<()> {
-        let result = self.fail_inner(attempt, failure);
+        self.fail_at(attempt, failure, current_time_ms())
+    }
+    /// Apply a failure at an explicit timestamp for deterministic hosts and tests.
+    pub fn fail_at(
+        &mut self,
+        attempt: &ActivityAttempt,
+        failure: ActivityFailure,
+        failed_at_ms: i64,
+    ) -> Result<()> {
+        let result = self.fail_inner(attempt, failure, failed_at_ms);
         let released = self.release_dispatch(attempt);
         result.and(released)
     }
-    fn fail_inner(&mut self, attempt: &ActivityAttempt, failure: ActivityFailure) -> Result<()> {
+    fn fail_inner(
+        &mut self,
+        attempt: &ActivityAttempt,
+        failure: ActivityFailure,
+        failed_at_ms: i64,
+    ) -> Result<()> {
         let mut r = self.store.load(&attempt.run_id)?;
         ensure_active(&r)?;
         let task = owned_task(&mut r, attempt, self.store.owner_epoch())?;
@@ -617,8 +717,28 @@ impl<S: Store> Engine<S> {
             EffectPolicy::Read | EffectPolicy::Idempotent
         );
         if safe && matches!(failure, ActivityFailure::Retryable) {
-            task.state = TaskState::Ready;
-            r.wakeup = Some(0);
+            let policy = task.attempt.retry_policy.unwrap_or(self.retry_policy);
+            policy.validate()?;
+            if task.attempt.attempt >= policy.max_attempts {
+                task.state = TaskState::Ready;
+                r.state = RunState::Failed;
+                r.failure_reason = Some(RunFailure::RetryExhausted);
+                r.wakeup = None;
+            } else {
+                let retry_started_at_ms = if task.attempt.attempt == 1 {
+                    task.attempt.started_at_ms
+                } else {
+                    task.attempt.retry_started_at_ms
+                };
+                let next_attempt_at_ms =
+                    failed_at_ms.saturating_add(backoff_ms(policy, task.attempt.attempt));
+                task.state = TaskState::Retrying(RetryState {
+                    next_attempt_at_ms,
+                    retry_started_at_ms,
+                    policy,
+                });
+                merge_retry_wakeup(&mut r);
+            }
         } else {
             task.state = TaskState::Uncertain;
             r.state = RunState::OutcomeUnknown;
@@ -809,9 +929,55 @@ fn dispatch_key(a: &ActivityAttempt) -> (String, u64, u64) {
     (a.effect_id.clone(), a.attempt, a.owner_epoch)
 }
 
+fn current_time_ms() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .min(i64::MAX as u128) as i64
+}
+
+fn merge_retry_wakeup(r: &mut RunRecord) {
+    if let Some(retry_wakeup) = retry_wakeup(r) {
+        r.wakeup = Some(
+            r.wakeup
+                .map_or(retry_wakeup, |wakeup| wakeup.min(retry_wakeup)),
+        );
+    }
+}
+
+fn retry_wakeup(r: &RunRecord) -> Option<i64> {
+    r.tasks
+        .iter()
+        .filter_map(|task| {
+            let TaskState::Retrying(retry) = &task.state else {
+                return None;
+            };
+            Some(
+                retry.next_attempt_at_ms.min(
+                    retry
+                        .retry_started_at_ms
+                        .saturating_add(retry.policy.max_elapsed_ms),
+                ),
+            )
+        })
+        .min()
+}
+
+fn backoff_ms(policy: RetryPolicy, attempt: u64) -> i64 {
+    let shift = attempt.saturating_sub(1).min(62) as u32;
+    let multiplier = 1_i64.checked_shl(shift).unwrap_or(i64::MAX);
+    policy
+        .base_delay_ms
+        .saturating_mul(multiplier)
+        .min(policy.max_delay_ms)
+}
+
 fn failure_state(reason: RunFailure) -> RunState {
     match reason {
-        RunFailure::InvalidCommand | RunFailure::ResourceLimit => RunState::Failed,
+        RunFailure::InvalidCommand | RunFailure::ResourceLimit | RunFailure::RetryExhausted => {
+            RunState::Failed
+        }
         RunFailure::MissingActivityImplementation => RunState::NeedsImplementation,
         RunFailure::PayloadUnavailable => RunState::NeedsInput,
     }

@@ -260,6 +260,40 @@ fn malformed_blocked_rejection_releases_detached_dispatch_capacity() {
     ));
 }
 
+#[test]
+fn retry_backoff_releases_native_capacity_for_unrelated_work() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut engine = Engine::open(directory.path().join("engine.db")).unwrap();
+    engine.set_dispatch_limit(1).unwrap();
+    engine
+        .set_retry_policy(RetryPolicy::new(3, 1_000, 100, 100).unwrap())
+        .unwrap();
+    engine
+        .register_workflow("one", "v1", |context| {
+            context.activity("lookup", "v1", context.input().clone(), EffectPolicy::Read)
+        })
+        .unwrap();
+    engine.register_activity("lookup", "v1").unwrap();
+    for id in ["retry", "other"] {
+        engine
+            .start(id, "one", "v1", PayloadRef::durable("input").unwrap())
+            .unwrap();
+    }
+
+    let retry_attempt = match engine.drive("retry", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        outcome => panic!("expected retry activity dispatch, got {outcome:?}"),
+    };
+    engine
+        .fail_at(&retry_attempt, ActivityFailure::Retryable, 0)
+        .unwrap();
+    assert_eq!(engine.runnable(0, 10).unwrap(), vec!["other"]);
+    assert!(matches!(
+        engine.drive("other", 0).unwrap(),
+        DriveOutcome::Activity(_)
+    ));
+}
+
 struct Local;
 impl PayloadResolver for Local {
     fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {

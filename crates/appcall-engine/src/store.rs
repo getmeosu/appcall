@@ -64,7 +64,32 @@ impl SqliteStore {
             UPDATE engine_owner SET epoch=epoch+1 WHERE id=1;
             CREATE TABLE IF NOT EXISTS engine_runs (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, state TEXT NOT NULL, wakeup INTEGER, record BLOB NOT NULL);
             CREATE INDEX IF NOT EXISTS engine_runs_wakeup ON engine_runs(state,wakeup);")?;
-        connection.execute("UPDATE engine_runs SET wakeup=0 WHERE state='running'", [])?;
+        // A NULL wakeup identifies interrupted work that recovery must inspect.
+        // Keep the old restart behavior for runs with an in-flight native
+        // attempt, but preserve scheduled retry deadlines and timers.
+        let recovery_ids: Vec<String> = {
+            let mut statement = connection
+                .prepare("SELECT id,wakeup,record FROM engine_runs WHERE state='running'")?;
+            let rows = statement.query_map([], |row| {
+                let id: String = row.get(0)?;
+                let wakeup: Option<i64> = row.get(1)?;
+                let recover = wakeup.is_none()
+                    && serde_json::from_slice::<RunRecord>(&row.get::<_, Vec<u8>>(2)?)
+                        .map(|run| requires_recovery(&run))
+                        .unwrap_or(false);
+                Ok((id, recover))
+            })?;
+            rows.collect::<std::result::Result<Vec<_>, _>>()?
+                .into_iter()
+                .filter_map(|(id, recover)| recover.then_some(id))
+                .collect()
+        };
+        for id in recovery_ids {
+            connection.execute(
+                "UPDATE engine_runs SET wakeup=0 WHERE id=?1 AND state='running'",
+                [id],
+            )?;
+        }
         let epoch = connection.query_row("SELECT epoch FROM engine_owner WHERE id=1", [], |r| {
             r.get(0)
         })?;
@@ -88,6 +113,15 @@ fn state(run: &RunRecord) -> &'static str {
     } else {
         "suspended"
     }
+}
+fn requires_recovery(run: &RunRecord) -> bool {
+    run.state == RunState::CancelRequested
+        || run.tasks.iter().any(|task| {
+            matches!(
+                task.state,
+                TaskState::Ready | TaskState::InFlight | TaskState::Invoking
+            )
+        })
 }
 impl Store for SqliteStore {
     fn owner_epoch(&self) -> u64 {

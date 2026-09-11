@@ -32,11 +32,31 @@ impl PostgresStore {
             )
             .map_err(safe)?
             .get(0);
-        tx.execute(
-            "UPDATE appcall_workflow_runs SET wakeup=0 WHERE state='running'",
-            &[],
-        )
-        .map_err(safe)?;
+        let recovery_ids: Vec<String> = tx
+            .query(
+                "SELECT id,wakeup,record FROM appcall_workflow_runs WHERE state='running'",
+                &[],
+            )
+            .map_err(safe)?
+            .into_iter()
+            .filter_map(|row| {
+                let id: String = row.get(0);
+                let wakeup: Option<i64> = row.get(1);
+                let record: Vec<u8> = row.get(2);
+                let recover = wakeup.is_none()
+                    && serde_json::from_slice::<RunRecord>(&record)
+                        .map(|run| requires_recovery(&run))
+                        .unwrap_or(false);
+                recover.then_some(id)
+            })
+            .collect();
+        for id in recovery_ids {
+            tx.execute(
+                "UPDATE appcall_workflow_runs SET wakeup=0 WHERE id=$1 AND state='running'",
+                &[&id],
+            )
+            .map_err(safe)?;
+        }
         tx.commit().map_err(safe)?;
         Ok(Self {
             client: Mutex::new(client),
@@ -67,6 +87,15 @@ fn state(r: &RunRecord) -> &'static str {
     } else {
         "suspended"
     }
+}
+fn requires_recovery(run: &RunRecord) -> bool {
+    run.state == RunState::CancelRequested
+        || run.tasks.iter().any(|task| {
+            matches!(
+                task.state,
+                TaskState::Ready | TaskState::InFlight | TaskState::Invoking
+            )
+        })
 }
 fn insert(tx: &mut Transaction<'_>, run: &RunRecord) -> Result<()> {
     let revision = i64::try_from(run.revision).map_err(|_| Error::Limit)?;

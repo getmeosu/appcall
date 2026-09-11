@@ -320,4 +320,99 @@ mod tests {
             );
         });
     }
+
+    #[test]
+    fn host_cancels_retry_during_backoff_and_runs_unrelated_work() {
+        struct Local;
+        impl PayloadResolver for Local {
+            fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+                Ok(Some(Vec::new()))
+            }
+        }
+
+        let directory = tempfile::tempdir().unwrap();
+        let retry_calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let retry_calls_for_activity = retry_calls.clone();
+        let (run_sender, run_receiver) = mpsc::channel();
+        let mut engine = Engine::open(directory.path().join("engine.db")).unwrap();
+        engine
+            .set_retry_policy(RetryPolicy::new(3, 5_000, 300, 300).unwrap())
+            .unwrap();
+        engine
+            .register_workflow("one", "v1", |context| {
+                context.activity("lookup", "v1", context.input().clone(), EffectPolicy::Read)
+            })
+            .unwrap();
+        engine
+            .register_activity_fn("lookup", "v1", move |attempt, _| {
+                run_sender.send(attempt.run_id.clone()).unwrap();
+                if attempt.run_id == "retry" {
+                    retry_calls_for_activity.fetch_add(1, Ordering::SeqCst);
+                    Err(ActivityFailure::Retryable)
+                } else {
+                    Ok(PayloadRef::durable("other-result").unwrap())
+                }
+            })
+            .unwrap();
+        let host = EngineHost::spawn(
+            HttpAdapter::new(engine, "test-token-is-at-least-thirty-two-bytes").unwrap(),
+            Arc::new(Local),
+        )
+        .unwrap();
+        let client = host.client();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let auth = "Bearer test-token-is-at-least-thirty-two-bytes".to_string();
+        let start = |id: &str| {
+            runtime.block_on(client.request(
+                "POST".into(),
+                "/runs".into(),
+                auth.clone(),
+                format!(
+                    "{{\"id\":\"{id}\",\"workflow\":\"one\",\"version\":\"v1\",\"input\":{{\"key\":\"input\",\"ephemeral\":false}}}}"
+                )
+                .into_bytes(),
+                Duration::from_secs(1),
+            ))
+        };
+
+        assert_eq!(start("retry").status, 201);
+        assert_eq!(
+            run_receiver.recv_timeout(Duration::from_secs(1)).unwrap(),
+            "retry"
+        );
+        assert_eq!(
+            runtime
+                .block_on(client.request(
+                    "POST".into(),
+                    "/runs/retry/cancel".into(),
+                    auth.clone(),
+                    Vec::new(),
+                    Duration::from_secs(1),
+                ))
+                .status,
+            202
+        );
+        assert_eq!(start("other").status, 201);
+        assert_eq!(
+            run_receiver.recv_timeout(Duration::from_secs(1)).unwrap(),
+            "other"
+        );
+        thread::sleep(Duration::from_millis(350));
+        assert_eq!(retry_calls.load(Ordering::SeqCst), 1);
+        let status = runtime.block_on(client.request(
+            "GET".into(),
+            "/runs/retry".into(),
+            auth,
+            Vec::new(),
+            Duration::from_secs(1),
+        ));
+        assert_eq!(status.status, 200);
+        assert!(String::from_utf8(status.body)
+            .unwrap()
+            .contains("Cancelled"));
+        host.shutdown().unwrap();
+    }
 }
