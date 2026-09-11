@@ -954,9 +954,7 @@ fn sqlite_commit_with_max_expected_returns_conflict_without_panicking() {
     let mut changed = original.clone();
     changed.revision += 1;
     changed.state = RunState::Cancelled;
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        store.commit(u64::MAX, &changed, &[])
-    }));
+    let result = catch_unwind(AssertUnwindSafe(|| store.commit(u64::MAX, &changed, &[])));
 
     assert!(result.is_ok(), "revision successor overflow must not panic");
     assert!(matches!(result.unwrap(), Err(Error::Conflict)));

@@ -23,6 +23,65 @@ fn postgres_contract_guard_serializes_parallel_tests() {
 
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_revision_overflow_returns_limit_and_conflict() {
+    let _guard = postgres_contract_guard();
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_revision_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut c = Client::connect(&url, NoTls).unwrap();
+        c.batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        c
+    };
+
+    let mut engine = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    engine
+        .start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    drop(engine);
+
+    let mut store = PostgresStore::from_client(connect()).unwrap();
+    let original = store.load("r").unwrap();
+
+    let mut max_insert = original.clone();
+    max_insert.id = "max-insert".into();
+    max_insert.revision = u64::MAX;
+    assert!(matches!(store.insert(&max_insert), Err(Error::Limit)));
+
+    let mut max_expected = original.clone();
+    max_expected.revision = original.revision + 1;
+    max_expected.state = RunState::Cancelled;
+    assert!(matches!(
+        store.commit(u64::MAX, &max_expected, &[]),
+        Err(Error::Conflict)
+    ));
+
+    let mut max_successor = original.clone();
+    max_successor.revision = u64::MAX;
+    assert!(matches!(
+        store.commit(u64::MAX - 1, &max_successor, &[]),
+        Err(Error::Limit)
+    ));
+
+    drop(store);
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
 fn postgres_atomic_replay_ownership_and_parent_wakeup() {
     let _guard = postgres_contract_guard();
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();

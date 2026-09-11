@@ -104,10 +104,11 @@ impl Store for SqliteStore {
         serde_json::from_slice(&bytes).map_err(|_| Error::Storage("invalid durable record".into()))
     }
     fn insert(&mut self, run: &RunRecord) -> Result<()> {
+        let revision = i64::try_from(run.revision).map_err(|_| Error::Limit)?;
         self.connection
             .execute(
                 "INSERT INTO engine_runs VALUES (?1,?2,?3,?4,?5)",
-                params![run.id, run.revision, state(run), run.wakeup, encoded(run)?],
+                params![run.id, revision, state(run), run.wakeup, encoded(run)?],
             )
             .map_err(|e| {
                 if e.sqlite_error_code() == Some(rusqlite::ErrorCode::ConstraintViolation) {
@@ -119,11 +120,13 @@ impl Store for SqliteStore {
         Ok(())
     }
     fn commit(&mut self, expected: u64, run: &RunRecord, children: &[RunRecord]) -> Result<()> {
-        if run.revision != expected + 1 {
+        if expected.checked_add(1) != Some(run.revision) {
             return Err(Error::Conflict);
         }
+        let revision = i64::try_from(run.revision).map_err(|_| Error::Limit)?;
+        let expected = i64::try_from(expected).map_err(|_| Error::Limit)?;
         let tx = self.connection.transaction()?;
-        let n = tx.execute("UPDATE engine_runs SET revision=?2,state=?3,wakeup=?4,record=?5 WHERE id=?1 AND revision=?6", params![run.id,run.revision,state(run),run.wakeup,encoded(run)?,expected])?;
+        let n = tx.execute("UPDATE engine_runs SET revision=?2,state=?3,wakeup=?4,record=?5 WHERE id=?1 AND revision=?6", params![run.id,revision,state(run),run.wakeup,encoded(run)?,expected])?;
         if n != 1 {
             return Err(Error::Conflict);
         }

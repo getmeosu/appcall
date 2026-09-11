@@ -203,7 +203,7 @@ impl<S: Store> Engine<S> {
     }
     fn save(&mut self, run: &mut RunRecord, children: &[RunRecord]) -> Result<()> {
         let old = run.revision;
-        run.revision += 1;
+        run.revision = old.checked_add(1).ok_or(Error::Limit)?;
         self.store.commit(old, run, children)
     }
     pub fn signal(&mut self, id: &str, name: &str, value: PayloadRef) -> Result<()> {
@@ -225,7 +225,14 @@ impl<S: Store> Engine<S> {
     /// finish an interrupted walk; completions are fenced as soon as requested.
     pub fn cancel(&mut self, id: &str) -> Result<()> {
         let mut r = self.store.load(id)?;
-        if matches!(r.state, RunState::Completed | RunState::Cancelled) {
+        if matches!(
+            r.state,
+            RunState::Completed
+                | RunState::Cancelled
+                | RunState::OutcomeUnknown
+                | RunState::Nondeterminism
+                | RunState::Failed
+        ) {
             return Ok(());
         }
         r.state = RunState::CancelRequested;
