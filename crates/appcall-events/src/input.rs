@@ -24,6 +24,10 @@ pub(super) fn classify_dispatch(connector: &str, operation: &str) -> DispatchKin
     }
 }
 
+pub fn is_sync_operation(connector: &str, operation: &str) -> bool {
+    classify_dispatch(connector, operation) == DispatchKind::Sync
+}
+
 pub fn sync_input(connector: &str, operation: &str, payload: &Value) -> Result<Value> {
     if connector != "slack" || operation != "messages.list" {
         return Ok(json!({}));

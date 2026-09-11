@@ -46,8 +46,8 @@ impl MemoryEvents {
         expected_revision: u64,
         parsed: &ParsedWebhook,
     ) -> Result<IngestResult> {
-        // Reject scheduling even for a duplicate: no in-memory durable-success fiction.
-        if !parsed.operation.is_empty() {
+        // The memory adapter has no durable worker; reject only worker-supported syncs.
+        if appcall_events::is_sync_operation(&expected.connector, &parsed.operation) {
             return Err(ApiError::new("WEBHOOK_SYNC_UNAVAILABLE"));
         }
         appcall_events::validate_parsed(&expected.connector, parsed).map_err(
@@ -106,7 +106,7 @@ impl MemoryEvents {
             connection_id: expected.id.clone(),
             external_account_id: expected.external_account_id.clone(),
             connector: expected.connector.clone(),
-            operation: String::new(),
+            operation: parsed.operation.clone(),
             payload,
             created_at: chrono::Utc::now(),
             stream_position: position,
@@ -383,7 +383,7 @@ impl MemoryEvents {
                 if !p.scopes.permits("events:replay") {
                     return Err(ApiError::new("FORBIDDEN"));
                 }
-                if !event.operation.is_empty() {
+                if appcall_events::is_sync_operation(&event.connector, &event.operation) {
                     return Err(ApiError::new("WEBHOOK_SYNC_UNAVAILABLE"));
                 }
                 return Ok(Some(Response {

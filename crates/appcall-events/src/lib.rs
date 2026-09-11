@@ -6,7 +6,7 @@ mod types;
 pub use cursor::{
     decode as decode_cursor, history_cursor, stream_cursor, stream_cursor_at, Cursor,
 };
-pub use input::{sync_input, validate_parsed};
+pub use input::{is_sync_operation, sync_input, validate_parsed};
 pub use store::*;
 pub use types::*;
 pub type Result<T> = std::result::Result<T, Error>;
