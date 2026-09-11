@@ -34,6 +34,14 @@ describe("buildBasicAuth", () => {
     const decoded = atob(auth.slice(6));
     expect(decoded).toBe("user+1@icloud.com:p@ss!word=");
   });
+
+  test("preserves surrounding ASCII and Unicode whitespace", () => {
+    const username = " user@example.com ";
+    const password = "\u00a0app-password\u00a0";
+    const auth = buildBasicAuth(username, password);
+
+    expect(atob(auth.slice(6))).toBe(`${username}:${password}`);
+  });
 });
 
 describe("resolveBaseUrl", () => {

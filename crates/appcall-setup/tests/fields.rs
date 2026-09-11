@@ -1,5 +1,6 @@
 use appcall_connectors::{DeriveField, SetupConfig, SetupField, SetupRoute};
 use appcall_setup::*;
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use std::collections::BTreeMap;
 #[test]
 fn missing_declared_field_retains_only_selected_key_and_validation_order() {
@@ -113,4 +114,75 @@ fn required_route_derived_and_untrusted_fields_are_validated() {
     let mut forged = input;
     forged.insert("basicAuth".into(), "forged".into());
     assert!(collect_fields(&setup, "basic", &forged).is_err());
+}
+
+#[test]
+fn secret_fields_preserve_whitespace_while_nonsecret_fields_are_normalized() {
+    let setup = SetupConfig {
+        mode: "api_key".into(),
+        fields: vec![
+            SetupField {
+                key: "username".into(),
+                required: true,
+                secret: false,
+                ..Default::default()
+            },
+            SetupField {
+                key: "password".into(),
+                required: true,
+                secret: true,
+                ..Default::default()
+            },
+        ],
+        derive: vec![DeriveField {
+            field: "basicAuth".into(),
+            kind: "basic".into(),
+            from: vec!["username".into(), "password".into()],
+        }],
+        ..Default::default()
+    };
+    let username = " \tuser\u{00a0} ";
+    let password = "\u{2003}pass\u{2003}";
+    let result = collect_fields(
+        &setup,
+        "",
+        &BTreeMap::from([
+            ("username".into(), username.into()),
+            ("password".into(), password.into()),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(result.fields()["username"], "user");
+    assert_eq!(result.fields()["password"], password);
+    assert_eq!(
+        STANDARD.decode(result.fields()["basicAuth"].as_bytes()).unwrap(),
+        format!("user:{password}").as_bytes()
+    );
+}
+
+#[test]
+fn whitespace_only_required_secret_is_rejected_explicitly() {
+    let setup = SetupConfig {
+        fields: vec![SetupField {
+            key: "password".into(),
+            required: true,
+            secret: true,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let expected = Error::MissingDeclaredField(DeclaredFieldKey::new("password").unwrap());
+
+    for value in ["", " \t\u{2003} "] {
+        assert_eq!(
+            collect_fields(
+                &setup,
+                "",
+                &BTreeMap::from([("password".into(), value.into())]),
+            )
+            .unwrap_err(),
+            expected
+        );
+    }
 }

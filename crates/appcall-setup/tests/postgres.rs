@@ -300,6 +300,40 @@ fn atomic_replacement_ownership_and_validation() {
 
 #[test]
 #[ignore = "explicit PostgreSQL isolated schema"]
+fn setup_persists_exact_secrets_and_normalizes_nonsecret_fields() {
+    let db = Database::new();
+    let service = setup(&db);
+    let scope = appcall_setup::SetupScope::new("p", None).unwrap();
+    let password = "\u{2003}smtp-password\u{2003}";
+    let connection = service
+        .submit(
+            &scope,
+            "brevo",
+            "smtp",
+            &BTreeMap::from([
+                ("smtpHost".into(), " smtp-relay.brevo.com\u{00a0} ".into()),
+                ("smtpPort".into(), " 587 ".into()),
+                ("smtpUser".into(), " smtp-user ".into()),
+                ("smtpPassword".into(), password.into()),
+            ]),
+        )
+        .unwrap();
+    let encoded = db
+        .store
+        .lock()
+        .unwrap()
+        .load_secret("p", &connection.secret_ref_id)
+        .unwrap();
+    let stored: BTreeMap<String, String> = serde_json::from_slice(encoded.as_bytes()).unwrap();
+
+    assert_eq!(stored["smtpHost"], "smtp-relay.brevo.com");
+    assert_eq!(stored["smtpPort"], "587");
+    assert_eq!(stored["smtpUser"], "smtp-user");
+    assert_eq!(stored["smtpPassword"], password);
+}
+
+#[test]
+#[ignore = "explicit PostgreSQL isolated schema"]
 fn setup_fences_authorization_started_during_validation() {
     let db = Database::new();
     let platform = appcall_setup::SetupScope::new("p", None).unwrap();
