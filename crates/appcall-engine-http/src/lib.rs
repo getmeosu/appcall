@@ -127,6 +127,9 @@ impl<S: Store> HttpAdapter<S> {
                     RunResult::Failed(failure_reason) => {
                         json!({"id":id,"outcome":"failed","failure_reason":failure_reason})
                     }
+                    RunResult::Nondeterminism(failure_reason) => {
+                        json!({"id":id,"outcome":"nondeterminism","failure_reason":failure_reason})
+                    }
                     RunResult::Cancelled => json!({"id":id,"outcome":"cancelled"}),
                     RunResult::Unknown => json!({"id":id,"outcome":"unknown"}),
                 };

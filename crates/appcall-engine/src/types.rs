@@ -294,6 +294,7 @@ pub enum RunResult {
     Pending,
     Completed(PayloadRef),
     Failed(Option<RunFailure>),
+    Nondeterminism(Option<RunFailure>),
     Cancelled,
     Unknown,
 }

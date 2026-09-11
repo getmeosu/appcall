@@ -133,9 +133,8 @@ impl<S: Store> Engine<S> {
         let run = self.store.load(id)?;
         match run.state {
             RunState::Completed => Ok(RunResult::Completed(run.output.ok_or(Error::Conflict)?)),
-            RunState::Failed | RunState::Nondeterminism => {
-                Ok(RunResult::Failed(run.failure_reason))
-            }
+            RunState::Failed => Ok(RunResult::Failed(run.failure_reason)),
+            RunState::Nondeterminism => Ok(RunResult::Nondeterminism(run.failure_reason)),
             RunState::Cancelled => Ok(RunResult::Cancelled),
             RunState::OutcomeUnknown => Ok(RunResult::Unknown),
             RunState::Running
