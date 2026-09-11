@@ -987,3 +987,27 @@ fn sqlite_signed_revision_overflow_returns_limit_for_insert_and_commit() {
         Err(Error::Limit)
     ));
 }
+
+#[test]
+fn retry_policy_durable_serde_rejects_malformed_policies() {
+    let malformed = [
+        r#"{"max_attempts":0,"max_elapsed_ms":1000,"base_delay_ms":10,"max_delay_ms":20}"#,
+        r#"{"max_attempts":1025,"max_elapsed_ms":1000,"base_delay_ms":10,"max_delay_ms":20}"#,
+        r#"{"max_attempts":2,"max_elapsed_ms":0,"base_delay_ms":10,"max_delay_ms":20}"#,
+        r#"{"max_attempts":2,"max_elapsed_ms":1000,"base_delay_ms":0,"max_delay_ms":20}"#,
+        r#"{"max_attempts":2,"max_elapsed_ms":1000,"base_delay_ms":20,"max_delay_ms":10}"#,
+    ];
+    for persisted in malformed {
+        assert!(
+            serde_json::from_slice::<RetryPolicy>(persisted.as_bytes()).is_err(),
+            "malformed retry policy was accepted: {persisted}"
+        );
+    }
+
+    let valid = RetryPolicy::new(3, 1_000, 10, 100).unwrap();
+    let persisted = serde_json::to_vec(&valid).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<RetryPolicy>(&persisted).unwrap(),
+        valid
+    );
+}
