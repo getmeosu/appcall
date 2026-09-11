@@ -386,6 +386,30 @@ async fn mcp_omitted_sessions_are_isolated_without_bypassing_in_flight_cap() {
         assert_eq!(call.await.unwrap().status, 200);
     }
 }
+
+#[tokio::test]
+async fn mcp_session_registry_fails_closed_at_its_bounded_capacity() {
+    let (server, _) = server();
+    let scope = scope();
+    let initialize = br#"{"jsonrpc":"2.0","id":1,"method":"initialize"}"#;
+
+    for _ in 0..1024 {
+        let response = server.handle_http("POST", &scope, initialize).await;
+        assert_eq!(response.status, 200);
+        assert!(response_header(&response, MCP_SESSION_ID_HEADER).is_some());
+    }
+    assert_eq!(server.session_len(), 1024);
+
+    let exhausted = server.handle_http("POST", &scope, initialize).await;
+    assert_eq!(exhausted.status, 503);
+    assert_eq!(
+        exhausted.body.as_ref().unwrap()["error"]["code"],
+        "MCP_SESSION_UNAVAILABLE"
+    );
+    assert!(response_header(&exhausted, MCP_SESSION_ID_HEADER).is_none());
+    assert_eq!(server.session_len(), 1024);
+}
+
 #[tokio::test]
 async fn protocol_transport_and_notifications() {
     let (s, e) = server();
