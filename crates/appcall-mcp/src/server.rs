@@ -87,6 +87,12 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         if request.get("jsonrpc").and_then(Value::as_str) != Some("2.0") || method.is_empty() {
             return id.map(|id| rpc_error(Some(id), -32600, "Invalid request."));
         }
+        if id
+            .as_ref()
+            .is_some_and(|id| bounded_request_id(id).is_none())
+        {
+            return Some(rpc_error(Some(Value::Null), -32600, "Invalid request ID."));
+        }
         // Notifications never receive a response. Cancellation notifications do
         // update the process-local registry so a matching request can observe it.
         if method == "notifications/cancelled" {
@@ -537,6 +543,9 @@ struct CancellationParams {
 }
 
 fn bounded_request_id(id: &Value) -> Option<String> {
+    if !id.is_null() && !id.is_string() && !id.is_number() {
+        return None;
+    }
     let serialized = serde_json::to_string(id).ok()?;
     (serialized.len() <= MAX_MCP_REQUEST_ID_BYTES).then_some(serialized)
 }
