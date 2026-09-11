@@ -313,6 +313,29 @@ async fn mcp_requires_a_string_idempotency_key_when_the_field_is_present() {
 }
 
 #[tokio::test]
+async fn mcp_rejects_null_idempotency_key_before_executor_dispatch() {
+    let (s, e) = server();
+    let result = rpc(
+        &s,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "idempotencyKey":null,
+                "arguments":{}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(result["error"]["code"], -32600);
+    assert!(e.0.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
 async fn malformed_params_unknown_tool_and_platform_fallback() {
     let e = Executor::default();
     let s = Server::new(

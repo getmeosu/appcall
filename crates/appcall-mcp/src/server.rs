@@ -271,11 +271,21 @@ struct CallParams {
     name: String,
     #[serde(default = "empty_arguments")]
     arguments: Value,
-    #[serde(default, rename = "idempotencyKey")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_present_idempotency_key",
+        rename = "idempotencyKey"
+    )]
     idempotency_key: Option<String>,
 }
 fn empty_arguments() -> Value {
     json!({})
+}
+fn deserialize_present_idempotency_key<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    String::deserialize(deserializer).map(Some)
 }
 impl Default for CallParams {
     fn default() -> Self {
