@@ -78,24 +78,55 @@ impl MemoryEvents {
         {
             return Err(ApiError::new("CONNECTION_CHANGED"));
         }
-        let id = if parsed.idempotency_key.is_empty() {
-            format!("wh_{}", uuid::Uuid::new_v4().simple())
+        let provider_event_key =
+            (!parsed.idempotency_key.is_empty()).then_some(parsed.idempotency_key.as_str());
+        let dedup_key = provider_event_key.map(|provider_event_key| {
+            (
+                expected.project_id.clone(),
+                expected.connector.clone(),
+                expected.id.clone(),
+                provider_event_key.to_owned(),
+            )
+        });
+        if let Some(dedup_key) = dedup_key.as_ref() {
+            if let Some(id) = data.event_dedup.get(dedup_key).cloned() {
+                if let Some(old) = data.events.get(&(expected.project_id.clone(), id.clone())) {
+                    if old.connection_id != expected.id
+                        || old.connector != expected.connector
+                        || old.external_account_id != expected.external_account_id
+                    {
+                        return Err(ApiError::new("CONNECTION_CHANGED"));
+                    }
+                    return Ok(IngestResult {
+                        event_id: id,
+                        duplicate: true,
+                    });
+                }
+                data.event_dedup.remove(dedup_key);
+            }
+        }
+        let mut id = if let Some(provider_event_key) = provider_event_key {
+            provider_event_key.to_owned()
         } else {
-            parsed.idempotency_key.clone()
+            fresh_public_id(&data, &expected.project_id)?
         };
         let key = (expected.project_id.clone(), id.clone());
         if let Some(old) = data.events.get(&key) {
-            if old.connection_id != expected.id
-                || old.connector != expected.connector
-                || old.external_account_id != expected.external_account_id
+            if old.connection_id == expected.id
+                && old.connector == expected.connector
+                && old.external_account_id == expected.external_account_id
             {
-                return Err(ApiError::new("CONNECTION_CHANGED"));
+                if let Some(dedup_key) = dedup_key.as_ref() {
+                    data.event_dedup.insert(dedup_key.clone(), id.clone());
+                }
+                return Ok(IngestResult {
+                    event_id: id,
+                    duplicate: true,
+                });
             }
-            return Ok(IngestResult {
-                event_id: id,
-                duplicate: true,
-            });
+            id = fresh_public_id(&data, &expected.project_id)?;
         }
+        let key = (expected.project_id.clone(), id.clone());
         let position = data
             .next_sequence
             .checked_add(1)
@@ -140,6 +171,7 @@ impl MemoryEvents {
                     + expected.id.len()
                     + expected.external_account_id.len()
                     + expected.connector.len()
+                    + provider_event_key.map_or(0, str::len)
                     + 512,
             )
             .ok_or_else(|| ApiError::new("MEMORY_CAPACITY_EXCEEDED"))?;
@@ -162,6 +194,9 @@ impl MemoryEvents {
         data.usage_monthly.insert(usage_key, usage_total);
         data.bytes_used += retained;
         data.next_sequence = position;
+        if let Some(dedup_key) = dedup_key {
+            data.event_dedup.insert(dedup_key, id.clone());
+        }
         data.events.insert(key, event);
         Ok(IngestResult {
             event_id: id,
@@ -548,6 +583,18 @@ fn decode(s: &str) -> Result<String> {
         .decode_utf8()
         .map(|s| s.into_owned())
         .map_err(|_| ApiError::new("INVALID_REQUEST"))
+}
+fn fresh_public_id(data: &super::state::MemoryData, project_id: &str) -> Result<String> {
+    for _ in 0..8 {
+        let id = format!("wh_{}", uuid::Uuid::new_v4().simple());
+        if !data
+            .events
+            .contains_key(&(project_id.to_owned(), id.clone()))
+        {
+            return Ok(id);
+        }
+    }
+    Err(ApiError::new("WEBHOOK_INGEST_FAILED"))
 }
 fn authorize(p: &Principal) -> Result<()> {
     if p.project_id.is_empty() || !p.scopes.permits("events:read") {

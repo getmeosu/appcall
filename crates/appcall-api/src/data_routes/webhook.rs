@@ -52,12 +52,12 @@ pub fn webhook_replay(
     id: &str,
     sink: &mut impl DispatchSink,
 ) -> Result<Response> {
-    PgEvents::new(client)
+    let public_id = PgEvents::new(client)
         .replay(principal, id, sink)
         .map_err(event_error)?;
     Ok(Response {
         status: 200,
-        body: json!({"eventId":id,"replayed":true}),
+        body: json!({"eventId":public_id,"replayed":true}),
         headers: vec![],
     })
 }

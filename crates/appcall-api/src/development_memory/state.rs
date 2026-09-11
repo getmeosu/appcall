@@ -199,6 +199,9 @@ pub(crate) struct MemoryData {
     pub usage_reserved: BTreeMap<String, UsageReservation>,
     pub action_limits: appcall_actions::Entitlements,
     pub events: BTreeMap<(String, String), appcall_events::Event>,
+    /// The parser's provider key is scoped to the connection; the mapped event
+    /// ID remains the public resource identity used by all history APIs.
+    pub event_dedup: BTreeMap<(String, String, String, String), String>,
     pub oauth_pending: BTreeMap<String, OAuthPending>,
     pub next_sequence: i64,
     pub bytes_used: usize,
