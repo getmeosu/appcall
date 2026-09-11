@@ -1,7 +1,21 @@
 use appcall_engine::*;
 use appcall_engine_http::*;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        mpsc, Arc,
+    },
+    time::Duration,
+};
 const TOKEN: &str = "actor-test-token-at-least-thirty-two-bytes";
+
+struct DurableInput;
+impl PayloadResolver for DurableInput {
+    fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+        Ok(Some(b"input".to_vec()))
+    }
+}
+
 #[test]
 fn one_exhausted_or_external_only_run_does_not_stop_other_workflows() {
     let d = tempfile::tempdir().unwrap();
@@ -74,6 +88,97 @@ fn one_exhausted_or_external_only_run_does_not_stop_other_workflows() {
     host.shutdown().unwrap();
     assert!(!client.is_alive());
 }
+
+#[test]
+fn reopened_host_auto_recovers_stale_read_and_idempotent_attempts() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    for (workflow, policy) in [
+        ("read-restart", EffectPolicy::Read),
+        ("idempotent-restart", EffectPolicy::Idempotent),
+    ] {
+        let d = tempfile::tempdir().unwrap();
+        let db = d.path().join("db");
+        let mut initial = Engine::open(&db).unwrap();
+        initial
+            .register_workflow(workflow, "v1", move |c| {
+                c.activity("lookup", "v1", c.input().clone(), policy)
+            })
+            .unwrap();
+        initial.register_activity("lookup", "v1").unwrap();
+        initial
+            .start(
+                workflow,
+                workflow,
+                "v1",
+                PayloadRef::durable("input").unwrap(),
+            )
+            .unwrap();
+        let stale = match initial.drive(workflow, 0).unwrap() {
+            DriveOutcome::Activity(attempt) => attempt,
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(initial.status(workflow).unwrap(), RunState::Running);
+        assert_eq!(stale.attempt, 1);
+        drop(initial);
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let callback_calls = calls.clone();
+        let (invoked_tx, invoked_rx) = mpsc::channel();
+        let stale_epoch = stale.owner_epoch;
+        let mut reopened = Engine::open(&db).unwrap();
+        reopened
+            .register_workflow(workflow, "v1", move |c| {
+                c.activity("lookup", "v1", c.input().clone(), policy)
+            })
+            .unwrap();
+        reopened
+            .register_activity_fn("lookup", "v1", move |attempt, bytes| {
+                assert_eq!(attempt.policy, policy);
+                assert_eq!(attempt.attempt, 2);
+                assert!(attempt.owner_epoch > stale_epoch);
+                assert_eq!(bytes, b"input");
+                assert_eq!(callback_calls.fetch_add(1, Ordering::SeqCst), 0);
+                invoked_tx.send(()).unwrap();
+                Ok(PayloadRef::durable("output").unwrap())
+            })
+            .unwrap();
+        let host = EngineHost::spawn(
+            HttpAdapter::new(reopened, TOKEN).unwrap(),
+            Arc::new(DurableInput),
+        )
+        .unwrap();
+        let client = host.client();
+        invoked_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+
+        let body = runtime.block_on(async {
+            for _ in 0..100 {
+                let response = client
+                    .request(
+                        "GET".into(),
+                        format!("/runs/{workflow}"),
+                        format!("Bearer {TOKEN}"),
+                        vec![],
+                        Duration::from_secs(2),
+                    )
+                    .await;
+                assert_eq!(response.status, 200);
+                let body = String::from_utf8(response.body).unwrap();
+                if body.contains("Completed") {
+                    return body;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+            panic!("reopened host did not complete {workflow}");
+        });
+        assert!(body.contains("Completed"));
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        host.shutdown().unwrap();
+    }
+}
+
 #[test]
 fn repeated_cancellation_retains_physical_native_capacity_until_callback_returns() {
     use std::sync::{
@@ -495,4 +600,93 @@ fn blocked_workflow_fails_closed_without_stopping_actor_or_replaying_after_resta
     assert_eq!(bad_invocations.load(Ordering::SeqCst), 1);
     assert!(reopened_client.is_alive());
     reopened_host.shutdown().unwrap();
+}
+
+#[test]
+fn authenticated_resume_rechecks_persisted_input_after_restart() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    struct RestoredPayload(AtomicBool);
+    impl PayloadResolver for RestoredPayload {
+        fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+            if self.0.load(Ordering::Acquire) {
+                Ok(Some(b"restored input".to_vec()))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut initial = Engine::open(&db).unwrap();
+    initial
+        .register_workflow("input", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    initial
+        .start(
+            "r",
+            "input",
+            "v1",
+            PayloadRef::ephemeral("cache-key").unwrap(),
+        )
+        .unwrap();
+    assert!(matches!(
+        initial
+            .drive_with_resolver("r", 0, &MissingPayloads)
+            .unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsInput)
+    ));
+    drop(initial);
+
+    let resolver = Arc::new(RestoredPayload(AtomicBool::new(false)));
+    let mut recovered = Engine::open(&db).unwrap();
+    recovered
+        .register_workflow("input", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    let host = EngineHost::spawn(
+        HttpAdapter::new(recovered, TOKEN).unwrap(),
+        resolver.clone(),
+    )
+    .unwrap();
+    resolver.0.store(true, Ordering::Release);
+    let client = host.client();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    let authorization = format!("Bearer {TOKEN}");
+
+    runtime.block_on(async {
+        let response = client
+            .request(
+                "POST".into(),
+                "/runs/r/resume".into(),
+                authorization.clone(),
+                vec![],
+                Duration::from_secs(2),
+            )
+            .await;
+        assert_eq!(response.status, 202);
+        for _ in 0..100 {
+            let response = client
+                .request(
+                    "GET".into(),
+                    "/runs/r".into(),
+                    authorization.clone(),
+                    vec![],
+                    Duration::from_secs(2),
+                )
+                .await;
+            if String::from_utf8(response.body)
+                .unwrap()
+                .contains("\"state\":\"Completed\"")
+            {
+                return;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!("persisted NeedsInput run did not complete after authenticated resume");
+    });
+    host.shutdown().unwrap();
 }

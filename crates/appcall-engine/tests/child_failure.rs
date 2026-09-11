@@ -145,3 +145,98 @@ fn cancelled_child_select_cascades_before_ready_timer_or_signal_and_survives_res
         );
     }
 }
+
+#[test]
+fn parent_cancellation_preserves_terminal_child_states() {
+    for (child_workflow, expected_state) in [
+        ("failed-child", RunState::Failed),
+        ("nondeterministic-child", RunState::Nondeterminism),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let mut e = Engine::open(dir.path().join("terminal-child.db")).unwrap();
+        e.register_workflow("parent", "v1", move |c| {
+            let child = c.child(child_workflow, "v1", c.input().clone())?;
+            c.join_child(child)
+        })
+        .unwrap();
+        if expected_state == RunState::Failed {
+            e.register_workflow("failed-child", "v1", |c| Ok(c.input().clone()))
+                .unwrap();
+        } else {
+            e.register_workflow("nondeterministic-child", "v1", |_| {
+                Err(WorkflowError::Invalid)
+            })
+            .unwrap();
+        }
+        e.start(
+            "parent",
+            "parent",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+        assert!(matches!(
+            e.drive("parent", 0).unwrap(),
+            DriveOutcome::Waiting
+        ));
+        if expected_state == RunState::Failed {
+            e.reject_run("parent:c:0", RunFailure::ResourceLimit)
+                .unwrap();
+        } else {
+            assert!(matches!(
+                e.drive("parent:c:0", 0).unwrap(),
+                DriveOutcome::Suspended(RunState::Nondeterminism)
+            ));
+        }
+
+        e.cancel("parent").unwrap();
+
+        assert_eq!(e.status("parent:c:0").unwrap(), expected_state);
+        if expected_state == RunState::Failed {
+            assert_eq!(
+                e.failure_reason("parent:c:0").unwrap(),
+                Some(RunFailure::ResourceLimit)
+            );
+        }
+    }
+}
+
+#[test]
+fn parent_cancellation_keeps_unknown_child_reconcilable() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(dir.path().join("unknown-child.db")).unwrap();
+    e.register_workflow("parent", "v1", |c| {
+        let child = c.child("child", "v1", c.input().clone())?;
+        c.join_child(child)
+    })
+    .unwrap();
+    e.register_workflow("child", "v1", |c| {
+        c.activity("lookup", "v1", c.input().clone(), EffectPolicy::Unknown)
+    })
+    .unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start(
+        "parent",
+        "parent",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("parent", 0).unwrap(),
+        DriveOutcome::Waiting
+    ));
+    let child_attempt = match e.drive("parent:c:0", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("{other:?}"),
+    };
+    e.fail(&child_attempt, ActivityFailure::OutcomeUnknown)
+        .unwrap();
+
+    e.cancel("parent").unwrap();
+
+    assert_eq!(e.status("parent:c:0").unwrap(), RunState::OutcomeUnknown);
+    e.reconcile("parent:c:0", &child_attempt.effect_id, None)
+        .unwrap();
+    assert_eq!(e.status("parent:c:0").unwrap(), RunState::Running);
+}

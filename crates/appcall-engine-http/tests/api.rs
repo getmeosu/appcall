@@ -42,6 +42,112 @@ fn encoded_slash_run_id_is_addressable_and_duplicate_is_conflict() {
     assert_eq!(api.handle("POST", "/runs", &auth, body).status, 409);
 }
 #[test]
+fn authenticated_resume_rechecks_a_persisted_run_without_duplicate() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.start(
+        "r",
+        "late-workflow",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsImplementation)
+    ));
+    drop(e);
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("late-workflow", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    let mut api = HttpAdapter::new(e, TOKEN).unwrap();
+    let auth = format!("Bearer {TOKEN}");
+    assert_eq!(api.handle("POST", "/runs/r/resume", "", b"").status, 401);
+    assert_eq!(api.handle("POST", "/runs/r/resume", &auth, b"").status, 202);
+    assert_eq!(api.handle("POST", "/runs/r/resume", &auth, b"").status, 202);
+    assert!(matches!(
+        api.engine_mut().drive("r", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
+#[test]
+fn authenticated_resume_cannot_bypass_persisted_unknown_outcome() {
+    fn unknown(c: &mut Context) -> WorkflowResult {
+        c.activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)
+    }
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("unknown", "v1", unknown).unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    e.start("r", "unknown", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Activity(_)
+    ));
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("unknown", "v1", unknown).unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    let mut api = HttpAdapter::new(e, TOKEN).unwrap();
+    assert!(matches!(
+        api.engine_mut().drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::OutcomeUnknown)
+    ));
+    let auth = format!("Bearer {TOKEN}");
+    assert_eq!(api.handle("POST", "/runs/r/resume", &auth, b"").status, 409);
+    assert_eq!(
+        api.engine_mut().status("r").unwrap(),
+        RunState::OutcomeUnknown
+    );
+}
+
+#[test]
+fn authenticated_resume_recovers_restarted_in_flight_unknown_attempt_without_drive() {
+    fn unknown(c: &mut Context) -> WorkflowResult {
+        c.activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)
+    }
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut initial = Engine::open(&db).unwrap();
+    initial.register_workflow("unknown", "v1", unknown).unwrap();
+    initial.register_activity("unknown", "v1").unwrap();
+    initial
+        .start("r", "unknown", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let attempt = match initial.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("{other:?}"),
+    };
+    assert_eq!(initial.status("r").unwrap(), RunState::Running);
+    drop(initial);
+
+    let mut recovered = Engine::open(&db).unwrap();
+    recovered
+        .register_workflow("unknown", "v1", unknown)
+        .unwrap();
+    recovered.register_activity("unknown", "v1").unwrap();
+    assert_eq!(recovered.runnable(0, 10).unwrap(), vec!["r"]);
+    let mut api = HttpAdapter::new(recovered, TOKEN).unwrap();
+    let auth = format!("Bearer {TOKEN}");
+    assert_eq!(api.handle("POST", "/runs/r/resume", &auth, b"").status, 409);
+    assert_eq!(
+        api.engine_mut().status("r").unwrap(),
+        RunState::OutcomeUnknown
+    );
+    assert!(api.engine_mut().runnable(0, 10).unwrap().is_empty());
+    assert!(api
+        .engine_mut()
+        .complete(&attempt, PayloadRef::durable("late").unwrap())
+        .is_err());
+}
+
+#[test]
 fn deployment_scope_cannot_be_changed_by_client_ids() {
     let d = tempfile::tempdir().unwrap();
     let mut e = Engine::open(d.path().join("db")).unwrap();

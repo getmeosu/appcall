@@ -2,9 +2,88 @@
 use appcall_engine::*;
 use appcall_engine_postgres::PostgresStore;
 use postgres::{Client, NoTls};
+use std::sync::{Mutex, MutexGuard};
+
+static POSTGRES_CONTRACT_LOCK: Mutex<()> = Mutex::new(());
+
+fn postgres_contract_guard() -> MutexGuard<'static, ()> {
+    POSTGRES_CONTRACT_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[test]
+fn postgres_contract_guard_serializes_parallel_tests() {
+    let _guard = postgres_contract_guard();
+    let acquired = std::thread::spawn(|| POSTGRES_CONTRACT_LOCK.try_lock().is_ok())
+        .join()
+        .unwrap();
+    assert!(!acquired);
+}
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_revision_overflow_returns_limit_and_conflict() {
+    let _guard = postgres_contract_guard();
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_revision_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut c = Client::connect(&url, NoTls).unwrap();
+        c.batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        c
+    };
+
+    let mut engine = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    engine
+        .start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    drop(engine);
+
+    let mut store = PostgresStore::from_client(connect()).unwrap();
+    let original = store.load("r").unwrap();
+
+    let mut max_insert = original.clone();
+    max_insert.id = "max-insert".into();
+    max_insert.revision = u64::MAX;
+    assert!(matches!(store.insert(&max_insert), Err(Error::Limit)));
+
+    let mut max_expected = original.clone();
+    max_expected.revision = original.revision + 1;
+    max_expected.state = RunState::Cancelled;
+    assert!(matches!(
+        store.commit(u64::MAX, &max_expected, &[]),
+        Err(Error::Conflict)
+    ));
+
+    let mut max_successor = original.clone();
+    max_successor.revision = u64::MAX;
+    assert!(matches!(
+        store.commit(u64::MAX - 1, &max_successor, &[]),
+        Err(Error::Limit)
+    ));
+
+    drop(store);
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
 fn postgres_atomic_replay_ownership_and_parent_wakeup() {
+    let _guard = postgres_contract_guard();
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
     let schema = format!("engine_test_{}", std::process::id());
     let mut admin = Client::connect(&url, NoTls).unwrap();
@@ -178,4 +257,124 @@ fn postgres_atomic_replay_ownership_and_parent_wakeup() {
     admin
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_persisted_blocked_runs_resume_after_registration_and_input_restore() {
+    let _guard = postgres_contract_guard();
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_resume_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut c = Client::connect(&url, NoTls).unwrap();
+        c.batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        c
+    };
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.start(
+        "implementation",
+        "late-workflow",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("implementation", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsImplementation)
+    ));
+    let history = serde_json::to_value(e.history("implementation").unwrap()).unwrap();
+    drop(e);
+
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.register_workflow("late-workflow", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+    e.resume("implementation").unwrap();
+    assert_eq!(
+        serde_json::to_value(e.history("implementation").unwrap()).unwrap(),
+        history
+    );
+    e.resume("implementation").unwrap();
+    assert_eq!(e.runnable(0, 10).unwrap(), vec!["implementation"]);
+    assert!(matches!(
+        e.drive("implementation", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+
+    e.register_workflow("input", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.start(
+        "input",
+        "input",
+        "v1",
+        PayloadRef::ephemeral("cache-key").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("input", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsInput)
+    ));
+    drop(e);
+
+    struct Restored;
+    impl PayloadResolver for Restored {
+        fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+            Ok(Some(b"restored input".to_vec()))
+        }
+    }
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.register_workflow("input", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.resume("input").unwrap();
+    assert!(matches!(
+        e.drive_with_resolver("input", 0, &Restored).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+
+    e.register_workflow("unknown", "v1", one_unknown).unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    e.start(
+        "unknown",
+        "unknown",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    let attempt = match e.drive("unknown", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("{other:?}"),
+    };
+    drop(e);
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.register_workflow("unknown", "v1", one_unknown).unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    assert!(matches!(
+        e.drive("unknown", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::OutcomeUnknown)
+    ));
+    assert!(matches!(e.resume("unknown"), Err(Error::Conflict)));
+    assert!(e
+        .complete(&attempt, PayloadRef::durable("late").unwrap())
+        .is_err());
+
+    drop(e);
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+fn one_unknown(c: &mut Context) -> WorkflowResult {
+    c.activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)
 }

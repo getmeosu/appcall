@@ -176,9 +176,34 @@ impl<S: Store> Engine<S> {
     pub fn runnable(&self, now_ms: i64, limit: usize) -> Result<Vec<String>> {
         self.store.runnable(now_ms, limit)
     }
+    /// Requeue one persisted run for a bounded recheck.
+    ///
+    /// This operation never changes the serialized command history or effect
+    /// fences. A restarted in-flight attempt is recovered according to its
+    /// effect policy before the run is requeued. In particular, an unknown
+    /// outcome must be reconciled explicitly before any further execution can
+    /// be scheduled.
+    pub fn resume(&mut self, id: &str) -> Result<()> {
+        let mut run = self.store.load(id)?;
+        match run.state {
+            RunState::NeedsInput | RunState::NeedsImplementation => {
+                run.state = RunState::Running;
+                run.wakeup = Some(0);
+                self.save(&mut run, &[])
+            }
+            RunState::Running => {
+                self.recover(&mut run)?;
+                if run.state != RunState::Running {
+                    return Err(Error::Conflict);
+                }
+                Ok(())
+            }
+            _ => Err(Error::Conflict),
+        }
+    }
     fn save(&mut self, run: &mut RunRecord, children: &[RunRecord]) -> Result<()> {
         let old = run.revision;
-        run.revision += 1;
+        run.revision = old.checked_add(1).ok_or(Error::Limit)?;
         self.store.commit(old, run, children)
     }
     pub fn signal(&mut self, id: &str, name: &str, value: PayloadRef) -> Result<()> {
@@ -200,7 +225,14 @@ impl<S: Store> Engine<S> {
     /// finish an interrupted walk; completions are fenced as soon as requested.
     pub fn cancel(&mut self, id: &str) -> Result<()> {
         let mut r = self.store.load(id)?;
-        if matches!(r.state, RunState::Completed | RunState::Cancelled) {
+        if matches!(
+            r.state,
+            RunState::Completed
+                | RunState::Cancelled
+                | RunState::OutcomeUnknown
+                | RunState::Nondeterminism
+                | RunState::Failed
+        ) {
             return Ok(());
         }
         r.state = RunState::CancelRequested;

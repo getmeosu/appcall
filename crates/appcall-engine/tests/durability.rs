@@ -43,6 +43,105 @@ fn exclusive_owner_and_pinned_version() {
         DriveOutcome::Suspended(RunState::NeedsImplementation)
     ));
 }
+#[test]
+fn persisted_missing_workflow_can_be_resumed_after_registration_without_a_duplicate() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.start(
+        "r",
+        "late-workflow",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsImplementation)
+    ));
+    let history = serde_json::to_value(e.history("r").unwrap()).unwrap();
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("late-workflow", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+    e.resume("r").unwrap();
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        history
+    );
+    assert!(e.runnable(0, 10).unwrap().contains(&"r".to_string()));
+    e.resume("r").unwrap();
+    assert_eq!(e.runnable(0, 10).unwrap(), vec!["r"]);
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
+#[test]
+fn resume_running_does_not_bypass_a_future_timer() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("timer", "v1", |c| {
+        c.timer(100)?;
+        Ok(c.input().clone())
+    })
+    .unwrap();
+    e.start("r", "timer", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    assert_eq!(e.next_wakeup().unwrap(), Some(100));
+    e.resume("r").unwrap();
+    assert_eq!(e.next_wakeup().unwrap(), Some(100));
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+}
+
+#[test]
+fn resume_reopens_stale_read_and_idempotent_attempts_without_drive() {
+    for (workflow, policy) in [
+        ("read-restart", EffectPolicy::Read),
+        ("idempotent-restart", EffectPolicy::Idempotent),
+    ] {
+        let d = tempfile::tempdir().unwrap();
+        let db = d.path().join("db");
+        let mut initial = Engine::open(&db).unwrap();
+        initial
+            .register_workflow(workflow, "v1", move |c| {
+                c.activity("lookup", "v1", c.input().clone(), policy)
+            })
+            .unwrap();
+        initial.register_activity("lookup", "v1").unwrap();
+        initial
+            .start(
+                workflow,
+                workflow,
+                "v1",
+                PayloadRef::durable("input").unwrap(),
+            )
+            .unwrap();
+        let stale = match initial.drive(workflow, 0).unwrap() {
+            DriveOutcome::Activity(attempt) => attempt,
+            other => panic!("{other:?}"),
+        };
+        assert_eq!(initial.status(workflow).unwrap(), RunState::Running);
+        drop(initial);
+
+        let mut reopened = Engine::open(&db).unwrap();
+        reopened.resume(workflow).unwrap();
+        drop(reopened);
+
+        let store = SqliteStore::open(&db).unwrap();
+        let run = store.load(workflow).unwrap();
+        assert_eq!(run.state, RunState::Running);
+        assert_eq!(run.wakeup, Some(0));
+        assert_eq!(run.tasks.len(), 1);
+        assert_eq!(run.tasks[0].attempt, stale);
+        assert!(matches!(run.tasks[0].state, TaskState::Ready));
+    }
+}
+
 fn one(c: &mut Context) -> WorkflowResult {
     c.activity("lookup", "v1", c.input().clone(), EffectPolicy::Unknown)
 }
@@ -70,6 +169,8 @@ fn ambiguous_effect_requires_reconciliation_and_late_attempt_is_fenced() {
         e.drive("r", 0).unwrap(),
         DriveOutcome::Suspended(RunState::OutcomeUnknown)
     ));
+    assert!(matches!(e.resume("r"), Err(Error::Conflict)));
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
     assert!(e
         .complete(&old, PayloadRef::durable("late").unwrap())
         .is_err());
@@ -173,6 +274,41 @@ fn missing_ephemeral_input_suspends_and_payload_content_is_not_persisted() {
     assert!(matches!(
         e.drive("r", 0).unwrap(),
         DriveOutcome::Suspended(RunState::NeedsInput)
+    ));
+}
+#[test]
+fn restored_ephemeral_input_requeues_persisted_needs_input_after_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.start(
+        "r",
+        "one",
+        "v1",
+        PayloadRef::ephemeral("cache-key").unwrap(),
+    )
+    .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::NeedsInput)
+    ));
+    let history = serde_json::to_value(e.history("r").unwrap()).unwrap();
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    assert!(e.runnable(0, 10).unwrap().is_empty());
+    e.resume("r").unwrap();
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        history
+    );
+    assert!(matches!(
+        e.drive_with_resolver("r", 0, &Local).unwrap(),
+        DriveOutcome::Completed(_)
     ));
 }
 struct Local;
@@ -702,4 +838,174 @@ fn explicit_failure_reports_retry_safely_fence_stale_attempts_and_release_capaci
     e.fail(&reconciled, ActivityFailure::OutcomeUnknown)
         .unwrap();
     assert_eq!(e.status("unknown").unwrap(), RunState::OutcomeUnknown);
+}
+
+fn rewrite_persisted_revision(db: &std::path::Path, id: &str, revision: u64) {
+    let connection = rusqlite::Connection::open(db).unwrap();
+    let bytes: Vec<u8> = connection
+        .query_row("SELECT record FROM engine_runs WHERE id=?1", [id], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    let mut record: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    record["revision"] = serde_json::json!(revision);
+    connection
+        .execute(
+            "UPDATE engine_runs SET record=?1 WHERE id=?2",
+            rusqlite::params![serde_json::to_vec(&record).unwrap(), id],
+        )
+        .unwrap();
+}
+
+#[test]
+fn cancellation_preserves_outcome_unknown_and_allows_reconciliation() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let attempt = attempt(&mut e, "r");
+    e.fail(&attempt, ActivityFailure::OutcomeUnknown).unwrap();
+
+    e.cancel("r").unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    e.reconcile("r", &attempt.effect_id, None).unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::Running);
+}
+
+#[test]
+fn cancellation_preserves_failed_terminal_identity() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    e.reject_run("r", RunFailure::ResourceLimit).unwrap();
+
+    e.cancel("r").unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::Failed);
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::ResourceLimit)
+    );
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::Failed)
+    ));
+}
+
+#[test]
+fn cancellation_preserves_nondeterminism_terminal_identity() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("bad", "v1", |_| Err(WorkflowError::Invalid))
+        .unwrap();
+    e.start("r", "bad", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::Nondeterminism)
+    ));
+
+    e.cancel("r").unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::Nondeterminism);
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::Nondeterminism)
+    ));
+}
+
+#[test]
+fn engine_save_at_max_revision_returns_limit_without_panicking() {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    drop(e);
+    rewrite_persisted_revision(&db, "r", u64::MAX);
+
+    let mut e = Engine::open(&db).unwrap();
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        e.signal("r", "wake", PayloadRef::durable("value").unwrap())
+    }));
+    assert!(result.is_ok(), "revision overflow must not panic");
+    assert!(matches!(result.unwrap(), Err(Error::Limit)));
+}
+
+#[test]
+fn sqlite_commit_with_max_expected_returns_conflict_without_panicking() {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    drop(e);
+
+    let mut store = SqliteStore::open(&db).unwrap();
+    let original = store.load("r").unwrap();
+    let mut changed = original.clone();
+    changed.revision += 1;
+    changed.state = RunState::Cancelled;
+    let result = catch_unwind(AssertUnwindSafe(|| store.commit(u64::MAX, &changed, &[])));
+
+    assert!(result.is_ok(), "revision successor overflow must not panic");
+    assert!(matches!(result.unwrap(), Err(Error::Conflict)));
+    assert_eq!(store.load("r").unwrap().revision, original.revision);
+}
+
+#[test]
+fn sqlite_signed_revision_overflow_returns_limit_for_insert_and_commit() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.start("r", "missing", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    drop(e);
+
+    let mut store = SqliteStore::open(&db).unwrap();
+    let original = store.load("r").unwrap();
+
+    let mut max_insert = original.clone();
+    max_insert.id = "max-insert".into();
+    max_insert.revision = u64::MAX;
+    assert!(matches!(store.insert(&max_insert), Err(Error::Limit)));
+
+    let mut max_successor = original.clone();
+    max_successor.revision = u64::MAX;
+    assert!(matches!(
+        store.commit(u64::MAX - 1, &max_successor, &[]),
+        Err(Error::Limit)
+    ));
+}
+
+#[test]
+fn retry_policy_durable_serde_rejects_malformed_policies() {
+    let malformed = [
+        r#"{"max_attempts":0,"max_elapsed_ms":1000,"base_delay_ms":10,"max_delay_ms":20}"#,
+        r#"{"max_attempts":1025,"max_elapsed_ms":1000,"base_delay_ms":10,"max_delay_ms":20}"#,
+        r#"{"max_attempts":2,"max_elapsed_ms":0,"base_delay_ms":10,"max_delay_ms":20}"#,
+        r#"{"max_attempts":2,"max_elapsed_ms":1000,"base_delay_ms":0,"max_delay_ms":20}"#,
+        r#"{"max_attempts":2,"max_elapsed_ms":1000,"base_delay_ms":20,"max_delay_ms":10}"#,
+    ];
+    for persisted in malformed {
+        assert!(
+            serde_json::from_slice::<RetryPolicy>(persisted.as_bytes()).is_err(),
+            "malformed retry policy was accepted: {persisted}"
+        );
+    }
+
+    let valid = RetryPolicy::new(3, 1_000, 10, 100).unwrap();
+    let persisted = serde_json::to_vec(&valid).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<RetryPolicy>(&persisted).unwrap(),
+        valid
+    );
 }

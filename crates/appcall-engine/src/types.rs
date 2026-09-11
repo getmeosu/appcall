@@ -103,6 +103,73 @@ pub enum EffectPolicy {
     Reconcile,
     Unknown,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "UncheckedRetryPolicy")]
+pub struct RetryPolicy {
+    pub max_attempts: u64,
+    pub max_elapsed_ms: i64,
+    pub base_delay_ms: i64,
+    pub max_delay_ms: i64,
+}
+#[derive(Deserialize)]
+struct UncheckedRetryPolicy {
+    max_attempts: u64,
+    max_elapsed_ms: i64,
+    base_delay_ms: i64,
+    max_delay_ms: i64,
+}
+impl RetryPolicy {
+    pub fn new(
+        max_attempts: u64,
+        max_elapsed_ms: i64,
+        base_delay_ms: i64,
+        max_delay_ms: i64,
+    ) -> Result<Self> {
+        let policy = Self {
+            max_attempts,
+            max_elapsed_ms,
+            base_delay_ms,
+            max_delay_ms,
+        };
+        policy.validate()?;
+        Ok(policy)
+    }
+    pub(crate) fn validate(&self) -> Result<()> {
+        if self.max_attempts == 0
+            || self.max_attempts > 1024
+            || self.max_elapsed_ms <= 0
+            || self.max_elapsed_ms > 86_400_000
+            || self.base_delay_ms <= 0
+            || self.base_delay_ms > 86_400_000
+            || self.max_delay_ms < self.base_delay_ms
+            || self.max_delay_ms > 86_400_000
+        {
+            return Err(Error::Invalid("invalid retry policy"));
+        }
+        Ok(())
+    }
+}
+impl TryFrom<UncheckedRetryPolicy> for RetryPolicy {
+    type Error = Error;
+    fn try_from(policy: UncheckedRetryPolicy) -> Result<Self> {
+        Self::new(
+            policy.max_attempts,
+            policy.max_elapsed_ms,
+            policy.base_delay_ms,
+            policy.max_delay_ms,
+        )
+    }
+}
+impl Default for RetryPolicy {
+    fn default() -> Self {
+        Self {
+            max_attempts: 5,
+            max_elapsed_ms: 60_000,
+            base_delay_ms: 1_000,
+            max_delay_ms: 30_000,
+        }
+    }
+}
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActivityHandle(pub String);
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
