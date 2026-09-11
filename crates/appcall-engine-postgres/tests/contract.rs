@@ -2,6 +2,15 @@
 use appcall_engine::*;
 use appcall_engine_postgres::PostgresStore;
 use postgres::{Client, NoTls};
+use std::sync::{Mutex, MutexGuard};
+
+static POSTGRES_CONTRACT_LOCK: Mutex<()> = Mutex::new(());
+
+fn postgres_contract_guard() -> MutexGuard<'static, ()> {
+    POSTGRES_CONTRACT_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 #[test]
 fn postgres_contract_guard_serializes_parallel_tests() {
@@ -15,6 +24,7 @@ fn postgres_contract_guard_serializes_parallel_tests() {
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
 fn postgres_atomic_replay_ownership_and_parent_wakeup() {
+    let _guard = postgres_contract_guard();
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
     let schema = format!("engine_test_{}", std::process::id());
     let mut admin = Client::connect(&url, NoTls).unwrap();
@@ -193,6 +203,7 @@ fn postgres_atomic_replay_ownership_and_parent_wakeup() {
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
 fn postgres_persisted_blocked_runs_resume_after_registration_and_input_restore() {
+    let _guard = postgres_contract_guard();
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
     let schema = format!(
         "engine_resume_test_{}_{}",
