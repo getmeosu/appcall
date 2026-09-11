@@ -334,6 +334,24 @@ async fn mcp_registered_session_cancellation_works_across_independent_http_scope
     assert_eq!(server.in_flight_len(), 0);
 }
 
+#[test]
+fn mcp_auth_fingerprint_ignores_execution_secrets() {
+    let first = vec![
+        ("X-API-Key".into(), "api-key".into()),
+        ("X-Connector-Token".into(), "secret-a".into()),
+    ];
+    let second = vec![
+        ("X-API-Key".into(), "api-key".into()),
+        ("X-Connector-Token".into(), "secret-b".into()),
+    ];
+
+    assert_eq!(
+        auth_context_fingerprint(&first),
+        auth_context_fingerprint(&second),
+        "execution credentials must not become session authorization"
+    );
+}
+
 #[tokio::test]
 async fn mcp_omitted_sessions_are_isolated_without_bypassing_in_flight_cap() {
     let executor = CancellableExecutor::new();
