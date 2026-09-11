@@ -13,7 +13,7 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{mpsc, watch, OwnedSemaphorePermit, Semaphore};
 
 pub type EventReceiver = mpsc::Receiver<Vec<u8>>;
 pub struct StreamResponse {
@@ -43,10 +43,20 @@ impl EventFilters {
 }
 pub struct EventBody {
     receiver: EventReceiver,
+    _permit: Option<OwnedSemaphorePermit>,
 }
 impl EventBody {
     pub fn new(receiver: EventReceiver) -> Self {
-        Self { receiver }
+        Self {
+            receiver,
+            _permit: None,
+        }
+    }
+    fn with_permit(receiver: EventReceiver, permit: OwnedSemaphorePermit) -> Self {
+        Self {
+            receiver,
+            _permit: Some(permit),
+        }
     }
 }
 impl Body for EventBody {
@@ -98,7 +108,16 @@ impl Body for WireBody {
     }
 }
 pub fn response(receiver: EventReceiver) -> hyper::Response<WireBody> {
-    let mut response = hyper::Response::new(WireBody::Events(EventBody::new(receiver)));
+    response_body(EventBody::new(receiver))
+}
+pub(crate) fn response_with_permit(
+    receiver: EventReceiver,
+    permit: OwnedSemaphorePermit,
+) -> hyper::Response<WireBody> {
+    response_body(EventBody::with_permit(receiver, permit))
+}
+fn response_body(body: EventBody) -> hyper::Response<WireBody> {
+    let mut response = hyper::Response::new(WireBody::Events(body));
     let headers = response.headers_mut();
     headers.insert(
         "content-type",
@@ -113,6 +132,22 @@ pub fn response(receiver: EventReceiver) -> hyper::Response<WireBody> {
         hyper::header::HeaderValue::from_static("no"),
     );
     response
+}
+
+pub(crate) const MAX_STREAMS: usize = 32;
+#[derive(Clone)]
+pub(crate) struct StreamAdmission {
+    permits: Arc<Semaphore>,
+}
+impl StreamAdmission {
+    pub(crate) fn new() -> Self {
+        Self {
+            permits: Arc::new(Semaphore::new(MAX_STREAMS)),
+        }
+    }
+    pub(crate) fn try_acquire(&self) -> Option<OwnedSemaphorePermit> {
+        self.permits.clone().try_acquire_owned().ok()
+    }
 }
 
 #[derive(Default)]

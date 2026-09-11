@@ -11,11 +11,13 @@ use std::{
     rc::Rc,
     time::{Duration, Instant},
 };
+const MAX_CONNECTIONS: usize = 64;
 
-/// Run inside a host LocalSet. At most 64 connections and bounded per-peer
-/// token buckets. Ordinary connections close after one request or the supported
-/// operation budget plus a small connection grace; live event streams remain
-/// open until disconnection or shutdown. Shutdown uses the same bounded grace.
+/// Run inside a host LocalSet. At most 64 connections and 32 live event streams
+/// leave half the connection tasks available for ordinary requests. Ordinary
+/// connections close after one request or the supported operation budget plus a
+/// small connection grace; live event streams remain open until disconnection or
+/// shutdown. Shutdown uses the same bounded grace.
 pub async fn serve<B: Backend + 'static>(
     listener: tokio::net::TcpListener,
     api: Rc<Api<B>>,
@@ -37,6 +39,7 @@ pub async fn serve_with_rate<B: Backend + 'static>(
 ) -> std::io::Result<()> {
     let mut tasks = tokio::task::JoinSet::new();
     let rate = Rc::new(crate::rate_limit::PeerLimiter::new(rate_config));
+    let stream_admission = crate::streaming::StreamAdmission::new();
     tokio::pin!(shutdown);
     loop {
         tokio::select! {
@@ -44,12 +47,12 @@ pub async fn serve_with_rate<B: Backend + 'static>(
             _=tasks.join_next(),if !tasks.is_empty()=>{},
             accepted=listener.accept()=>{
                 let (socket,peer)=accepted?;
-                if tasks.len()>=64 {drop(socket);continue;}
-                let api=api.clone();let rate=rate.clone();
+                if tasks.len()>=MAX_CONNECTIONS {drop(socket);continue;}
+                let api=api.clone();let rate=rate.clone();let stream_admission=stream_admission.clone();
                 tasks.spawn_local(async move {
                     let streaming=Rc::new(Cell::new(false));
                     let active_stream=streaming.clone();
-                    let service=service_fn(move|request|handle(request,api.clone(),rate.clone(),peer.ip(),streaming.clone()));
+                    let service=service_fn(move|request|handle(request,api.clone(),rate.clone(),peer.ip(),streaming.clone(),stream_admission.clone()));
                     let mut builder=http1::Builder::new();
                     builder.keep_alive(false).max_headers(64).max_buf_size(16384).timer(TokioTimer::new()).header_read_timeout(Duration::from_secs(5));
                     let connection=builder.serve_connection(TokioIo::new(socket),service);
@@ -78,6 +81,7 @@ async fn handle<B: Backend>(
     rate: Rc<crate::rate_limit::PeerLimiter>,
     peer: std::net::IpAddr,
     streaming: Rc<Cell<bool>>,
+    stream_admission: crate::streaming::StreamAdmission,
 ) -> std::result::Result<WireResponse, Infallible> {
     if !rate.allow(peer, Instant::now()) {
         return Ok(failure("RATE_LIMITED"));
@@ -132,10 +136,24 @@ async fn handle<B: Backend>(
         headers,
         body,
     };
+    let stream_permit = if parts.method == hyper::Method::GET
+        && matches!(parts.uri.path(), "/v1/events" | "/app/events/stream")
+    {
+        let Some(permit) = stream_admission.try_acquire() else {
+            return Ok(failure("SERVICE_BUSY"));
+        };
+        Some(permit)
+    } else {
+        None
+    };
     match tokio::time::timeout(Duration::from_secs(5), api.backend.event_stream(&request)).await {
         Ok(Ok(Some(stream))) => {
-            let mut response = crate::streaming::response(stream.receiver);
-            for (name, value) in stream.headers {
+            let crate::streaming::StreamResponse { receiver, headers } = stream;
+            let Some(permit) = stream_permit.or_else(|| stream_admission.try_acquire()) else {
+                return Ok(failure("SERVICE_BUSY"));
+            };
+            let mut response = crate::streaming::response_with_permit(receiver, permit);
+            for (name, value) in headers {
                 let (Ok(name), Ok(value)) = (
                     hyper::header::HeaderName::from_bytes(name.as_bytes()),
                     hyper::header::HeaderValue::from_str(&value),
@@ -147,7 +165,7 @@ async fn handle<B: Backend>(
             streaming.set(true);
             return Ok(response);
         }
-        Ok(Ok(None)) => {}
+        Ok(Ok(None)) => drop(stream_permit),
         Ok(Err(error)) => return Ok(wire(crate::error_response(error))),
         Err(_) => return Ok(failure("REQUEST_TIMEOUT")),
     }
