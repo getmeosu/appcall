@@ -17,29 +17,38 @@ export type ConnectorError = {
   providerError?: string;
 };
 
+const DEFAULT_RETRY_AFTER_SECONDS = 10;
+const MAX_RETRY_AFTER_SECONDS = 3600;
+
 export function parseGoogleRetryAfter(value: unknown, nowMs = Date.now()): number | undefined {
   const numeric = typeof value === "number" || typeof value === "string" ? Number(value) : Number.NaN;
   if (Number.isFinite(numeric)) {
-    return numeric;
+    return normalizeGoogleRetryAfter(numeric);
   }
   if (typeof value !== "string") {
     return undefined;
   }
   const dateMs = Date.parse(value);
-  return Number.isFinite(dateMs) ? (dateMs - nowMs) / 1000 : undefined;
+  return Number.isFinite(dateMs) ? normalizeGoogleRetryAfter((dateMs - nowMs) / 1000) : undefined;
 }
 
 export function parseGoogleRateLimit(response: Response): GoogleRateLimitResult {
-  if (response.status === 429) {
-    return { limited: true, retryAfterSeconds: parseGoogleRetryAfter(response.headers.get("Retry-After")) ?? 0 };
-  }
-  return { limited: false };
+  return parseGoogleRateLimitMetadata(response.status, Object.fromEntries(response.headers.entries()));
 }
 
-export function parseGoogleRateLimitMetadata(status: number, headers: Record<string, string>): GoogleRateLimitResult {
+export function parseGoogleRateLimitMetadata(
+  status: number,
+  headers: Record<string, string>,
+  bodyRetryAfter?: unknown,
+): GoogleRateLimitResult {
   if (status === 429) {
-    const retryAfter = parseGoogleRetryAfter(headers["retry-after"] ?? headers["Retry-After"]);
-    return { limited: true, retryAfterSeconds: retryAfter ?? 0 };
+    const headerRetryAfter = Object.entries(headers).find(([key]) => key.toLowerCase() === "retry-after")?.[1];
+    return {
+      limited: true,
+      retryAfterSeconds: parseGoogleRetryAfter(headerRetryAfter)
+        ?? parseGoogleRetryAfter(bodyRetryAfter)
+        ?? DEFAULT_RETRY_AFTER_SECONDS,
+    };
   }
   return { limited: false };
 }
@@ -75,9 +84,7 @@ function parseRetryAfterFromError(error: Record<string, unknown>): number {
   const domain = first.domain;
   if (domain === "usageLimits") {
     const retryAfter = first.retryDelay;
-    if (typeof retryAfter === "number") {
-      return retryAfter;
-    }
+    return parseGoogleRetryAfter(retryAfter) ?? 0;
   }
   return 0;
 }
@@ -115,4 +122,11 @@ export function createGoogleClient(options: GoogleClientOptions): ConnectorHttpC
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeGoogleRetryAfter(seconds: number): number | undefined {
+  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > MAX_RETRY_AFTER_SECONDS) {
+    return undefined;
+  }
+  return Math.ceil(seconds);
 }

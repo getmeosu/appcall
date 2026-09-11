@@ -1,9 +1,6 @@
-import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, parseGoogleRetryAfter, type ConnectorError } from "./http";
+import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
-
-const DEFAULT_RETRY_AFTER_SECONDS = 10;
-const MAX_RETRY_AFTER_SECONDS = 3600;
 
 export type SheetRow = {
   id: string;
@@ -573,31 +570,21 @@ function throwGoogleResponseError(
   parsedError: ConnectorError | null,
   fallbackMessage: string,
 ): never {
-  if (parseGoogleRateLimitMetadata(response.status, response.headers).limited || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+  const rateLimit = parseGoogleRateLimitMetadata(
+    parsedError?.code === "CONNECTOR_RATE_LIMITED" ? 429 : response.status,
+    response.headers,
+    parsedError?.retryAfterSeconds,
+  );
+  if (rateLimit.limited) {
     throw {
       ok: false,
       code: "CONNECTOR_RATE_LIMITED",
       message: "Sheets API rate limit exceeded.",
-      retryAfterSeconds: safeRetryAfterSeconds(response, parsedError),
+      retryAfterSeconds: rateLimit.retryAfterSeconds,
     };
   }
   throw {
     ok: false,
     ...(parsedError ?? { code: "CONNECTOR_UPSTREAM_ERROR", message: fallbackMessage }),
   };
-}
-
-function safeRetryAfterSeconds(response: GoogleResponse, parsedError: ConnectorError | null): number {
-  const header = Object.entries(response.headers).find(([key]) => key.toLowerCase() === "retry-after")?.[1];
-  return parseSafeRetryAfter(parseGoogleRetryAfter(header))
-    ?? parseSafeRetryAfter(parsedError?.retryAfterSeconds)
-    ?? DEFAULT_RETRY_AFTER_SECONDS;
-}
-
-function parseSafeRetryAfter(value: unknown): number | undefined {
-  const seconds = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
-  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > MAX_RETRY_AFTER_SECONDS) {
-    return undefined;
-  }
-  return Math.ceil(seconds);
 }
