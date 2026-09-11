@@ -17,18 +17,29 @@ export type ConnectorError = {
   providerError?: string;
 };
 
+export function parseGoogleRetryAfter(value: unknown, nowMs = Date.now()): number | undefined {
+  const numeric = typeof value === "number" || typeof value === "string" ? Number(value) : Number.NaN;
+  if (Number.isFinite(numeric)) {
+    return numeric;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const dateMs = Date.parse(value);
+  return Number.isFinite(dateMs) ? (dateMs - nowMs) / 1000 : undefined;
+}
+
 export function parseGoogleRateLimit(response: Response): GoogleRateLimitResult {
   if (response.status === 429) {
-    const retryAfter = Number(response.headers.get("Retry-After") ?? "0");
-    return { limited: true, retryAfterSeconds: Number.isFinite(retryAfter) ? retryAfter : 0 };
+    return { limited: true, retryAfterSeconds: parseGoogleRetryAfter(response.headers.get("Retry-After")) ?? 0 };
   }
   return { limited: false };
 }
 
 export function parseGoogleRateLimitMetadata(status: number, headers: Record<string, string>): GoogleRateLimitResult {
   if (status === 429) {
-    const retryAfter = Number(headers["retry-after"] ?? headers["Retry-After"] ?? "0");
-    return { limited: true, retryAfterSeconds: Number.isFinite(retryAfter) ? retryAfter : 0 };
+    const retryAfter = parseGoogleRetryAfter(headers["retry-after"] ?? headers["Retry-After"]);
+    return { limited: true, retryAfterSeconds: retryAfter ?? 0 };
   }
   return { limited: false };
 }

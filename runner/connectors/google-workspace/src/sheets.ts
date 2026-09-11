@@ -1,4 +1,4 @@
-import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, type ConnectorError } from "./http";
+import { createGoogleClient, parseGoogleError, parseGoogleRateLimitMetadata, parseGoogleRetryAfter, type ConnectorError } from "./http";
 import type { ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
@@ -589,7 +589,7 @@ function throwGoogleResponseError(
 
 function safeRetryAfterSeconds(response: GoogleResponse, parsedError: ConnectorError | null): number {
   const header = Object.entries(response.headers).find(([key]) => key.toLowerCase() === "retry-after")?.[1];
-  return parseSafeRetryAfter(header)
+  return parseSafeRetryAfter(parseGoogleRetryAfter(header))
     ?? parseSafeRetryAfter(parsedError?.retryAfterSeconds)
     ?? DEFAULT_RETRY_AFTER_SECONDS;
 }

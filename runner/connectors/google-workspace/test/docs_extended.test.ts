@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import docCreateFixture from "../fixtures/doc_create.json";
 import rateLimitedFixture from "../fixtures/rate_limited.json";
 import { createDocsClient, validateCreateDocumentInput } from "../src/docs";
+import { parseGoogleRetryAfter } from "../src/http";
 
 const docsOperations: Array<(client: ReturnType<typeof createDocsClient>) => Promise<unknown>> = [
   (client) => client.getDocument({ documentId: "doc-id" }),
@@ -73,6 +74,34 @@ describe("google-workspace Docs extended actions", () => {
         code: "CONNECTOR_RATE_LIMITED",
         retryAfterSeconds: 37,
       });
+    }
+  });
+
+  test("parses an HTTP-date Retry-After relative to the supplied clock", () => {
+    const now = Date.parse("Wed, 21 Oct 2015 07:28:00 GMT");
+    expect(parseGoogleRetryAfter("Wed, 21 Oct 2015 07:29:00 GMT", now)).toBe(60);
+  });
+
+  test("all Docs operations honor a future HTTP-date Retry-After", async () => {
+    const retryAfter = new Date(Date.now() + 120_000).toUTCString();
+    for (const operation of docsOperations) {
+      const client = createDocsClient({
+        accessToken: "token",
+        fetch: async () => new Response(JSON.stringify({
+          error: { code: 429, message: "Rate Limit Exceeded" },
+        }), {
+          status: 429,
+          headers: { "Retry-After": retryAfter },
+        }),
+      });
+
+      const error = await operation(client).catch((value: unknown) => value as Record<string, unknown>);
+      expect(error).toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+      });
+      expect(error.retryAfterSeconds).toBeGreaterThan(100);
+      expect(error.retryAfterSeconds).toBeLessThanOrEqual(120);
     }
   });
 

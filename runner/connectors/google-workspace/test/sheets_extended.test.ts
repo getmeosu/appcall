@@ -344,6 +344,29 @@ describe("google-workspace Sheets extended actions", () => {
     }
   });
 
+  test("all Sheets operations honor a future HTTP-date Retry-After", async () => {
+    const retryAfter = new Date(Date.now() + 120_000).toUTCString();
+    for (const operation of sheetsOperations) {
+      const client = createSheetsClient({
+        accessToken: "token",
+        fetch: async () => new Response(JSON.stringify({
+          error: { code: 429, message: "Rate Limit Exceeded" },
+        }), {
+          status: 429,
+          headers: { "Retry-After": retryAfter },
+        }),
+      });
+
+      const error = await operation(client).catch((value: unknown) => value as Record<string, unknown>);
+      expect(error).toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+      });
+      expect(error.retryAfterSeconds).toBeGreaterThan(100);
+      expect(error.retryAfterSeconds).toBeLessThanOrEqual(120);
+    }
+  });
+
   test("all Sheets operations use a safe fallback for malformed Retry-After", async () => {
     for (const retryAfter of ["not-a-number", "0", "-5", "999999999"]) {
       for (const operation of sheetsOperations) {
