@@ -139,7 +139,9 @@ function buildOperation(
   const parameters = [...parametersByIdentity.values()];
   const properties: JSONObject = {};
   const required: string[] = [];
-  const inputNames = generatedParameterNames(parameters);
+  const bodySchema = requestBodySchema(spec, operation);
+  const bodyPropertyNames = new Set(bodySchema ? Object.keys(bodySchema.properties) : []);
+  const inputNames = generatedParameterNames(parameters, bodyPropertyNames);
 
   const query: JSONObject = {};
   const headers: JSONObject = {};
@@ -189,7 +191,12 @@ function buildOperation(
     }
   }
 
-  const body = buildBody(spec, operation, properties, required);
+  const parameterWireNames = new Set(
+    parameters
+      .filter((parameter) => parameterLocation(parameter) !== undefined && generatedParameterName(parameter).length > 0)
+      .map((parameter) => generatedParameterName(parameter)),
+  );
+  const body = buildBody(spec, bodySchema, properties, required, new Set(Object.keys(properties)), parameterWireNames);
 
   const responseSchema = successResponseSchema(spec, operation);
 
@@ -255,7 +262,7 @@ function parameterLocation(parameter: JSONObject): ParameterLocation | undefined
   return parameter.in === "path" || parameter.in === "query" || parameter.in === "header" ? parameter.in : undefined;
 }
 
-function generatedParameterNames(parameters: JSONObject[]): Map<JSONObject, string> {
+function generatedParameterNames(parameters: JSONObject[], bodyPropertyNames: Set<string> = new Set()): Map<JSONObject, string> {
   const byBaseName = new Map<string, JSONObject[]>();
   const baseNames = new Set<string>();
   for (const parameter of parameters) {
@@ -272,26 +279,19 @@ function generatedParameterNames(parameters: JSONObject[]): Map<JSONObject, stri
     byBaseName.set(baseName, group);
   }
 
-  const used = new Set(baseNames);
+  const used = new Set([...baseNames, ...bodyPropertyNames]);
   const generated = new Map<JSONObject, string>();
   for (const parameter of parameters) {
     const baseName = generatedParameterName(parameter);
     const group = byBaseName.get(baseName) ?? [];
-    if (group.length <= 1) {
+    if (group.length <= 1 && !bodyPropertyNames.has(baseName)) {
       generated.set(parameter, baseName);
       continue;
     }
 
     const location = parameterLocation(parameter) ?? "query";
     const suffix = location[0].toUpperCase() + location.slice(1);
-    let candidate = `${baseName}${suffix}`;
-    let counter = 2;
-    while (used.has(candidate)) {
-      candidate = `${baseName}${suffix}${counter}`;
-      counter += 1;
-    }
-    used.add(candidate);
-    generated.set(parameter, candidate);
+    generated.set(parameter, allocateInputName(baseName, suffix, used));
   }
   return generated;
 }
@@ -309,7 +309,7 @@ function parameterExplode(parameter: JSONObject, style: ParameterStyle): boolean
   return typeof parameter.explode === "boolean" ? parameter.explode : style === "form";
 }
 
-function buildBody(spec: JSONObject, operation: JSONObject, properties: JSONObject, required: string[]): JSONObject | undefined {
+function requestBodySchema(spec: JSONObject, operation: JSONObject): JSONObject | undefined {
   const requestBody = resolveRef(spec, operation.requestBody);
   if (!isRecord(requestBody)) {
     return undefined;
@@ -318,20 +318,50 @@ function buildBody(spec: JSONObject, operation: JSONObject, properties: JSONObje
   if (!isRecord(schema) || !isRecord(schema.properties)) {
     return undefined;
   }
+  return schema;
+}
+
+function buildBody(
+  spec: JSONObject,
+  schema: JSONObject | undefined,
+  properties: JSONObject,
+  required: string[],
+  parameterInputNames: Set<string>,
+  parameterWireNames: Set<string>,
+): JSONObject | undefined {
+  if (!schema) {
+    return undefined;
+  }
 
   const body: JSONObject = {};
+  const used = new Set([...parameterInputNames, ...parameterWireNames]);
+  const bodyInputNames = new Map<string, string>();
   for (const [name, rawProperty] of Object.entries(schema.properties)) {
-    properties[name] = describeSchema(spec, rawProperty, undefined);
-    body[name] = `{{${name}}}`;
+    const inputName = parameterWireNames.has(name) || used.has(name) ? allocateInputName(name, "Body", used) : name;
+    used.add(inputName);
+    bodyInputNames.set(name, inputName);
+    properties[inputName] = describeSchema(spec, rawProperty, undefined);
+    body[name] = `{{${inputName}}}`;
   }
   if (Array.isArray(schema.required)) {
     for (const name of schema.required) {
       if (typeof name === "string") {
-        required.push(name);
+        required.push(bodyInputNames.get(name) ?? name);
       }
     }
   }
   return Object.keys(body).length > 0 ? body : undefined;
+}
+
+function allocateInputName(baseName: string, suffix: string, used: Set<string>): string {
+  let candidate = `${baseName}${suffix}`;
+  let counter = 2;
+  while (used.has(candidate)) {
+    candidate = `${baseName}${suffix}${counter}`;
+    counter += 1;
+  }
+  used.add(candidate);
+  return candidate;
 }
 
 // describeSchema flattens a parameter or property schema into the small JSON

@@ -228,6 +228,42 @@ const aliasSpec = {
   },
 };
 
+const bodyRoutingCollisionSpec = {
+  openapi: "3.0.3",
+  servers: [{ url: "https://api.body-routing-collision.test" }],
+  paths: {
+    "/records/{id}": {
+      patch: {
+        operationId: "updateRecord",
+        tags: ["Records"],
+        summary: "Update record",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["id"],
+                properties: { id: { type: "integer" } },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "updated" } },
+      },
+    },
+  },
+};
+
+const bodyRoutingCollisionManifest = generateManifest(bodyRoutingCollisionSpec, {
+  key: "body-routing-collision",
+  name: "Body Routing Collision",
+  categories: ["productivity"],
+  models: ["record"],
+  auth: { type: "api_key", field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}", label: "API key" },
+});
+
 describe("generated manifest round-trip", () => {
   it("is recognised as declarative and compiles to handlers", () => {
     expect(isDeclarativeManifest(manifest)).toBe(true);
@@ -394,6 +430,27 @@ describe("generated manifest round-trip", () => {
     expect(seenUrl).toContain("trace=query-value");
     expect(seenTrace).toBe("region=eu");
     expect(seenUrl).not.toContain("trace=region%3Deu");
+  });
+
+  it("keeps mixed-type path and body values independent in a generated HTTP round-trip", async () => {
+    const { actions } = compileDeclarativeConnector(bodyRoutingCollisionManifest as never);
+    let seenUrl = "";
+    let seenBody = "";
+
+    const result = await actions["records.update"]!({
+      apiKey: "k_live",
+      idPath: "old",
+      idBody: 42,
+      fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+        seenUrl = String(url);
+        seenBody = String(init?.body ?? "");
+        return new Response(JSON.stringify({ id: "old", replacementId: 42 }), { status: 200 });
+      },
+    }) as Record<string, unknown>;
+
+    expect(seenUrl).toBe("https://api.body-routing-collision.test/records/old");
+    expect(JSON.parse(seenBody)).toEqual({ id: 42 });
+    expect(result.data).toEqual({ id: "old", replacementId: 42 });
   });
 
   it("enforces required inherited inputs before the provider call", async () => {
