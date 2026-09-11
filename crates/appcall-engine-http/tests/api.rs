@@ -375,3 +375,43 @@ fn result_endpoint_respects_namespace_and_authentication() {
         401
     );
 }
+
+#[test]
+fn result_endpoint_preserves_nondeterminism_state_without_inventing_failure_reason() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut initial = Engine::open(&db).unwrap();
+    initial
+        .register_workflow("replay", "v1", |context| {
+            context.timer(200)?;
+            Ok(context.input().clone())
+        })
+        .unwrap();
+    initial
+        .start("run", "replay", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(
+        initial.drive("run", 0).unwrap(),
+        DriveOutcome::Waiting
+    ));
+    drop(initial);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened
+        .register_workflow("replay", "v1", |context| Ok(context.input().clone()))
+        .unwrap();
+    assert!(matches!(
+        reopened.drive("run", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::Nondeterminism)
+    ));
+
+    let mut api = HttpAdapter::new(reopened, TOKEN).unwrap();
+    let auth = format!("Bearer {TOKEN}");
+    let status = body(api.handle("GET", "/runs/run", &auth, b""));
+    assert_eq!(status["data"]["state"], "Nondeterminism");
+
+    let result = body(api.handle("GET", "/runs/run/result", &auth, b""));
+    assert_eq!(result["data"]["outcome"], "nondeterminism");
+    assert_eq!(result["data"]["failure_reason"], Value::Null);
+    assert!(result["data"].get("output").is_none());
+}

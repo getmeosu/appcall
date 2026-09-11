@@ -223,4 +223,29 @@ mod tests {
         assert!(!window.admit(1, now));
         assert!(window.admit(1, now + Duration::from_secs(2)));
     }
+
+    #[test]
+    fn rate_buckets_keep_anonymous_admission_independent_from_authenticated() {
+        let now = std::time::Instant::now();
+        let mut buckets = RateBuckets::new(now);
+
+        assert!(buckets.admit(false, 1, now));
+        assert!(!buckets.admit(false, 1, now));
+        assert!(buckets.admit(true, 1, now));
+        assert!(!buckets.admit(true, 1, now));
+    }
+
+    #[test]
+    fn malformed_authorization_uses_bounded_anonymous_bucket() {
+        let token = b"transport-test-token-at-least-thirty-two-bytes";
+        let now = std::time::Instant::now();
+        let mut buckets = RateBuckets::new(now);
+
+        for authorization in ["", "Bearer wrong", "Basic credentials"] {
+            assert!(!is_authorized(token, authorization));
+            assert!(buckets.admit(is_authorized(token, authorization), 2, now));
+        }
+        assert!(!buckets.admit(false, 2, now));
+        assert!(buckets.admit(true, 1, now));
+    }
 }
