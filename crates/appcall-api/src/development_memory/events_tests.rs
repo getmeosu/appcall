@@ -13,6 +13,35 @@ fn parsed(id: &str, operation: &str) -> ParsedWebhook {
     }
 }
 
+fn webhook_retained_bytes(
+    expected: &Connection,
+    event: &appcall_events::Event,
+    provider_event_key: &str,
+) -> usize {
+    let usage_id = format!(
+        "usage_webhook_{}_{}_{}",
+        expected.project_id.len(),
+        expected.project_id,
+        event.id
+    );
+    serde_json::to_vec(event).unwrap().len()
+        + usage_id.len()
+        + expected.project_id.len()
+        + expected.id.len()
+        + expected.external_account_id.len()
+        + expected.connector.len()
+        + provider_event_key.len()
+        + 512
+}
+
+fn webhook_dedup_bytes(expected: &Connection, provider_event_key: &str, event_id: &str) -> usize {
+    expected.project_id.len()
+        + expected.connector.len()
+        + expected.id.len()
+        + provider_event_key.len()
+        + event_id.len()
+}
+
 fn manifest_operation(
     repo: &MemoryRepository,
     connector: &str,
@@ -73,31 +102,30 @@ async fn event_only_manifest_webhooks_retain_operations_in_memory_history() {
             serde_json::json!({"visitorId":"visitor-1","apiKey":"never-retain"}),
         ),
     ];
-    for (connector, id, operation, sanitized) in cases {
+    let mut accepted_ids = Vec::with_capacity(cases.len());
+    for (connector, id, operation, sanitized) in &cases {
         let (connection, revision) = add_connection(&repo, connector, connector);
         let accepted = events
             .accept(
                 &connection,
                 revision,
                 &ParsedWebhook {
-                    idempotency_key: id.into(),
-                    operation: operation.into(),
-                    sanitized,
+                    idempotency_key: (*id).into(),
+                    operation: (*operation).into(),
+                    sanitized: sanitized.clone(),
                 },
             )
             .unwrap();
         assert!(!accepted.duplicate);
+        accepted_ids.push(accepted.event_id);
     }
 
     let principal = Principal::project("proj_dev").unwrap();
     let polled = events.poll(&principal, "").await.unwrap();
     assert_eq!(polled.len(), 2);
-    for (id, operation) in [
-        ("apollo-event", apollo_operation.as_str()),
-        ("rb2b-event", rb2b_operation.as_str()),
-    ] {
-        let event = polled.iter().find(|event| event.id == id).unwrap();
-        assert_eq!(event.operation, operation);
+    for ((_, _, operation, _), id) in cases.iter().zip(&accepted_ids) {
+        let event = polled.iter().find(|event| event.id == *id).unwrap();
+        assert_eq!(event.operation, *operation);
         assert!(!event.payload.to_string().contains("never-retain"));
     }
 
@@ -114,17 +142,14 @@ async fn event_only_manifest_webhooks_retain_operations_in_memory_history() {
         .await
         .unwrap()
         .unwrap();
-    for (id, operation) in [
-        ("apollo-event", apollo_operation.as_str()),
-        ("rb2b-event", rb2b_operation.as_str()),
-    ] {
+    for ((_, _, operation, _), id) in cases.iter().zip(&accepted_ids) {
         let event = history.body["events"]
             .as_array()
             .unwrap()
             .iter()
-            .find(|event| event["id"] == id)
+            .find(|event| event["id"] == *id)
             .unwrap();
-        assert_eq!(event["operation"], operation);
+        assert_eq!(event["operation"], *operation);
     }
 }
 
@@ -148,10 +173,14 @@ async fn event_only_manifest_webhooks_support_filters_usage_replay_and_deduplica
     let (rb2b, rb2b_revision) = add_connection(&repo, "rb2b", "rb2b");
     let apollo_event = parsed("apollo-event", &apollo_operation);
     let rb2b_event = parsed("rb2b-event", &rb2b_operation);
-    events
+    let apollo_event_id = events
         .accept(&apollo, apollo_revision, &apollo_event)
-        .unwrap();
-    events.accept(&rb2b, rb2b_revision, &rb2b_event).unwrap();
+        .unwrap()
+        .event_id;
+    let rb2b_event_id = events
+        .accept(&rb2b, rb2b_revision, &rb2b_event)
+        .unwrap()
+        .event_id;
 
     let principal = Principal::project("proj_dev").unwrap();
     for (connector, connection_id, operation, id) in [
@@ -159,9 +188,9 @@ async fn event_only_manifest_webhooks_support_filters_usage_replay_and_deduplica
             "apollo",
             "apollo",
             apollo_operation.as_str(),
-            "apollo-event",
+            apollo_event_id.as_str(),
         ),
-        ("rb2b", "rb2b", rb2b_operation.as_str(), "rb2b-event"),
+        ("rb2b", "rb2b", rb2b_operation.as_str(), rb2b_event_id.as_str()),
     ] {
         let filtered = events
             .poll_filtered(
@@ -200,7 +229,7 @@ async fn event_only_manifest_webhooks_support_filters_usage_replay_and_deduplica
             Some(&principal),
             &Request {
                 method: "POST".into(),
-                uri: "/v1/webhook-events/apollo-event/replay".into(),
+                uri: format!("/v1/webhook-events/{apollo_event_id}/replay"),
                 headers: vec![],
                 body: vec![],
             },
@@ -226,6 +255,192 @@ async fn event_only_manifest_webhooks_support_filters_usage_replay_and_deduplica
         repo.usage_monthly("proj_dev", Some("brand"), "").unwrap()["webhookEvents"],
         2
     );
+}
+
+#[tokio::test]
+async fn memory_webhook_dedup_is_scoped_to_connection_revision() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let (expected, revision) = repo.get_connection("proj_dev", None, "c").unwrap();
+    let first = events
+        .accept(&expected, revision, &parsed("generation-key", ""))
+        .unwrap();
+
+    let mut disconnected = expected.clone();
+    disconnected.status = Status::Disconnected;
+    repo.replace_connection("proj_dev", None, revision, disconnected, None)
+        .unwrap();
+    let (_, disconnected_revision) = repo.get_connection("proj_dev", None, "c").unwrap();
+    repo.replace_connection(
+        "proj_dev",
+        None,
+        disconnected_revision,
+        expected.clone(),
+        None,
+    )
+    .unwrap();
+    let (current, current_revision) = repo.get_connection("proj_dev", None, "c").unwrap();
+    assert!(current_revision > revision);
+
+    let second = events
+        .accept(&current, current_revision, &parsed("generation-key", ""))
+        .unwrap();
+    assert!(!first.duplicate);
+    assert!(!second.duplicate);
+    assert_ne!(first.event_id, second.event_id);
+    let data = repo.lock().unwrap();
+    assert_eq!(data.events.len(), 2);
+    assert_eq!(data.event_dedup.len(), 2);
+    assert_eq!(data.usage_events.len(), 2);
+    assert_eq!(data.next_sequence, 2);
+}
+
+#[tokio::test]
+async fn memory_webhook_dedup_capacity_rejects_before_any_mutation() {
+    let probe = super::history_tests::fixture();
+    let probe_events = MemoryEvents::new(probe.clone(), None, None);
+    let (expected, revision) = probe.get_connection("proj_dev", None, "c").unwrap();
+    let accepted = probe_events
+        .accept(&expected, revision, &parsed("capacity-key", ""))
+        .unwrap();
+    let probe_data = probe.lock().unwrap();
+    let event = probe_data
+        .events
+        .get(&(expected.project_id.clone(), accepted.event_id.clone()))
+        .unwrap()
+        .clone();
+    let retained = webhook_retained_bytes(&expected, &event, "capacity-key");
+    let dedup = webhook_dedup_bytes(&expected, "capacity-key", &accepted.event_id);
+    drop(probe_data);
+
+    let limited = super::history_tests::fixture();
+    let (expected, revision) = limited.get_connection("proj_dev", None, "c").unwrap();
+    let events = MemoryEvents::new(limited.clone(), None, None);
+    let limits = limited.limits();
+    {
+        let mut data = limited.lock().unwrap();
+        let reservation = limits
+            .payload_bytes
+            .checked_sub(data.bytes_used + retained + dedup)
+            .unwrap()
+            + 1;
+        data.bytes_reserved = reservation;
+    }
+    let before = {
+        let data = limited.lock().unwrap();
+        (
+            data.events.keys().cloned().collect::<Vec<_>>(),
+            data.usage_events.keys().cloned().collect::<Vec<_>>(),
+            data.event_dedup.clone(),
+            data.bytes_used,
+            data.bytes_reserved,
+            data.next_sequence,
+        )
+    };
+    let error = events
+        .accept(&expected, revision, &parsed("capacity-key", ""))
+        .unwrap_err();
+    assert_eq!(error.code, "MEMORY_CAPACITY_EXCEEDED");
+    let after = {
+        let data = limited.lock().unwrap();
+        (
+            data.events.keys().cloned().collect::<Vec<_>>(),
+            data.usage_events.keys().cloned().collect::<Vec<_>>(),
+            data.event_dedup.clone(),
+            data.bytes_used,
+            data.bytes_reserved,
+            data.next_sequence,
+        )
+    };
+    assert_eq!(after, before);
+}
+
+#[tokio::test]
+async fn memory_webhook_accounting_charges_one_new_dedup_entry_exactly() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let (expected, revision) = repo.get_connection("proj_dev", None, "c").unwrap();
+    let before = repo.lock().unwrap().bytes_used;
+    let accepted = events
+        .accept(&expected, revision, &parsed("accounting-key", ""))
+        .unwrap();
+    let data = repo.lock().unwrap();
+    let event = data
+        .events
+        .get(&(expected.project_id.clone(), accepted.event_id.clone()))
+        .unwrap();
+    let retained = webhook_retained_bytes(&expected, event, "accounting-key");
+    let dedup = webhook_dedup_bytes(&expected, "accounting-key", &accepted.event_id);
+    assert_eq!(data.bytes_used - before, retained + dedup);
+    assert_eq!(data.event_dedup.len(), 1);
+    drop(data);
+
+    let before_duplicate = {
+        let data = repo.lock().unwrap();
+        (
+            data.events.keys().cloned().collect::<Vec<_>>(),
+            data.usage_events.keys().cloned().collect::<Vec<_>>(),
+            data.event_dedup.clone(),
+            data.bytes_used,
+            data.next_sequence,
+        )
+    };
+    let duplicate = events
+        .accept(&expected, revision, &parsed("accounting-key", ""))
+        .unwrap();
+    assert!(duplicate.duplicate);
+    let after_duplicate = {
+        let data = repo.lock().unwrap();
+        (
+            data.events.keys().cloned().collect::<Vec<_>>(),
+            data.usage_events.keys().cloned().collect::<Vec<_>>(),
+            data.event_dedup.clone(),
+            data.bytes_used,
+            data.next_sequence,
+        )
+    };
+    assert_eq!(after_duplicate, before_duplicate);
+}
+
+#[tokio::test]
+async fn memory_webhook_orphaned_dedup_entry_refunds_its_old_allocation() {
+    let repo = super::history_tests::fixture();
+    let events = MemoryEvents::new(repo.clone(), None, None);
+    let (expected, revision) = repo.get_connection("proj_dev", None, "c").unwrap();
+    let provider_key = "orphan-key";
+    let first = events
+        .accept(&expected, revision, &parsed(provider_key, ""))
+        .unwrap();
+    let old_value = "orphan";
+    let old_dedup = webhook_dedup_bytes(&expected, provider_key, old_value);
+    {
+        let mut data = repo.lock().unwrap();
+        data.events
+            .remove(&(expected.project_id.clone(), first.event_id.clone()))
+            .unwrap();
+        let key = data.event_dedup.keys().next().cloned().unwrap();
+        data.event_dedup.insert(key, old_value.into());
+        // Seed the pre-fix accounting state so this test isolates orphan
+        // cleanup as well as the replacement entry allocation.
+        data.bytes_used += old_dedup;
+    }
+    let before_cleanup = repo.lock().unwrap().bytes_used;
+    let second = events
+        .accept(&expected, revision, &parsed(provider_key, ""))
+        .unwrap();
+    let data = repo.lock().unwrap();
+    let event = data
+        .events
+        .get(&(expected.project_id.clone(), second.event_id.clone()))
+        .unwrap();
+    let expected_bytes = before_cleanup - old_dedup
+        + webhook_retained_bytes(&expected, event, provider_key)
+        + webhook_dedup_bytes(&expected, provider_key, &second.event_id);
+    assert_eq!(data.bytes_used, expected_bytes);
+    assert_eq!(data.event_dedup.len(), 1);
+    assert_eq!(data.events.len(), 1);
+    assert_eq!(data.usage_events.len(), 2);
+    assert_eq!(data.next_sequence, 2);
 }
 
 #[tokio::test]

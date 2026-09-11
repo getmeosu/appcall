@@ -309,6 +309,13 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
                         )
                         .unwrap();
                 }
+                if payload["id"] == "aba" {
+                    concurrent
+                        .batch_execute(
+                            "UPDATE connections SET status='disconnected' WHERE id='c'; UPDATE connections SET status='active' WHERE id='c';",
+                        )
+                        .unwrap();
+                }
 
                 json!({"idempotencyKey":payload["id"],"operation":"messages.list","sanitized":if payload["poison"]==true{json!({})}else{json!({"channel":"C123","safe":true})}})
             };
@@ -457,6 +464,14 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
         assert_eq!(
             routes
                 .handle(None, &request(TOKEN, json!({"id":"late","secret":"s"})))
+                .await
+                .unwrap_err()
+                .code,
+            "CONNECTION_CHANGED"
+        );
+        assert_eq!(
+            routes
+                .handle(None, &request(TOKEN, json!({"id":"aba","secret":"s"})))
                 .await
                 .unwrap_err()
                 .code,

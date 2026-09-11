@@ -58,6 +58,47 @@ fn parsed(id: &str) -> ParsedWebhook {
         sanitized: json!({"channel":"C123","safe":true}),
     }
 }
+
+fn install_connection_revision_contract(client: &mut Client) {
+    client
+        .batch_execute(
+            r#"
+            ALTER TABLE connections
+                ADD COLUMN connection_revision bigint NOT NULL DEFAULT 1;
+            ALTER TABLE webhook_events
+                ADD COLUMN connection_revision bigint NOT NULL DEFAULT 1;
+            DROP INDEX webhook_events_provider_event_identity;
+            CREATE UNIQUE INDEX webhook_events_provider_event_revision_identity
+                ON webhook_events(project_id, connector, connection_id,
+                                  connection_revision, provider_event_key)
+                WHERE provider_event_key IS NOT NULL AND provider_event_key <> '';
+            CREATE OR REPLACE FUNCTION test_bump_connection_revision()
+            RETURNS trigger
+            LANGUAGE plpgsql
+            AS $function$
+            BEGIN
+                IF OLD.status IS DISTINCT FROM NEW.status
+                    OR OLD.secret_ref_id IS DISTINCT FROM NEW.secret_ref_id
+                    OR OLD.auth_type IS DISTINCT FROM NEW.auth_type
+                    OR OLD.last_test_status IS DISTINCT FROM NEW.last_test_status
+                    OR OLD.connector IS DISTINCT FROM NEW.connector
+                    OR OLD.external_account_id IS DISTINCT FROM NEW.external_account_id
+                    OR OLD.credential_owner IS DISTINCT FROM NEW.credential_owner
+                THEN
+                    NEW.connection_revision := OLD.connection_revision + 1;
+                END IF;
+                RETURN NEW;
+            END
+            $function$;
+            DROP TRIGGER IF EXISTS test_connection_revision ON connections;
+            CREATE TRIGGER test_connection_revision
+                BEFORE UPDATE ON connections
+                FOR EACH ROW
+                EXECUTE FUNCTION test_bump_connection_revision();
+            "#,
+        )
+        .unwrap();
+}
 fn brand(name: &str) -> Principal {
     let mut p = Principal::project("p").unwrap();
     p.brand_id = Some(name.into());
@@ -334,6 +375,47 @@ fn connection_scoped_identity_keeps_public_delivery_and_usage_keys_consistent() 
             .unwrap()
             .project_id,
         "q"
+    );
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn provider_dedup_is_scoped_to_connection_revision() {
+    let mut db = Db::new();
+    install_connection_revision_contract(&mut db.client);
+    let first = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("generation-key"))
+        .unwrap();
+    assert!(!first.duplicate);
+    db.client
+        .batch_execute(
+            "UPDATE connections SET status='disconnected' WHERE project_id='p' AND id='a'; UPDATE connections SET status='active' WHERE project_id='p' AND id='a';",
+        )
+        .unwrap();
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT connection_revision FROM connections WHERE project_id='p' AND id='a'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        3
+    );
+    let second = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("generation-key"))
+        .unwrap();
+    assert!(!second.duplicate);
+    assert_ne!(first.event_id, second.event_id);
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT count(*) FROM webhook_events WHERE project_id='p' AND connection_id='a'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        2
     );
 }
 
