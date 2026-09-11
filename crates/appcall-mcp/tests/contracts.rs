@@ -172,6 +172,146 @@ async fn schemas_profile_scope_dispatch_and_redaction() {
     );
     assert_eq!(s.usage().list("p", "brand").unwrap()[0].count, 1);
 }
+
+#[tokio::test]
+async fn mcp_caller_idempotency_key_is_forwarded_outside_provider_arguments() {
+    let (s, e) = server();
+    let result = rpc(
+        &s,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "idempotencyKey":"fixture-key",
+                "arguments":{"query":"Ada"}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(result["result"]["isError"], false);
+    let calls = e.0.lock().unwrap();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].idempotency_key, "fixture-key");
+    assert_eq!(calls[0].input, json!({"query":"Ada"}));
+}
+
+#[tokio::test]
+async fn mcp_omitted_idempotency_keys_dispatch_independently_with_empty_execute_keys() {
+    let (s, e) = server();
+    let request = |id| {
+        json!({
+            "jsonrpc":"2.0",
+            "id":id,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "arguments":{"query":"Ada"}
+            }
+        })
+    };
+
+    let first = rpc(&s, &scope(), request(1)).await;
+    let second = rpc(&s, &scope(), request(2)).await;
+
+    assert_eq!(first["result"]["isError"], false);
+    assert_eq!(second["result"]["isError"], false);
+    let calls = e.0.lock().unwrap();
+    assert_eq!(calls.len(), 2);
+    assert!(calls.iter().all(|call| call.idempotency_key.is_empty()));
+    assert!(calls
+        .iter()
+        .all(|call| call.input == json!({"query":"Ada"})));
+}
+
+#[tokio::test]
+async fn mcp_rejects_explicit_empty_idempotency_key_before_executor_dispatch() {
+    let (s, e) = server();
+    let result = rpc(
+        &s,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "idempotencyKey":"",
+                "arguments":{}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(result["result"]["isError"], true);
+    assert_eq!(
+        result["result"]["structuredContent"]["code"],
+        "INVALID_TOOL_INPUT"
+    );
+    assert!(e.0.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn mcp_rejects_idempotency_keys_outside_the_action_contract_before_dispatch() {
+    let (s, e) = server();
+    for key in [
+        "a".repeat(129),
+        "contains space".into(),
+        "line\nbreak".into(),
+        "é".into(),
+    ] {
+        let result = rpc(
+            &s,
+            &scope(),
+            json!({
+                "jsonrpc":"2.0",
+                "id":1,
+                "method":"tools/call",
+                "params":{
+                    "name":"apollo__people__search",
+                    "idempotencyKey":key,
+                    "arguments":{}
+                }
+            }),
+        )
+        .await;
+
+        assert_eq!(result["result"]["isError"], true, "key: {key:?}");
+        assert_eq!(
+            result["result"]["structuredContent"]["code"], "INVALID_TOOL_INPUT",
+            "key: {key:?}"
+        );
+        assert!(!result.to_string().contains(&key));
+    }
+    assert!(e.0.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn mcp_requires_a_string_idempotency_key_when_the_field_is_present() {
+    let (s, e) = server();
+    let result = rpc(
+        &s,
+        &scope(),
+        json!({
+            "jsonrpc":"2.0",
+            "id":1,
+            "method":"tools/call",
+            "params":{
+                "name":"apollo__people__search",
+                "idempotencyKey":42,
+                "arguments":{}
+            }
+        }),
+    )
+    .await;
+
+    assert_eq!(result["error"]["code"], -32600);
+    assert!(e.0.lock().unwrap().is_empty());
+}
+
 #[tokio::test]
 async fn malformed_params_unknown_tool_and_platform_fallback() {
     let e = Executor::default();
