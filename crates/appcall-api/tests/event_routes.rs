@@ -2,8 +2,10 @@ use appcall_api::{
     event_routes::{public_exact, EventRoutes},
     Request,
 };
-use appcall_auth::{Principal, WebhookVerifier};
-use appcall_store::{LocalProvider, Store};
+use appcall_auth::{Grant, Principal, WebhookVerifier};
+use appcall_store::{
+    AuthType, Connection, CredentialOwner, LocalProvider, Status, Store, TestStatus,
+};
 use postgres::{Client, NoTls};
 use serde_json::{json, Value};
 use std::{
@@ -16,6 +18,186 @@ use std::{
 };
 const TOKEN: &str =
     "eyJwIjoicCIsImMiOiJjIiwiayI6InNsYWNrIn0.LVmHbEaZ8w7z9Ir26XhIybs2jclqEc2rbbAOtVRqzxc";
+
+#[tokio::test]
+async fn development_memory_scopes_identical_provider_keys_to_connections() {
+    let registry = appcall_connectors::Registry::load("../../runner/connectors").unwrap();
+    let repo = appcall_api::development_memory::MemoryRepository::new(
+        appcall_api::development_memory::DevelopmentPermit::validate(false, None).unwrap(),
+        Arc::new(registry),
+        appcall_api::development_memory::MemoryLimits::default(),
+    )
+    .unwrap();
+    repo.create_connection(
+        Connection {
+            id: "first".into(),
+            project_id: "proj_dev".into(),
+            connector: "slack".into(),
+            auth_type: AuthType::ApiKey,
+            status: Status::Active,
+            secret_ref_id: String::new(),
+            last_test_status: TestStatus::Unknown,
+            external_account_id: "brand-a".into(),
+            credential_owner: CredentialOwner::Brand,
+        },
+        None,
+    )
+    .unwrap();
+    repo.create_connection(
+        Connection {
+            id: "second".into(),
+            project_id: "proj_dev".into(),
+            connector: "slack".into(),
+            auth_type: AuthType::ApiKey,
+            status: Status::Active,
+            secret_ref_id: String::new(),
+            last_test_status: TestStatus::Unknown,
+            external_account_id: "brand-b".into(),
+            credential_owner: CredentialOwner::Brand,
+        },
+        None,
+    )
+    .unwrap();
+    let events = appcall_api::development_memory::MemoryEvents::new(repo.clone(), None, None);
+    let principal = Principal::project("proj_dev").unwrap();
+    let request = |connection: &str| Request {
+        method: "POST".into(),
+        uri: format!("/v1/connections/{connection}/webhooks/slack"),
+        headers: vec![],
+        body: br#"{"event_id":"same-provider-event"}"#.to_vec(),
+    };
+
+    let first = events
+        .handle(Some(&principal), &request("first"))
+        .await
+        .unwrap()
+        .unwrap();
+    let second = events
+        .handle(Some(&principal), &request("second"))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(first.status, 202);
+    assert_eq!(second.status, 202);
+    let first_id = first.body["eventId"].as_str().unwrap();
+    let second_id = second.body["eventId"].as_str().unwrap();
+    assert!(first_id.starts_with("wh_"));
+    assert!(second_id.starts_with("wh_"));
+    assert_ne!(first_id, "same-provider-event");
+    assert_ne!(second_id, "same-provider-event");
+    assert_ne!(first_id, second_id);
+
+    let redelivery = events
+        .handle(Some(&principal), &request("first"))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(redelivery.status, 200);
+    assert_eq!(redelivery.body["eventId"], first.body["eventId"]);
+    let second_redelivery = events
+        .handle(Some(&principal), &request("second"))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(second_redelivery.status, 200);
+    assert_eq!(second_redelivery.body["eventId"], second.body["eventId"]);
+    let history = events
+        .handle(
+            Some(&principal),
+            &Request {
+                method: "GET".into(),
+                uri: "/v1/webhook-events".into(),
+                headers: vec![],
+                body: vec![],
+            },
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    let history_ids = history.body["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|event| event["id"].as_str().unwrap())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(history_ids, [first_id, second_id].into_iter().collect());
+    let snapshot_cursor = history.body["streamCursor"].as_str().unwrap();
+    assert!(events
+        .poll(&principal, snapshot_cursor)
+        .await
+        .unwrap()
+        .is_empty());
+    assert_eq!(events.poll(&principal, "").await.unwrap().len(), 2);
+    assert_eq!(repo.list_usage_events("proj_dev", None).unwrap().len(), 2);
+
+    let mut brand_a = Principal::project("proj_dev").unwrap();
+    brand_a.brand_id = Some("brand-a".into());
+    brand_a.allowed_brands = Grant::Only(["brand-a".into()].into_iter().collect());
+    let detail = |id: &str| Request {
+        method: "GET".into(),
+        uri: format!("/v1/webhook-events/{id}"),
+        headers: vec![],
+        body: vec![],
+    };
+    let first_detail = events
+        .handle(Some(&brand_a), &detail(first_id))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(first_detail.status, 200);
+    assert_eq!(first_detail.body["id"], first.body["eventId"]);
+    assert_eq!(
+        events
+            .handle(Some(&brand_a), &detail(second_id))
+            .await
+            .unwrap_err()
+            .code,
+        "WEBHOOK_EVENT_NOT_FOUND"
+    );
+    let replay = |id: &str| Request {
+        method: "POST".into(),
+        uri: format!("/v1/webhook-events/{id}/replay"),
+        headers: vec![],
+        body: vec![],
+    };
+    let replayed = events
+        .handle(Some(&brand_a), &replay(first_id))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(replayed.status, 202);
+    assert_eq!(replayed.body["eventId"], first.body["eventId"]);
+
+    repo.ensure_project("other").unwrap();
+    repo.create_connection(
+        Connection {
+            id: "other-connection".into(),
+            project_id: "other".into(),
+            connector: "slack".into(),
+            auth_type: AuthType::ApiKey,
+            status: Status::Active,
+            secret_ref_id: String::new(),
+            last_test_status: TestStatus::Unknown,
+            external_account_id: "brand-a".into(),
+            credential_owner: CredentialOwner::Brand,
+        },
+        None,
+    )
+    .unwrap();
+    let other_principal = Principal::project("other").unwrap();
+    let other = events
+        .handle(Some(&other_principal), &request("other-connection"))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(other.status, 202);
+    assert!(other.body["eventId"].as_str().unwrap().starts_with("wh_"));
+    assert_ne!(other.body["eventId"], "same-provider-event");
+    assert_eq!(events.poll(&other_principal, "").await.unwrap().len(), 1);
+    assert_eq!(events.poll(&principal, "").await.unwrap().len(), 2);
+    assert_eq!(repo.list_usage_events("other", None).unwrap().len(), 1);
+}
+
 #[test]
 fn only_exact_ingestion_routes_can_use_callback_authentication() {
     assert!(public_exact("POST", "/v1/connections/c/webhooks/slack"));
@@ -57,6 +239,8 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
         include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
         include_str!("../../../migrations/202609040001_sync_job_terminal_failure.sql"),
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
         include_str!("../../../migrations/202609090001_sync_job_history.sql"),
     ] {
@@ -123,6 +307,13 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
                         .execute(
                             "UPDATE connections SET external_account_id='new-brand' WHERE id='c'",
                             &[],
+                        )
+                        .unwrap();
+                }
+                if payload["id"] == "aba" {
+                    concurrent
+                        .batch_execute(
+                            "UPDATE connections SET status='disconnected' WHERE id='c'; UPDATE connections SET status='active' WHERE id='c';",
                         )
                         .unwrap();
                 }
@@ -198,24 +389,22 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
             .await
             .is_err());
         assert_eq!(calls.load(Ordering::SeqCst), 0);
-        assert_eq!(
-            routes
-                .handle(None, &request(TOKEN, body.clone()))
-                .await
-                .unwrap()
-                .unwrap()
-                .status,
-            202
-        );
-        assert_eq!(
-            routes
-                .handle(None, &request(TOKEN, body))
-                .await
-                .unwrap()
-                .unwrap()
-                .status,
-            200
-        );
+        let first_ingest = routes
+            .handle(None, &request(TOKEN, body.clone()))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(first_ingest.status, 202);
+        let public_event_id = first_ingest.body["eventId"].as_str().unwrap().to_owned();
+        assert!(public_event_id.starts_with("wh_"));
+        assert_ne!(public_event_id, "provider-event");
+        let redelivery = routes
+            .handle(None, &request(TOKEN, body))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(redelivery.status, 200);
+        assert_eq!(redelivery.body["eventId"], public_event_id);
         assert!(routes
             .handle(
                 None,
@@ -260,7 +449,7 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
 
         let replay = Request {
             method: "POST".into(),
-            uri: "/v1/webhook-events/provider-event/replay".into(),
+            uri: format!("/v1/webhook-events/{public_event_id}/replay"),
             headers: vec![],
             body: vec![],
         };
@@ -276,6 +465,14 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
         assert_eq!(
             routes
                 .handle(None, &request(TOKEN, json!({"id":"late","secret":"s"})))
+                .await
+                .unwrap_err()
+                .code,
+            "CONNECTION_CHANGED"
+        );
+        assert_eq!(
+            routes
+                .handle(None, &request(TOKEN, json!({"id":"aba","secret":"s"})))
                 .await
                 .unwrap_err()
                 .code,
@@ -326,6 +523,8 @@ fn live_stream_retirement_releases_database_owners_before_blocking_cleanup() {
         include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
         include_str!("../../../migrations/202609040001_sync_job_terminal_failure.sql"),
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
     ] {
         admin.batch_execute(sql).unwrap();

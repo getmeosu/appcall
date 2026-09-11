@@ -100,6 +100,12 @@ impl Store {
     pub fn get(&mut self, s: &Scope, id: &str) -> Result<Connection, Error> {
         self.transaction(|tx| tx.get(s, id))
     }
+    /// Return the public connection record together with its durable
+    /// generation. The revision is intentionally separate from Connection's
+    /// compatibility-preserved wire shape.
+    pub fn get_with_revision(&mut self, s: &Scope, id: &str) -> Result<(Connection, i64), Error> {
+        self.transaction(|tx| tx.get_with_revision(s, id))
+    }
     pub fn list(&mut self, s: &Scope) -> Result<Vec<Connection>, Error> {
         self.transaction(|tx| tx.list(s))
     }
@@ -152,6 +158,11 @@ impl<'a> StoreTransaction<'a> {
     pub fn get(&mut self, s: &Scope, id: &str) -> Result<Connection, Error> {
         let row=self.transaction.query_opt("SELECT * FROM connections WHERE project_id=$1 AND id=$2 AND ($3='' OR external_account_id=$3 OR credential_owner='platform')",&[&s.project,&id,&s.account])?.ok_or(Error::NotFound)?;
         Connection::row(row)
+    }
+    pub fn get_with_revision(&mut self, s: &Scope, id: &str) -> Result<(Connection, i64), Error> {
+        let row=self.transaction.query_opt("SELECT * FROM connections WHERE project_id=$1 AND id=$2 AND ($3='' OR external_account_id=$3 OR credential_owner='platform')",&[&s.project,&id,&s.account])?.ok_or(Error::NotFound)?;
+        let revision = row.try_get("connection_revision")?;
+        Ok((Connection::row(row)?, revision))
     }
     pub fn lock_connection(&mut self, s: &Scope, id: &str) -> Result<Connection, Error> {
         let row=self.transaction.query_opt("SELECT * FROM connections WHERE project_id=$1 AND id=$2 AND ($3='' OR external_account_id=$3) FOR UPDATE",&[&s.project,&id,&s.account])?.ok_or(Error::NotFound)?;

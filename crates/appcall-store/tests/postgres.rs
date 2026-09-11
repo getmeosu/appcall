@@ -163,6 +163,99 @@ fn existing_schema_scopes_and_credential_transactions_are_atomic() {
 
 #[test]
 #[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
+fn connection_revision_advances_for_all_stale_snapshot_mutations() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut client = Client::connect(&url, NoTls).unwrap();
+    let schema = format!(
+        "store_connection_revision_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
+    ] {
+        client.batch_execute(sql).unwrap();
+    }
+    client
+        .batch_execute("INSERT INTO projects(id,name) VALUES ('p','test');")
+        .unwrap();
+    let mut store = Store::new(client, LocalProvider::new(&[7; 32]).unwrap());
+    let scope = Scope::new("p", None).unwrap();
+    let connection = Connection {
+        id: "conn".into(),
+        project_id: "p".into(),
+        connector: "mock".into(),
+        auth_type: AuthType::ApiKey,
+        status: Status::Active,
+        secret_ref_id: String::new(),
+        last_test_status: TestStatus::Unknown,
+        external_account_id: "brand".into(),
+        credential_owner: CredentialOwner::Brand,
+    };
+    store.create(&scope, &connection).unwrap();
+    let revision = |store: &mut Store| store.get_with_revision(&scope, "conn").unwrap().1;
+    let initial = revision(&mut store);
+    assert_eq!(initial, 1);
+    store
+        .update_status(&scope, "conn", Status::Disconnected)
+        .unwrap();
+    let after_disconnect = revision(&mut store);
+    assert_eq!(after_disconnect, initial + 1);
+    store.update_status(&scope, "conn", Status::Active).unwrap();
+    let after_reactivate = revision(&mut store);
+    assert_eq!(after_reactivate, after_disconnect + 1);
+    store
+        .update_test_status(&scope, "conn", TestStatus::Passed)
+        .unwrap();
+    let after_test = revision(&mut store);
+    assert_eq!(after_test, after_reactivate + 1);
+    store
+        .store_secret("p", "secret", "api_key", b"synthetic")
+        .unwrap();
+    store.set_secret_ref(&scope, "conn", "secret").unwrap();
+    let after_secret = revision(&mut store);
+    assert_eq!(after_secret, after_test + 1);
+    store
+        .replace_credentials(&scope, "conn", "secret", AuthType::OAuth2)
+        .unwrap();
+    let after_credentials = revision(&mut store);
+    assert_eq!(after_credentials, after_secret + 1);
+    store
+        .update_status(&scope, "conn", Status::Authorizing)
+        .unwrap();
+    let before_cleanup = revision(&mut store);
+    assert_eq!(before_cleanup, after_credentials + 1);
+    assert_eq!(
+        store
+            .expire_stale_authorizing(
+                "p",
+                std::time::SystemTime::now() + std::time::Duration::from_secs(1),
+            )
+            .unwrap(),
+        1
+    );
+    assert_eq!(revision(&mut store), before_cleanup + 1);
+    let mut client = store.into_client();
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
 fn stale_authorization_cleanup_skips_locked_connection_and_rechecks_intent() {
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
     let schema = format!(

@@ -1,5 +1,5 @@
 //! Process-local webhook history. Sync operations require a durable scheduler.
-use super::MemoryRepository;
+use super::{state::event_dedup_entry_bytes, MemoryRepository};
 use crate::{
     data_routes::{event_error, event_page, event_response, sanitize, LogKind, LogQuery},
     ApiError, Request, Response, Result,
@@ -78,24 +78,42 @@ impl MemoryEvents {
         {
             return Err(ApiError::new("CONNECTION_CHANGED"));
         }
-        let id = if parsed.idempotency_key.is_empty() {
-            format!("wh_{}", uuid::Uuid::new_v4().simple())
-        } else {
-            parsed.idempotency_key.clone()
-        };
-        let key = (expected.project_id.clone(), id.clone());
-        if let Some(old) = data.events.get(&key) {
-            if old.connection_id != expected.id
-                || old.connector != expected.connector
-                || old.external_account_id != expected.external_account_id
-            {
-                return Err(ApiError::new("CONNECTION_CHANGED"));
+        let provider_event_key =
+            (!parsed.idempotency_key.is_empty()).then_some(parsed.idempotency_key.as_str());
+        let dedup_key = provider_event_key.map(|provider_event_key| {
+            (
+                expected.project_id.clone(),
+                expected.connector.clone(),
+                expected.id.clone(),
+                expected_revision,
+                provider_event_key.to_owned(),
+            )
+        });
+        let orphaned_dedup = if let Some(dedup_key) = dedup_key.as_ref() {
+            if let Some(id) = data.event_dedup.get(dedup_key).cloned() {
+                if let Some(old) = data.events.get(&(expected.project_id.clone(), id.clone())) {
+                    if old.connection_id != expected.id
+                        || old.connector != expected.connector
+                        || old.external_account_id != expected.external_account_id
+                    {
+                        return Err(ApiError::new("CONNECTION_CHANGED"));
+                    }
+                    return Ok(IngestResult {
+                        event_id: id,
+                        duplicate: true,
+                    });
+                }
+                Some((dedup_key.clone(), id))
+            } else {
+                None
             }
-            return Ok(IngestResult {
-                event_id: id,
-                duplicate: true,
-            });
-        }
+        } else {
+            None
+        };
+        // Event.id is the opaque public resource identity. Keep the raw parser
+        // key only in the connection-scoped in-memory dedup map.
+        let id = fresh_public_id(&data, &expected.project_id)?;
+        let key = (expected.project_id.clone(), id.clone());
         let position = data
             .next_sequence
             .checked_add(1)
@@ -140,11 +158,41 @@ impl MemoryEvents {
                     + expected.id.len()
                     + expected.external_account_id.len()
                     + expected.connector.len()
+                    + provider_event_key.map_or(0, str::len)
                     + 512,
             )
             .ok_or_else(|| ApiError::new("MEMORY_CAPACITY_EXCEEDED"))?;
-        data.check_capacity(self.repo.state.limits, retained, 2)
+        let dedup_bytes = dedup_key
+            .as_ref()
+            .map(|key| event_dedup_entry_bytes(key, &id))
+            .transpose()
+            .map_err(|_| ApiError::new("MEMORY_CAPACITY_EXCEEDED"))?
+            .unwrap_or(0);
+        let orphaned_dedup_bytes = orphaned_dedup
+            .as_ref()
+            .map(|(key, old_id)| event_dedup_entry_bytes(key, old_id))
+            .transpose()
+            .map_err(|_| ApiError::new("MEMORY_CAPACITY_EXCEEDED"))?
+            .unwrap_or(0);
+        if orphaned_dedup_bytes > data.bytes_used {
+            return Err(ApiError::new("MEMORY_CAPACITY_EXCEEDED"));
+        }
+        let new_bytes = retained
+            .checked_add(dedup_bytes)
+            .ok_or_else(|| ApiError::new("MEMORY_CAPACITY_EXCEEDED"))?;
+        let additional_bytes = new_bytes.saturating_sub(orphaned_dedup_bytes);
+        let bytes_after = data
+            .bytes_used
+            .checked_sub(orphaned_dedup_bytes)
+            .and_then(|bytes| bytes.checked_add(new_bytes))
+            .ok_or_else(|| ApiError::new("MEMORY_CAPACITY_EXCEEDED"))?;
+        data.check_capacity(self.repo.state.limits, additional_bytes, 2)
             .map_err(|_| ApiError::new("MEMORY_CAPACITY_EXCEEDED"))?;
+        if let Some((dedup_key, old_id)) = orphaned_dedup {
+            if data.event_dedup.get(&dedup_key) == Some(&old_id) {
+                data.event_dedup.remove(&dedup_key);
+            }
+        }
         data.usage_events.insert(
             usage_id.clone(),
             super::state::UsageEvent {
@@ -160,8 +208,11 @@ impl MemoryEvents {
             },
         );
         data.usage_monthly.insert(usage_key, usage_total);
-        data.bytes_used += retained;
+        data.bytes_used = bytes_after;
         data.next_sequence = position;
+        if let Some(dedup_key) = dedup_key {
+            data.event_dedup.insert(dedup_key, id.clone());
+        }
         data.events.insert(key, event);
         Ok(IngestResult {
             event_id: id,
@@ -548,6 +599,18 @@ fn decode(s: &str) -> Result<String> {
         .decode_utf8()
         .map(|s| s.into_owned())
         .map_err(|_| ApiError::new("INVALID_REQUEST"))
+}
+fn fresh_public_id(data: &super::state::MemoryData, project_id: &str) -> Result<String> {
+    for _ in 0..8 {
+        let id = format!("wh_{}", uuid::Uuid::new_v4().simple());
+        if !data
+            .events
+            .contains_key(&(project_id.to_owned(), id.clone()))
+        {
+            return Ok(id);
+        }
+    }
+    Err(ApiError::new("WEBHOOK_INGEST_FAILED"))
 }
 fn authorize(p: &Principal) -> Result<()> {
     if p.project_id.is_empty() || !p.scopes.permits("events:read") {

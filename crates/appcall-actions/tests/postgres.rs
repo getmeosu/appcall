@@ -626,6 +626,13 @@ fn production_migrations_support_action_finish_and_policy() {
             .batch_execute(&std::fs::read_to_string(migration).unwrap())
             .unwrap();
     }
+    assert!(client
+        .query_one(
+            "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='webhook_events' AND column_name='provider_event_key')",
+            &[],
+        )
+        .unwrap()
+        .get::<_, bool>(0));
     client.batch_execute("INSERT INTO projects(id,name) VALUES('p','test'); INSERT INTO connections(id,project_id,connector,status,auth_type,external_account_id,credential_owner) VALUES('c','p','test','active','none','brand','brand')").unwrap();
     let rt = tokio::runtime::Runtime::new().unwrap();
     let repo = PgActionRepository::new(client);

@@ -44,13 +44,15 @@ fn fixture() -> (Client, String) {
         include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
         include_str!("../../../migrations/202609040001_sync_job_terminal_failure.sql"),
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
         include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
         include_str!("../../../migrations/202609090001_sync_job_history.sql"),
     ] {
         db.batch_execute(migration).unwrap();
     }
-    db.batch_execute("INSERT INTO projects(id,name) VALUES('p','p');INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id) VALUES('c','p','slack','api_key','active','brand','brand'),('apollo','p','apollo','api_key','active','brand','brand'),('rb2b','p','rb2b','api_key','active','brand','brand')").unwrap();
+    db.batch_execute("INSERT INTO projects(id,name) VALUES('p','p');INSERT INTO connections(id,project_id,connector,auth_type,status,credential_owner,external_account_id) VALUES('c','p','slack','api_key','active','brand','brand'),('apollo','p','apollo','api_key','active','brand','brand-a'),('apollo-2','p','apollo','api_key','active','brand','brand-b'),('rb2b','p','rb2b','api_key','active','brand','brand')").unwrap();
     (db, schema)
 }
 
@@ -241,6 +243,16 @@ fn parser_rpc_outbox_worker_retains_event_only_deliveries_after_disconnect() {
             "webhook.phone_revealed",
         ),
         (
+            "apollo-2",
+            "apollo",
+            json!({
+                "event_id":"evt_phone_1",
+                "person_id":"person-1",
+                "sanitized_number":"+15550001111"
+            }),
+            "webhook.phone_revealed",
+        ),
+        (
             "rb2b",
             "rb2b",
             serde_json::from_str::<Value>(include_str!(
@@ -309,11 +321,11 @@ fn parser_rpc_outbox_worker_retains_event_only_deliveries_after_disconnect() {
     let worker = Worker::new(
         client(Some(&schema)),
         service,
-        TickLimits { outbox: 2, jobs: 1 },
+        TickLimits { outbox: 3, jobs: 1 },
     )
     .unwrap();
     let report = rt.block_on(worker.tick("worker")).unwrap();
-    assert_eq!(report.outbox_completed, 2);
+    assert_eq!(report.outbox_completed, 3);
     assert_eq!(report.outbox_failed, 0);
     assert_eq!(report.pages_completed, 0);
     assert!(report.job_failures.is_empty());
@@ -327,7 +339,7 @@ fn parser_rpc_outbox_worker_retains_event_only_deliveries_after_disconnect() {
         db.query_one("SELECT count(*) FROM webhook_events", &[])
             .unwrap()
             .get::<_, i64>(0),
-        2
+        3
     );
     assert_eq!(
         db.query_one(
@@ -345,7 +357,7 @@ fn parser_rpc_outbox_worker_retains_event_only_deliveries_after_disconnect() {
         )
         .unwrap()
         .get::<_, i64>(0),
-        2
+        3
     );
     drop(worker);
     drop(rt);
@@ -374,6 +386,18 @@ fn run_event(mode: u8) {
     let accepted = appcall_events::PgEvents::new(&mut db)
         .accept(&claims, &parsed)
         .unwrap();
+    assert!(accepted.event_id.starts_with("wh_"));
+    assert_ne!(accepted.event_id, parsed.idempotency_key);
+    assert_eq!(
+        db.query_one(
+            "SELECT provider_event_key FROM webhook_events WHERE project_id='p' AND id=$1",
+            &[&accepted.event_id],
+        )
+        .unwrap()
+        .get::<_, Option<String>>(0)
+        .as_deref(),
+        Some(parsed.idempotency_key.as_str())
+    );
     // A failing usage write must roll back sync scheduling and outbox completion together.
     db.batch_execute(
         "ALTER TABLE usage_monthly_rollups ADD CONSTRAINT fail_usage CHECK(quantity=0)",

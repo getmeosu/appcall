@@ -134,6 +134,8 @@ fn sync_runs_projection_is_scoped_and_uses_persisted_queue_evidence() {
         include_str!("../../../migrations/202605290001_connections_ownership.sql"),
         include_str!("../../../migrations/202605290003_usage_brand_dim.sql"),
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
         include_str!("../../../migrations/202609040001_sync_job_terminal_failure.sql"),
     ] {
@@ -946,6 +948,8 @@ fn webhook_replay_preserves_scope_and_rolls_back_failed_scheduling() {
         include_str!("../../../migrations/202609070005_action_history_ownership.sql"),
         include_str!("../../../migrations/202605290001_connections_ownership.sql"),
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
     ] {
         client.batch_execute(sql).unwrap()
     }
@@ -1035,6 +1039,184 @@ fn webhook_replay_preserves_scope_and_rolls_back_failed_scheduling() {
             .map(|event| event.id.as_str())
             .collect::<Vec<_>>(),
         ["e2"]
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn webhook_public_ids_and_routes_are_connection_scoped_and_project_owned() {
+    use appcall_api::{data_routes::*, Identity};
+    struct Sink;
+    impl appcall_events::DispatchSink for Sink {
+        fn schedule(
+            &mut self,
+            tx: &mut postgres::Transaction<'_>,
+            job: &appcall_events::SyncJob,
+        ) -> appcall_events::Result<()> {
+            tx.execute(
+                "INSERT INTO scheduled(project_id,dedup_key,input) VALUES($1,$2,$3) ON CONFLICT DO NOTHING",
+                &[&job.project_id, &job.dedup_key, &job.input],
+            )
+            .map_err(|_| appcall_events::Error::Storage)?;
+            Ok(())
+        }
+    }
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut client = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+    let schema = format!("webhook_public_id_test_{}", uuid::Uuid::new_v4().simple());
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290003_usage_brand_dim.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070001_event_outbox.sql"),
+        include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
+        include_str!("../../../migrations/202609120001_connection_revision.sql"),
+    ] {
+        client.batch_execute(sql).unwrap();
+    }
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','p'),('q','q'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('a','p','slack','api_key','active','brand-a','brand'),('b','p','slack','api_key','active','brand-b','brand'),('q-c','q','slack','api_key','active','brand-a','brand'); CREATE TABLE scheduled(project_id text,dedup_key text,input jsonb,PRIMARY KEY(project_id,dedup_key))",
+        )
+        .unwrap();
+    let (a, b) = {
+        let mut events = appcall_events::PgEvents::new(&mut client);
+        let a = events
+            .accept(
+                &appcall_auth::WebhookClaims {
+                    project_id: "p".into(),
+                    connection_id: "a".into(),
+                    connector: "slack".into(),
+                },
+                &appcall_events::ParsedWebhook {
+                    idempotency_key: "same-provider-key".into(),
+                    operation: "messages.list".into(),
+                    sanitized: json!({"channel":"C123"}),
+                },
+            )
+            .unwrap();
+        let b = events
+            .accept(
+                &appcall_auth::WebhookClaims {
+                    project_id: "p".into(),
+                    connection_id: "b".into(),
+                    connector: "slack".into(),
+                },
+                &appcall_events::ParsedWebhook {
+                    idempotency_key: "same-provider-key".into(),
+                    operation: "messages.list".into(),
+                    sanitized: json!({"channel":"C123"}),
+                },
+            )
+            .unwrap();
+        (a, b)
+    };
+    assert_ne!(a.event_id, b.event_id);
+    assert!(a.event_id.starts_with("wh_"));
+    assert!(b.event_id.starts_with("wh_"));
+    assert_ne!(a.event_id, "same-provider-key");
+    assert_ne!(b.event_id, "same-provider-key");
+    let mut p = appcall_auth::Principal::project("p").unwrap();
+    p.brand_id = Some("brand-a".into());
+    let page = webhook_read(
+        &mut client,
+        &appcall_auth::Principal::project("p").unwrap(),
+        &url::Url::parse("http://x/v1/webhook-events").unwrap(),
+    )
+    .unwrap()
+    .unwrap();
+    let ids = page.body["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|event| event["id"].as_str().unwrap())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(
+        ids,
+        [a.event_id.as_str(), b.event_id.as_str()]
+            .into_iter()
+            .collect()
+    );
+    let generic = list(
+        &mut client,
+        &Identity {
+            project_id: "p".into(),
+            account_id: String::new(),
+            admin_scope: false,
+        },
+        LogKind::Webhook,
+        &LogQuery::parse_for(
+            &url::Url::parse("http://x/v1/webhook-events").unwrap(),
+            LogKind::Webhook,
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(generic["events"].as_array().unwrap().len(), 2);
+    let detail = webhook_read(
+        &mut client,
+        &p,
+        &url::Url::parse(&format!("http://x/v1/webhook-events/{}", a.event_id)).unwrap(),
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(detail.body["id"], a.event_id);
+    assert_eq!(
+        webhook_read(
+            &mut client,
+            &p,
+            &url::Url::parse(&format!("http://x/v1/webhook-events/{}", b.event_id)).unwrap(),
+        )
+        .unwrap_err()
+        .code,
+        "WEBHOOK_EVENT_NOT_FOUND"
+    );
+    let q = appcall_events::PgEvents::new(&mut client)
+        .accept(
+            &appcall_auth::WebhookClaims {
+                project_id: "q".into(),
+                connection_id: "q-c".into(),
+                connector: "slack".into(),
+            },
+            &appcall_events::ParsedWebhook {
+                idempotency_key: "same-provider-key".into(),
+                operation: String::new(),
+                sanitized: json!({}),
+            },
+        )
+        .unwrap();
+    let q_page = webhook_read(
+        &mut client,
+        &appcall_auth::Principal::project("q").unwrap(),
+        &url::Url::parse("http://x/v1/webhook-events").unwrap(),
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(q_page.body["events"].as_array().unwrap().len(), 1);
+    assert_eq!(q_page.body["events"][0]["id"], q.event_id);
+
+    let mut sink = Sink;
+    let a_replay = webhook_replay(&mut client, &p, &a.event_id, &mut sink).unwrap();
+    let mut p_b = appcall_auth::Principal::project("p").unwrap();
+    p_b.brand_id = Some("brand-b".into());
+    let b_replay = webhook_replay(&mut client, &p_b, &b.event_id, &mut sink).unwrap();
+    assert_eq!(a_replay.body, json!({"eventId":a.event_id,"replayed":true}));
+    assert_eq!(b_replay.body, json!({"eventId":b.event_id,"replayed":true}));
+    assert_eq!(
+        client
+            .query_one("SELECT count(*) FROM scheduled", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
     );
     client
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
