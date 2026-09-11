@@ -118,6 +118,23 @@ impl<S: Store> HttpAdapter<S> {
                 200,
                 json!({"id":id,"state":self.engine.status(&self.run_id(id))?,"failure_reason":self.engine.failure_reason(&self.run_id(id))?}),
             )),
+            ("GET", ["", "runs", id, "result"]) => {
+                let data = match self.engine.result(&self.run_id(id))? {
+                    RunResult::Pending => json!({"id":id,"outcome":"pending"}),
+                    RunResult::Completed(output) => {
+                        json!({"id":id,"outcome":"completed","output":output})
+                    }
+                    RunResult::Failed(failure_reason) => {
+                        json!({"id":id,"outcome":"failed","failure_reason":failure_reason})
+                    }
+                    RunResult::Nondeterminism(failure_reason) => {
+                        json!({"id":id,"outcome":"nondeterminism","failure_reason":failure_reason})
+                    }
+                    RunResult::Cancelled => json!({"id":id,"outcome":"cancelled"}),
+                    RunResult::Unknown => json!({"id":id,"outcome":"unknown"}),
+                };
+                Ok((200, data))
+            }
             ("GET", ["", "runs", id, "history"]) => {
                 Ok((200, json!(self.engine.history(&self.run_id(id))?)))
             }

@@ -289,6 +289,15 @@ pub struct RunRecord {
     pub output: Option<PayloadRef>,
     pub wakeup: Option<i64>,
 }
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RunResult {
+    Pending,
+    Completed(PayloadRef),
+    Failed(Option<RunFailure>),
+    Nondeterminism(Option<RunFailure>),
+    Cancelled,
+    Unknown,
+}
 /// Host-owned payload storage. Returned bytes are never written to engine storage.
 pub trait PayloadResolver {
     fn resolve(&self, reference: &PayloadRef) -> Result<Option<Vec<u8>>>;

@@ -73,10 +73,9 @@ pub async fn serve(
         ));
     }
     let token = Arc::new(token);
-    let rate = Arc::new(std::sync::Mutex::new(RateWindow {
-        started: std::time::Instant::now(),
-        used: 0,
-    }));
+    let rate = Arc::new(std::sync::Mutex::new(RateBuckets::new(
+        std::time::Instant::now(),
+    )));
     let slots = Arc::new(Semaphore::new(limits.max_connections));
     let mut connections = JoinSet::new();
     tokio::pin!(shutdown);
@@ -119,15 +118,8 @@ async fn handle(
     client: EngineClient,
     token: Arc<String>,
     limits: TransportLimits,
-    rate: Arc<std::sync::Mutex<RateWindow>>,
+    rate: Arc<std::sync::Mutex<RateBuckets>>,
 ) -> Result<Response<Full<Bytes>>, Infallible> {
-    if !rate
-        .lock()
-        .map(|mut window| window.admit(limits.requests_per_second, std::time::Instant::now()))
-        .unwrap_or(false)
-    {
-        return Ok(wire(response(429, "rate_limit")));
-    }
     let auth: Vec<_> = request
         .headers()
         .get_all(hyper::header::AUTHORIZATION)
@@ -138,7 +130,21 @@ async fn handle(
     } else {
         String::new()
     };
-    if !is_authorized(token.as_bytes(), &authorization) {
+    let authorized = is_authorized(token.as_bytes(), &authorization);
+    if !rate
+        .lock()
+        .map(|mut buckets| {
+            buckets.admit(
+                authorized,
+                limits.requests_per_second,
+                std::time::Instant::now(),
+            )
+        })
+        .unwrap_or(false)
+    {
+        return Ok(wire(response(429, "rate_limit")));
+    }
+    if !authorized {
         return Ok(wire(response(401, "unauthorized")));
     }
     if request.method() == hyper::Method::GET && request.uri().path() == "/ready" {
@@ -209,6 +215,32 @@ impl RateWindow {
         true
     }
 }
+struct RateBuckets {
+    anonymous: RateWindow,
+    authenticated: RateWindow,
+}
+impl RateBuckets {
+    fn new(now: std::time::Instant) -> Self {
+        Self {
+            anonymous: RateWindow {
+                started: now,
+                used: 0,
+            },
+            authenticated: RateWindow {
+                started: now,
+                used: 0,
+            },
+        }
+    }
+    fn admit(&mut self, authenticated: bool, limit: u32, now: std::time::Instant) -> bool {
+        let window = if authenticated {
+            &mut self.authenticated
+        } else {
+            &mut self.anonymous
+        };
+        window.admit(limit, now)
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -222,5 +254,31 @@ mod tests {
         assert!(window.admit(1, now));
         assert!(!window.admit(1, now));
         assert!(window.admit(1, now + Duration::from_secs(2)));
+    }
+
+    #[test]
+    fn rate_buckets_keep_anonymous_admission_independent_from_authenticated() {
+        let now = std::time::Instant::now();
+        let mut buckets = RateBuckets::new(now);
+
+        assert!(buckets.admit(false, 1, now));
+        assert!(!buckets.admit(false, 1, now));
+        assert!(buckets.admit(true, 1, now));
+        assert!(!buckets.admit(true, 1, now));
+    }
+
+    #[test]
+    fn malformed_authorization_uses_bounded_anonymous_bucket() {
+        let token = b"transport-test-token-at-least-thirty-two-bytes";
+        let now = std::time::Instant::now();
+        let mut buckets = RateBuckets::new(now);
+
+        for authorization in ["", "Bearer wrong"] {
+            assert!(!is_authorized(token, authorization));
+            assert!(buckets.admit(is_authorized(token, authorization), 2, now));
+        }
+        assert!(!is_authorized(token, "Basic credentials"));
+        assert!(!buckets.admit(false, 2, now));
+        assert!(buckets.admit(true, 1, now));
     }
 }
