@@ -156,7 +156,9 @@ fn secret_fields_preserve_whitespace_while_nonsecret_fields_are_normalized() {
     assert_eq!(result.fields()["username"], "user");
     assert_eq!(result.fields()["password"], password);
     assert_eq!(
-        STANDARD.decode(result.fields()["basicAuth"].as_bytes()).unwrap(),
+        STANDARD
+            .decode(result.fields()["basicAuth"].as_bytes())
+            .unwrap(),
         format!("user:{password}").as_bytes()
     );
 }

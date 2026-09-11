@@ -69,17 +69,19 @@ pub fn collect_fields(
     }
     let mut result = Credentials(BTreeMap::new());
     for field in fields {
-        let value = input
-            .get(&field.key)
-            .map(String::as_str)
-            .unwrap_or("")
-            .trim();
-        if field.required && value.is_empty() {
+        let raw_value = input.get(&field.key).map(String::as_str).unwrap_or("");
+        let is_empty = raw_value.trim().is_empty();
+        if field.required && is_empty {
             return Err(DeclaredFieldKey::new(&field.key)
                 .map(Error::MissingDeclaredField)
                 .unwrap_or(Error::MissingField));
         }
-        if !value.is_empty() {
+        if !is_empty {
+            let value = if field.secret {
+                raw_value
+            } else {
+                raw_value.trim()
+            };
             result.0.insert(field.key.clone(), value.to_owned());
         }
     }
