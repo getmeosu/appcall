@@ -588,6 +588,186 @@ impl DashboardData for Failing {
 }
 
 #[tokio::test]
+async fn rotated_session_cookie_survives_dashboard_renderer_error() {
+    use tokio::{
+        io::{AsyncReadExt, AsyncWriteExt},
+        net::TcpListener,
+    };
+    struct Allow;
+    impl appcall_auth::MembershipVerifier for Allow {
+        fn verify_membership(
+            &self,
+            _: &appcall_auth::AccessClaims,
+            tenant: &str,
+            _: &str,
+        ) -> Result<Option<appcall_auth::Membership>, appcall_auth::AuthError> {
+            Ok(Some(appcall_auth::Membership {
+                tenant_id: tenant.into(),
+                allowed_brands: appcall_auth::Grant::All,
+                scopes: appcall_auth::Grant::All,
+            }))
+        }
+    }
+
+    let fixture: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../appcall-auth/tests/auth_golden.json"
+    )))
+    .unwrap();
+    let expired: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/refresh_generation.json"
+    )))
+    .unwrap();
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let access_token = fixture["jwt"].as_str().unwrap().to_owned();
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        let mut bytes = [0; 8192];
+        let count = stream.read(&mut bytes).await.unwrap();
+        assert!(String::from_utf8_lossy(&bytes[..count]).starts_with("POST /api/auth/refresh "));
+        let body = serde_json::json!({
+            "accessToken": access_token,
+            "refreshToken": "rotated-refresh"
+        })
+        .to_string();
+        stream
+            .write_all(
+                format!(
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                )
+                .as_bytes(),
+            )
+            .await
+            .unwrap();
+    });
+    let codec = SessionCodec::new("dashboard-refresh", false).unwrap();
+    let jwt =
+        appcall_auth::JwtVerifier::new(fixture["jwt_secret"].as_str().unwrap(), Default::default())
+            .unwrap();
+    let broker = Broker::new(&format!("http://{address}"), "appcall").unwrap();
+    let browser = Browser {
+        codec: &codec,
+        identity: Identity {
+            jwt: &jwt,
+            memberships: &Allow,
+            broker: &broker,
+        },
+        public_origin: "https://app.example",
+    };
+    let dashboard = Dashboard {
+        browser: &browser,
+        data: &Failing(Error::Unavailable),
+    };
+    let session = Session {
+        access_token: expired["expired_access_token"].as_str().unwrap().into(),
+        refresh_token: "old-single-use".into(),
+        user_id: "11111111-1111-1111-1111-111111111111".into(),
+        email: "fixture@example.invalid".into(),
+        tenant_id: "tenant-a".into(),
+        tenant_name: "Tenant".into(),
+    };
+    let cookies = format!("appcall_session={}", codec.seal_session(&session).unwrap());
+    let request = Request {
+        method: "GET",
+        path: "/app/connectors",
+        cookies: &cookies,
+        origin: None,
+        referer: None,
+        fields: BTreeMap::new(),
+        now: 1800000000,
+    };
+    let response = dashboard.handle(&request).await.unwrap();
+    assert_eq!(response.status, 503);
+    assert!(!response.body.contains("old-single-use"));
+    assert!(!response.body.contains("rotated-refresh"));
+    assert!(response
+        .headers
+        .iter()
+        .all(|(_, value)| !value.contains("old-single-use") && !value.contains("rotated-refresh")));
+    let cookie = response
+        .headers
+        .iter()
+        .find(|(key, _)| key == "Set-Cookie")
+        .expect("renderer errors must hand off the rotated session")
+        .1
+        .strip_prefix("appcall_session=")
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap();
+    let persisted = codec.open_session(cookie).unwrap();
+    assert_eq!(persisted.access_token, fixture["jwt"].as_str().unwrap());
+    assert_eq!(persisted.refresh_token, "rotated-refresh");
+    server.await.unwrap();
+}
+
+#[tokio::test]
+async fn unrotated_dashboard_renderer_error_does_not_issue_session_cookie() {
+    struct Allow;
+    impl appcall_auth::MembershipVerifier for Allow {
+        fn verify_membership(
+            &self,
+            _: &appcall_auth::AccessClaims,
+            tenant: &str,
+            _: &str,
+        ) -> Result<Option<appcall_auth::Membership>, appcall_auth::AuthError> {
+            Ok(Some(appcall_auth::Membership {
+                tenant_id: tenant.into(),
+                allowed_brands: appcall_auth::Grant::All,
+                scopes: appcall_auth::Grant::All,
+            }))
+        }
+    }
+    let fixture: Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../appcall-auth/tests/auth_golden.json"
+    )))
+    .unwrap();
+    let codec = SessionCodec::new("dashboard-unrotated", false).unwrap();
+    let jwt =
+        appcall_auth::JwtVerifier::new(fixture["jwt_secret"].as_str().unwrap(), Default::default())
+            .unwrap();
+    let broker = Broker::new("http://127.0.0.1:1", "appcall").unwrap();
+    let browser = Browser {
+        codec: &codec,
+        identity: Identity {
+            jwt: &jwt,
+            memberships: &Allow,
+            broker: &broker,
+        },
+        public_origin: "https://app.example",
+    };
+    let dashboard = Dashboard {
+        browser: &browser,
+        data: &Failing(Error::Unavailable),
+    };
+    let session = Session {
+        access_token: fixture["jwt"].as_str().unwrap().into(),
+        refresh_token: "unused-refresh".into(),
+        user_id: "11111111-1111-1111-1111-111111111111".into(),
+        email: "fixture@example.invalid".into(),
+        tenant_id: "tenant-a".into(),
+        tenant_name: "Tenant".into(),
+    };
+    let cookies = format!("appcall_session={}", codec.seal_session(&session).unwrap());
+    let request = Request {
+        method: "GET",
+        path: "/app/connectors",
+        cookies: &cookies,
+        origin: None,
+        referer: None,
+        fields: BTreeMap::new(),
+        now: 1800000000,
+    };
+    let response = dashboard.handle(&request).await.unwrap();
+    assert_eq!(response.status, 503);
+    assert!(!response.headers.iter().any(|(key, _)| key == "Set-Cookie"));
+}
+
+#[tokio::test]
 async fn toolkit_operation_failures_replace_their_live_region_without_fake_results() {
     for error in [
         Error::Invalid,

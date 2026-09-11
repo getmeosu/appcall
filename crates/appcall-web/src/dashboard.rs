@@ -99,6 +99,7 @@ impl Dashboard<'_> {
                 )
             }
         };
+        let previous_session = session.clone();
         let (session, principal) = match self.browser.identity.refresh(&session, r.now).await {
             Ok(pair) => pair,
             Err(Error::Unavailable) => {
@@ -110,14 +111,20 @@ impl Dashboard<'_> {
                 )
             }
         };
+        let rotated_session_cookie = if session != previous_session {
+            Some(match self.browser.codec.session_cookie(&session) {
+                Ok(cookie) => cookie,
+                Err(_) => return Some(Response::new(503, "Session unavailable".into())),
+            })
+        } else {
+            None
+        };
         let result = DashboardRenderer { data: self.data }
             .render(r, operation, &session, principal)
             .await;
-        Some(match result {
-            Ok(response) => match self.browser.codec.session_cookie(&session) {
-                Ok(c) => response.cookie(c),
-                Err(_) => Response::new(503, "Session unavailable".into()),
-            },
+        let rendered = result.is_ok();
+        let response = match result {
+            Ok(response) => response,
             Err(e) => Response::new(
                 match e {
                     Error::Invalid => 400,
@@ -130,7 +137,17 @@ impl Dashboard<'_> {
                 },
                 escape(&e.to_string()),
             ),
-        })
+        };
+        if let Some(cookie) = rotated_session_cookie {
+            return Some(response.cookie(cookie));
+        }
+        if rendered {
+            return Some(match self.browser.codec.session_cookie(&session) {
+                Ok(cookie) => response.cookie(cookie),
+                Err(_) => Response::new(503, "Session unavailable".into()),
+            });
+        }
+        Some(response)
     }
 }
 fn session_required(drawer: bool) -> Response {
