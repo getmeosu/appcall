@@ -2,7 +2,7 @@ use crate::*;
 use appcall_connectors::Registry;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 
 pub struct HttpResponse {
     pub status: u16,
@@ -136,6 +136,9 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         if scope.project_id.is_empty() {
             return Err(InfrastructureError);
         }
+        if scope.account_id.is_empty() {
+            return Ok(Vec::new());
+        }
         Ok(self
             .connections
             .list(&scope.project_id)
@@ -149,14 +152,17 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
             .collect())
     }
     pub async fn list_tools(&self, scope: &Scope) -> Result<Vec<Value>, InfrastructureError> {
-        let keys: BTreeSet<_> = self
-            .scoped_connections(scope)
-            .await?
-            .into_iter()
-            .map(|c| c.connector)
-            .collect();
+        let mut connection_ids_by_connector = BTreeMap::<String, Vec<String>>::new();
+        for connection in self.scoped_connections(scope).await? {
+            connection_ids_by_connector
+                .entry(connection.connector)
+                .or_default()
+                .push(connection.id);
+        }
         let mut tools = Vec::new();
-        for key in keys {
+        for (key, mut connection_ids) in connection_ids_by_connector {
+            connection_ids.sort_unstable();
+            connection_ids.dedup();
             let Ok(connector) = self.registry.connector(&key) else {
                 continue;
             };
@@ -169,7 +175,22 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
                 } else {
                     json!({"readOnlyHint":false,"destructiveHint":op.side_effect.is_empty()||op.is_destructive()})
                 };
-                let mut tool = json!({"name":encode_tool_name(&key,operation),"inputSchema":op.input_schema,"annotations":annotations});
+                // Keep provider input schemas stable; the authenticated connection
+                // target is a gateway-level selector carried in MCP metadata.
+                let mut tool = json!({
+                    "name":encode_tool_name(&key,operation),
+                    "inputSchema":op.input_schema,
+                    "annotations":annotations,
+                    "_meta":{
+                        "appcall":{
+                            "connectionIds":connection_ids,
+                            "connectionSelector":{
+                                "location":"tools/call.params.connectionId",
+                                "schema":{"type":"string","enum":connection_ids}
+                            }
+                        }
+                    }
+                });
                 if !op.title.is_empty() {
                     tool["title"] = json!(op.title)
                 }
@@ -193,6 +214,16 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         self.call_tool_with_key(scope, name, input, None, None)
             .await
     }
+    pub async fn call_tool_for_connection(
+        &self,
+        scope: &Scope,
+        name: &str,
+        connection_id: &str,
+        input: Value,
+    ) -> Result<Value, InfrastructureError> {
+        self.call_tool_with_key(scope, name, input, None, Some(connection_id.to_owned()))
+            .await
+    }
     async fn call_tool_with_key(
         &self,
         scope: &Scope,
@@ -201,6 +232,12 @@ impl<L: ConnectionLister, E: ActionExecutor, U: UsageRecorder> Server<L, E, U> {
         idempotency_key: Option<String>,
         connection_id: Option<String>,
     ) -> Result<Value, InfrastructureError> {
+        if scope.account_id.is_empty() {
+            return Ok(tool_error(
+                "MISSING_ACCOUNT_SCOPE",
+                "An account scope is required to execute MCP tools.",
+            ));
+        }
         if !idempotency_key.as_deref().is_none_or(valid_idempotency_key) {
             return Ok(tool_error("INVALID_TOOL_INPUT", "Invalid idempotency key."));
         }
@@ -368,9 +405,9 @@ fn valid_connection_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 256 && !id.chars().any(|c| c.is_control() || c.is_whitespace())
 }
 fn connection_visible_to_scope(scope: &Scope, connection: &Connection) -> bool {
-    scope.account_id.is_empty()
-        || connection.external_account_id.is_empty()
-        || connection.external_account_id == scope.account_id
+    !scope.account_id.is_empty()
+        && (connection.external_account_id.is_empty()
+            || connection.external_account_id == scope.account_id)
 }
 #[derive(Clone, Copy)]
 enum ConnectionSelectionError {
