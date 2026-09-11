@@ -62,6 +62,45 @@ describe("connector outbound HTTP boundary", () => {
     });
   });
 
+  test("cancels a streaming response after the byte limit is crossed", async () => {
+    let canceled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("1234"));
+        controller.enqueue(new TextEncoder().encode("5"));
+      },
+      cancel() {
+        canceled = true;
+      },
+    });
+    const client = createConnectorHttpClient({
+      allowedHosts: ["slack.com"],
+      maxResponseBytes: 4,
+      fetch: async () => new Response(body),
+    });
+
+    await expect(client.fetchText("https://slack.com/api/chat.postMessage")).rejects.toMatchObject({
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    expect(canceled).toBe(true);
+  });
+
+  test("does not treat an allowed-host suffix as an allowed host", async () => {
+    let dispatched = false;
+    const client = createConnectorHttpClient({
+      allowedHosts: ["api.telegram.org"],
+      maxResponseBytes: 1024,
+      fetch: async () => {
+        dispatched = true;
+        return new Response("should not fetch");
+      },
+    });
+
+    await expect(client.fetchText("https://api.telegram.org.attacker.example/bot/getMe"))
+      .rejects.toMatchObject({ code: "OUTBOUND_HOST_NOT_ALLOWED" });
+    expect(dispatched).toBe(false);
+  });
+
   test("rejects redirect responses instead of following them to unchecked hosts", async () => {
     const client = createConnectorHttpClient({
       allowedHosts: ["slack.com"],
