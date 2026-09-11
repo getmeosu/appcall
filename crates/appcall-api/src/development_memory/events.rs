@@ -105,27 +105,9 @@ impl MemoryEvents {
                 data.event_dedup.remove(dedup_key);
             }
         }
-        let mut id = if let Some(provider_event_key) = provider_event_key {
-            provider_event_key.to_owned()
-        } else {
-            fresh_public_id(&data, &expected.project_id)?
-        };
-        let key = (expected.project_id.clone(), id.clone());
-        if let Some(old) = data.events.get(&key) {
-            if old.connection_id == expected.id
-                && old.connector == expected.connector
-                && old.external_account_id == expected.external_account_id
-            {
-                if let Some(dedup_key) = dedup_key.as_ref() {
-                    data.event_dedup.insert(dedup_key.clone(), id.clone());
-                }
-                return Ok(IngestResult {
-                    event_id: id,
-                    duplicate: true,
-                });
-            }
-            id = fresh_public_id(&data, &expected.project_id)?;
-        }
+        // Event.id is the opaque public resource identity. Keep the raw parser
+        // key only in the connection-scoped in-memory dedup map.
+        let id = fresh_public_id(&data, &expected.project_id)?;
         let key = (expected.project_id.clone(), id.clone());
         let position = data
             .next_sequence

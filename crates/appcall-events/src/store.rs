@@ -91,7 +91,13 @@ impl<'a> PgEvents<'a> {
             return Err(Error::Conflict);
         }
         let scoped_dedup = provider_event_key_column_exists(&mut tx)?;
-        if let (true, Some(provider_event_key)) = (scoped_dedup, provider_event_key) {
+        if provider_event_key.is_some() && !scoped_dedup {
+            // Do not store a provider key as a public ID while an older schema
+            // is still active; that would make a later migration unable to
+            // distinguish provider provenance from legacy resource IDs.
+            return Err(Error::Storage);
+        }
+        if let Some(provider_event_key) = provider_event_key {
             if let Some(prior) = tx
                 .query_opt(
                     "SELECT id,external_account_id FROM webhook_events WHERE project_id=$1 AND connector=$2 AND connection_id=$3 AND provider_event_key=$4",
@@ -114,64 +120,25 @@ impl<'a> PgEvents<'a> {
                     duplicate: true,
                 });
             }
-        }
-        let mut id = if let Some(provider_event_key) = provider_event_key {
-            provider_event_key.to_owned()
-        } else {
-            fresh_public_id(&mut tx, &claims.project_id)?
-        };
-        if scoped_dedup {
             if let Some(prior) = tx
                 .query_opt(
-                    "SELECT connection_id,connector,external_account_id,provider_event_key FROM webhook_events WHERE project_id=$1 AND id=$2",
-                    &[&claims.project_id, &id],
+                    "SELECT provider_event_key FROM webhook_events WHERE project_id=$1 AND id=$2",
+                    &[&claims.project_id, &provider_event_key],
                 )
                 .map_err(|_| Error::Storage)?
             {
-                let same_owner = prior.get::<_, String>(0) == claims.connection_id
-                    && prior.get::<_, String>(1) == claims.connector
-                    && prior.get::<_, String>(2) == brand;
-                let same_provider_key = provider_event_key.is_some_and(|key| {
-                    prior
-                        .get::<_, Option<String>>(3)
-                        .as_deref()
-                        .is_none_or(|prior_key| prior_key == key)
-                });
-                if same_owner && same_provider_key {
-                    if let Some(provider_event_key) = provider_event_key {
-                        tx.execute(
-                            "UPDATE webhook_events SET provider_event_key=$3 WHERE project_id=$1 AND id=$2 AND provider_event_key IS NULL",
-                            &[&claims.project_id, &id, &provider_event_key],
-                        )
-                        .map_err(|_| Error::Storage)?;
-                    }
-                    tx.commit().map_err(|_| Error::Storage)?;
-                    return Ok(IngestResult {
-                        event_id: id,
-                        duplicate: true,
-                    });
+                let known_provider_key: Option<String> = prior.get(0);
+                if known_provider_key.is_none() {
+                    // A NULL key is an intentionally unknown legacy row. A
+                    // matching provider key is an ambiguous redelivery, not a
+                    // safe duplicate and not a safe new insert.
+                    return Err(Error::Conflict);
                 }
-                id = fresh_public_id(&mut tx, &claims.project_id)?;
             }
-        } else if let Some(prior) = tx
-            .query_opt(
-                "SELECT connection_id,connector,external_account_id FROM webhook_events WHERE project_id=$1 AND id=$2",
-                &[&claims.project_id, &id],
-            )
-            .map_err(|_| Error::Storage)?
-        {
-            if prior.get::<_, String>(0) == claims.connection_id
-                && prior.get::<_, String>(1) == claims.connector
-                && prior.get::<_, String>(2) == brand
-            {
-                tx.commit().map_err(|_| Error::Storage)?;
-                return Ok(IngestResult {
-                    event_id: id,
-                    duplicate: true,
-                });
-            }
-            id = fresh_public_id(&mut tx, &claims.project_id)?;
         }
+        // Event.id is the opaque public resource identity. The raw provider
+        // key is stored only in provider_event_key for scoped deduplication.
+        let id = fresh_public_id(&mut tx, &claims.project_id)?;
         let created = if scoped_dedup {
             tx.execute(
                 "INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id,provider_event_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(project_id,id) DO NOTHING",
