@@ -94,9 +94,7 @@ impl DispatchSink for Sink {
 fn acceptance_outbox_and_brand_replay_are_atomic() {
     let mut db = Db::new();
     db.client
-        .batch_execute(
-            "ALTER TABLE webhook_outbox ADD CONSTRAINT reject_test CHECK(event_id <> 'event')",
-        )
+        .batch_execute("ALTER TABLE webhook_outbox ADD CONSTRAINT reject_test CHECK(false)")
         .unwrap();
     assert!(PgEvents::new(&mut db.client)
         .accept(&claims("a"), &parsed("event"))
@@ -114,6 +112,8 @@ fn acceptance_outbox_and_brand_replay_are_atomic() {
     let mut store = PgEvents::new(&mut db.client);
     let a_event = store.accept(&claims("a"), &parsed("event")).unwrap();
     assert!(!a_event.duplicate);
+    assert!(a_event.event_id.starts_with("wh_"));
+    assert_ne!(a_event.event_id, "event");
     assert_eq!(
         store.accept(&claims("a"), &parsed("event")).unwrap(),
         IngestResult {
@@ -123,6 +123,8 @@ fn acceptance_outbox_and_brand_replay_are_atomic() {
     );
     let b_event = store.accept(&claims("b"), &parsed("event")).unwrap();
     assert!(!b_event.duplicate);
+    assert!(b_event.event_id.starts_with("wh_"));
+    assert_ne!(b_event.event_id, "event");
     assert_ne!(a_event.event_id, b_event.event_id);
     assert_eq!(
         store.accept(&claims("b"), &parsed("event")).unwrap(),
@@ -407,7 +409,7 @@ fn event_dedup_migration_rolls_back_atomically_and_preserves_legacy_reads() {
     }
     client
         .batch_execute(
-            "INSERT INTO projects(id,name) VALUES('p','p'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('a','p','slack','api_key','active','brand-a','brand'); INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id) VALUES('legacy','p','a','slack','','{}','brand-a'); INSERT INTO webhook_outbox(project_id,event_id) VALUES('p','legacy')",
+            "INSERT INTO projects(id,name) VALUES('p','p'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('a','p','slack','api_key','active','brand-a','brand'); INSERT INTO webhook_events(id,project_id,connection_id,connector,operation,payload,external_account_id) VALUES('wh_0123456789abcdef0123456789abcdef','p','a','slack','','{}','brand-a'),('legacy-provider-key','p','a','slack','','{}','brand-a'); INSERT INTO webhook_outbox(project_id,event_id) VALUES('p','wh_0123456789abcdef0123456789abcdef'),('p','legacy-provider-key')",
         )
         .unwrap();
     let mut tx = client.transaction().unwrap();
@@ -424,45 +426,129 @@ fn event_dedup_migration_rolls_back_atomically_and_preserves_legacy_reads() {
         )
         .unwrap()
         .get::<_, bool>(0));
-    assert_eq!(
-        PgEvents::new(&mut client)
-            .get(&Principal::project("p").unwrap(), "legacy")
-            .unwrap()
-            .id,
-        "legacy"
-    );
+    for id in ["wh_0123456789abcdef0123456789abcdef", "legacy-provider-key"] {
+        assert_eq!(
+            PgEvents::new(&mut client)
+                .get(&Principal::project("p").unwrap(), id)
+                .unwrap()
+                .id,
+            id
+        );
+    }
 
     client
         .batch_execute(include_str!(
             "../../../migrations/202609110001_event_connection_dedup.sql"
         ))
         .unwrap();
-    assert_eq!(
-        client
+    for id in ["wh_0123456789abcdef0123456789abcdef", "legacy-provider-key"] {
+        assert!(client
             .query_one(
-                "SELECT provider_event_key FROM webhook_events WHERE project_id='p' AND id='legacy'",
-                &[],
+                "SELECT provider_event_key IS NULL FROM webhook_events WHERE project_id='p' AND id=$1",
+                &[&id],
             )
             .unwrap()
-            .get::<_, String>(0),
-        "legacy"
+            .get::<_, bool>(0));
+        let mut store = PgEvents::new(&mut client);
+        assert_eq!(
+            store
+                .replay(&brand("brand-a"), id, &mut Sink::new(false))
+                .unwrap(),
+            id
+        );
+        assert_eq!(
+            store
+                .accept(
+                    &claims("a"),
+                    &ParsedWebhook {
+                        idempotency_key: id.into(),
+                        operation: String::new(),
+                        sanitized: json!({}),
+                    },
+                )
+                .unwrap_err(),
+            Error::Conflict
+        );
+    }
+    assert_eq!(
+        client
+            .query_one("SELECT count(*) FROM webhook_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
     );
     assert_eq!(
-        PgEvents::new(&mut client)
-            .accept(
-                &claims("a"),
-                &ParsedWebhook {
-                    idempotency_key: "legacy".into(),
-                    operation: String::new(),
-                    sanitized: json!({}),
-                },
-            )
-            .unwrap(),
-        IngestResult {
-            event_id: "legacy".into(),
-            duplicate: true,
-        }
+        client
+            .query_one("SELECT count(*) FROM webhook_outbox", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
     );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn provider_keys_fail_closed_until_dedup_column_exists() {
+    let mut client = Client::connect(
+        &std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap(),
+        NoTls,
+    )
+    .unwrap();
+    let schema = format!("events_no_dedup_column_{}", uuid::Uuid::new_v4().simple());
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for migration in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290003_usage_brand_dim.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070001_event_outbox.sql"),
+    ] {
+        client.batch_execute(migration).unwrap();
+    }
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','p'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('a','p','slack','api_key','active','brand-a','brand')",
+        )
+        .unwrap();
+    assert_eq!(
+        PgEvents::new(&mut client)
+            .accept(&claims("a"), &parsed("provider-before-migration"))
+            .unwrap_err(),
+        Error::Storage
+    );
+    assert_eq!(
+        client
+            .query_one("SELECT count(*) FROM webhook_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        client
+            .query_one("SELECT count(*) FROM webhook_outbox", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+    let empty = PgEvents::new(&mut client)
+        .accept(
+            &claims("a"),
+            &ParsedWebhook {
+                idempotency_key: String::new(),
+                operation: String::new(),
+                sanitized: json!({}),
+            },
+        )
+        .unwrap();
+    assert!(!empty.duplicate);
+    assert!(empty.event_id.starts_with("wh_"));
     client
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
@@ -506,6 +592,8 @@ fn event_only_webhooks_retain_usage_and_replay_without_sync_jobs() {
                 )
                 .unwrap();
             assert!(!accepted.duplicate);
+            assert!(accepted.event_id.starts_with("wh_"));
+            assert_ne!(accepted.event_id, *event_id);
             accepted_ids.push(accepted.event_id);
         }
     }
@@ -542,6 +630,16 @@ fn event_only_webhooks_retain_usage_and_replay_without_sync_jobs() {
     assert_eq!(
         db.client
             .query_one("SELECT count(*) FROM usage_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT count(*) FROM webhook_events WHERE provider_event_key='same-provider-key' AND id <> provider_event_key",
+                &[],
+            )
             .unwrap()
             .get::<_, i64>(0),
         2

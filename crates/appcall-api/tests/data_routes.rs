@@ -1118,6 +1118,10 @@ fn webhook_public_ids_and_routes_are_connection_scoped_and_project_owned() {
         (a, b)
     };
     assert_ne!(a.event_id, b.event_id);
+    assert!(a.event_id.starts_with("wh_"));
+    assert!(b.event_id.starts_with("wh_"));
+    assert_ne!(a.event_id, "same-provider-key");
+    assert_ne!(b.event_id, "same-provider-key");
     let mut p = appcall_auth::Principal::project("p").unwrap();
     p.brand_id = Some("brand-a".into());
     let page = webhook_read(

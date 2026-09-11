@@ -81,6 +81,10 @@ async fn development_memory_scopes_identical_provider_keys_to_connections() {
     assert_eq!(second.status, 202);
     let first_id = first.body["eventId"].as_str().unwrap();
     let second_id = second.body["eventId"].as_str().unwrap();
+    assert!(first_id.starts_with("wh_"));
+    assert!(second_id.starts_with("wh_"));
+    assert_ne!(first_id, "same-provider-event");
+    assert_ne!(second_id, "same-provider-event");
     assert_ne!(first_id, second_id);
 
     let redelivery = events
@@ -187,6 +191,8 @@ async fn development_memory_scopes_identical_provider_keys_to_connections() {
         .unwrap()
         .unwrap();
     assert_eq!(other.status, 202);
+    assert!(other.body["eventId"].as_str().unwrap().starts_with("wh_"));
+    assert_ne!(other.body["eventId"], "same-provider-event");
     assert_eq!(events.poll(&other_principal, "").await.unwrap().len(), 1);
     assert_eq!(events.poll(&principal, "").await.unwrap().len(), 2);
     assert_eq!(repo.list_usage_events("other", None).unwrap().len(), 1);
@@ -382,6 +388,8 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
             .unwrap();
         assert_eq!(first_ingest.status, 202);
         let public_event_id = first_ingest.body["eventId"].as_str().unwrap().to_owned();
+        assert!(public_event_id.starts_with("wh_"));
+        assert_ne!(public_event_id, "provider-event");
         let redelivery = routes
             .handle(None, &request(TOKEN, body))
             .await

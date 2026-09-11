@@ -385,6 +385,18 @@ fn run_event(mode: u8) {
     let accepted = appcall_events::PgEvents::new(&mut db)
         .accept(&claims, &parsed)
         .unwrap();
+    assert!(accepted.event_id.starts_with("wh_"));
+    assert_ne!(accepted.event_id, parsed.idempotency_key);
+    assert_eq!(
+        db.query_one(
+            "SELECT provider_event_key FROM webhook_events WHERE project_id='p' AND id=$1",
+            &[&accepted.event_id],
+        )
+        .unwrap()
+        .get::<_, Option<String>>(0)
+        .as_deref(),
+        Some(parsed.idempotency_key.as_str())
+    );
     // A failing usage write must roll back sync scheduling and outbox completion together.
     db.batch_execute(
         "ALTER TABLE usage_monthly_rollups ADD CONSTRAINT fail_usage CHECK(quantity=0)",
