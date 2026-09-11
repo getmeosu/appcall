@@ -5,7 +5,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
         mpsc, Arc,
     },
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 const TOKEN: &str = "actor-test-token-at-least-thirty-two-bytes";
 
@@ -116,7 +116,12 @@ fn reopened_host_auto_recovers_stale_read_and_idempotent_attempts() {
                 PayloadRef::durable("input").unwrap(),
             )
             .unwrap();
-        let stale = match initial.drive(workflow, 0).unwrap() {
+        let now_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+            .min(i64::MAX as u128) as i64;
+        let stale = match initial.drive(workflow, now_ms).unwrap() {
             DriveOutcome::Activity(attempt) => attempt,
             other => panic!("{other:?}"),
         };

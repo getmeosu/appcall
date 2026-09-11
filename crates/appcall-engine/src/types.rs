@@ -95,6 +95,7 @@ pub enum RunFailure {
     ResourceLimit,
     MissingActivityImplementation,
     PayloadUnavailable,
+    RetryExhausted,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EffectPolicy {
@@ -227,6 +228,12 @@ pub struct ActivityAttempt {
     pub version: String,
     pub input: PayloadRef,
     pub policy: EffectPolicy,
+    #[serde(default)]
+    pub started_at_ms: i64,
+    #[serde(default)]
+    pub retry_started_at_ms: i64,
+    #[serde(default)]
+    pub retry_policy: Option<RetryPolicy>,
 }
 #[derive(Clone, Debug)]
 pub enum DriveOutcome {
@@ -243,6 +250,13 @@ pub enum TaskState {
     Invoking,
     Done(PayloadRef),
     Uncertain,
+    Retrying(RetryState),
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RetryState {
+    pub next_attempt_at_ms: i64,
+    pub retry_started_at_ms: i64,
+    pub policy: RetryPolicy,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ActivityTask {
