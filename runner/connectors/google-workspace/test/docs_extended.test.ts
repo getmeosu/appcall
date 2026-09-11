@@ -3,6 +3,11 @@ import docCreateFixture from "../fixtures/doc_create.json";
 import rateLimitedFixture from "../fixtures/rate_limited.json";
 import { createDocsClient, validateCreateDocumentInput } from "../src/docs";
 
+const docsOperations: Array<(client: ReturnType<typeof createDocsClient>) => Promise<unknown>> = [
+  (client) => client.getDocument({ documentId: "doc-id" }),
+  (client) => client.createDocument({ title: "Test" }),
+];
+
 describe("google-workspace Docs extended actions", () => {
   // ─── docs.create ────────────────────────────────────────────────────────
 
@@ -51,6 +56,64 @@ describe("google-workspace Docs extended actions", () => {
     await expect(
       client.createDocument({ title: "Test" })
     ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  test("all Docs operations preserve rate-limit codes and valid Retry-After", async () => {
+    for (const operation of docsOperations) {
+      const client = createDocsClient({
+        accessToken: "token",
+        fetch: async () => new Response(JSON.stringify(rateLimitedFixture), {
+          status: 429,
+          headers: { "Retry-After": "37" },
+        }),
+      });
+
+      await expect(operation(client)).rejects.toMatchObject({
+        ok: false,
+        code: "CONNECTOR_RATE_LIMITED",
+        retryAfterSeconds: 37,
+      });
+    }
+  });
+
+  test("all Docs operations use a safe fallback for malformed Retry-After", async () => {
+    for (const retryAfter of ["not-a-number", "0", "-5", "999999999"]) {
+      for (const operation of docsOperations) {
+        const client = createDocsClient({
+          accessToken: "token",
+          fetch: async () => new Response(JSON.stringify({
+            error: { code: 429, message: "Rate Limit Exceeded" },
+          }), {
+            status: 429,
+            headers: { "Retry-After": retryAfter },
+          }),
+        });
+
+        const error = await operation(client).catch((value: unknown) => value as Record<string, unknown>);
+        expect(error).toMatchObject({
+          ok: false,
+          code: "CONNECTOR_RATE_LIMITED",
+          retryAfterSeconds: 10,
+        });
+      }
+    }
+  });
+
+  test("all Docs operations keep 400 and 401 as non-retryable upstream errors", async () => {
+    for (const status of [400, 401]) {
+      for (const operation of docsOperations) {
+        const client = createDocsClient({
+          accessToken: "token",
+          fetch: async () => new Response(JSON.stringify({
+            error: { code: status, status, message: status === 400 ? "Bad Request" : "Unauthorized" },
+          }), { status }),
+        });
+
+        const error = await operation(client).catch((value: unknown) => value as Record<string, unknown>);
+        expect(error).toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+        expect(error).not.toHaveProperty("retryAfterSeconds");
+      }
+    }
   });
 
   test("createDocument with empty title throws validation error", () => {
