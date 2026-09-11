@@ -129,6 +129,21 @@ impl<S: Store> Engine<S> {
     pub fn failure_reason(&self, id: &str) -> Result<Option<RunFailure>> {
         Ok(self.store.load(id)?.failure_reason)
     }
+    pub fn result(&self, id: &str) -> Result<RunResult> {
+        let run = self.store.load(id)?;
+        match run.state {
+            RunState::Completed => Ok(RunResult::Completed(run.output.ok_or(Error::Conflict)?)),
+            RunState::Failed | RunState::Nondeterminism => {
+                Ok(RunResult::Failed(run.failure_reason))
+            }
+            RunState::Cancelled => Ok(RunResult::Cancelled),
+            RunState::OutcomeUnknown => Ok(RunResult::Unknown),
+            RunState::Running
+            | RunState::CancelRequested
+            | RunState::NeedsInput
+            | RunState::NeedsImplementation => Ok(RunResult::Pending),
+        }
+    }
     pub fn has_native_activity(&self, name: &str, version: &str) -> bool {
         self.activities
             .get(&(name.into(), version.into()))
