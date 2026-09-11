@@ -24,7 +24,12 @@ export type CalDAVClientOptions = CalDAVCredentials & {
 
 /** Build HTTP Basic auth header value from username:password */
 export function buildBasicAuth(username: string, password: string): string {
-  const encoded = btoa(`${username}:${password}`);
+  const bytes = new TextEncoder().encode(`${username}:${password}`);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  const encoded = btoa(binary);
   return `Basic ${encoded}`;
 }
 
