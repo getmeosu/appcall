@@ -41,6 +41,8 @@ pub struct Config {
     state_key: Zeroizing<Vec<u8>>,
     apps: BTreeMap<String, AppCredentials>,
     mcp_allowed_origins: Vec<String>,
+    secret_retention_days: u64,
+    secret_cleanup_batch: usize,
     pub connector_dir: String,
     pub runner_url: String,
     runner_token: Zeroizing<String>,
@@ -95,6 +97,13 @@ impl Config {
             state_key: Zeroizing::new(state),
             apps,
             mcp_allowed_origins: mcp_allowed_origins_from_map(e)?,
+            secret_retention_days: positive_bounded(e, "APPCALL_SECRET_RETENTION_DAYS", 7, 3650)?,
+            secret_cleanup_batch: positive_bounded(
+                e,
+                "APPCALL_SECRET_CLEANUP_BATCH",
+                100,
+                appcall_store::MAX_SECRET_CLEANUP_BATCH,
+            )? as usize,
             connector_dir: if value("APPCALL_CONNECTOR_DIR").is_empty() {
                 "runner/connectors".into()
             } else {
@@ -140,6 +149,12 @@ impl Config {
     }
     pub fn mcp_allowed_origins(&self) -> &[String] {
         &self.mcp_allowed_origins
+    }
+    pub fn secret_retention_days(&self) -> u64 {
+        self.secret_retention_days
+    }
+    pub fn secret_cleanup_batch(&self) -> usize {
+        self.secret_cleanup_batch
     }
     pub fn registry(&self) -> Result<Registry> {
         Registry::load(&self.connector_dir).map_err(|_| Error::Registry)
@@ -278,6 +293,24 @@ fn nonnegative(e: &BTreeMap<String, String>, key: &str) -> Result<i64> {
         return Err(Error::Configuration);
     }
     Ok(n)
+}
+
+fn positive_bounded(
+    e: &BTreeMap<String, String>,
+    key: &str,
+    default: u64,
+    max: usize,
+) -> Result<u64> {
+    let raw = e.get(key).map(|v| v.trim()).unwrap_or("");
+    let value = if raw.is_empty() {
+        default
+    } else {
+        raw.parse::<u64>().map_err(|_| Error::Configuration)?
+    };
+    if value == 0 || value > max as u64 {
+        return Err(Error::Configuration);
+    }
+    Ok(value)
 }
 pub fn policy_from_map(e: &BTreeMap<String, String>) -> Result<appcall_actions::PolicyConfig> {
     let text = |key: &str| e.get(key).map(|s| s.trim().to_owned()).unwrap_or_default();

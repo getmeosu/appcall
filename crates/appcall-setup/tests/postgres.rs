@@ -83,12 +83,22 @@ impl Database {
             .unwrap();
         client
             .batch_execute(include_str!(
+                "../../../migrations/202605290002_provider_subaccounts.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
                 "../../../migrations/202605290004_connections_owner_check.sql"
             ))
             .unwrap();
         client
             .batch_execute(include_str!(
                 "../../../migrations/202609070004_oauth_refresh_intents.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202609120004_secret_retention.sql"
             ))
             .unwrap();
         client

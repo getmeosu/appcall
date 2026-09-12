@@ -9,6 +9,32 @@ afterEach(() => {
 });
 
 describe("runner protocol", () => {
+  test("cancels an already-aborted request body before the first read", async () => {
+    let canceled = false;
+    const body = new ReadableStream<Uint8Array>({
+      cancel() {
+        canceled = true;
+      },
+    });
+    const controller = new AbortController();
+    controller.abort(new Error("client disconnected"));
+
+    const response = await Promise.race([
+      handleRPC(new Request("http://runner.local/rpc", {
+        method: "POST",
+        body,
+        signal: controller.signal,
+      })),
+      new Promise<"stalled">((resolve) => setTimeout(() => resolve("stalled"), 100)),
+    ]);
+
+    expect(response).not.toBe("stalled");
+    if (response === "stalled") return;
+    expect(response.status).toBe(504);
+    expect((await response.json()).error.code).toBe("OPERATION_TIMEOUT");
+    expect(canceled).toBe(true);
+  });
+
   test("runner.describe returns protocol version", async () => {
     const response = await handleRPC(
       new Request("http://runner.local/rpc", {

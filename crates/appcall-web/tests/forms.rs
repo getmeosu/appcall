@@ -30,7 +30,7 @@ fn guided_input_uses_schema_types_and_preserves_repeated_key_values() {
     ]);
     assert_eq!(
         assemble_guided_input(&schema, &fields).unwrap(),
-        json!({"count":42.0,"enabled":true,"emails":[{"email":"a@example.invalid"},{"email":"b@example.invalid"}],"metadata":{"first":"a","second":"b"},"nested":{"title":"Hello"}})
+        json!({"count":42,"enabled":true,"emails":[{"email":"a@example.invalid"},{"email":"b@example.invalid"}],"metadata":{"first":"a","second":"b"},"nested":{"title":"Hello"}})
     );
 }
 
@@ -159,6 +159,57 @@ fn guided_input_bounds_duplicates_and_depth() {
         deep = json!({"type":"object","properties":{"nested":deep}})
     }
     assert!(assemble_guided_input(&deep, &BTreeMap::new()).is_err());
+}
+
+#[test]
+fn guided_numeric_fields_reject_malformed_values_and_preserve_integer_precision() {
+    let number_schema = json!({
+        "type": "object",
+        "properties": {"amount": {"type": "number"}}
+    });
+    for raw in ["not-a-number", "NaN", "inf", "+1"] {
+        let fields = BTreeMap::from([("f.amount".into(), vec![raw.into()])]);
+        assert_eq!(
+            assemble_guided_input(&number_schema, &fields),
+            Err(Error::Invalid),
+            "{raw} must not be silently omitted"
+        );
+    }
+
+    let integer_schema = json!({
+        "type": "object",
+        "properties": {"count": {"type": "integer"}}
+    });
+    let exact = BTreeMap::from([("f.count".into(), vec!["9007199254740993".into()])]);
+    assert_eq!(
+        assemble_guided_input(&integer_schema, &exact).unwrap(),
+        json!({"count": 9007199254740993u64}),
+        "representable JSON integers must not round through f64"
+    );
+    for raw in ["1.5", "1.0", "18446744073709551616"] {
+        let fields = BTreeMap::from([("f.count".into(), vec![raw.into()])]);
+        assert_eq!(
+            assemble_guided_input(&integer_schema, &fields),
+            Err(Error::Invalid),
+            "{raw} must not be accepted as an integer"
+        );
+    }
+}
+
+#[test]
+fn guided_numeric_arrays_reject_an_invalid_item_instead_of_partial_dispatch() {
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "assigneeIds": {"type": "array", "items": {"type": "integer"}}
+        }
+    });
+    let fields = BTreeMap::from([("f.assigneeIds".into(), vec!["123,typo,456".into()])]);
+    assert_eq!(
+        assemble_guided_input(&schema, &fields),
+        Err(Error::Invalid),
+        "one malformed assignee must reject the entire replacement list"
+    );
 }
 
 struct GuidedFixture(serde_json::Value);

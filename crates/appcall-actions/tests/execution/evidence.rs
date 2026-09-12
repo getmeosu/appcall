@@ -213,6 +213,74 @@ async fn response_received_failure_releases_quota_but_unknown_retains_it() {
 }
 
 #[tokio::test]
+async fn ambiguous_runner_output_failure_keeps_quota_reserved() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let error = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        Catalog { read: false },
+        Credentials,
+        Scripted(Mutex::new(
+            vec![Err(RunnerFailure {
+                code: "ACTION_RESPONSE_TOO_LARGE".into(),
+                outcome: Unknown,
+                ..Default::default()
+            })]
+            .into(),
+        )),
+        Allow,
+    )
+    .execute(request("owner"))
+    .await
+    .unwrap_err();
+
+    assert_eq!(error.code, "ACTION_RESPONSE_TOO_LARGE");
+    assert_eq!(error.evidence.outcome, Unknown);
+    let state = state.lock().unwrap();
+    assert_eq!(state.releases, 0);
+    assert!(
+        state.marked,
+        "ambiguous output must keep the dispatch fence"
+    );
+}
+
+#[tokio::test]
+async fn generic_upstream_runner_failure_keeps_quota_reserved() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let error = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        Catalog { read: false },
+        Credentials,
+        Scripted(Mutex::new(
+            vec![Err(RunnerFailure {
+                code: "CONNECTOR_UPSTREAM_ERROR".into(),
+                outcome: Unknown,
+                ..Default::default()
+            })]
+            .into(),
+        )),
+        Allow,
+    )
+    .execute(request("owner"))
+    .await
+    .unwrap_err();
+
+    assert_eq!(error.code, "CONNECTOR_UPSTREAM_ERROR");
+    assert_eq!(error.evidence.outcome, Unknown);
+    let state = state.lock().unwrap();
+    assert_eq!(state.releases, 0);
+    assert!(
+        state.marked,
+        "generic upstream failures must keep the dispatch fence"
+    );
+}
+
+#[tokio::test]
 async fn evidence_success_then_storage_failure_keeps_response_received() {
     for state in [
         State {

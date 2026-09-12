@@ -40,6 +40,8 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
         "unauthorized",
         "malformed",
         "oversized",
+        "output-too-large",
+        "invalid-output",
     ] {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
@@ -78,6 +80,8 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
                 "upstream"=>(400,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_UPSTREAM_ERROR","message":"Bad Request"}}).to_string()),
                 "unauthorized"=>(401,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_UPSTREAM_ERROR","message":"Unauthorized"}}).to_string()),
                 "oversized"=>(200,"x".repeat(4000)),
+                "output-too-large"=>(502,json!({"id":request["id"],"ok":false,"error":{"code":"OUTPUT_TOO_LARGE","message":"Operation output exceeds the manifest byte limit."}}).to_string()),
+                "invalid-output"=>(502,json!({"id":request["id"],"ok":false,"error":{"code":"CONNECTOR_RESPONSE_INVALID","message":"Connector response does not match its declared schema."}}).to_string()),
                 _=>(200,"not json".into()),
             };
             let _=write!(socket,"HTTP/1.1 {status} Test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body);
@@ -126,9 +130,25 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
                 assert_eq!(e.code, "CONNECTOR_UPSTREAM_ERROR");
                 assert!(!e.transient);
                 assert_eq!(e.retry_after_seconds, None);
-                assert_eq!(e.outcome, ActionDispatchOutcome::ResponseReceived);
+                // CONNECTOR_UPSTREAM_ERROR is also the runner's generic
+                // outer-catch code, so it cannot prove provider rejection.
+                assert_eq!(e.outcome, ActionDispatchOutcome::Unknown);
             }
-            "oversized" => assert_eq!(result.unwrap_err().code, "ACTION_RESPONSE_TOO_LARGE"),
+            "oversized" => {
+                let error = result.unwrap_err();
+                assert_eq!(error.code, "ACTION_RESPONSE_TOO_LARGE");
+                assert_eq!(error.outcome, ActionDispatchOutcome::Unknown);
+            }
+            "output-too-large" => {
+                let error = result.unwrap_err();
+                assert_eq!(error.code, "ACTION_RESPONSE_TOO_LARGE");
+                assert_eq!(error.outcome, ActionDispatchOutcome::Unknown);
+            }
+            "invalid-output" => {
+                let error = result.unwrap_err();
+                assert_eq!(error.code, "ACTION_RESPONSE_INVALID");
+                assert_eq!(error.outcome, ActionDispatchOutcome::Unknown);
+            }
             _ => {
                 let e = result.unwrap_err();
                 assert_eq!(e.code, "ACTION_FAILED");
@@ -158,6 +178,7 @@ fn runner_adapter_keeps_typed_rate_retry_and_bounds_unknown_or_oversized_respons
         .unwrap_err();
     assert_eq!(e.code, "CONNECTOR_UNAVAILABLE");
     assert!(e.transient);
+    assert_eq!(e.outcome, ActionDispatchOutcome::Unknown);
     let e = rt
         .block_on(ActionRunner::execute(&runner, &attempt(), json!({}), 1))
         .unwrap_err();

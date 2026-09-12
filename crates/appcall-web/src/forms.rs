@@ -56,11 +56,20 @@ fn field(
                 Some(Value::String(raw.into()))
             }
         }
-        "number" | "integer" => raw
-            .parse::<f64>()
-            .ok()
-            .and_then(Number::from_f64)
-            .map(Value::Number),
+        "number" => {
+            if raw.is_empty() {
+                None
+            } else {
+                Some(Value::Number(parse_json_number(raw)?))
+            }
+        }
+        "integer" => {
+            if raw.is_empty() {
+                None
+            } else {
+                Some(Value::Number(parse_integer(raw)?))
+            }
+        }
         "boolean" => match raw {
             "" => None,
             "true" => Some(Value::Bool(true)),
@@ -94,23 +103,20 @@ fn field(
                     .split(',')
                     .map(str::trim)
                     .filter(|v| !v.is_empty())
-                    .filter_map(|item| match kind {
-                        "number" | "integer" => item
-                            .parse::<f64>()
-                            .ok()
-                            .and_then(Number::from_f64)
-                            .map(Value::Number),
+                    .map(|item| match kind {
+                        "number" => Ok(Value::Number(parse_json_number(item)?)),
+                        "integer" => Ok(Value::Number(parse_integer(item)?)),
                         "object"
                             if items
                                 .get("properties")
                                 .and_then(|p| p.get("email"))
                                 .is_some() =>
                         {
-                            Some(serde_json::json!({"email":item}))
+                            Ok(serde_json::json!({"email":item}))
                         }
-                        _ => Some(Value::String(item.into())),
+                        _ => Ok(Value::String(item.into())),
                     })
-                    .collect::<Vec<_>>();
+                    .collect::<Result<Vec<_>, Error>>()?;
                 if values.is_empty() {
                     None
                 } else {
@@ -172,6 +178,33 @@ fn nested_array(schema: &Value) -> bool {
             .and_then(|items| items.get("type"))
             .and_then(Value::as_str)
             == Some("array")
+}
+
+fn parse_json_number(raw: &str) -> Result<Number, Error> {
+    if is_plain_integer(raw) {
+        return parse_integer(raw);
+    }
+    match serde_json::from_str::<Value>(raw) {
+        Ok(Value::Number(number)) => Ok(number),
+        _ => Err(Error::Invalid),
+    }
+}
+
+fn parse_integer(raw: &str) -> Result<Number, Error> {
+    if raw.starts_with('-') {
+        raw.parse::<i64>()
+            .map(Number::from)
+            .map_err(|_| Error::Invalid)
+    } else {
+        raw.parse::<u64>()
+            .map(Number::from)
+            .map_err(|_| Error::Invalid)
+    }
+}
+
+fn is_plain_integer(raw: &str) -> bool {
+    let digits = raw.strip_prefix('-').unwrap_or(raw);
+    !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 fn is_google_sheets_cell(value: &Value) -> bool {

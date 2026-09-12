@@ -286,7 +286,7 @@ impl Lifecycle {
    if !valid||current.connector!=pending.connection.connector||current.external_account_id!=pending.connection.external_account_id||current.auth_type!=pending.connection.auth_type||current.secret_ref_id!=pending.connection.secret_ref_id||current.status!=Status::Degraded{return Ok(Err(Error::ConnectionUnavailable))}
    tx.store_secret(&current.project_id,&secret,&format!("oauth_tokens_{}",current.id),&encoded)?;
    let activated=tx.replace_credentials(scope,&current.id,&secret,AuthType::OAuth2)?;
-   tx.client().execute("UPDATE oauth_refresh_intents SET state='completed',updated_at=now() WHERE project_id=$1 AND connection_id=$2 AND attempt_id=$3",&[&current.project_id,&current.id,&pending.attempt])?;
+   tx.client().execute("UPDATE oauth_refresh_intents SET state='completed',pkce_secret_ref_id=NULL,updated_at=now() WHERE project_id=$1 AND connection_id=$2 AND attempt_id=$3",&[&current.project_id,&current.id,&pending.attempt])?;
    Ok(Ok(activated))
   }).map_err(persistence)??;
         Ok((

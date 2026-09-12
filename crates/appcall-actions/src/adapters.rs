@@ -116,6 +116,16 @@ fn runner_failure(e: appcall_runner_client::Error, input: &Value) -> RunnerFailu
         }
         .into()
     });
+    // The runner uses connector-facing codes for failures that happen after
+    // an action has crossed the provider boundary. Keep the public action
+    // vocabulary typed while preserving the runner's Unknown outcome: a
+    // response that cannot be returned or validated may still follow a
+    // provider-side mutation.
+    code = match code.as_str() {
+        "OUTPUT_TOO_LARGE" | "OUTBOUND_RESPONSE_TOO_LARGE" => "ACTION_RESPONSE_TOO_LARGE".into(),
+        "CONNECTOR_RESPONSE_INVALID" => "ACTION_RESPONSE_INVALID".into(),
+        _ => code,
+    };
     if (!bounded && !known_safe_runner_code(&code))
         || secrets.iter().any(|value| code.contains(*value))
         || code.is_empty()
@@ -167,6 +177,7 @@ fn known_safe_runner_code(code: &str) -> bool {
             | "INVALID_ACTION_INPUT"
             | "NOTE_TOO_LONG"
             | "MISSING_CREDENTIAL"
+            | "ACTION_RESPONSE_INVALID"
             | "ACTION_RESPONSE_TOO_LARGE"
     )
 }

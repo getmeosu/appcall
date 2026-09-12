@@ -1,8 +1,24 @@
 use crate::*;
 use postgres::{Client, Transaction};
+use std::time::SystemTime;
+
+pub const MAX_SECRET_CLEANUP_BATCH: usize = 1000;
+/// Maximum number of envelopes inspected by one cleanup transaction. This is
+/// deliberately separate from the deletion batch: protected rows still count
+/// toward the scan budget so a reference-heavy prefix cannot create an
+/// unbounded query.
+pub const MAX_SECRET_CLEANUP_SCAN: usize = 1000;
+
+#[derive(Clone)]
+struct SecretCleanupCursor {
+    created_at: SystemTime,
+    id: String,
+}
+
 pub struct Store {
     client: Client,
     provider: LocalProvider,
+    secret_cleanup_cursor: Option<SecretCleanupCursor>,
 }
 pub struct StoreTransaction<'a> {
     transaction: Transaction<'a>,
@@ -14,7 +30,11 @@ impl Store {
         Some(!self.client.is_closed())
     }
     pub fn new(client: Client, provider: LocalProvider) -> Self {
-        Self { client, provider }
+        Self {
+            client,
+            provider,
+            secret_cleanup_cursor: None,
+        }
     }
     pub fn into_client(self) -> Client {
         self.client
@@ -149,6 +169,23 @@ impl Store {
     ) -> Result<(), Error> {
         self.transaction(|tx| tx.store_secret(project, id, kind, plain))
     }
+    /// Delete at most `batch` stale envelopes that have no live credential
+    /// reference. The scan is global and age ordered so a busy project cannot
+    /// monopolize maintenance cycles.
+    pub fn cleanup_expired_secrets(
+        &mut self,
+        cutoff: SystemTime,
+        batch: usize,
+    ) -> Result<u64, Error> {
+        if batch == 0 || batch > MAX_SECRET_CLEANUP_BATCH {
+            return Err(Error::Invalid);
+        }
+        let cursor = self.secret_cleanup_cursor.clone();
+        let (deleted, next_cursor) =
+            self.transaction(|tx| tx.cleanup_expired_secrets(cutoff, batch, cursor.as_ref()))?;
+        self.secret_cleanup_cursor = next_cursor;
+        Ok(deleted)
+    }
 }
 impl<'a> StoreTransaction<'a> {
     /// SQL escape hatch for service repositories. All operations share this transaction.
@@ -205,7 +242,7 @@ impl<'a> StoreTransaction<'a> {
             && self
                 .transaction
                 .query_opt(
-                    "SELECT id FROM secret_envelopes WHERE project_id=$1 AND id=$2",
+                    "SELECT id FROM secret_envelopes WHERE project_id=$1 AND id=$2 FOR KEY SHARE",
                     &[&project, &id],
                 )?
                 .is_none()
@@ -265,5 +302,105 @@ impl<'a> StoreTransaction<'a> {
             )?
             .ok_or(Error::NotFound)?
             .get(0))
+    }
+    /// Delete a bounded, globally age-ordered batch of unreferenced envelopes.
+    /// The candidate row lock and restrictive foreign keys give reference
+    /// writers a deterministic boundary: an existing writer makes the row
+    /// skip, while a writer arriving after the check fails safely instead of
+    /// losing its credential reference.
+    fn cleanup_expired_secrets(
+        &mut self,
+        cutoff: SystemTime,
+        batch: usize,
+        cursor: Option<&SecretCleanupCursor>,
+    ) -> Result<(u64, Option<SecretCleanupCursor>), Error> {
+        if batch == 0 || batch > MAX_SECRET_CLEANUP_BATCH {
+            return Err(Error::Invalid);
+        }
+        let scan_limit = MAX_SECRET_CLEANUP_SCAN as i64;
+        let mut scanned = match cursor {
+            Some(cursor) => self.transaction.query(
+                "SELECT id,created_at FROM secret_envelopes \
+                 WHERE created_at < $1 AND (created_at,id) > ($2,$3) \
+                 ORDER BY created_at,id LIMIT $4",
+                &[&cutoff, &cursor.created_at, &cursor.id, &scan_limit],
+            )?,
+            None => self.transaction.query(
+                "SELECT id,created_at FROM secret_envelopes \
+                 WHERE created_at < $1 ORDER BY created_at,id LIMIT $2",
+                &[&cutoff, &scan_limit],
+            )?,
+        };
+        if cursor.is_some() && scanned.len() < MAX_SECRET_CLEANUP_SCAN {
+            let remaining = (MAX_SECRET_CLEANUP_SCAN - scanned.len()) as i64;
+            scanned.extend(self.transaction.query(
+                "SELECT id,created_at FROM secret_envelopes \
+                 WHERE created_at < $1 ORDER BY created_at,id LIMIT $2",
+                &[&cutoff, &remaining],
+            )?);
+        }
+        let next_cursor = scanned.last().map(|row| SecretCleanupCursor {
+            id: row.get("id"),
+            created_at: row.get("created_at"),
+        });
+        if scanned.is_empty() {
+            return Ok((0, None));
+        }
+        let scanned_ids: Vec<String> = scanned.iter().map(|row| row.get("id")).collect();
+        let candidates = self.transaction.query(
+            r#"
+            SELECT e.id
+            FROM secret_envelopes AS e
+            WHERE e.id = ANY($1)
+              AND e.created_at < $2
+              AND NOT EXISTS (
+                  SELECT 1 FROM connections AS c
+                  WHERE c.secret_ref_id = e.id
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM provider_subaccounts AS s
+                  WHERE s.secret_ref_id = e.id
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM oauth_refresh_intents AS i
+                  WHERE i.pkce_secret_ref_id = e.id
+              )
+              AND NOT EXISTS (
+                  -- Before pkce_secret_ref_id existed, the signed state and
+                  -- its kind were the only durable binding. Keep that
+                  -- envelope while a corresponding authorization intent is
+                  -- unresolved, including a disconnected/unknown connection.
+                  SELECT 1
+                  FROM oauth_refresh_intents AS i
+                  WHERE i.state IN ('authorizing', 'dispatched', 'unknown')
+                    AND i.secret_ref_id = e.id
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM connections AS c
+                  JOIN oauth_refresh_intents AS i
+                    ON i.project_id = c.project_id
+                   AND i.connection_id = c.id
+                  WHERE c.project_id = e.project_id
+                    AND e.kind = 'oauth_pkce_' || c.id
+                    AND i.operation = 'authorization'
+                    AND i.state IN ('authorizing', 'dispatched', 'unknown')
+                    AND i.pkce_secret_ref_id IS NULL
+              )
+            ORDER BY e.created_at, e.id
+            FOR UPDATE OF e SKIP LOCKED
+            LIMIT $3
+            "#,
+            &[&scanned_ids, &cutoff, &(batch as i64)],
+        )?;
+        let candidate_ids: Vec<String> = candidates.iter().map(|row| row.get("id")).collect();
+        if candidate_ids.is_empty() {
+            return Ok((0, next_cursor));
+        }
+        let deleted = self.transaction.execute(
+            "DELETE FROM secret_envelopes WHERE id=ANY($1)",
+            &[&candidate_ids],
+        )?;
+        Ok((deleted, next_cursor))
     }
 }

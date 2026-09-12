@@ -60,6 +60,22 @@ fn parsed(id: &str) -> ParsedWebhook {
     }
 }
 
+fn install_review_persistence_columns(db: &mut Db) {
+    db.client
+        .batch_execute(include_str!(
+            "../../../migrations/202609120002_connection_generation.sql"
+        ))
+        .unwrap();
+}
+
+fn install_review_dead_letter_columns(db: &mut Db) {
+    db.client
+        .batch_execute(include_str!(
+            "../../../migrations/202609120003_webhook_outbox_dead_letter.sql"
+        ))
+        .unwrap();
+}
+
 fn brand(name: &str) -> Principal {
     let mut p = Principal::project("p").unwrap();
     p.brand_id = Some(name.into());
@@ -275,7 +291,8 @@ fn connection_scoped_identity_keeps_public_delivery_and_usage_keys_consistent() 
             .unwrap(),
         DispatchReport {
             completed: 3,
-            failed: 0
+            failed: 0,
+            dead_lettered: 0,
         }
     );
     assert_eq!(
@@ -381,8 +398,302 @@ fn provider_dedup_is_scoped_to_connection_revision() {
 
 #[test]
 #[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn provider_dedup_survives_incidental_updates_and_refresh_but_resets_on_reconnect() {
+    let mut db = Db::new();
+    db.client
+        .batch_execute(
+            "CREATE TABLE scheduled(project_id text,dedup_key text,input jsonb,PRIMARY KEY(project_id,dedup_key));",
+        )
+        .unwrap();
+    db.client
+        .batch_execute(include_str!(
+            "../../../migrations/202609070004_oauth_refresh_intents.sql"
+        ))
+        .unwrap();
+    db.client
+        .batch_execute(
+            "INSERT INTO secret_envelopes(id,project_id,kind,key_id,algorithm,nonce,ciphertext)
+               VALUES('refresh-old','p','oauth_tokens_a','test','fixture',decode('00','hex'),decode('00','hex'));
+             UPDATE connections SET secret_ref_id='refresh-old' WHERE id='a';",
+        )
+        .unwrap();
+    install_review_persistence_columns(&mut db);
+
+    let first = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("stable-provider-key"))
+        .unwrap();
+    db.client
+        .batch_execute("UPDATE connections SET last_test_status='passed' WHERE id='a'")
+        .unwrap();
+    assert_eq!(
+        PgEvents::new(&mut db.client)
+            .accept(&claims("a"), &parsed("stable-provider-key"))
+            .unwrap(),
+        IngestResult {
+            event_id: first.event_id.clone(),
+            duplicate: true,
+        }
+    );
+
+    db.client
+        .batch_execute(
+            "INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state)
+             VALUES('p','a','refresh-attempt','refresh-old','refresh','dispatched');
+             UPDATE connections SET status='degraded' WHERE id='a';
+             INSERT INTO secret_envelopes(id,project_id,kind,key_id,algorithm,nonce,ciphertext)
+               VALUES('refresh-new','p','oauth_tokens_a','test','fixture',decode('01','hex'),decode('01','hex'));
+             UPDATE connections SET secret_ref_id='refresh-new',status='active' WHERE id='a';",
+        )
+        .unwrap();
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT connection_generation FROM connections WHERE id='a'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+    assert_eq!(
+        PgEvents::new(&mut db.client)
+            .accept(&claims("a"), &parsed("stable-provider-key"))
+            .unwrap(),
+        IngestResult {
+            event_id: first.event_id.clone(),
+            duplicate: true,
+        }
+    );
+
+    db.client
+        .batch_execute(
+            "UPDATE oauth_refresh_intents SET state='completed' WHERE connection_id='a';
+             UPDATE connections SET status='disconnected' WHERE id='a';
+             UPDATE connections SET status='active' WHERE id='a';",
+        )
+        .unwrap();
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT connection_generation FROM connections WHERE id='a'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    let second = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("stable-provider-key"))
+        .unwrap();
+    assert!(!second.duplicate);
+    assert_ne!(first.event_id, second.event_id);
+
+    db.client
+        .batch_execute(
+            "INSERT INTO secret_envelopes(id,project_id,kind,key_id,algorithm,nonce,ciphertext)
+               VALUES('manual-new','p','oauth_tokens_a','test','fixture',decode('02','hex'),decode('02','hex'));
+             UPDATE connections SET secret_ref_id='manual-new' WHERE id='a';",
+        )
+        .unwrap();
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT connection_generation FROM connections WHERE id='a'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        3
+    );
+    let third = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("stable-provider-key"))
+        .unwrap();
+    assert!(!third.duplicate);
+    assert_ne!(second.event_id, third.event_id);
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn generation_migration_prefers_current_connection_scope_for_historical_duplicates() {
+    let mut db = Db::new();
+    let old = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("historical-reassignment-key"))
+        .unwrap();
+    let old_only = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("historical-old-only-key"))
+        .unwrap();
+    db.client
+        .batch_execute(
+            "UPDATE connections
+                SET external_account_id='brand-new'
+              WHERE project_id='p' AND id='a';",
+        )
+        .unwrap();
+    let current = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("historical-reassignment-key"))
+        .unwrap();
+    assert_ne!(old.event_id, current.event_id);
+
+    install_review_persistence_columns(&mut db);
+    let redelivery = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("historical-reassignment-key"))
+        .unwrap();
+    assert_eq!(
+        redelivery,
+        IngestResult {
+            event_id: current.event_id,
+            duplicate: true,
+        }
+    );
+    let current_after_upgrade = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("historical-old-only-key"))
+        .unwrap();
+    assert!(!current_after_upgrade.duplicate);
+    assert_ne!(current_after_upgrade.event_id, old_only.event_id);
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT count(*) FROM webhook_events
+                  WHERE project_id='p' AND connection_id='a'
+                    AND connection_generation IS NOT NULL",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    assert!(db
+        .client
+        .query_one(
+            "SELECT connection_generation IS NULL FROM webhook_events WHERE project_id='p' AND id=$1",
+            &[&old.event_id],
+        )
+        .unwrap()
+        .get::<_, bool>(0));
+    assert!(db
+        .client
+        .query_one(
+            "SELECT connection_generation IS NULL FROM webhook_events WHERE project_id='p' AND id=$1",
+            &[&old_only.event_id],
+        )
+        .unwrap()
+        .get::<_, bool>(0));
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn disconnected_outbox_dead_letters_after_bounded_failures_and_replay_remains_available() {
+    let mut db = Db::new();
+    db.client
+        .batch_execute(
+            "CREATE TABLE scheduled(project_id text,dedup_key text,input jsonb,PRIMARY KEY(project_id,dedup_key));",
+        )
+        .unwrap();
+    install_review_dead_letter_columns(&mut db);
+    let event = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("dead-letter-provider-key"))
+        .unwrap();
+    db.client
+        .batch_execute("UPDATE connections SET status='disconnected' WHERE id='a'")
+        .unwrap();
+    db.client
+        .execute(
+            "UPDATE webhook_outbox SET attempts=9,next_attempt_at=now() WHERE event_id=$1",
+            &[&event.event_id],
+        )
+        .unwrap();
+    let mut sink = Sink::new(false);
+    let report = PgEvents::new(&mut db.client)
+        .dispatch_pending(1, &mut sink)
+        .unwrap();
+    assert_eq!(report.failed, 1);
+    assert_eq!(report.dead_lettered, 1);
+    let row = db
+        .client
+        .query_one(
+            "SELECT status,last_error_code,dead_lettered_at FROM webhook_outbox WHERE event_id=$1",
+            &[&event.event_id],
+        )
+        .unwrap();
+    assert_eq!(row.get::<_, String>(0), "dead_letter");
+    assert_eq!(row.get::<_, String>(1), "CONNECTION_UNAVAILABLE");
+    assert!(row
+        .get::<_, Option<chrono::DateTime<chrono::Utc>>>(2)
+        .is_some());
+    assert_eq!(
+        PgEvents::new(&mut db.client)
+            .dispatch_pending(1, &mut sink)
+            .unwrap(),
+        DispatchReport::default()
+    );
+
+    db.client
+        .batch_execute("UPDATE connections SET status='active' WHERE id='a'")
+        .unwrap();
+    PgEvents::new(&mut db.client)
+        .replay(&brand("brand-a"), &event.event_id, &mut sink)
+        .unwrap();
+    assert_eq!(
+        db.client
+            .query_one("SELECT count(*) FROM scheduled", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        1
+    );
+    assert_eq!(
+        db.client
+            .query_one(
+                "SELECT status FROM webhook_outbox WHERE event_id=$1",
+                &[&event.event_id],
+            )
+            .unwrap()
+            .get::<_, String>(0),
+        "dead_letter"
+    );
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn migrated_outbox_marks_successful_dispatch_as_dispatched_atomically() {
+    let mut db = Db::new();
+    db.client
+        .batch_execute(
+            "CREATE TABLE scheduled(project_id text,dedup_key text,input jsonb,PRIMARY KEY(project_id,dedup_key));",
+        )
+        .unwrap();
+    install_review_dead_letter_columns(&mut db);
+    let event = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("successful-dead-letter-schema"))
+        .unwrap();
+    let report = PgEvents::new(&mut db.client)
+        .dispatch_pending(1, &mut Sink::new(false))
+        .unwrap();
+    assert_eq!(report.completed, 1);
+    assert_eq!(report.failed, 0);
+    assert_eq!(report.dead_lettered, 0);
+    let row = db
+        .client
+        .query_one(
+            "SELECT status,last_error_code,dispatched_at,dead_lettered_at
+               FROM webhook_outbox WHERE event_id=$1",
+            &[&event.event_id],
+        )
+        .unwrap();
+    assert_eq!(row.get::<_, String>(0), "dispatched");
+    assert_eq!(row.get::<_, String>(1), "");
+    assert!(row
+        .get::<_, Option<chrono::DateTime<chrono::Utc>>>(2)
+        .is_some());
+    assert!(row
+        .get::<_, Option<chrono::DateTime<chrono::Utc>>>(3)
+        .is_none());
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
 fn concurrent_same_connection_redelivery_inserts_one_public_event() {
     let mut db = Db::new();
+    install_review_persistence_columns(&mut db);
     let workers = 8;
     let barrier = std::sync::Arc::new(std::sync::Barrier::new(workers));
     let handles = (0..workers)
@@ -649,6 +960,7 @@ fn event_only_webhooks_retain_usage_and_replay_without_sync_jobs() {
             DispatchReport {
                 completed: 2,
                 failed: 0,
+                dead_lettered: 0,
             }
         );
     }
@@ -783,14 +1095,16 @@ fn poisoned_outbox_does_not_starve_and_replays_do_not_double_meter() {
         store.dispatch_pending(1, &mut sink).unwrap(),
         DispatchReport {
             completed: 0,
-            failed: 1
+            failed: 1,
+            dead_lettered: 0,
         }
     );
     assert_eq!(
         store.dispatch_pending(1, &mut sink).unwrap(),
         DispatchReport {
             completed: 1,
-            failed: 0
+            failed: 0,
+            dead_lettered: 0,
         }
     );
     db.client
@@ -1019,7 +1333,8 @@ fn dispatch_sql_failure_rolls_back_sink_and_metering() {
         store.dispatch_pending(1, &mut Sink::new(false)).unwrap(),
         DispatchReport {
             completed: 0,
-            failed: 1
+            failed: 1,
+            dead_lettered: 0,
         }
     );
     assert_eq!(

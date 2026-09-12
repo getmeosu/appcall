@@ -48,7 +48,9 @@ fn fixture() -> (Client, String) {
         include_str!("../../../migrations/202609120001_connection_revision.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
         include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+        include_str!("../../../migrations/202605290002_provider_subaccounts.sql"),
         include_str!("../../../migrations/202609090001_sync_job_history.sql"),
+        include_str!("../../../migrations/202609120004_secret_retention.sql"),
     ] {
         db.batch_execute(migration).unwrap();
     }
@@ -64,6 +66,67 @@ impl appcall_sync::CredentialResolver for NeverCredentials {
     ) -> impl Future<Output = appcall_sync::Result<appcall_sync::ResolvedCredentials>> + Send {
         std::future::ready(Err(appcall_sync::Error::Unavailable))
     }
+}
+
+#[test]
+#[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
+fn periodic_tick_runs_bounded_secret_cleanup() {
+    let (mut db, schema) = fixture();
+    let mut store = appcall_store::Store::new(
+        client(Some(&schema)),
+        appcall_store::LocalProvider::new(&[1; 32]).unwrap(),
+    );
+    store
+        .store_secret("p", "expired", "api_key", b"synthetic")
+        .unwrap();
+    store
+        .transaction(|tx| {
+            tx.client()
+                .batch_execute("UPDATE secret_envelopes SET created_at=now()-interval '8 days'")?;
+            Ok(())
+        })
+        .unwrap();
+    let runner = appcall_runner_client::RunnerClient::new(
+        "http://127.0.0.1:1",
+        "runner-token",
+        Default::default(),
+    )
+    .unwrap();
+    let service = appcall_sync::Service::new(
+        appcall_sync::Repository::new(client(Some(&schema))),
+        appcall_store::Store::new(
+            client(Some(&schema)),
+            appcall_store::LocalProvider::new(&[1; 32]).unwrap(),
+        ),
+        appcall_connectors::Registry::default(),
+        runner,
+        NeverCredentials,
+        Default::default(),
+    )
+    .unwrap();
+    let worker = Worker::new_with_maintenance(
+        client(Some(&schema)),
+        service,
+        TickLimits { outbox: 1, jobs: 1 },
+        store,
+        SecretCleanupConfig {
+            retention: Duration::from_secs(7 * 24 * 3600),
+            batch: 1,
+        },
+    )
+    .unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let report = rt.block_on(worker.tick_jobs("worker")).unwrap();
+    assert_eq!(report.secret_envelopes_deleted, 1);
+    assert!(!report.secret_cleanup_failed);
+    drop(worker);
+    drop(rt);
+    assert!(db
+        .query_opt("SELECT id FROM secret_envelopes WHERE id='expired'", &[])
+        .unwrap()
+        .is_none());
+    db.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
 }
 
 struct BunRunner {

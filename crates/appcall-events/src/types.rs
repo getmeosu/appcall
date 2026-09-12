@@ -52,6 +52,7 @@ pub struct EventPage {
 pub struct DispatchReport {
     pub completed: usize,
     pub failed: usize,
+    pub dead_lettered: usize,
 }
 #[derive(Debug, Clone)]
 pub struct SyncJob {

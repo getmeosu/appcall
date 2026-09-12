@@ -1098,7 +1098,12 @@ export function createConnectorRegistry(input: {
         return {
           ok: true,
           output: runExecution(
-            () => boundedOutput(handler(inputValue), operationSpec?.maxResponseBytes),
+            () => enforceCredentialedHealthcheckEvidence(
+              connectorKey,
+              input.manifests,
+              inputValue,
+              boundedOutput(handler(inputValue), operationSpec?.maxResponseBytes),
+            ),
             operationSpec?.timeoutMs,
           ),
         };
@@ -1119,7 +1124,11 @@ export function createConnectorRegistry(input: {
       }
     },
     executeAction(connectorKey: string, action: string, inputValue: unknown): RegistryActionResult {
-      if (!input.actions[connectorKey]) {
+      // Healthchecks are action-kind operations in manifests, but their
+      // handlers live in the dedicated healthchecks table so the same handler
+      // can serve connector.healthcheck. Treat that table as a registered
+      // connector for dispatch instead of making every healthcheck UNKNOWN_ACTION.
+      if (!input.actions[connectorKey] && !input.healthchecks[connectorKey]) {
         return { ok: false, code: "UNKNOWN_CONNECTOR", message: "Connector is not registered." };
       }
       const operationSpec = operationSpecs[connectorKey]?.[action];
@@ -1145,9 +1154,41 @@ export function createConnectorRegistry(input: {
       if (inputSizeFailure) {
         return inputSizeFailure;
       }
-      const handler = input.actions[connectorKey][action];
+      const handler = action === "healthcheck"
+        ? input.healthchecks[connectorKey]
+        : input.actions[connectorKey]?.[action];
       if (!handler) {
         return { ok: false, code: "UNKNOWN_ACTION", message: "Action is not registered." };
+      }
+      if (action === "healthcheck") {
+        try {
+          return {
+            ok: true,
+            output: runExecution(
+              () => enforceCredentialedHealthcheckEvidence(
+                connectorKey,
+                input.manifests,
+                inputValue,
+                boundedOutput(handler(inputValue), operationSpec.maxResponseBytes),
+              ),
+              operationSpec.timeoutMs,
+            ),
+          };
+        } catch (error) {
+          if (isRecord(error) && typeof error.code === "string" && error.code.length > 0) {
+            return {
+              ok: false,
+              code: error.code,
+              ...(typeof error.retryAfterSeconds === "number" && Number.isSafeInteger(error.retryAfterSeconds) && error.retryAfterSeconds > 0 ? { retryAfterSeconds: error.retryAfterSeconds } : {}),
+              message: typeof error.message === "string" ? error.message : "Connector healthcheck failed.",
+            };
+          }
+          return {
+            ok: false,
+            code: "CONNECTOR_UPSTREAM_ERROR",
+            message: error instanceof Error ? error.message : "Connector healthcheck failed.",
+          };
+        }
       }
       return { ok: true, output: runExecution(() => boundedOutput(handler(inputValue), operationSpec.maxResponseBytes), operationSpec.timeoutMs) };
     },
@@ -1308,6 +1349,53 @@ function buildConnectorDescriptions(manifests: Manifest[]): Record<string, Recor
       },
     ]),
   );
+}
+
+// A hand-written healthcheck may retain the connector-owned fixture result for
+// setup validation. That result is not evidence for a configured connection,
+// so reject it at the shared dispatch boundary when credentials are present.
+// This keeps every action-kind healthcheck honest without requiring a bespoke
+// provider probe for connectors that are not ready to implement one yet.
+function enforceCredentialedHealthcheckEvidence(
+  connectorKey: string,
+  manifests: Manifest[],
+  inputValue: unknown,
+  output: unknown,
+): unknown {
+  if (!hasCredentialedHealthcheckInput(connectorKey, manifests, inputValue)) {
+    return output;
+  }
+  if (isPromiseLike(output)) {
+    return Promise.resolve(output).then((resolved) => enforceProviderHealthcheckOutput(resolved));
+  }
+  return enforceProviderHealthcheckOutput(output);
+}
+
+function enforceProviderHealthcheckOutput(output: unknown): unknown {
+  if (isRecord(output) && output.source === "connector") {
+    throw {
+      ok: false,
+      code: "CONNECTOR_UPSTREAM_ERROR",
+      message: "Credentialed healthcheck did not confirm provider health.",
+    };
+  }
+  return output;
+}
+
+function hasCredentialedHealthcheckInput(
+  connectorKey: string,
+  manifests: Manifest[],
+  inputValue: unknown,
+): boolean {
+  const manifest = manifests.find((candidate) => candidate.key === connectorKey);
+  if (!manifest || !isRecord(manifest.auth) || manifest.auth.type === "none" || !isRecord(inputValue)) {
+    return false;
+  }
+  return Object.entries(inputValue).some(([key, value]) => (
+    typeof value === "string"
+    && value.trim().length > 0
+    && /token|secret|password|apikey|authorization|credential|basicauth/i.test(key.replace(/[^a-z]/gi, ""))
+  ));
 }
 
 type OperationSpec = OperationBudgetLike & { kind?: string };

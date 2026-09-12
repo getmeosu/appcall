@@ -205,12 +205,12 @@ fn guided_input_preserves_types_and_restricts_actor_schema_scope() {
     let actor = r#"{"type":"object","properties":{"city":{"type":"string"}}}"#;
     assert_eq!(
         guided_action_input(&schema, &fields, actor).unwrap(),
-        json!({"enabled":true,"count":2.0,"runInput":{"city":"Pune"}})
+        json!({"enabled":true,"count":2,"runInput":{"city":"Pune"}})
     );
     fields.insert("f.enabled".into(), vec!["false".into()]);
     assert_eq!(
         guided_action_input(&schema, &fields, actor).unwrap(),
-        json!({"enabled":false,"count":2.0,"runInput":{"city":"Pune"}})
+        json!({"enabled":false,"count":2,"runInput":{"city":"Pune"}})
     );
     assert!(guided_action_input(&json!({"type":"object"}), &fields, actor).is_err());
 }

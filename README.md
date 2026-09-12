@@ -20,8 +20,9 @@ make run
 ```
 
 Open http://127.0.0.1:5080. This uses the development API key `devkey` and bounded
-in-memory storage. State disappears on restart. Without a configured runner,
-actions return explicit local simulation results.
+in-memory storage when `APPCALL_DATABASE_URL` is omitted. State disappears on
+restart. Without a configured runner, actions return explicit local simulation
+results; this mode is not durable or live-provider evidence.
 
 For real connector execution, configure the same `APPCALL_RUNNER_TOKEN` for
 both processes, start `bun run runner:dev`, and set `APPCALL_RUNNER_URL` for the
@@ -29,9 +30,12 @@ API. See `.env.example` for configuration names; the binary does not load it
 automatically. Never use the development key in production.
 
 Durable application storage requires PostgreSQL, a stable `APPCALL_SECRET_KEY`,
-and the bundled SQLx migrator for startup migrations. The worker requires PostgreSQL. Authenticated
-dashboard accounts additionally require an independently provisioned Anusa
-service and its identity database; Anusa server software is not included here.
+and the bundled SQLx migrator for startup migrations. The Rust application
+repositories currently use the synchronous `postgres` client for queries and
+transactions; SQLx is limited to migration discovery, locking, checksums, and
+application. The worker requires PostgreSQL. Authenticated dashboard accounts
+additionally require an independently provisioned Anusa service and its
+identity database; Anusa server software is not included here.
 
 Runs controls are browser-only and deny-all by default. A deployment may opt in
 specific authenticated users with `APPCALL_RUN_OPERATOR_GRANTS`, a JSON array
@@ -97,7 +101,61 @@ belongs to. Before upgrading such a database, back it up, verify the actual targ
 schema and revision history, and have its administrator move the existing revision
 table into that verified application schema. Do not drop history, create a fake
 baseline, or rerun SQL manually. Partial or mismatched histories require repair
-of the underlying migration state before startup.
+of the underlying migration state before startup. Atlas is a legacy-history
+adoption path only; new schema changes use numbered SQLx migration files.
+
+Migration `202609120002_connection_generation.sql` gives connection identity a
+separate `connection_generation` from the row-level `connection_revision`. A
+generation advances when a connection is rebound or truly re-established,
+while routine row updates and an in-flight OAuth refresh do not create a new
+provider identity. Provider-event deduplication is scoped
+to the project, connector, connection, generation, and provider event key.
+Migration preserves older duplicate events in history while retaining one
+canonical current-scope identity; do not rewrite historical events to force
+deduplication.
+
+Migration `202609120003_webhook_outbox_dead_letter.sql` bounds webhook delivery
+failures at ten attempts. Before the terminal attempt, pending rows retry with
+bounded backoff. On the tenth failed dispatch, the outbox row becomes
+`dead_letter`, stores only a safe mapped `last_error_code` and the database
+`dead_lettered_at` timestamp, and is no longer selected for automatic delivery.
+The webhook payload and authenticated event history remain preserved. After
+correcting the connection, an authenticated principal with the
+`events:read` and `events:replay` scopes can call
+`POST /v1/webhook-events/{eventId}/replay`; the route returns `202` and
+schedules a fresh replay job without deleting the event or silently reopening
+the dead-letter row.
+
+### Secret-envelope retention
+
+The worker runs one bounded secret-cleanup pass on each jobs tick. It considers
+envelopes older than `APPCALL_SECRET_RETENTION_DAYS` (default 7 days, maximum
+3650) and deletes only unreferenced rows. Connection and provider-subaccount
+references, unresolved OAuth refresh/authorization intents, and PKCE envelopes
+remain protected; completed authorization clears its explicit PKCE reference.
+Legacy unresolved PKCE intents without a persisted reference are conservatively
+protected by their connection-bound envelope kind. Each cleanup transaction
+scans at most 1,000 globally age/id-ordered rows and deletes at most
+`APPCALL_SECRET_CLEANUP_BATCH` rows (default 100, maximum 1,000), using the
+worker's `APPCALL_WORKER_INTERVAL_MS` cadence (default 1,000 ms, maximum
+60,000 ms). Row locks and restrictive foreign keys make a concurrent reference
+writer skip or fail safely rather than lose its credential reference.
+
+The `202609120002` through `202609120004` migrations require a coordinated
+forward rollout: quiesce old API and worker binaries, apply all migrations, and
+then start binaries built with the same migration set. The new outbox status
+check rejects an old binary's dispatched-at-only update, and new OAuth queries
+read `pkce_secret_ref_id` unconditionally. Do not run mixed old and new
+binaries against the upgraded schema.
+
+## Provider workspace maintenance
+
+For each project, Unipile credential resolution considers only platform-owned
+rows whose status is `active`; inactive rows are ignored. Keep exactly one
+active platform Unipile workspace for a project. If no active row or more than
+one active row matches, the provider fails closed with `UNIPILE_UNAVAILABLE`
+instead of choosing a workspace arbitrarily. Disable or retire stale rows
+before retrying provider operations.
 
 ## Checks
 
@@ -125,7 +183,8 @@ See [LICENSE](LICENSE) for the unmodified terms, [NOTICE](NOTICE) for Meosu
 attribution, and [LICENSING](LICENSING) for scope, usage guidance, and historical
 grants. Previously published AGPL-3.0-only versions retain their original
 license grants. Third-party terms remain in [third_party/NOTICE](third_party/NOTICE).
-No enterprise implementation or license-key requirement is introduced by this change.
+This repository does not introduce an enterprise implementation or a
+license-key requirement.
 
 Public releases use `scripts/public-release.py export --source . --destination
 /absolute/new-directory` to construct an allowlisted snapshot without private

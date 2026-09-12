@@ -78,6 +78,69 @@ async fn malformed_or_uncorrelated_response_is_unknown_outcome() {
 }
 
 #[tokio::test]
+async fn runner_error_outcomes_distinguish_preflight_provider_and_ambiguous_failures() {
+    let cases = [
+        ("OUTPUT_TOO_LARGE", DispatchOutcome::Unknown),
+        ("OUTBOUND_RESPONSE_TOO_LARGE", DispatchOutcome::Unknown),
+        ("CONNECTOR_RESPONSE_INVALID", DispatchOutcome::Unknown),
+        ("CONNECTOR_UNAVAILABLE", DispatchOutcome::Unknown),
+        // Connector-local validation and outbound policy failures are not
+        // proof that no earlier subrequest ran.
+        ("INVALID_ACTION_INPUT", DispatchOutcome::Unknown),
+        ("OUTBOUND_HOST_NOT_ALLOWED", DispatchOutcome::Unknown),
+        ("OUTBOUND_INVALID_URL", DispatchOutcome::Unknown),
+        ("OUTBOUND_UNSUPPORTED_BUDGET", DispatchOutcome::Unknown),
+        // These are rejected by the runner before an action handler can run.
+        ("ACTION_NOT_DECLARED", DispatchOutcome::NotDispatched),
+        ("UNKNOWN_CONNECTOR", DispatchOutcome::NotDispatched),
+        ("INPUT_TOO_LARGE", DispatchOutcome::NotDispatched),
+        (
+            "UNSUPPORTED_OPERATION_BUDGET",
+            DispatchOutcome::NotDispatched,
+        ),
+        // The runner's outer catch also emits this code for unexpected
+        // failures, so the code alone cannot prove provider rejection.
+        ("CONNECTOR_UPSTREAM_ERROR", DispatchOutcome::Unknown),
+        ("CONNECTOR_RATE_LIMITED", DispatchOutcome::ResponseReceived),
+        (
+            "CONNECTOR_ACCOUNT_RESTRICTED",
+            DispatchOutcome::ResponseReceived,
+        ),
+        (
+            "CONNECTOR_ACTION_NOT_PERMITTED",
+            DispatchOutcome::ResponseReceived,
+        ),
+    ];
+    for (code, expected_outcome) in cases {
+        let (url, server) = fixture(
+            json!({
+                "id": "test-id",
+                "ok": false,
+                "error": {"code": code, "message": "safe diagnostic"}
+            })
+            .to_string(),
+        )
+        .await;
+        let client = RunnerClient::new(&url, "", ClientOptions::default()).unwrap();
+        let error = client
+            .action_execute(
+                &context(),
+                ActionExecuteRequest {
+                    connector_key: "test".into(),
+                    action: "write".into(),
+                    input: json!({}),
+                },
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.kind, ErrorKind::Runner, "{code} kind");
+        assert_eq!(error.outcome, expected_outcome, "{code} outcome");
+        assert_eq!(error.code.as_deref(), Some(code), "{code} code");
+        server.await.unwrap();
+    }
+}
+
+#[tokio::test]
 async fn correlated_runner_busy_admission_is_typed_not_dispatched() {
     let (url, server) = fixture_with_status(
         503,
@@ -349,6 +412,7 @@ async fn connector_credentials_are_removed_from_remote_diagnostics() {
         .await
         .unwrap_err();
     assert_eq!(error.message, "token=[REDACTED]; raw=[REDACTED]");
+    assert_eq!(error.outcome, DispatchOutcome::Unknown);
     task.await.unwrap();
 }
 

@@ -1425,6 +1425,117 @@ fn explicit_failure_reports_retry_safely_fence_stale_attempts_and_release_capaci
     assert_eq!(e.status("unknown").unwrap(), RunState::OutcomeUnknown);
 }
 
+fn mixed_detached_activities(c: &mut Context) -> WorkflowResult {
+    c.spawn_activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)?;
+    c.spawn_activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)?;
+    c.timer(100)?;
+    Ok(c.input().clone())
+}
+
+fn mixed_engine() -> (tempfile::TempDir, Engine) {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_dispatch_limit(2).unwrap();
+    e.set_retry_policy(retry_policy(1, 1_000, 10, 10)).unwrap();
+    e.register_workflow("mixed", "v1", mixed_detached_activities)
+        .unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "mixed", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    (d, e)
+}
+
+#[test]
+fn retry_exhaustion_preserves_an_earlier_unknown_sibling_for_reconciliation() {
+    let (_d, mut e) = mixed_engine();
+    let unknown = attempt_at(&mut e, "r", 0);
+    let retryable = attempt_at(&mut e, "r", 0);
+
+    e.fail_at(&unknown, ActivityFailure::OutcomeUnknown, 0)
+        .unwrap();
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    e.reconcile("r", &unknown.effect_id, None).unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::Failed);
+    assert_eq!(e.next_wakeup().unwrap(), None);
+}
+
+#[test]
+fn later_unknown_sibling_upgrades_retry_exhaustion_back_to_reconcilable_state() {
+    let (_d, mut e) = mixed_engine();
+    let unknown = attempt_at(&mut e, "r", 0);
+    let retryable = attempt_at(&mut e, "r", 0);
+
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    e.fail_at(&unknown, ActivityFailure::OutcomeUnknown, 0)
+        .unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    e.reconcile("r", &unknown.effect_id, None).unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::Failed);
+    assert_eq!(e.next_wakeup().unwrap(), None);
+}
+
+#[test]
+fn owned_sibling_completion_after_retry_exhaustion_preserves_terminal_failure() {
+    let (_d, mut e) = mixed_engine();
+    let unknown = attempt_at(&mut e, "r", 0);
+    let retryable = attempt_at(&mut e, "r", 0);
+
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    e.complete(&unknown, PayloadRef::durable("known").unwrap())
+        .unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::Failed);
+    assert_eq!(
+        e.result("r").unwrap(),
+        RunResult::Failed(Some(RunFailure::RetryExhausted))
+    );
+}
+
+#[test]
+fn unknown_sibling_reconciliation_after_retry_exhaustion_survives_restart() {
+    let (d, mut e) = mixed_engine();
+    let unknown = attempt_at(&mut e, "r", 0);
+    let retryable = attempt_at(&mut e, "r", 0);
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    drop(e);
+
+    let mut reopened = Engine::open(d.path().join("db")).unwrap();
+    assert_eq!(reopened.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(matches!(
+        reopened.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::OutcomeUnknown)
+    ));
+    assert!(reopened
+        .complete(&unknown, PayloadRef::durable("late").unwrap())
+        .is_err());
+    reopened.reconcile("r", &unknown.effect_id, None).unwrap();
+    assert_eq!(reopened.status("r").unwrap(), RunState::Failed);
+    assert_eq!(reopened.next_wakeup().unwrap(), None);
+}
+
 fn rewrite_persisted_revision(db: &std::path::Path, id: &str, revision: u64) {
     let connection = rusqlite::Connection::open(db).unwrap();
     let bytes: Vec<u8> = connection

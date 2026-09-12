@@ -450,19 +450,15 @@ impl<S: Store> Engine<S> {
                     });
                 if retry_deadline.is_some_and(|deadline| now_ms >= deadline) {
                     r.tasks[index].state = TaskState::Ready;
-                    r.state = RunState::Failed;
-                    r.failure_reason = Some(RunFailure::RetryExhausted);
-                    r.wakeup = None;
+                    mark_retry_exhausted(&mut r);
                     self.save(&mut r, &children)?;
-                    return Ok(DriveOutcome::Suspended(RunState::Failed));
+                    return Ok(DriveOutcome::Suspended(r.state));
                 }
                 if r.tasks[index].attempt.attempt >= retry_policy.max_attempts {
                     r.tasks[index].state = TaskState::Ready;
-                    r.state = RunState::Failed;
-                    r.failure_reason = Some(RunFailure::RetryExhausted);
-                    r.wakeup = None;
+                    mark_retry_exhausted(&mut r);
                     self.save(&mut r, &children)?;
-                    return Ok(DriveOutcome::Suspended(RunState::Failed));
+                    return Ok(DriveOutcome::Suspended(r.state));
                 }
                 let task = &mut r.tasks[index];
                 let retry_state_missing = task.attempt.retry_policy.is_none();
@@ -522,11 +518,9 @@ impl<S: Store> Engine<S> {
             }
         }
         if exhausted {
-            r.state = RunState::Failed;
-            r.failure_reason = Some(RunFailure::RetryExhausted);
-            r.wakeup = None;
+            mark_retry_exhausted(r);
             self.save(r, &[])?;
-            return Ok(Some(DriveOutcome::Suspended(RunState::Failed)));
+            return Ok(Some(DriveOutcome::Suspended(r.state)));
         }
         if changed {
             r.wakeup = Some(0);
@@ -713,10 +707,25 @@ impl<S: Store> Engine<S> {
     }
     fn complete_inner(&mut self, attempt: &ActivityAttempt, output: PayloadRef) -> Result<()> {
         let mut r = self.store.load(&attempt.run_id)?;
-        ensure_active(&r)?;
-        let task = owned_task(&mut r, attempt, self.store.owner_epoch())?;
-        task.state = TaskState::Done(output);
-        r.wakeup = Some(0);
+        {
+            let task = owned_attempt(&mut r, attempt, self.store.owner_epoch())?;
+            task.state = TaskState::Done(output);
+        }
+        if r.state == RunState::OutcomeUnknown && !has_unresolved_effect(&r) {
+            if r.failure_reason == Some(RunFailure::RetryExhausted) {
+                r.state = RunState::Failed;
+                r.wakeup = None;
+            } else {
+                r.state = RunState::Running;
+                r.wakeup = Some(0);
+            }
+        } else {
+            r.wakeup = if r.state == RunState::OutcomeUnknown {
+                None
+            } else {
+                Some(0)
+            };
+        }
         self.save(&mut r, &[])
     }
     pub fn fail(&mut self, attempt: &ActivityAttempt, failure: ActivityFailure) -> Result<()> {
@@ -740,37 +749,44 @@ impl<S: Store> Engine<S> {
         failed_at_ms: i64,
     ) -> Result<()> {
         let mut r = self.store.load(&attempt.run_id)?;
-        ensure_active(&r)?;
-        let task = owned_task(&mut r, attempt, self.store.owner_epoch())?;
-        let safe = matches!(
-            task.attempt.policy,
-            EffectPolicy::Read | EffectPolicy::Idempotent
-        );
-        if safe && matches!(failure, ActivityFailure::Retryable) {
-            let policy = task.attempt.retry_policy.unwrap_or(self.retry_policy);
-            policy.validate()?;
-            if task.attempt.attempt >= policy.max_attempts {
-                task.state = TaskState::Ready;
-                r.state = RunState::Failed;
-                r.failure_reason = Some(RunFailure::RetryExhausted);
-                r.wakeup = None;
-            } else {
-                let retry_started_at_ms = if task.attempt.attempt == 1 {
-                    task.attempt.started_at_ms
+        let mut exhausted = false;
+        let mut retrying = false;
+        {
+            let task = owned_attempt(&mut r, attempt, self.store.owner_epoch())?;
+            let safe = matches!(
+                task.attempt.policy,
+                EffectPolicy::Read | EffectPolicy::Idempotent
+            );
+            if safe && matches!(failure, ActivityFailure::Retryable) {
+                let policy = task.attempt.retry_policy.unwrap_or(self.retry_policy);
+                policy.validate()?;
+                if task.attempt.attempt >= policy.max_attempts {
+                    task.state = TaskState::Ready;
+                    exhausted = true;
                 } else {
-                    task.attempt.retry_started_at_ms
-                };
-                let next_attempt_at_ms =
-                    failed_at_ms.saturating_add(backoff_ms(policy, task.attempt.attempt));
-                task.state = TaskState::Retrying(RetryState {
-                    next_attempt_at_ms,
-                    retry_started_at_ms,
-                    policy,
-                });
-                merge_retry_wakeup(&mut r);
+                    let retry_started_at_ms = if task.attempt.attempt == 1 {
+                        task.attempt.started_at_ms
+                    } else {
+                        task.attempt.retry_started_at_ms
+                    };
+                    let next_attempt_at_ms =
+                        failed_at_ms.saturating_add(backoff_ms(policy, task.attempt.attempt));
+                    task.state = TaskState::Retrying(RetryState {
+                        next_attempt_at_ms,
+                        retry_started_at_ms,
+                        policy,
+                    });
+                    retrying = true;
+                }
+            } else {
+                task.state = TaskState::Uncertain;
             }
+        }
+        if exhausted {
+            mark_retry_exhausted(&mut r);
+        } else if retrying {
+            merge_retry_wakeup(&mut r);
         } else {
-            task.state = TaskState::Uncertain;
             r.state = RunState::OutcomeUnknown;
             r.wakeup = None;
         }
@@ -785,9 +801,10 @@ impl<S: Store> Engine<S> {
         resolver: &dyn PayloadResolver,
     ) -> Result<Option<NativeInvocation>> {
         let mut r = self.store.load(&attempt.run_id)?;
-        ensure_active(&r)?;
-        let task = owned_task(&mut r, attempt, self.store.owner_epoch())?;
-        if !matches!(task.state, TaskState::InFlight) {
+        if !matches!(
+            owned_attempt(&mut r, attempt, self.store.owner_epoch())?.state,
+            TaskState::InFlight
+        ) {
             return Err(Error::Conflict);
         }
         let handler = self
@@ -847,33 +864,42 @@ impl<S: Store> Engine<S> {
             .find(|t| t.attempt.effect_id == effect_id && matches!(t.state, TaskState::Uncertain))
             .ok_or(Error::Conflict)?;
         task.state = observed.map_or(TaskState::Ready, TaskState::Done);
-        r.state = if r
-            .tasks
-            .iter()
-            .any(|t| matches!(t.state, TaskState::Uncertain))
-        {
+        r.state = if has_unresolved_effect(&r) {
             RunState::OutcomeUnknown
+        } else if r.failure_reason == Some(RunFailure::RetryExhausted) {
+            RunState::Failed
         } else {
             RunState::Running
         };
-        r.wakeup = Some(0);
+        r.wakeup = if r.state == RunState::Failed {
+            None
+        } else {
+            Some(0)
+        };
         self.save(&mut r, &[])
     }
     fn recover(&mut self, r: &mut RunRecord) -> Result<()> {
+        let retry_exhausted =
+            r.state == RunState::Failed && r.failure_reason == Some(RunFailure::RetryExhausted);
         if matches!(
             r.state,
             RunState::Cancelled
                 | RunState::CancelRequested
                 | RunState::Completed
                 | RunState::Nondeterminism
-                | RunState::Failed
-        ) {
+        ) || (r.state == RunState::Failed && !retry_exhausted)
+        {
             return Ok(());
         }
         let mut changed = false;
         for task in &mut r.tasks {
             if matches!(task.state, TaskState::InFlight | TaskState::Invoking)
-                && task.attempt.owner_epoch != self.store.owner_epoch()
+                && (task.attempt.owner_epoch != self.store.owner_epoch()
+                    || (retry_exhausted
+                        && matches!(
+                            task.attempt.policy,
+                            EffectPolicy::Reconcile | EffectPolicy::Unknown
+                        )))
             {
                 changed = true;
                 match task.attempt.policy {
@@ -931,6 +957,28 @@ fn ensure_active(r: &RunRecord) -> Result<()> {
         Ok(())
     }
 }
+
+fn has_unresolved_effect(r: &RunRecord) -> bool {
+    r.tasks.iter().any(|task| {
+        matches!(task.state, TaskState::Uncertain)
+            || matches!(task.state, TaskState::InFlight | TaskState::Invoking)
+                && matches!(
+                    task.attempt.policy,
+                    EffectPolicy::Reconcile | EffectPolicy::Unknown
+                )
+    })
+}
+
+fn mark_retry_exhausted(r: &mut RunRecord) {
+    r.failure_reason = Some(RunFailure::RetryExhausted);
+    r.state = if has_unresolved_effect(r) {
+        RunState::OutcomeUnknown
+    } else {
+        RunState::Failed
+    };
+    r.wakeup = None;
+}
+
 fn take_signal(r: &mut RunRecord, name: &str) -> Option<PayloadRef> {
     let signal = r
         .signals
@@ -953,6 +1001,28 @@ fn owned_task<'a>(
                 && matches!(t.state, TaskState::InFlight | TaskState::Invoking)
         })
         .ok_or(Error::Conflict)
+}
+
+fn owned_attempt<'a>(
+    r: &'a mut RunRecord,
+    attempt: &ActivityAttempt,
+    epoch: u64,
+) -> Result<&'a mut ActivityTask> {
+    let terminal = matches!(
+        r.state,
+        RunState::Cancelled
+            | RunState::CancelRequested
+            | RunState::Completed
+            | RunState::Nondeterminism
+            | RunState::Failed
+    );
+    let retry_exhausted =
+        r.state == RunState::Failed && r.failure_reason == Some(RunFailure::RetryExhausted);
+    let task = owned_task(r, attempt, epoch)?;
+    if terminal && !retry_exhausted {
+        return Err(Error::Conflict);
+    }
+    Ok(task)
 }
 
 fn dispatch_key(a: &ActivityAttempt) -> (String, u64, u64) {

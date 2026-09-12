@@ -1,3 +1,6 @@
+import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
+import manifest from "../manifest.json";
+
 // Static result returned by the no-credential setup-validation path (the
 // connector is registered and reachable as code, but no provider call is made).
 export type HealthcheckResult = { connector: "whatsapp"; status: "ok"; source: "connector" };
@@ -43,16 +46,23 @@ async function verifyCredentials(
   phoneNumberId: string,
   fetchFn: typeof fetch,
 ): Promise<ProviderHealthcheckResult> {
-  let response: Response;
+  const httpClient = createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts,
+    maxResponseBytes: manifest.operations.healthcheck.maxResponseBytes,
+    timeoutMs: manifest.operations.healthcheck.timeoutMs,
+    fetch: fetchFn,
+  });
+  let response: { status: number; body: string };
   try {
-    response = await fetchFn(
+    response = await httpClient.fetchText(
       `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}?fields=verified_name,quality_rating`,
       {
         method: "GET",
         headers: { Authorization: `Bearer ${accessToken}` },
       },
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof ConnectorHttpError) throw error;
     throw { ok: false, code: "CONNECTOR_UNAVAILABLE", message: "WhatsApp (Meta Graph API) could not be reached." };
   }
   if (response.status === 429) {
