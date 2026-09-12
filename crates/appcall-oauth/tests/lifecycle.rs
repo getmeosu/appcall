@@ -88,6 +88,26 @@ impl Database {
             .unwrap();
         client
             .batch_execute(include_str!(
+                "../../../migrations/202609070001_event_outbox.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202609110001_event_connection_dedup.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202609120001_connection_revision.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202609120002_connection_generation.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
                 "../../../migrations/202605290002_provider_subaccounts.sql"
             ))
             .unwrap();
@@ -474,6 +494,83 @@ fn independent_resolvers_never_double_refresh_and_reconnect_fences_old_result() 
         assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
     }
 }
+
+#[test]
+#[ignore = "uses explicit local PostgreSQL private schema"]
+fn managed_refresh_preserves_generation_but_manual_inflight_replacement_wins() {
+    fn generation(db: &Database) -> i64 {
+        db.store
+            .lock()
+            .unwrap()
+            .transaction(|tx| {
+                Ok(tx
+                    .client()
+                    .query_one(
+                        "SELECT connection_generation FROM connections WHERE project_id='p' AND id='c'",
+                        &[],
+                    )?
+                    .get(0))
+            })
+            .unwrap()
+    }
+
+    let db = Database::new();
+    let before = generation(&db);
+    let provider = Arc::new(Provider {
+        calls: AtomicUsize::new(0),
+        fail: false,
+    });
+    let service = db.service(provider.clone());
+    let scope = Scope::new("p", None).unwrap();
+    assert_eq!(
+        service
+            .resolve(&scope, "c", "google-workspace")
+            .unwrap()
+            .into_fields()["accessToken"],
+        "fresh"
+    );
+    assert_eq!(generation(&db), before);
+
+    let db = Database::new();
+    let before = generation(&db);
+    let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let provider = Arc::new(Gated {
+        calls: AtomicUsize::new(0),
+        entered: entered_tx,
+        release: Mutex::new(release_rx),
+    });
+    let service = db.service(provider.clone());
+    let refresh_scope = scope.clone();
+    let refresh =
+        std::thread::spawn(move || service.resolve(&refresh_scope, "c", "google-workspace"));
+    entered_rx
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .unwrap();
+
+    db.store
+        .lock()
+        .unwrap()
+        .store_secret("p", "manual", "oauth_tokens_c", br#"manual"#)
+        .unwrap();
+    db.store
+        .lock()
+        .unwrap()
+        .replace_credentials(&scope, "c", "manual", AuthType::OAuth2)
+        .unwrap();
+    assert_eq!(generation(&db), before + 1);
+
+    release_tx.send(()).unwrap();
+    assert!(matches!(
+        refresh.join().unwrap(),
+        Err(Error::ConnectionUnavailable)
+    ));
+    let final_connection = db.store.lock().unwrap().get(&scope, "c").unwrap();
+    assert_eq!(final_connection.secret_ref_id, "manual");
+    assert_eq!(final_connection.status, Status::Active);
+    assert_eq!(generation(&db), before + 1);
+}
+
 #[test]
 #[ignore = "uses explicit local PostgreSQL private schema"]
 fn ambiguous_provider_failure_stays_blocked() {

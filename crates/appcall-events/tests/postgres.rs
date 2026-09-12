@@ -442,6 +442,7 @@ fn provider_dedup_survives_incidental_updates_and_refresh_but_resets_on_reconnec
              UPDATE connections SET status='degraded' WHERE id='a';
              INSERT INTO secret_envelopes(id,project_id,kind,key_id,algorithm,nonce,ciphertext)
                VALUES('refresh-new','p','oauth_tokens_a','test','fixture',decode('01','hex'),decode('01','hex'));
+             SELECT set_config('appcall.oauth_refresh_generation',json_build_object('project_id','p','connection_id','a','attempt_id','refresh-attempt','old_secret_ref_id','refresh-old','new_secret_ref_id','refresh-new')::text,true);
              UPDATE connections SET secret_ref_id='refresh-new',status='active' WHERE id='a';",
         )
         .unwrap();
@@ -687,6 +688,84 @@ fn migrated_outbox_marks_successful_dispatch_as_dispatched_atomically() {
     assert!(row
         .get::<_, Option<chrono::DateTime<chrono::Utc>>>(3)
         .is_none());
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn dead_letter_migration_terminalizes_legacy_exhausted_pending_rows() {
+    let mut db = Db::new();
+    let exhausted = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("legacy-exhausted"))
+        .unwrap();
+    let dispatched = PgEvents::new(&mut db.client)
+        .accept(&claims("a"), &parsed("legacy-dispatched"))
+        .unwrap();
+    db.client
+        .execute(
+            "UPDATE webhook_outbox
+                SET attempts=10,next_attempt_at=now()
+              WHERE event_id=$1",
+            &[&exhausted.event_id],
+        )
+        .unwrap();
+    db.client
+        .execute(
+            "UPDATE webhook_outbox
+                SET attempts=10,dispatched_at=now()
+              WHERE event_id=$1",
+            &[&dispatched.event_id],
+        )
+        .unwrap();
+
+    install_review_dead_letter_columns(&mut db);
+
+    let exhausted_row = db
+        .client
+        .query_one(
+            "SELECT status,last_error_code,dispatched_at,dead_lettered_at
+               FROM webhook_outbox WHERE event_id=$1",
+            &[&exhausted.event_id],
+        )
+        .unwrap();
+    assert_eq!(exhausted_row.get::<_, String>(0), "dead_letter");
+    assert_eq!(exhausted_row.get::<_, String>(1), "RETRY_EXHAUSTED");
+    assert!(exhausted_row
+        .get::<_, Option<chrono::DateTime<chrono::Utc>>>(2)
+        .is_none());
+    assert!(exhausted_row
+        .get::<_, Option<chrono::DateTime<chrono::Utc>>>(3)
+        .is_some());
+
+    let dispatched_row = db
+        .client
+        .query_one(
+            "SELECT status,dispatched_at,dead_lettered_at
+               FROM webhook_outbox WHERE event_id=$1",
+            &[&dispatched.event_id],
+        )
+        .unwrap();
+    assert_eq!(dispatched_row.get::<_, String>(0), "dispatched");
+    assert!(dispatched_row
+        .get::<_, Option<chrono::DateTime<chrono::Utc>>>(1)
+        .is_some());
+    assert!(dispatched_row
+        .get::<_, Option<chrono::DateTime<chrono::Utc>>>(2)
+        .is_none());
+
+    assert_eq!(
+        db.client
+            .query_one("SELECT count(*) FROM webhook_events", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
+    assert_eq!(
+        db.client
+            .query_one("SELECT count(*) FROM webhook_outbox", &[])
+            .unwrap()
+            .get::<_, i64>(0),
+        2
+    );
 }
 
 #[test]

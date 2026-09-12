@@ -8,6 +8,8 @@ export interface RunnerFetchOptions {
   token?: string;
   maxConcurrent?: number;
   maxQueued?: number;
+  // Completed-job threshold for entering drain mode and requesting recycle.
+  // This is not a hard cap: requests already queued are admitted FIFO.
   maxJobs?: number;
   onRecycle?: () => void;
 }

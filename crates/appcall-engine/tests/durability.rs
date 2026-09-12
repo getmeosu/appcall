@@ -173,6 +173,52 @@ fn reopen_keeps_passive_signal_wait_asleep() {
 }
 
 #[test]
+fn reopen_rejects_malformed_running_record_without_rewriting_it() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut initial = Engine::open(&db).unwrap();
+    initial
+        .start(
+            "malformed",
+            "missing-workflow",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    drop(initial);
+
+    let raw = b"malformed durable record with no secret".to_vec();
+    let connection = rusqlite::Connection::open(&db).unwrap();
+    connection
+        .execute(
+            "UPDATE engine_runs
+                SET state='running',wakeup=?1,record=?2
+              WHERE id=?3",
+            rusqlite::params![4_242_i64, &raw, "malformed"],
+        )
+        .unwrap();
+    drop(connection);
+
+    let error = match SqliteStore::open(&db) {
+        Err(error) => error,
+        Ok(_) => panic!("malformed running record must fail database open"),
+    };
+    assert!(matches!(error, Error::Storage(message) if message == "invalid durable record"));
+
+    let connection = rusqlite::Connection::open(&db).unwrap();
+    let (state, wakeup, persisted): (String, i64, Vec<u8>) = connection
+        .query_row(
+            "SELECT state,wakeup,record FROM engine_runs WHERE id=?1",
+            ["malformed"],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(state, "running");
+    assert_eq!(wakeup, 4_242);
+    assert_eq!(persisted, raw);
+}
+
+#[test]
 fn reopen_keeps_passive_child_wait_asleep() {
     let d = tempfile::tempdir().unwrap();
     let db = d.path().join("db");

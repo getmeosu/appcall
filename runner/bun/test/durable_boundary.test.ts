@@ -61,6 +61,56 @@ test('admission limits reject overflow and recycle only after accepted work drai
  const request=()=>new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id:'a',method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send'}})});
  try{const pending=handler(request());await new Promise(r=>setTimeout(r,1));expect((await handler(request())).status).toBe(503);expect(recycled).toBe(0);resolve();await pending;expect(recycled).toBe(1);expect((await handler(request())).status).toBe(503);}finally{defaultConnectorRegistry.executeAction=original;}
 });
+test('maxJobs drains the prefilled FIFO queue before recycling',async()=>{
+ const original=defaultConnectorRegistry.executeAction;
+ const jobs=['first','second','third'] as const;
+ const gates=new Map<string,{promise:Promise<{job:string}>;release:(value:{job:string})=>void}>();
+ for(const job of jobs){let release!: (value:{job:string})=>void;const promise=new Promise<{job:string}>(resolve=>release=resolve);gates.set(job,{promise,release});}
+ const started:string[]=[];
+ const startedSignals=jobs.map(()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>resolve=done);return {promise,resolve};});
+ defaultConnectorRegistry.executeAction=(_connector,_action,input)=>{
+  const job=(input as {job:string}).job;
+  started.push(job);startedSignals[started.length-1]?.resolve();
+  const gate=gates.get(job);if(!gate)throw new Error(`unexpected job ${job}`);
+  return {ok:true,output:gate.promise};
+ };
+ let recycled=0;const handler=createFetchHandler({maxConcurrent:1,maxQueued:2,maxJobs:1,onRecycle:()=>recycled++});
+ const request=(id:string,job:string)=>new Request('http://local/rpc',{method:'POST',body:JSON.stringify({id,method:'connector.action.execute',params:{connectorKey:'resend',action:'emails.send',input:{job}}})});
+ let first:Promise<Response>|undefined;let second:Promise<Response>|undefined;let third:Promise<Response>|undefined;
+ try{
+  first=handler(request('first','first'));
+  await startedSignals[0].promise;
+  second=handler(request('second','second'));third=handler(request('third','third'));
+  expect(started).toEqual(['first']);
+
+  gates.get('first')!.release({job:'first'});
+  expect((await first).status).toBe(200);
+  await startedSignals[1].promise;
+  expect(started).toEqual(['first','second']);
+  expect(recycled).toBe(0);
+
+  const rejected=await handler(request('late','late'));
+  expect(rejected.status).toBe(503);
+  expect((await rejected.json()).error.code).toBe('RUNNER_BUSY');
+  expect(recycled).toBe(0);
+
+  gates.get('second')!.release({job:'second'});
+  await startedSignals[2].promise;
+  expect(started).toEqual(['first','second','third']);
+  expect(recycled).toBe(0);
+
+  gates.get('third')!.release({job:'third'});
+  const responses=await Promise.all([second!,third!]);
+  expect(responses.map(response=>response.status)).toEqual([200,200]);
+  expect(started).toEqual([...jobs]);
+  expect(new Set(started).size).toBe(jobs.length);
+  expect(recycled).toBe(1);
+ }finally{
+  for(const gate of gates.values())gate.release({job:'cleanup'});
+  await Promise.allSettled([first,second,third].filter((pending):pending is Promise<Response>=>pending!==undefined));
+  defaultConnectorRegistry.executeAction=original;
+ }
+});
 function admissionRequest(bodyID: string, headerID?: string): Request {
  const headers = headerID === undefined ? undefined : {'x-request-id': headerID};
  return new Request('http://local/rpc', {

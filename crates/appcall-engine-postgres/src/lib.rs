@@ -58,6 +58,9 @@ fn encoded(run: &RunRecord) -> Result<Vec<u8>> {
     }
     Ok(bytes)
 }
+fn decode_record(record: &[u8]) -> Result<RunRecord> {
+    serde_json::from_slice(record).map_err(|_| Error::Storage("invalid durable record".into()))
+}
 fn state(r: &RunRecord) -> &'static str {
     if matches!(r.state, RunState::Running | RunState::CancelRequested) {
         "running"
@@ -94,9 +97,7 @@ fn recover_running(tx: &mut Transaction<'_>) -> Result<()> {
                 let id: String = row.get(0);
                 let record: Vec<u8> = row.get(1);
                 next_cursor = Some(id.clone());
-                let recover = serde_json::from_slice::<RunRecord>(&record)
-                    .map(|run| requires_recovery(&run))
-                    .unwrap_or(false);
+                let recover = requires_recovery(&decode_record(&record)?);
                 if recover {
                     recovery_ids.push(id);
                 }
@@ -153,7 +154,7 @@ impl Store for PostgresStore {
             .map_err(safe)?
             .ok_or(Error::NotFound)?;
         let bytes: Vec<u8> = row.get(0);
-        serde_json::from_slice(&bytes).map_err(|_| Error::Storage("invalid durable record".into()))
+        decode_record(&bytes)
     }
     fn insert(&mut self, run: &RunRecord) -> Result<()> {
         let mut client = self.client()?;

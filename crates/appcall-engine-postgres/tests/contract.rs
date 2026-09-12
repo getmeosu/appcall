@@ -23,6 +23,85 @@ fn postgres_contract_guard_serializes_parallel_tests() {
 
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_reopen_rejects_malformed_running_record_without_rewriting_it() {
+    let _guard = postgres_contract_guard();
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_malformed_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut client = Client::connect(&url, NoTls).unwrap();
+        client
+            .batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        client
+    };
+
+    let mut initial = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    initial
+        .start(
+            "malformed",
+            "missing-workflow",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    drop(initial);
+
+    let raw = b"malformed durable record with no secret".to_vec();
+    let mut connection = connect();
+    connection
+        .execute(
+            "UPDATE appcall_workflow_runs
+                SET state='running',wakeup=$1,record=$2
+              WHERE id=$3",
+            &[&4_242_i64, &raw, &"malformed"],
+        )
+        .unwrap();
+    let epoch_before: i64 = connection
+        .query_one("SELECT epoch FROM appcall_workflow_owner WHERE id=1", &[])
+        .unwrap()
+        .get(0);
+    drop(connection);
+
+    let error = match PostgresStore::from_client(connect()) {
+        Err(error) => error,
+        Ok(_) => panic!("malformed running record must fail database open"),
+    };
+    assert!(matches!(error, Error::Storage(message) if message == "invalid durable record"));
+
+    let mut connection = connect();
+    let row = connection
+        .query_one(
+            "SELECT state,wakeup,record FROM appcall_workflow_runs WHERE id=$1",
+            &[&"malformed"],
+        )
+        .unwrap();
+    assert_eq!(row.get::<_, String>(0), "running");
+    assert_eq!(row.get::<_, i64>(1), 4_242);
+    assert_eq!(row.get::<_, Vec<u8>>(2), raw);
+    let epoch_after: i64 = connection
+        .query_one("SELECT epoch FROM appcall_workflow_owner WHERE id=1", &[])
+        .unwrap()
+        .get(0);
+    assert_eq!(epoch_after, epoch_before);
+    drop(connection);
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
 fn postgres_revision_overflow_returns_limit_and_conflict() {
     let _guard = postgres_contract_guard();
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();

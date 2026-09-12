@@ -285,7 +285,10 @@ impl Lifecycle {
    let valid=intent.is_some_and(|row|row.get::<_,String>("attempt_id")==pending.attempt&&row.get::<_,String>("secret_ref_id")==pending.connection.secret_ref_id&&row.get::<_,String>("state")=="dispatched");
    if !valid||current.connector!=pending.connection.connector||current.external_account_id!=pending.connection.external_account_id||current.auth_type!=pending.connection.auth_type||current.secret_ref_id!=pending.connection.secret_ref_id||current.status!=Status::Degraded{return Ok(Err(Error::ConnectionUnavailable))}
    tx.store_secret(&current.project_id,&secret,&format!("oauth_tokens_{}",current.id),&encoded)?;
+   let marker = serde_json::json!({"project_id": current.project_id, "connection_id": current.id, "attempt_id": pending.attempt, "old_secret_ref_id": current.secret_ref_id, "new_secret_ref_id": secret}).to_string();
+   tx.client().query_one("SELECT set_config('appcall.oauth_refresh_generation', $1, true)",&[&marker])?;
    let activated=tx.replace_credentials(scope,&current.id,&secret,AuthType::OAuth2)?;
+   tx.client().query_one("SELECT set_config('appcall.oauth_refresh_generation', '', true)",&[])?;
    tx.client().execute("UPDATE oauth_refresh_intents SET state='completed',pkce_secret_ref_id=NULL,updated_at=now() WHERE project_id=$1 AND connection_id=$2 AND attempt_id=$3",&[&current.project_id,&current.id,&pending.attempt])?;
    Ok(Ok(activated))
   }).map_err(persistence)??;

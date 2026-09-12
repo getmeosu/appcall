@@ -76,12 +76,19 @@ LANGUAGE plpgsql
 AS $function$
 DECLARE
     refresh_in_flight boolean := false;
+    refresh_marker jsonb := NULLIF(current_setting('appcall.oauth_refresh_generation', true), '')::jsonb;
 BEGIN
     -- Older isolated schemas can apply this migration before the OAuth intent
     -- table. Dynamic SQL keeps the trigger compatible with those schemas;
     -- production applies the intent migration first.
     IF OLD.status = 'degraded'
        AND NEW.status = 'active'
+       AND refresh_marker IS NOT NULL
+       AND refresh_marker->>'project_id' = OLD.project_id
+       AND refresh_marker->>'connection_id' = OLD.id
+       AND refresh_marker->>'attempt_id' IS NOT NULL
+       AND refresh_marker->>'old_secret_ref_id' = OLD.secret_ref_id
+       AND refresh_marker->>'new_secret_ref_id' = NEW.secret_ref_id
        AND to_regclass('oauth_refresh_intents') IS NOT NULL
     THEN
         EXECUTE $sql$
@@ -91,14 +98,15 @@ BEGIN
                 WHERE project_id = $1
                   AND connection_id = $2
                   AND operation = 'refresh'
-                  AND state IN ('dispatched', 'unknown')
+                  AND state = 'dispatched'
                   -- A stale intent for an earlier credential must not hide a
                   -- genuine manual credential replacement.
                   AND secret_ref_id IS NOT DISTINCT FROM $3::text
+                  AND attempt_id = $4::text
             )
         $sql$
         INTO refresh_in_flight
-        USING NEW.project_id, NEW.id, OLD.secret_ref_id;
+        USING NEW.project_id, NEW.id, OLD.secret_ref_id, refresh_marker->>'attempt_id';
     END IF;
 
     IF OLD.external_account_id IS DISTINCT FROM NEW.external_account_id
