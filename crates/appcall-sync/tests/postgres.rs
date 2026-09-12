@@ -14,7 +14,7 @@ fn connect() -> Client {
     .unwrap()
 }
 static FIXTURE_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-fn fixture() -> (Client, String) {
+fn fixture_with_generation_migration(apply_generation_migration: bool) -> (Client, String) {
     let mut c = connect();
     let schema = format!(
         "sync_test_{}_{}_{}",
@@ -29,12 +29,24 @@ fn fixture() -> (Client, String) {
         "CREATE SCHEMA {schema}; SET search_path TO {schema}"
     ))
     .unwrap();
-    c.batch_execute("CREATE TABLE connections(id text primary key,project_id text,connector text,external_account_id text,credential_owner text NOT NULL DEFAULT 'brand');CREATE TABLE sync_jobs(id text primary key,project_id text,connection_id text,operation text,status text,worker_id text NOT NULL DEFAULT '',attempts integer NOT NULL DEFAULT 0,run_after timestamptz,leased_until timestamptz,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz DEFAULT now(),last_error text NOT NULL DEFAULT '',dedup_key text,input jsonb,UNIQUE(project_id,dedup_key));CREATE TABLE sync_job_checkpoints(job_id text primary key,cursor text);CREATE TABLE sync_job_cursor_visits(job_id text,cursor text,primary key(job_id,cursor));CREATE TABLE synced_messages(id text,project_id text,connection_id text,provider text,provider_message_id text,channel_id text,sender_id text,text text,model_version text,raw jsonb,updated_at timestamptz DEFAULT now(),PRIMARY KEY(project_id,connection_id,id));CREATE TABLE usage_events(id text primary key,project_id text,connection_id text,connector text,action text,kind text,occurred_at timestamptz,external_account_id text,quantity bigint);CREATE TABLE usage_monthly_rollups(project_id text,external_account_id text,month text,kind text,quantity bigint,updated_at timestamptz DEFAULT now(),PRIMARY KEY(project_id,external_account_id,month,kind));INSERT INTO connections(id,project_id,connector,external_account_id) VALUES('c','p','slack','brand')").unwrap();
+    c.batch_execute("CREATE TABLE connections(id text primary key,project_id text,connector text,external_account_id text,credential_owner text NOT NULL DEFAULT 'brand',connection_generation bigint NOT NULL DEFAULT 1);CREATE TABLE sync_jobs(id text primary key,project_id text,connection_id text,operation text,status text,worker_id text NOT NULL DEFAULT '',attempts integer NOT NULL DEFAULT 0,run_after timestamptz,leased_until timestamptz,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz DEFAULT now(),last_error text NOT NULL DEFAULT '',dedup_key text,input jsonb,UNIQUE(project_id,dedup_key));CREATE TABLE sync_job_checkpoints(job_id text primary key,cursor text);CREATE TABLE sync_job_cursor_visits(job_id text,cursor text,primary key(job_id,cursor));CREATE TABLE synced_messages(id text,project_id text,connection_id text,provider text,provider_message_id text,channel_id text,sender_id text,text text,model_version text,raw jsonb,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz DEFAULT now(),PRIMARY KEY(project_id,connection_id,id));CREATE TABLE usage_events(id text primary key,project_id text,connection_id text,connector text,action text,kind text,occurred_at timestamptz,external_account_id text,quantity bigint);CREATE TABLE usage_monthly_rollups(project_id text,external_account_id text,month text,kind text,quantity bigint,updated_at timestamptz DEFAULT now(),PRIMARY KEY(project_id,external_account_id,month,kind));INSERT INTO connections(id,project_id,connector,external_account_id) VALUES('c','p','slack','brand')").unwrap();
     c.batch_execute(include_str!(
         "../../../migrations/202609090001_sync_job_history.sql"
     ))
     .unwrap();
+    if apply_generation_migration {
+        c.batch_execute(include_str!(
+            "../../../migrations/202609120005_sync_generation.sql"
+        ))
+        .unwrap();
+    }
     (c, schema)
+}
+fn fixture() -> (Client, String) {
+    fixture_with_generation_migration(true)
+}
+fn legacy_generation_fixture() -> (Client, String) {
+    fixture_with_generation_migration(false)
 }
 fn request(id: &str) -> ScheduleRequest {
     ScheduleRequest {
@@ -219,6 +231,298 @@ fn history_reclaims_expired_lease_and_fences_stale_owner() {
             (4, "claimed".into(), json!({})),
         ]
     );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn expired_lease_attempts_are_bounded_and_unblock_younger_work() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.enqueue(&request("abandoned")).unwrap();
+    repo.enqueue(&request("younger")).unwrap();
+    repo.claim("first-worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    let mut client = repo.into_client();
+    client
+        .execute(
+            "UPDATE sync_jobs SET leased_until=now()-interval '1 second' WHERE id='abandoned'",
+            &[],
+        )
+        .unwrap();
+    let policy = json!({
+        "source":"service_config",
+        "maxAttempts":2,
+        "leaseDurationMs":30000,
+        "retryBaseMs":"1",
+        "maxRetryDelayMs":1000
+    });
+    let mut repo = Repository::new(client);
+    let reclaimed = repo
+        .claim_with_policy("second-worker", Duration::from_secs(30), Some(&policy))
+        .unwrap()
+        .unwrap();
+    assert_eq!(reclaimed.id, "abandoned");
+    assert_eq!(reclaimed.attempts, 1);
+    let mut client = repo.into_client();
+    client
+        .execute(
+            "UPDATE sync_jobs SET leased_until=now()-interval '1 second' WHERE id='abandoned'",
+            &[],
+        )
+        .unwrap();
+    let mut repo = Repository::new(client);
+    let younger = repo
+        .claim_with_policy("third-worker", Duration::from_secs(30), Some(&policy))
+        .unwrap()
+        .unwrap();
+    assert_eq!(younger.id, "younger");
+    let mut client = repo.into_client();
+    let abandoned = client
+        .query_one(
+            "SELECT status,attempts,last_error FROM sync_jobs WHERE id='abandoned'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(abandoned.get::<_, String>(0), "failed");
+    assert_eq!(abandoned.get::<_, i32>(1), 2);
+    assert_eq!(abandoned.get::<_, String>(2), "sync lease expired");
+    assert_eq!(
+        history(&mut client, "abandoned")
+            .into_iter()
+            .map(|(_, kind, detail)| (kind, detail))
+            .collect::<Vec<_>>(),
+        vec![
+            ("scheduled".into(), json!({"reason":"new_job"})),
+            ("claimed".into(), json!({})),
+            ("lease_expired".into(), json!({})),
+            (
+                "claimed".into(),
+                json!({"policy": {"source":"service_config","maxAttempts":2,"leaseDurationMs":30000,"retryBaseMs":"1","maxRetryDelayMs":1000}}),
+            ),
+            ("lease_expired".into(), json!({})),
+            ("failed".into(), json!({"code":"LEASE_EXPIRED"})),
+        ]
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn stale_recovery_batch_does_not_hold_younger_current_generation_work() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    for index in 0..40 {
+        repo.enqueue(&request(&format!("stale-batch-{index}")))
+            .unwrap();
+    }
+    let mut client = repo.into_client();
+    client
+        .execute(
+            "UPDATE connections SET connection_generation=2 WHERE id='c' AND project_id='p'",
+            &[],
+        )
+        .unwrap();
+    let mut repo = Repository::new(client);
+    let younger = repo.enqueue(&request("current-generation"));
+    assert_eq!(younger.unwrap().connection_generation, 2);
+    let claimed = repo
+        .claim("bounded-recovery-worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    assert_eq!(claimed.id, "current-generation");
+    let mut client = repo.into_client();
+    assert_eq!(
+        client
+            .query_one(
+                "SELECT count(*) FROM sync_jobs WHERE status='cancelled' AND last_error='connection generation changed'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        32
+    );
+    assert_eq!(
+        client
+            .query_one(
+                "SELECT count(*) FROM sync_jobs WHERE id LIKE 'stale-batch-%' AND status='pending'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        8
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn connection_generation_cancels_stale_jobs_and_reset_restarts_from_the_beginning() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.enqueue(&request("stale-generation")).unwrap();
+    let claimed = repo
+        .claim("old-worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    assert_eq!(claimed.connection_generation, 1);
+    let mut client = repo.into_client();
+    client
+        .batch_execute(
+            "INSERT INTO sync_job_checkpoints(job_id,cursor,connection_generation) VALUES('stale-generation','old-cursor',1); UPDATE connections SET connection_generation=2 WHERE id='c'",
+        )
+        .unwrap();
+    let mut repo = Repository::new(client);
+    assert!(repo
+        .claim("new-worker", Duration::from_secs(30))
+        .unwrap()
+        .is_none());
+    let mut client = repo.into_client();
+    let row = client
+        .query_one(
+            "SELECT status,attempts,connection_generation,last_error,worker_id,leased_until FROM sync_jobs WHERE id='stale-generation'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(row.get::<_, String>(0), "cancelled");
+    assert_eq!(row.get::<_, i32>(1), 0);
+    assert_eq!(row.get::<_, i64>(2), 1);
+    assert_eq!(row.get::<_, String>(3), "connection generation changed");
+    assert_eq!(row.get::<_, String>(4), "");
+    assert!(row.get::<_, Option<std::time::SystemTime>>(5).is_none());
+    assert_eq!(
+        client
+            .query_one(
+                "SELECT count(*) FROM sync_job_checkpoints WHERE job_id='stale-generation'",
+                &[],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        0
+    );
+    let mut repo = Repository::new(client);
+    repo.reset_attempts("p", "brand", "stale-generation")
+        .unwrap();
+    let restarted = repo
+        .claim("restart-worker", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    assert_eq!(restarted.connection_generation, 2);
+    assert_eq!(restarted.attempts, 0);
+    let mut client = repo.into_client();
+    assert_eq!(
+        history(&mut client, "stale-generation")
+            .into_iter()
+            .map(|(_, kind, _)| kind)
+            .collect::<Vec<_>>(),
+        vec![
+            String::from("scheduled"),
+            String::from("claimed"),
+            String::from("cancelled"),
+            String::from("scheduled"),
+            String::from("claimed"),
+        ]
+    );
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn generation_migration_cancels_legacy_checkpoint_after_pre_upgrade_rebind() {
+    let (mut db, schema) = legacy_generation_fixture();
+    db.batch_execute(
+        "INSERT INTO sync_jobs(id,project_id,connection_id,operation,status,run_after,dedup_key,input) VALUES('legacy-cursor','p','c','messages.list','pending',now(),'legacy-cursor','{}'); INSERT INTO sync_job_checkpoints(job_id,cursor) VALUES('legacy-cursor','old-account-cursor'); UPDATE connections SET connection_generation=2 WHERE id='c' AND project_id='p'",
+    )
+    .unwrap();
+
+    db.batch_execute(include_str!(
+        "../../../migrations/202609120005_sync_generation.sql"
+    ))
+    .unwrap();
+
+    let row = db
+        .query_one(
+            "SELECT status,connection_generation,last_error FROM sync_jobs WHERE id='legacy-cursor'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(row.get::<_, String>(0), "cancelled");
+    assert_eq!(row.get::<_, i64>(1), 2);
+    assert_eq!(
+        row.get::<_, String>(2),
+        "connection generation unknown; restart required"
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT count(*) FROM sync_job_checkpoints WHERE job_id='legacy-cursor'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        0
+    );
+    let event = db
+        .query_one(
+            "SELECT kind,detail FROM sync_job_events WHERE job_id='legacy-cursor' ORDER BY seq DESC LIMIT 1",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(event.get::<_, String>(0), "cancelled");
+    assert_eq!(
+        event.get::<_, serde_json::Value>(1),
+        json!({"reason":"connection_generation_unknown"})
+    );
+    db.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn generation_rebind_refreshes_existing_message_ordering_timestamp() {
+    let (db, schema) = fixture();
+    let mut repo = Repository::new(db);
+    repo.enqueue(&request("message-generation-one")).unwrap();
+    let first = repo
+        .claim("message-worker-one", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    repo.commit_page(&first, "", &page("")).unwrap();
+    let mut client = repo.into_client();
+    let old_created_at: std::time::SystemTime = client
+        .query_one("SELECT created_at FROM synced_messages WHERE id='m'", &[])
+        .unwrap()
+        .get(0);
+    client
+        .execute(
+            "UPDATE connections SET connection_generation=2 WHERE id='c' AND project_id='p'",
+            &[],
+        )
+        .unwrap();
+    let mut repo = Repository::new(client);
+    repo.enqueue(&request("message-generation-two")).unwrap();
+    let second = repo
+        .claim("message-worker-two", Duration::from_secs(30))
+        .unwrap()
+        .unwrap();
+    repo.commit_page(&second, "", &page("")).unwrap();
+    let mut client = repo.into_client();
+    let row = client
+        .query_one(
+            "SELECT connection_generation,created_at FROM synced_messages WHERE id='m'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(row.get::<_, i64>(0), 2);
+    assert!(row.get::<_, std::time::SystemTime>(1) > old_created_at);
     client
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
@@ -677,7 +981,7 @@ fn concurrent_claim_and_expired_owner_are_fenced() {
             &[],
         )
         .unwrap();
-    assert_eq!(row.get::<_, i32>(0), 1);
+    assert_eq!(row.get::<_, i32>(0), 2);
     assert!(row.get::<_, bool>(1));
     c.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
@@ -909,6 +1213,198 @@ fn dedup_bound_is_separate_and_preserves_exact_key() {
             .unwrap()
             .get::<_, String>(0),
         r.dedup_key
+    );
+    db.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires explicit local PostgreSQL"]
+fn stored_messages_are_project_connection_scoped_and_cursor_paginated() {
+    let (mut db, schema) = fixture();
+    db.batch_execute(
+        "INSERT INTO synced_messages(id,project_id,connection_id,connection_generation,provider,provider_message_id,channel_id,sender_id,text,model_version,raw,created_at) VALUES
+         ('m1','p','c',1,'slack','1','C1','U1','one','v1','{}',now()-interval '3 seconds'),
+         ('m2','p','c',1,'slack','2','C1','U1','two','v1','{}',now()-interval '2 seconds'),
+         ('m3','p','c',1,'slack','3','C2','U1','three','v1','{}',now()-interval '1 second'),
+         ('other','other-project','c',1,'slack','4','C1','U1','other','v1','{}',now())",
+    )
+    .unwrap();
+    let first = list_stored_messages(
+        &mut db,
+        &StoredMessageQuery {
+            project_id: "p".into(),
+            account_id: "brand".into(),
+            connection_id: "c".into(),
+            channel_id: None,
+            cursor: String::new(),
+            limit: 2,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        first
+            .messages
+            .iter()
+            .map(|message| message.id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["m3", "m2"]
+    );
+    assert!(first.has_more);
+    assert!(!first.next_cursor.is_empty());
+    assert_eq!(
+        list_stored_messages(
+            &mut db,
+            &StoredMessageQuery {
+                project_id: "p".into(),
+                account_id: "brand".into(),
+                connection_id: "c".into(),
+                channel_id: Some("C1".into()),
+                cursor: first.next_cursor.clone(),
+                limit: 2,
+            },
+        ),
+        Err(Error::InvalidInput)
+    );
+    let second = list_stored_messages(
+        &mut db,
+        &StoredMessageQuery {
+            project_id: "p".into(),
+            account_id: "brand".into(),
+            connection_id: "c".into(),
+            channel_id: None,
+            cursor: first.next_cursor.clone(),
+            limit: 2,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        second
+            .messages
+            .iter()
+            .map(|message| message.id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["m1"]
+    );
+    assert!(!second.has_more);
+    assert_eq!(
+        list_stored_messages(
+            &mut db,
+            &StoredMessageQuery {
+                project_id: "p".into(),
+                account_id: "other-brand".into(),
+                connection_id: "c".into(),
+                channel_id: None,
+                cursor: first.next_cursor.clone(),
+                limit: 2,
+            },
+        ),
+        Err(Error::InvalidInput)
+    );
+    let channel = list_stored_messages(
+        &mut db,
+        &StoredMessageQuery {
+            project_id: "p".into(),
+            account_id: "brand".into(),
+            connection_id: "c".into(),
+            channel_id: Some("C1".into()),
+            cursor: String::new(),
+            limit: 100,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        channel
+            .messages
+            .iter()
+            .map(|message| message.id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["m2", "m1"]
+    );
+    let wrong_account = list_stored_messages(
+        &mut db,
+        &StoredMessageQuery {
+            project_id: "p".into(),
+            account_id: "other-brand".into(),
+            connection_id: "c".into(),
+            channel_id: None,
+            cursor: String::new(),
+            limit: 100,
+        },
+    );
+    assert_eq!(wrong_account, Err(Error::NotFound));
+
+    db.batch_execute(
+        "UPDATE connections SET connection_generation=2 WHERE id='c' AND project_id='p'",
+    )
+    .unwrap();
+    assert_eq!(
+        list_stored_messages(
+            &mut db,
+            &StoredMessageQuery {
+                project_id: "p".into(),
+                account_id: "brand".into(),
+                connection_id: "c".into(),
+                channel_id: None,
+                cursor: first.next_cursor.clone(),
+                limit: 2,
+            },
+        ),
+        Err(Error::StaleGeneration)
+    );
+    db.batch_execute(
+        "UPDATE connections SET external_account_id='new-brand' WHERE id='c' AND project_id='p'; INSERT INTO synced_messages(id,project_id,connection_id,connection_generation,provider,provider_message_id,channel_id,sender_id,text,model_version,raw,created_at) VALUES ('m4','p','c',2,'slack','5','C1','U1','new','v1','{}',now())",
+    )
+    .unwrap();
+    let old_account_after_rebind = list_stored_messages(
+        &mut db,
+        &StoredMessageQuery {
+            project_id: "p".into(),
+            account_id: "brand".into(),
+            connection_id: "c".into(),
+            channel_id: None,
+            cursor: String::new(),
+            limit: 100,
+        },
+    );
+    assert_eq!(old_account_after_rebind, Err(Error::NotFound));
+    let new_account = list_stored_messages(
+        &mut db,
+        &StoredMessageQuery {
+            project_id: "p".into(),
+            account_id: "new-brand".into(),
+            connection_id: "c".into(),
+            channel_id: None,
+            cursor: String::new(),
+            limit: 100,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        new_account
+            .messages
+            .iter()
+            .map(|message| message.id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["m4"]
+    );
+    let mut invalid = StoredMessageQuery {
+        project_id: "p".into(),
+        account_id: "brand".into(),
+        connection_id: "c".into(),
+        channel_id: None,
+        cursor: String::new(),
+        limit: 0,
+    };
+    assert_eq!(
+        list_stored_messages(&mut db, &invalid),
+        Err(Error::InvalidInput)
+    );
+    invalid.limit = 1;
+    invalid.cursor = "%%%".into();
+    assert_eq!(
+        list_stored_messages(&mut db, &invalid),
+        Err(Error::InvalidInput)
     );
     db.batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();

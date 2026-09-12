@@ -1,5 +1,3 @@
-import { createSendGridClient, parseSendGridRateLimit } from "./http";
-import { normalizeContact } from "./objects";
 import { createMailClient, validateMailSendInput } from "./mail";
 import { isSmtpConfigured, sendSmtpEmail } from "../../_shared/smtp";
 import {
@@ -28,17 +26,16 @@ export function createContact(input: unknown): Record<string, unknown> | Promise
   if (isRecord(input) && typeof input.apiKey === "string") {
     const payload = validateCreateContactInput(input);
     const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
-    return createSendGridClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "contacts.create" })
-      .fetchJSON("/marketing/contacts", { method: "PUT", body: JSON.stringify({ contacts: [{ email: payload.email, first_name: payload.firstName, last_name: payload.lastName, list_ids: payload.listIds }] }) })
+    return createContactsExtClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "contacts.create" })
+      .upsert({
+        contacts: [{ email: payload.email, firstName: payload.firstName, lastName: payload.lastName }],
+        listIds: payload.listIds,
+      })
       .then((result) => {
-        if (result.status === 200 || result.status === 201 || result.status === 202) {
-          const body = result.body as any;
-          const created = isRecord(body) && Array.isArray(body.new_contacts) && body.new_contacts.length > 0 ? body.new_contacts[0] : { email: payload.email, id: payload.email };
-          return { connector: "sendgrid", action: "contacts.create", source: "connector", contact: normalizeContact(created) };
+        if (!result.ok) {
+          throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
         }
-        const rl = parseSendGridRateLimit(result.status, result.headers);
-        if (rl.limited) throw { ok: false, code: "CONNECTOR_RATE_LIMITED", message: "SendGrid rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds };
-        throw { ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: "SendGrid rejected the request." };
+        return { connector: "sendgrid", action: "contacts.create", source: "connector", jobId: result.jobId };
       });
   }
   return { connector: "sendgrid", action: "contacts.create", source: "connector", validated: validateCreateContactInput(input) };

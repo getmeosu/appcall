@@ -13,6 +13,7 @@ pub enum Error {
     UnsupportedModel,
     Unavailable,
     LeaseLost,
+    StaleGeneration,
     CursorCycle,
     NotFound,
     Conflict,
@@ -59,6 +60,7 @@ pub struct Job {
     pub worker_id: String,
     pub attempts: u32,
     pub leased_until: Option<SystemTime>,
+    pub connection_generation: i64,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -77,6 +79,48 @@ pub struct Message {
 pub struct Page {
     pub records: Vec<Message>,
     pub next_cursor: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StoredMessageQuery {
+    pub project_id: String,
+    /// Trusted account scope supplied by the authenticated caller. An empty
+    /// value is reserved for an operator-wide scope.
+    pub account_id: String,
+    pub connection_id: String,
+    pub channel_id: Option<String>,
+    pub cursor: String,
+    pub limit: usize,
+}
+
+impl StoredMessageQuery {
+    pub fn validate(&self) -> Result<()> {
+        fn valid_identifier(value: &str) -> bool {
+            !value.is_empty() && value.len() <= 512 && !value.chars().any(char::is_control)
+        }
+        if !valid_identifier(&self.project_id)
+            || self.account_id.len() > 512
+            || self.account_id.chars().any(char::is_control)
+            || !valid_identifier(&self.connection_id)
+            || self
+                .channel_id
+                .as_deref()
+                .is_some_and(|channel| !valid_identifier(channel))
+            || !(1..=100).contains(&self.limit)
+            || self.cursor.len() > 4096
+        {
+            return Err(Error::InvalidInput);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredMessagePage {
+    pub messages: Vec<Message>,
+    pub next_cursor: String,
+    pub has_more: bool,
 }
 impl Page {
     pub fn decode(value: Value) -> Result<Self> {

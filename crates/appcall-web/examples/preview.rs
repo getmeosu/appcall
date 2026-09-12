@@ -207,57 +207,6 @@ fn connector_fixture(r: &DashboardRequest) -> Result<Value, Error> {
     )
 }
 
-fn fixture_dynamic(r: &DashboardRequest) -> Result<Value, Error> {
-    let field = |name: &str| r.fields.get(name).map(String::as_str).unwrap_or("");
-    if r.resource.as_deref() != Some("connector-3")
-        || !matches!(
-            field("connectionId"),
-            "preview_active_1" | "preview_active_2"
-        )
-    {
-        return Err(Error::Invalid);
-    }
-    match r.operation {
-        DashboardOperation::Options => {
-            if field("source") != "actors.options"
-                || field("fieldName") != "f.actorId"
-                || field("detailSource") != "actors.input_schema"
-                || field("q").len() > 256
-            {
-                return Err(Error::Invalid);
-            }
-            let search = field("q").to_lowercase();
-            let options: Vec<_> = [
-                ("preview_actor_alpha", "Synthetic Alpha actor"),
-                ("preview_actor_beta", "Synthetic Beta actor"),
-            ]
-            .into_iter()
-            .filter(|(_, label)| label.to_lowercase().contains(&search))
-            .map(|(value, label)| json!({"value":value,"label":label}))
-            .collect();
-            Ok(json!({"options":options}))
-        }
-        DashboardOperation::RunInputFields => {
-            if field("source") != "actors.input_schema" {
-                return Err(Error::Invalid);
-            }
-            let schema = match field("actorId") {
-                "preview_actor_alpha" => {
-                    json!({"type":"object","required":["message"],"properties":{
-                        "message":{"type":"string","title":"Alpha message","description":"Synthetic additional input for Alpha; no message is sent."}
-                    }})
-                }
-                "preview_actor_beta" => json!({"type":"object","required":["count"],"properties":{
-                    "count":{"type":"integer","title":"Beta count","description":"Synthetic additional input for Beta; no provider is called."}
-                }}),
-                _ => return Err(Error::Invalid),
-            };
-            Ok(json!({"actorId":field("actorId"),"inputSchema":schema,"schema":schema}))
-        }
-        _ => Err(Error::Invalid),
-    }
-}
-
 async fn fixture_run(r: &DashboardRequest) -> Result<Value, DashboardFailure> {
     let item = connector_fixture(r)?;
     let connection = r.fields.get("connectionId").ok_or(Error::Invalid)?;

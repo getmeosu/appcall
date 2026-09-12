@@ -40,6 +40,7 @@ pub fn allowed(method: &str, path: &str) -> bool {
                     | "/app/forgot-password"
                     | "/app/magic-link"
                     | "/app/settings/account/mfa/setup"
+                    | "/app/action-claims/reconcile"
             )
 }
 

@@ -415,3 +415,231 @@ fn result_endpoint_preserves_nondeterminism_state_without_inventing_failure_reas
     assert_eq!(result["data"]["failure_reason"], Value::Null);
     assert!(result["data"].get("output").is_none());
 }
+
+fn two_unknown_effects(c: &mut Context) -> WorkflowResult {
+    c.spawn_activity("first", "v1", c.input().clone(), EffectPolicy::Unknown)?;
+    c.spawn_activity("second", "v1", c.input().clone(), EffectPolicy::Unknown)?;
+    c.timer(100)?;
+    Ok(c.input().clone())
+}
+
+#[test]
+fn scoped_reconciliation_is_authenticated_audited_and_restart_safe() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut engine = Engine::open(&db).unwrap();
+    engine
+        .register_workflow("two-unknown", "v1", two_unknown_effects)
+        .unwrap();
+    engine.register_activity("first", "v1").unwrap();
+    engine.register_activity("second", "v1").unwrap();
+    engine
+        .start(
+            "tenant/run",
+            "two-unknown",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    let first = match engine.drive("tenant/run", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("unexpected first dispatch: {other:?}"),
+    };
+    let second = match engine.drive("tenant/run", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("unexpected second dispatch: {other:?}"),
+    };
+    engine
+        .fail(&first, ActivityFailure::OutcomeUnknown)
+        .unwrap();
+    engine
+        .fail(&second, ActivityFailure::OutcomeUnknown)
+        .unwrap();
+
+    let mut api = HttpAdapter::with_scope(engine, TOKEN, "tenant").unwrap();
+    let auth = format!("Bearer {TOKEN}");
+    let reconcile_body = |attempt: &ActivityAttempt, observed: Option<PayloadRef>| {
+        serde_json::to_vec(&serde_json::json!({
+            "effect_id": &attempt.effect_id,
+            "attempt": attempt.attempt,
+            "owner_epoch": attempt.owner_epoch,
+            "evidence_ref": "test-reconciliation",
+            "observed": observed,
+        }))
+        .unwrap()
+    };
+    assert_eq!(
+        api.handle("POST", "/runs/run/reconcile", "", b"{}").status,
+        401
+    );
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            &reconcile_body(&first, None),
+        )
+        .status,
+        202
+    );
+    let audit = body(api.handle("GET", "/runs/run/reconciliation", &auth, b""));
+    assert_eq!(audit["data"]["events"].as_array().unwrap().len(), 1);
+    assert_eq!(audit["data"]["events"][0]["effect_id"], "tenant/run:a:0");
+    assert_eq!(audit["data"]["events"][0]["attempt"], first.attempt);
+    assert_eq!(audit["data"]["events"][0]["owner_epoch"], first.owner_epoch);
+    assert_eq!(audit["data"]["events"][0]["observed"], false);
+    assert_eq!(
+        audit["data"]["events"][0]["evidence_ref"],
+        "test-reconciliation"
+    );
+    assert!(audit["data"]["events"][0]["recorded_at_ms"]
+        .as_i64()
+        .is_some_and(|timestamp| timestamp > 0));
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            &reconcile_body(&first, None),
+        )
+        .status,
+        409
+    );
+    let audit_before_ephemeral = body(api.handle("GET", "/runs/run/reconciliation", &auth, b""));
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            &reconcile_body(&second, Some(PayloadRef::ephemeral("temporary").unwrap())),
+        )
+        .status,
+        400
+    );
+    let state_after_ephemeral = body(api.handle("GET", "/runs/run", &auth, b""));
+    let audit_after_ephemeral = body(api.handle("GET", "/runs/run/reconciliation", &auth, b""));
+    assert_eq!(state_after_ephemeral["data"]["state"], "OutcomeUnknown");
+    assert_eq!(
+        audit_after_ephemeral["data"]["events"],
+        audit_before_ephemeral["data"]["events"]
+    );
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            br#"{"effect_id":"tenant/run:a:99","attempt":1,"owner_epoch":1,"evidence_ref":"test-reconciliation","observed":null}"#,
+        )
+        .status,
+        409
+    );
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            br#"{"effect_id":"tenant/run:a:1","attempt":1,"owner_epoch":1,"evidence_ref":"test-reconciliation","observed":{"key":"bad key","ephemeral":false}}"#,
+        )
+        .status,
+        400
+    );
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            br#"{"effect_id":"tenant/run:a:1","attempt":1,"owner_epoch":1,"evidence_ref":"operator note","observed":null}"#,
+        )
+        .status,
+        400
+    );
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            br#"{"effect_id":"tenant/run:a:1","attempt":1,"owner_epoch":1,"evidence_ref":"test-reconciliation"}"#,
+        )
+        .status,
+        400
+    );
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            br#"{"effect_id":"tenant/run:a:1","attempt":1,"owner_epoch":1,"evidence_ref":"test-reconciliation","observed":null,"unexpected":true}"#,
+        )
+        .status,
+        400
+    );
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            &reconcile_body(&second, Some(PayloadRef::durable("second-result").unwrap())),
+        )
+        .status,
+        202
+    );
+    let newer_first = match api.engine_mut().drive("tenant/run", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("reconciled sibling should permit a fresh dispatch: {other:?}"),
+    };
+    api.engine_mut()
+        .fail(&newer_first, ActivityFailure::OutcomeUnknown)
+        .unwrap();
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            &reconcile_body(&first, Some(PayloadRef::durable("stale").unwrap())),
+        )
+        .status,
+        409
+    );
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            &reconcile_body(
+                &newer_first,
+                Some(PayloadRef::durable("first-result").unwrap())
+            ),
+        )
+        .status,
+        202
+    );
+    assert!(matches!(
+        api.engine_mut().drive("tenant/run", 100).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+    assert_eq!(
+        api.handle("GET", "/runs/other%2Frun/reconciliation", &auth, b"")
+            .status,
+        404
+    );
+    drop(api);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened
+        .register_workflow("two-unknown", "v1", two_unknown_effects)
+        .unwrap();
+    reopened.register_activity("first", "v1").unwrap();
+    reopened.register_activity("second", "v1").unwrap();
+    let mut api = HttpAdapter::with_scope(reopened, TOKEN, "tenant").unwrap();
+    let audit = body(api.handle("GET", "/runs/run/reconciliation", &auth, b""));
+    assert_eq!(audit["data"]["events"].as_array().unwrap().len(), 3);
+    assert_eq!(
+        api.engine_mut().status("tenant/run").unwrap(),
+        RunState::Completed
+    );
+    assert_eq!(
+        api.handle("POST", "/runs/run/reconcile", &auth, br#"{}"#)
+            .status,
+        400
+    );
+}

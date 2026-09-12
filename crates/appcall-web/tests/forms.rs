@@ -162,6 +162,43 @@ fn guided_input_bounds_duplicates_and_depth() {
 }
 
 #[test]
+fn guided_strings_preserve_bytes_and_distinguish_empty_from_omitted() {
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "optional": {"type": "string"},
+            "whitespace": {"type": "string"},
+            "required": {"type": "string"}
+        },
+        "required": ["required"]
+    });
+    let fields = BTreeMap::from([
+        ("f.optional".into(), vec!["  keep spaces  ".into()]),
+        ("f.whitespace".into(), vec!["   ".into()]),
+        ("f.required".into(), vec![String::new()]),
+    ]);
+    assert_eq!(
+        assemble_guided_input(&schema, &fields).unwrap(),
+        json!({"optional": "  keep spaces  ", "whitespace": "   ", "required": ""})
+    );
+
+    let omitted = BTreeMap::from([
+        ("f.optional".into(), vec![String::new()]),
+        ("f.optional.__omit".into(), vec!["on".into()]),
+    ]);
+    assert_eq!(assemble_guided_input(&schema, &omitted).unwrap(), json!({}));
+
+    let typed_with_omit = BTreeMap::from([
+        ("f.optional".into(), vec!["  typed  ".into()]),
+        ("f.optional.__omit".into(), vec!["on".into()]),
+    ]);
+    assert_eq!(
+        assemble_guided_input(&schema, &typed_with_omit).unwrap(),
+        json!({"optional": "  typed  "})
+    );
+}
+
+#[test]
 fn guided_numeric_fields_reject_malformed_values_and_preserve_integer_precision() {
     let number_schema = json!({
         "type": "object",
@@ -297,9 +334,15 @@ fn assert_confirmation(html: &str, heading: &str, body: &str, route: &str) -> St
     assert!(html.contains(&format!(
         "form=\"{id}-form\" formaction=\"{route}\" formmethod=\"post\""
     )));
-    assert!(html.contains(&format!(
-        "<form id=\"{id}-form\" method=\"post\" action=\"{route}\"></form>"
-    )));
+    if html.contains("data-trace-replay-form") {
+        assert!(html.contains(&format!(
+            "<form id=\"{id}-form\" method=\"post\" action=\"{route}\" data-trace-replay-form>"
+        )));
+    } else {
+        assert!(html.contains(&format!(
+            "<form id=\"{id}-form\" method=\"post\" action=\"{route}\"></form>"
+        )));
+    }
     let dialog = html
         .split("<dialog ")
         .nth(1)
@@ -569,6 +612,19 @@ async fn toolkit_guided_field_accessibility() {
     // block the pre-existing raw JSON override path.
     assert!(!html.contains(" required>"));
     assert!(!html.contains(" required "));
+}
+
+#[tokio::test]
+async fn optional_string_controls_explain_blank_value_omission() {
+    let html = guided_html(
+        json!({"type":"object","properties":{"title":{"type":"string"}}}),
+        json!({}),
+    )
+    .await;
+    assert!(html.contains("name=\"f.title\""));
+    assert!(html.contains("name=\"f.title.__omit\""));
+    assert!(html.contains("Omit when blank"));
+    assert!(html.contains("name=\"f.title.__omit\" type=\"checkbox\" value=\"on\" checked"));
 }
 
 #[tokio::test]

@@ -392,6 +392,28 @@ describe("google-workspace Meet: meet.spaces.create", () => {
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
   });
 
+  test("createSpace treats empty error responses as failures", async () => {
+    for (const status of [401, 403, 500, 503]) {
+      const client = createMeetClient({
+        accessToken: "token",
+        fetch: async () => new Response("", { status }),
+      });
+      const result = await client.createSpace({});
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+    }
+  });
+
+  test("createSpace rejects an incomplete successful response", async () => {
+    const client = createMeetClient({
+      accessToken: "token",
+      fetch: async () => Response.json({}),
+    });
+    const result = await client.createSpace({});
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
   test("createSpace dual-mode: returns validated when no accessToken", () => {
     const result = createMeetSpace({});
     const r = result as Record<string, unknown>;
@@ -649,6 +671,18 @@ describe("google-workspace Meet: meet.conference_records.list", () => {
     const result = await client.listConferenceRecords({});
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
+  test("listConferenceRecords keeps an empty 204 success as an empty page", async () => {
+    const client = createMeetClient({
+      accessToken: "token",
+      fetch: async () => new Response("", { status: 204 }),
+    });
+    await expect(client.listConferenceRecords({})).resolves.toEqual({
+      ok: true,
+      conferenceRecords: [],
+      nextPageToken: null,
+    });
   });
 
   test("listConferenceRecords dual-mode: returns validated when no accessToken", () => {

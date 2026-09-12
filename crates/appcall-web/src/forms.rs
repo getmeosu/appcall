@@ -46,31 +46,36 @@ fn field(
     }
     let raw = values
         .and_then(|v| v.first())
-        .map(|v| v.trim())
+        .map(String::as_str)
         .unwrap_or("");
+    let trimmed = raw.trim();
     let value = match schema.get("type").and_then(Value::as_str).unwrap_or("") {
         "string" => {
-            if raw.is_empty() {
+            let omit = fields.get(&format!("{name}.__omit"));
+            if omit.is_some_and(|v| v.len() != 1) {
+                return Err(Error::Invalid);
+            }
+            if values.is_none() || (raw.is_empty() && omit.is_some()) {
                 None
             } else {
                 Some(Value::String(raw.into()))
             }
         }
         "number" => {
-            if raw.is_empty() {
+            if trimmed.is_empty() {
                 None
             } else {
-                Some(Value::Number(parse_json_number(raw)?))
+                Some(Value::Number(parse_json_number(trimmed)?))
             }
         }
         "integer" => {
-            if raw.is_empty() {
+            if trimmed.is_empty() {
                 None
             } else {
-                Some(Value::Number(parse_integer(raw)?))
+                Some(Value::Number(parse_integer(trimmed)?))
             }
         }
-        "boolean" => match raw {
+        "boolean" => match trimmed {
             "" => None,
             "true" => Some(Value::Bool(true)),
             "false" => Some(Value::Bool(false)),
@@ -79,10 +84,10 @@ fn field(
         "array" => {
             let items = schema.get("items").unwrap_or(&Value::Null);
             if nested_array(schema) {
-                if raw.is_empty() {
+                if trimmed.is_empty() {
                     None
                 } else {
-                    let value: Value = serde_json::from_str(raw).map_err(|_| Error::Invalid)?;
+                    let value: Value = serde_json::from_str(trimmed).map_err(|_| Error::Invalid)?;
                     if value.as_array().is_some_and(|rows| {
                         rows.iter().all(|row| {
                             row.as_array()
@@ -99,7 +104,7 @@ fn field(
                     .get("type")
                     .and_then(Value::as_str)
                     .unwrap_or("string");
-                let values = raw
+                let values = trimmed
                     .split(',')
                     .map(str::trim)
                     .filter(|v| !v.is_empty())
@@ -152,7 +157,7 @@ fn field(
                             key.into(),
                             Value::String(
                                 vals.and_then(|v| v.get(i))
-                                    .map(|v| v.trim())
+                                    .map(String::as_str)
                                     .unwrap_or("")
                                     .into(),
                             ),
@@ -265,6 +270,7 @@ fn render_fields(
             sample.get(key).unwrap_or(&Value::Null),
             &name,
             &label,
+            required(key),
             depth,
             connector,
         )?;
@@ -371,6 +377,7 @@ fn render_control(
     sample: &Value,
     name: &str,
     label: &str,
+    required: bool,
     depth: usize,
     connector: Option<&str>,
 ) -> Result<String, Error> {
@@ -392,7 +399,7 @@ fn render_control(
                 .filter(|o| o.get("source").and_then(Value::as_str).is_some()),
             connector,
         ) {
-            return dynamic_control(options, sample, name, label, help, connector);
+            return dynamic_control(options, sample, name, label, help, required, connector);
         }
     }
     if kind == "object" {
@@ -492,15 +499,31 @@ fn render_control(
         )
     }
     .render();
+    let omission = if kind == "string" && !required && options.is_none() {
+        ui::Field {
+            value: "on",
+            checked: sample.as_str().is_none_or(str::is_empty),
+            ..ui::Field::new(
+                &presentation_id("omit", name),
+                &format!("{name}.__omit"),
+                "Omit when blank",
+                ui::Control::Input(ui::InputType::Checkbox),
+            )
+        }
+        .render()
+    } else {
+        String::new()
+    };
     let step = options.is_none().then(|| numeric_step(kind)).flatten();
-    Ok(match step {
+    let rendered = match step {
         Some(step) => rendered.replacen(
             " type=\"number\"",
             &format!(" type=\"number\" step=\"{step}\""),
             1,
         ),
         None => rendered,
-    })
+    };
+    Ok(format!("{rendered}{omission}"))
 }
 
 fn group(name: &str, label: &str, help: &str, content: &str) -> String {
@@ -555,6 +578,7 @@ fn dynamic_control(
     name: &str,
     label: &str,
     help: &str,
+    required: bool,
     connector: &str,
 ) -> Result<String, Error> {
     use crate::{http::escape, ui};
@@ -597,8 +621,23 @@ fn dynamic_control(
         ),
         1,
     );
+    let omission = if !required {
+        ui::Field {
+            value: "on",
+            checked: sample.as_str().is_none_or(str::is_empty),
+            ..ui::Field::new(
+                &presentation_id("omit", name),
+                &format!("{name}.__omit"),
+                "Omit when blank",
+                ui::Control::Input(ui::InputType::Checkbox),
+            )
+        }
+        .render()
+    } else {
+        String::new()
+    };
     Ok(format!(
-        "{hidden}{search}<div id=\"{}\" class=\"tk-opts\" role=\"listbox\" aria-label=\"Options for {}\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" data-input-id=\"{}\" data-value-id=\"{}\" data-status-id=\"{}\" hidden></div><p id=\"{}\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"></p>",
+        "{hidden}{search}{omission}<div id=\"{}\" class=\"tk-opts\" role=\"listbox\" aria-label=\"Options for {}\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" data-input-id=\"{}\" data-value-id=\"{}\" data-status-id=\"{}\" hidden></div><p id=\"{}\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"></p>",
         escape(&list_id),
         escape(label),
         escape(&search_id),

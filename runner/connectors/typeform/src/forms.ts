@@ -57,7 +57,20 @@ export function normalizeFormDetail(f: TypeFormFormDetail): NormalizedFormDetail
 export type FormsListInput = { page?: number; pageSize?: number; search?: string };
 export type FormsGetInput = { formId: string };
 export type FormsCreateInput = { title: string; fields?: unknown[]; settings?: Record<string, unknown>; welcomeScreens?: unknown[]; thankyouScreens?: unknown[] };
-export type FormsUpdateInput = { formId: string; title: string; fields?: unknown[]; settings?: Record<string, unknown>; welcomeScreens?: unknown[]; thankyouScreens?: unknown[] };
+export type FormsUpdateInput = {
+  formId: string;
+  title: string;
+  fields?: unknown[];
+  settings?: Record<string, unknown>;
+  welcomeScreens?: unknown[];
+  thankyouScreens?: unknown[];
+  logic?: unknown[];
+  hidden?: unknown[];
+  theme?: Record<string, unknown>;
+  type?: string;
+  variables?: Record<string, unknown>;
+  workspace?: Record<string, unknown>;
+};
 export type FormsDeleteInput = { formId: string };
 export type ResponsesListInput = { formId: string; pageSize?: number; since?: string; until?: string; after?: string; before?: string };
 export type ResponsesDeleteInput = { formId: string; includedTokens: string[] };
@@ -96,6 +109,12 @@ export function validateFormsUpdateInput(input: unknown): FormsUpdateInput {
     settings: isRecord(input.settings) ? (input.settings as Record<string, unknown>) : undefined,
     welcomeScreens: Array.isArray(input.welcomeScreens) ? input.welcomeScreens : undefined,
     thankyouScreens: Array.isArray(input.thankyouScreens) ? input.thankyouScreens : undefined,
+    logic: Array.isArray(input.logic) ? input.logic : undefined,
+    hidden: Array.isArray(input.hidden) ? input.hidden : undefined,
+    theme: isRecord(input.theme) ? (input.theme as Record<string, unknown>) : undefined,
+    type: typeof input.type === "string" ? input.type : undefined,
+    variables: isRecord(input.variables) ? (input.variables as Record<string, unknown>) : undefined,
+    workspace: isRecord(input.workspace) ? (input.workspace as Record<string, unknown>) : undefined,
   };
 }
 
@@ -202,6 +221,12 @@ export function createFormsClient(options: { accessToken: string; fetch?: typeof
       if (payload.settings !== undefined) body.settings = payload.settings;
       if (payload.welcomeScreens !== undefined) body.welcome_screens = payload.welcomeScreens;
       if (payload.thankyouScreens !== undefined) body.thankyou_screens = payload.thankyouScreens;
+      if (payload.logic !== undefined) body.logic = payload.logic;
+      if (payload.hidden !== undefined) body.hidden = payload.hidden;
+      if (payload.theme !== undefined) body.theme = payload.theme;
+      if (payload.type !== undefined) body.type = payload.type;
+      if (payload.variables !== undefined) body.variables = payload.variables;
+      if (payload.workspace !== undefined) body.workspace = payload.workspace;
       const response = await client.fetchJSON(`/forms/${payload.formId}`, {
         method: "PUT",
         body: JSON.stringify(body),

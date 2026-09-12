@@ -55,7 +55,10 @@ impl MemoryDashboard {
         if r.operation == Op::RunDetail {
             return Err(Error::NotFound.into());
         }
-        if matches!(r.operation, Op::RunNow | Op::ResetRun | Op::CancelRun) {
+        if matches!(
+            r.operation,
+            Op::RunNow | Op::ResetRun | Op::CancelRun | Op::ActionClaims | Op::ReconcileActionClaim
+        ) {
             // The product has not defined a trusted operator principal yet;
             // keep browser mutations fail-closed while scoped reads remain
             // available to ordinary dashboard principals.
@@ -76,6 +79,7 @@ impl MemoryDashboard {
             return Err(Error::Unavailable.into());
         }
         match r.operation {
+            Op::ActionClaims | Op::ReconcileActionClaim => Err(Error::Forbidden.into()),
             Op::Catalog => Ok(
                 json!({"connectors":self.core.registry().public_list().map(|c|crate::browser_host::catalog_item(c.manifest())).collect::<Vec<_>>()}),
             ),
@@ -253,10 +257,18 @@ impl MemoryDashboard {
                     .ok_or_else(|| Error::Invalid.into())
             }
             Op::ReplayTrace => {
+                let caller_credential = field("callerToken");
                 let request = Request {
                     method: "POST".into(),
                     uri: format!("/v1/requests/{resource}/replay"),
-                    headers: vec![],
+                    headers: if caller_credential.is_empty() {
+                        vec![]
+                    } else {
+                        vec![(
+                            "X-Connector-Token".into(),
+                            format!("Bearer {caller_credential}"),
+                        )]
+                    },
                     body: vec![],
                 };
                 let mut execute = self
@@ -267,7 +279,7 @@ impl MemoryDashboard {
                 execute.admin_scope = account_id.is_empty();
                 let value = self.core.execute(execute).await.map_err(web_error)?;
                 Ok(
-                    json!({"requestId":value.request_id,"replayLogId":value.replay_log_id,"output":value.output}),
+                    json!({"requestId":value.request_id,"originalRequestId":resource,"replayLogId":value.replay_log_id,"output":value.output}),
                 )
             }
             Op::ReplayEvent => {

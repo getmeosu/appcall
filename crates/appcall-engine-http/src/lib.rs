@@ -25,6 +25,24 @@ struct Signal {
     name: String,
     value: PayloadRef,
 }
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Reconcile {
+    effect_id: String,
+    attempt: u64,
+    owner_epoch: u64,
+    /// Required field: `null` explicitly proves non-dispatch; a payload
+    /// explicitly records the provider's durable result.
+    observed: ReconcileObservation,
+    /// Bounded opaque reference to the operator/provider evidence.
+    evidence_ref: String,
+}
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ReconcileObservation {
+    Observed(PayloadRef),
+    ProvenNotDispatched(()),
+}
 impl<S: Store> HttpAdapter<S> {
     pub fn new(engine: Engine<S>, token: &str) -> Result<Self> {
         if token.len() < 32 || token.len() > 256 || !token.is_ascii() {
@@ -116,7 +134,7 @@ impl<S: Store> HttpAdapter<S> {
             }
             ("GET", ["", "runs", id]) => Ok((
                 200,
-                json!({"id":id,"state":self.engine.status(&self.run_id(id))?,"failure_reason":self.engine.failure_reason(&self.run_id(id))?}),
+                json!({"id":id,"state":self.engine.status(&self.run_id(id))?,"failure_reason":self.engine.failure_reason(&self.run_id(id))?,"reconciliation_audit":self.engine.reconciliation_audit(&self.run_id(id))?}),
             )),
             ("GET", ["", "runs", id, "result"]) => {
                 let data = match self.engine.result(&self.run_id(id))? {
@@ -137,6 +155,35 @@ impl<S: Store> HttpAdapter<S> {
             }
             ("GET", ["", "runs", id, "history"]) => {
                 Ok((200, json!(self.engine.history(&self.run_id(id))?)))
+            }
+            ("GET", ["", "runs", id, "reconciliation"]) | ("GET", ["", "runs", id, "audit"]) => {
+                Ok((
+                    200,
+                    json!({"id":id,"events":self.engine.reconciliation_audit(&self.run_id(id))?}),
+                ))
+            }
+            ("POST", ["", "runs", id, "reconcile"]) => {
+                let p: Reconcile = decode(body)?;
+                let observed = match p.observed {
+                    ReconcileObservation::Observed(payload) => Some(payload),
+                    ReconcileObservation::ProvenNotDispatched(()) => None,
+                };
+                let run_id = self.run_id(id);
+                if !p.effect_id.starts_with(&format!("{run_id}:")) {
+                    return Err(Error::Conflict);
+                }
+                let audit = self.engine.reconcile_fenced_with_evidence(
+                    &run_id,
+                    &p.effect_id,
+                    p.attempt,
+                    p.owner_epoch,
+                    &p.evidence_ref,
+                    observed,
+                )?;
+                Ok((
+                    202,
+                    json!({"id":id,"state":self.engine.status(&run_id)?,"reconciliation":audit}),
+                ))
             }
             ("POST", ["", "runs", id, "signals"]) => {
                 let p: Signal = decode(body)?;

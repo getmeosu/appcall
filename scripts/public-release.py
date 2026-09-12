@@ -28,7 +28,8 @@ ROOT_FILES = {
 EXACT_FILES = {
     'scripts/public-release.py', 'scripts/test-public-release.py',
     'scripts/migrations-rehash.sh', 'scripts/probe-connectors.sh',
-    'scripts/smoke-prod.sh', 'scripts/measure-api.py',
+    'scripts/smoke-prod.sh', 'scripts/test-smoke-prod.sh',
+    'scripts/measure-api.py',
     '.github/workflows/ci.yml', '.github/workflows/public-release.yml',
     '.github/public-release-policy.json', 'deploy/sandbox/Caddyfile',
     'crates/appcall-web/CONTRACT.md',

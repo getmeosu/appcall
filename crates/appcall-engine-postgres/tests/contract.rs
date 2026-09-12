@@ -456,6 +456,160 @@ fn postgres_persisted_blocked_runs_resume_after_registration_and_input_restore()
 
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_known_unexecuted_payload_does_not_consume_retry_budget_after_restart() {
+    let _guard = postgres_contract_guard();
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_unexecuted_payload_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut c = Client::connect(&url, NoTls).unwrap();
+        c.batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        c
+    };
+
+    struct Missing;
+    impl PayloadResolver for Missing {
+        fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+            Ok(None)
+        }
+    }
+
+    struct Restored;
+    impl PayloadResolver for Restored {
+        fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+            Ok(Some(b"restored input".to_vec()))
+        }
+    }
+
+    let policy = RetryPolicy::new(1, 1, 1, 1).unwrap();
+    let mut initial = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    initial.set_retry_policy(policy).unwrap();
+    initial.register_workflow("one", "v1", one_read).unwrap();
+    initial
+        .register_activity_fn("lookup", "v1", |_, bytes| {
+            assert_eq!(bytes, b"restored input");
+            Ok(PayloadRef::durable("done").unwrap())
+        })
+        .unwrap();
+    initial
+        .start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    let first = match initial.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("unexpected first outcome: {other:?}"),
+    };
+    assert_eq!(first.attempt, 1);
+    assert!(initial
+        .prepare_registered(&first, &Missing)
+        .unwrap()
+        .is_none());
+    assert_eq!(initial.status("r").unwrap(), RunState::NeedsInput);
+    drop(initial);
+
+    let mut reopened = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    reopened.set_retry_policy(policy).unwrap();
+    reopened.register_workflow("one", "v1", one_read).unwrap();
+    reopened
+        .register_activity_fn("lookup", "v1", |_, bytes| {
+            assert_eq!(bytes, b"restored input");
+            Ok(PayloadRef::durable("done").unwrap())
+        })
+        .unwrap();
+    reopened.resume("r").unwrap();
+    let second = match reopened
+        .drive_with_resolver("r", 60_000, &Restored)
+        .unwrap()
+    {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("restored payload must dispatch once: {other:?}"),
+    };
+    assert_eq!(second.attempt, 2);
+    let invocation = reopened
+        .prepare_registered_at(&second, &Restored, 60_000)
+        .unwrap()
+        .expect("restored payload should invoke");
+    reopened.finish_registered(invocation.run()).unwrap();
+    assert!(matches!(
+        reopened
+            .drive_with_resolver("r", 60_000, &Restored)
+            .unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+
+    reopened
+        .register_workflow("missing-implementation", "v1", one_later)
+        .unwrap();
+    reopened.register_activity("later", "v1").unwrap();
+    reopened
+        .start(
+            "missing-implementation",
+            "missing-implementation",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    let rejected = match reopened.drive("missing-implementation", 60_000).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("unexpected implementation dispatch: {other:?}"),
+    };
+    reopened
+        .reject_dispatch(&rejected, RunFailure::MissingActivityImplementation)
+        .unwrap();
+    assert_eq!(
+        reopened.status("missing-implementation").unwrap(),
+        RunState::NeedsImplementation
+    );
+    drop(reopened);
+
+    let mut recovered = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    recovered.set_retry_policy(policy).unwrap();
+    recovered
+        .register_workflow("missing-implementation", "v1", one_later)
+        .unwrap();
+    recovered
+        .register_activity_fn("later", "v1", |_, _| {
+            Ok(PayloadRef::durable("done").unwrap())
+        })
+        .unwrap();
+    recovered.resume("missing-implementation").unwrap();
+    let restored_implementation = match recovered.drive("missing-implementation", 120_000).unwrap()
+    {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("restored implementation must dispatch once: {other:?}"),
+    };
+    assert_eq!(restored_implementation.attempt, 2);
+    let invocation = recovered
+        .prepare_registered_at(&restored_implementation, &Restored, 120_000)
+        .unwrap()
+        .expect("registered implementation should invoke");
+    recovered.finish_registered(invocation.run()).unwrap();
+    assert!(matches!(
+        recovered
+            .drive_with_resolver("missing-implementation", 120_000, &Restored)
+            .unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+
+    drop(recovered);
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
 fn postgres_retry_deadline_and_attempt_budget_survive_restart() {
     let _guard = postgres_contract_guard();
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
@@ -941,4 +1095,8 @@ fn one_unknown(c: &mut Context) -> WorkflowResult {
 
 fn one_read(c: &mut Context) -> WorkflowResult {
     c.activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)
+}
+
+fn one_later(c: &mut Context) -> WorkflowResult {
+    c.activity("later", "v1", c.input().clone(), EffectPolicy::Read)
 }

@@ -238,6 +238,52 @@ describe("updateForm", () => {
     expect(r.form).toBeDefined();
   });
 
+  test("sends the complete replacement definition without dropping logic, hidden, or theme", async () => {
+    const requests: Request[] = [];
+    const fields = [{
+      id: "field-original",
+      title: "Is this correct?",
+      type: "yes_no",
+      scoring: { type: "boolean_correct", boolean_correct: { boolean: true, score: 1 } },
+    }];
+    const logic = [{ type: "field", ref: "field-original", actions: [] }];
+    const hidden = ["field-original"];
+    const theme = { href: "https://example.com/theme.json" };
+    const variables = { score: 0, price: 10.5, custom: 1 };
+    const workspace = { href: "https://api.typeform.com/workspaces/workspace-001" };
+    await updateForm({
+      accessToken: "tf-token-abc",
+      formId: "abc123",
+      title: "Complete Replacement",
+      fields,
+      settings: { language: "en" },
+      welcomeScreens: [{ ref: "welcome" }],
+      thankyouScreens: [{ ref: "thankyou" }],
+      logic,
+      hidden,
+      theme,
+      type: "quiz",
+      variables,
+      workspace,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(formGetFixture), { status: 200 });
+      },
+    });
+
+    const body = await requests[0].json() as Record<string, unknown>;
+    expect(body.fields).toEqual(fields);
+    expect(body.settings).toEqual({ language: "en" });
+    expect(body.welcome_screens).toEqual([{ ref: "welcome" }]);
+    expect(body.thankyou_screens).toEqual([{ ref: "thankyou" }]);
+    expect(body.logic).toEqual(logic);
+    expect(body.hidden).toEqual(hidden);
+    expect(body.theme).toEqual(theme);
+    expect(body.type).toBe("quiz");
+    expect(body.variables).toEqual(variables);
+    expect(body.workspace).toEqual(workspace);
+  });
+
   test("maps 404 to CONNECTOR_UPSTREAM_ERROR", async () => {
     await expect(updateForm({
       accessToken: "tf-token-abc",

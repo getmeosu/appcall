@@ -52,6 +52,24 @@
   }, true);
 })();
 
+// Trace replay forms keep their confirmation dialog inside the form so the
+// native confirm button can target it. Block implicit or unrelated submits;
+// only the open dialog's own confirmation control may reach the POST.
+(() => {
+  document.addEventListener('submit', event => {
+    const form = event.target;
+    if (!form?.matches?.('form[data-trace-replay-form]')) return;
+    const dialog = form.querySelector?.('dialog.ui-confirm-dialog');
+    const submitter = event.submitter;
+    const confirmed = dialog?.open
+      && submitter?.matches?.('[data-confirm-submit]')
+      && dialog.contains?.(submitter);
+    if (confirmed) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+})();
+
 // Keep the OAuth consent preview local; only image URLs with an HTTPS origin
 // are ever assigned. User strings are rendered through textContent.
 const brandingName = document.getElementById('wl-name');
@@ -299,6 +317,14 @@ if (brandingName && brandingLogo && brandingColor) {
     state.generation += 1;
     state.dismissed = false;
     state.failed = false;
+    // The visible label is an editor, while the hidden control is the
+    // committed provider value. Any edit invalidates that commitment until a
+    // fresh option is chosen, so typing cannot submit the previous actor.
+    const hidden = hiddenFor(list);
+    if (hidden) {
+      hidden.value = '';
+      window.__appcallInvalidateRunInputSelection?.(hidden.id);
+    }
     open(input, list);
     clearActive(input, list);
   });
@@ -427,6 +453,10 @@ if (brandingName && brandingLogo && brandingColor) {
   let confirmed = null;
   let fieldsRequest = null;
   let fieldsReady = get('tk-test-fields')?.getAttribute('data-fields-valid') !== 'false';
+  let schemaGeneration = 0;
+  let loadedSchema = null;
+  let actorIntent = null;
+  let actorRequestController = null;
   const announce = text => { const status = get('tk-status'); if (status) status.textContent = text; };
   const stop = event => { event.preventDefault(); event.stopImmediatePropagation(); };
   const runButton = () => get('tk-run-control')?.querySelector('button');
@@ -492,6 +522,74 @@ if (brandingName && brandingLogo && brandingColor) {
     const select = get('tk-connection');
     return Array.from(select?.options || []).some(o => !o.disabled && o.value === select.value) ? select.value : '';
   };
+  const dataValue = (element, key) => element?.getAttribute?.(`data-${key}`) ?? element?.dataset?.[key] ?? null;
+  const actorContext = element => {
+    const field = dataValue(element, 'field');
+    const actor = dataValue(element, 'value');
+    const detail = dataValue(element, 'detail');
+    return field && actor !== null && detail ? { field, actor, detail } : null;
+  };
+  const currentActor = request => get(request?.field)?.value || '';
+  const renderedActor = () => get('tk-runinput')?.getAttribute('data-actor-id') || '';
+  const actorSchemaMatches = request => request?.kind === 'actor'
+    && request.action === get('tk-selected-action')?.value
+    && request.connection === account()
+    && currentActor(request) === request.actor
+    && renderedActor() === request.actor;
+  const clearLoadedActorSchema = () => {
+    const actorState = loadedSchema?.kind === 'actor'
+      || fieldsRequest?.kind === 'actor'
+      || !!actorIntent
+      || !!renderedActor();
+    if (loadedSchema?.kind === 'actor') loadedSchema = null;
+    if (actorState) {
+      fieldsReady = false;
+      get('tk-test-fields')?.removeAttribute('data-fields-valid');
+    }
+  };
+  const cancelActorRequest = () => {
+    actorRequestController?.abort();
+    actorRequestController = null;
+    window.__appcallRunInputRequestController = null;
+  };
+  const beginActorRequest = (connection, field, actor, el = null) => {
+    cancelActorRequest();
+    actorRequestController = typeof AbortController === 'function' ? new AbortController() : null;
+    window.__appcallRunInputRequestController = actorRequestController;
+    const request = {
+      kind: 'actor',
+      el,
+      actor,
+      field,
+      connection,
+      action: get('tk-selected-action')?.value || '',
+      generation: ++schemaGeneration,
+      patch: false,
+      failed: false,
+      controller: actorRequestController,
+    };
+    actorIntent = request;
+    fieldsRequest = request;
+    loadedSchema = null;
+    fieldsReady = false;
+    get('tk-test-fields')?.removeAttribute('data-fields-valid');
+    get('tk-runinput')?.setAttribute('aria-busy', 'true');
+    runAvailability();
+    return request.generation;
+  };
+  window.__appcallInvalidateRunInputSelection = field => {
+    const active = fieldsRequest?.kind === 'actor' && fieldsRequest.field === field;
+    const loaded = loadedSchema?.kind === 'actor' && loadedSchema.field === field;
+    if (!active && !loaded) return;
+    schemaGeneration += 1;
+    cancelActorRequest();
+    fieldsRequest = null;
+    actorIntent = null;
+    clearLoadedActorSchema();
+    get('tk-runinput')?.setAttribute('aria-busy', 'false');
+    runAvailability();
+  };
+  window.__appcallBeginRunInputRequest = beginActorRequest;
   const quote = value => "'" + value.replaceAll("'", "'\"'\"'") + "'";
   const segment = value => encodeURIComponent(value).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
   function syncSelection() {
@@ -520,6 +618,7 @@ if (brandingName && brandingLogo && brandingColor) {
     if (description) description.textContent = 'Run ' + get('tk-selected-action').value + ' as ' + (connection || 'no active account') + '? This operation is marked destructive and may permanently change data.';
   }
   function runAvailability() {
+    if (loadedSchema?.kind === 'actor' && !actorSchemaMatches(loadedSchema)) clearLoadedActorSchema();
     const disabled = !!pending || !!fieldsRequest || !fieldsReady || !account() || !get('tk-selected-action').value;
     for (const button of get('tk-run-control')?.querySelectorAll('button') || []) button.disabled = disabled;
   }
@@ -611,10 +710,26 @@ if (brandingName && brandingLogo && brandingColor) {
   document.addEventListener('change', event => {
     if (event.target.id === 'tk-input-raw') syncRawOverride();
     if (event.target.id === 'tk-connection' && !pending) {
+      const actorLoaded = loadedSchema?.kind === 'actor' || fieldsRequest?.kind === 'actor' || !!actorIntent || !!renderedActor();
+      actorIntent = null;
+      if (actorLoaded) {
+        schemaGeneration += 1;
+        cancelActorRequest();
+        fieldsRequest = null;
+        clearLoadedActorSchema();
+        get('tk-runinput')?.setAttribute('aria-busy', 'false');
+      }
       syncSelection(); runAvailability();
       resultMessage('Account changed. Run the tool to see a result for this account.');
     }
     if (event.target.id === 'tk-action' && !pending) {
+      actorIntent = null;
+      if (loadedSchema?.kind === 'actor' || fieldsRequest?.kind === 'actor' || !!actorIntent || !!renderedActor()) {
+        schemaGeneration += 1;
+        cancelActorRequest();
+        fieldsRequest = null;
+        clearLoadedActorSchema();
+      }
       syncSelection(); get('tk-tool-selector').requestSubmit();
     }
   });
@@ -622,6 +737,7 @@ if (brandingName && brandingLogo && brandingColor) {
     if (event.target.id === 'tk-tool-selector') { if (pending) stop(event); else syncSelection(); return; }
     if (event.target.id !== 'tk-run-form') return;
     const form = event.target;
+    if (loadedSchema?.kind === 'actor' && !actorSchemaMatches(loadedSchema)) clearLoadedActorSchema();
     if (pending || fieldsRequest || !fieldsReady || !form.checkValidity()) { stop(event); if (!pending && fieldsReady) form.reportValidity(); return; }
     const dialog = get('tk-run-confirm');
     if (dialog && (!dialog.open || !confirmed || event.submitter !== confirmed)) {
@@ -632,17 +748,99 @@ if (brandingName && brandingLogo && brandingColor) {
     if (dialog?.open) dialog.close();
     pending = { form, locked: new Map(), patch: false, failed: false, buttons: executionButtons(event.submitter), labels: new Map() };
   }, true);
+  const patchActor = elements => {
+    const match = String(elements || '').match(/\bdata-actor-id=["']([^"']*)["']/);
+    return match?.[1] ?? null;
+  };
   document.addEventListener('datastar-fetch', event => {
     const { type, el, argsRaw = {} } = event.detail;
+    const context = actorContext(el);
+    const actorPatchEvent = argsRaw.selector === '#tk-runinput' || /\bid=["']tk-runinput["']/.test(argsRaw.elements || '');
+    const actorTransport = !!context || actorPatchEvent || !!actorIntent || fieldsRequest?.kind === 'actor';
+    if (actorTransport) {
+      if (type === 'started') {
+        const candidate = context || actorIntent || fieldsRequest;
+        const current = candidate && currentActor(candidate);
+        if (candidate?.generation && fieldsRequest?.kind === 'actor' && fieldsRequest.generation > candidate.generation) {
+          return;
+        }
+        if (!candidate || current !== candidate.actor || (candidate.connection && candidate.connection !== account())) {
+          if (candidate && (fieldsRequest === candidate || actorIntent === candidate)) {
+            fieldsRequest = null;
+            actorIntent = null;
+          }
+          clearLoadedActorSchema();
+          runAvailability();
+          return;
+        }
+        if (!(fieldsRequest?.kind === 'actor' && fieldsRequest.actor === candidate.actor && fieldsRequest.field === candidate.field)) {
+          fieldsRequest = {
+            kind: 'actor', el, actor: candidate.actor, field: candidate.field,
+            connection: account(), action: get('tk-selected-action')?.value || '',
+            generation: ++schemaGeneration, patch: false, failed: false,
+          };
+        } else {
+          fieldsRequest.el = el;
+        }
+        actorIntent = null;
+        loadedSchema = null;
+        fieldsReady = false;
+        get('tk-test-fields')?.removeAttribute('data-fields-valid');
+        get('tk-test-fields')?.setAttribute('aria-busy', 'true');
+        get('tk-runinput')?.setAttribute('aria-busy', 'true');
+        const request = fieldsRequest;
+        queueMicrotask(() => { if (fieldsRequest === request) runAvailability(); });
+      } else {
+        const request = fieldsRequest;
+        const candidate = context || (request?.kind === 'actor' ? request : null);
+        const belongs = request?.kind === 'actor'
+          && candidate?.actor === request.actor
+          && candidate?.field === request.field
+          && (!candidate.generation || !request.generation || candidate.generation === request.generation);
+        const responseActor = patchActor(argsRaw.elements);
+        if (type === 'datastar-patch-elements') {
+          if (responseActor !== null && (!candidate || responseActor !== candidate.actor || currentActor(candidate) !== responseActor)) {
+            clearLoadedActorSchema();
+            runAvailability();
+          }
+          if (belongs) {
+            request.patch ||= argsRaw.selector === '#tk-runinput' || /\bid=["']tk-runinput["']/.test(argsRaw.elements || '');
+            queueMicrotask(syncRawOverride);
+          }
+        }
+        if (belongs && ['error', 'retrying', 'retries-failed'].includes(type)) request.failed = true;
+        if (type === 'finished') {
+          if (!belongs) {
+            if (candidate && currentActor(candidate) !== renderedActor()) clearLoadedActorSchema();
+            runAvailability();
+            return;
+          }
+          fieldsReady = request.patch && !request.failed && actorSchemaMatches(request);
+          loadedSchema = fieldsReady ? { ...request } : null;
+          fieldsRequest = null;
+          actorIntent = null;
+          if (actorRequestController === request.controller) cancelActorRequest();
+          get('tk-runinput')?.setAttribute('aria-busy', 'false');
+          get('tk-test-fields')?.setAttribute('aria-busy', 'false');
+          if (!fieldsReady) announce('Actor input could not be loaded. Choose the actor again.');
+          runAvailability();
+        }
+      }
+      return;
+    }
     if (['tk-connection', 'tk-action'].includes(el?.id)) {
       if (type === 'started') {
-        fieldsRequest = { el, patch: false, failed: false, action: get('tk-selected-action').value, connection: account() };
+        schemaGeneration += 1;
+        actorIntent = null;
+        loadedSchema = null;
+        fieldsRequest = { kind: 'fields', el, patch: false, failed: false, action: get('tk-selected-action').value, connection: account(), generation: schemaGeneration };
         fieldsReady = false;
         get('tk-test-fields')?.setAttribute('aria-busy', 'true');
         get('tk-test-fields')?.removeAttribute('data-fields-valid');
+        get('tk-runinput')?.setAttribute('aria-busy', 'false');
         const request = fieldsRequest;
         queueMicrotask(() => { if (fieldsRequest === request) runAvailability(); });
-      } else if (fieldsRequest?.el === el) {
+      } else if (fieldsRequest?.kind === 'fields' && fieldsRequest.el === el) {
         if (type === 'datastar-patch-elements') {
           fieldsRequest.patch ||= argsRaw.selector === '#tk-test-fields' || /\bid=["']tk-test-fields["']/.test(argsRaw.elements || '');
           queueMicrotask(syncRawOverride);

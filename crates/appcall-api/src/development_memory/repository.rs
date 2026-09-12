@@ -767,11 +767,11 @@ impl ActionRepository for MemoryRepository {
         _: &appcall_actions::PolicyReservation,
     ) -> appcall_actions::Result<()> {
         let mut d = self.lock().map_err(action_error)?;
-        if owned(&d, a)
-            .ok()
-            .is_some_and(|claim| claim.phase == ClaimPhase::Dispatched)
-        {
-            clear_dispatched(&mut d, a)?;
+        let phase = owned(&d, a).ok().map(|claim| claim.phase);
+        match phase {
+            Some(ClaimPhase::Pending) => remove_pending(&mut d, &key(a)),
+            Some(ClaimPhase::Dispatched) => clear_dispatched(&mut d, a)?,
+            Some(ClaimPhase::Completed | ClaimPhase::OutcomeUnknown) | None => {}
         }
         Ok(())
     }
@@ -807,6 +807,55 @@ impl ActionRepository for MemoryRepository {
                 created_at: Utc::now(),
             },
         );
+        Ok(())
+    }
+    async fn finish_read_failure_with_reservation(
+        &self,
+        a: &Attempt,
+        _: &appcall_actions::PolicyReservation,
+        error: &str,
+    ) -> appcall_actions::Result<()> {
+        validate_error_code(error)?;
+        let mut d = self.lock().map_err(action_error)?;
+        let claim = checked_claim(&d, a, ClaimPhase::Dispatched)?;
+        validate_failure_retention(claim)?;
+        if d.bytes_used.checked_add(8192).is_none() {
+            return Err(action_error(MemoryError::Capacity));
+        }
+        settle_dispatched(&mut d, a, false)?;
+        record_failure(&mut d, a, error);
+        Ok(())
+    }
+    async fn finish_read_timeout(
+        &self,
+        a: &Attempt,
+        outcome: appcall_actions::ActionDispatchOutcome,
+    ) -> appcall_actions::Result<()> {
+        let mut d = self.lock().map_err(action_error)?;
+        let Some(phase) = owned(&d, a).ok().map(|claim| claim.phase) else {
+            return Ok(());
+        };
+        if d.bytes_used.checked_add(8192).is_none() {
+            return Err(action_error(MemoryError::Capacity));
+        }
+        match phase {
+            ClaimPhase::Pending => {
+                let claim = checked_claim(&d, a, ClaimPhase::Pending)?;
+                validate_failure_retention(claim)?;
+                remove_pending(&mut d, &key(a));
+            }
+            ClaimPhase::Dispatched => {
+                let claim = checked_claim(&d, a, ClaimPhase::Dispatched)?;
+                validate_failure_retention(claim)?;
+                settle_dispatched(
+                    &mut d,
+                    a,
+                    outcome != appcall_actions::ActionDispatchOutcome::NotDispatched,
+                )?;
+            }
+            ClaimPhase::Completed | ClaimPhase::OutcomeUnknown => return Ok(()),
+        }
+        record_failure(&mut d, a, "ACTION_TIMEOUT");
         Ok(())
     }
     async fn finish(
@@ -864,6 +913,58 @@ impl ActionRepository for MemoryRepository {
         );
         Ok(())
     }
+}
+fn validate_error_code(error: &str) -> appcall_actions::Result<()> {
+    if error.len() > 128
+        || !error
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+    {
+        Err(ActionError::new("INVALID_ACTION_INPUT"))
+    } else {
+        Ok(())
+    }
+}
+fn validate_failure_retention(claim: &ActionClaim) -> appcall_actions::Result<()> {
+    if claim.reserved_bytes < 8192 || claim.reserved_histories < 1 {
+        Err(action_error(MemoryError::Capacity))
+    } else {
+        Ok(())
+    }
+}
+fn settle_dispatched(
+    d: &mut MemoryData,
+    a: &Attempt,
+    success: bool,
+) -> appcall_actions::Result<()> {
+    let claim = checked_claim(d, a, ClaimPhase::Dispatched)?;
+    if d.active_effects == 0
+        || d.bytes_reserved < claim.reserved_bytes
+        || d.histories_reserved < claim.reserved_histories
+    {
+        return Err(action_error(MemoryError::Unavailable));
+    }
+    super::usage::complete_usage(d, a, success)?;
+    let claim = d
+        .action_claims
+        .remove(&key(a))
+        .expect("checked dispatched claim");
+    d.bytes_reserved -= claim.reserved_bytes;
+    d.histories_reserved -= claim.reserved_histories;
+    d.active_effects -= 1;
+    Ok(())
+}
+fn record_failure(d: &mut MemoryData, a: &Attempt, error: &str) {
+    d.bytes_used += 8192;
+    d.action_logs.insert(
+        format!("alog_{}", a.request_id),
+        ActionLog {
+            attempt: a.clone(),
+            status: "failed".into(),
+            error_code: error.into(),
+            created_at: Utc::now(),
+        },
+    );
 }
 fn consume(d: &mut MemoryData, a: &Attempt, bytes: usize, history: usize) {
     let c = d.action_claims.get_mut(&key(a)).expect("checked claim");

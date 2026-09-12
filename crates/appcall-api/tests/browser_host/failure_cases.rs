@@ -6,6 +6,8 @@ pub struct TransportServer {
     stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
     thread: Option<std::thread::JoinHandle<()>>,
     pub calls: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    #[allow(dead_code)]
+    respond_ok: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 impl TransportServer {
     pub fn new() -> Self {
@@ -16,14 +18,50 @@ impl TransportServer {
         let stopped = stop.clone();
         let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let called = calls.clone();
+        let respond_ok = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let should_respond = respond_ok.clone();
         let thread = std::thread::spawn(move || {
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
             while !stopped.load(std::sync::atomic::Ordering::SeqCst)
                 && std::time::Instant::now() < deadline
             {
                 match listener.accept() {
-                    Ok((stream, _)) => {
+                    Ok((mut stream, _)) => {
                         called.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        if should_respond.load(std::sync::atomic::Ordering::SeqCst) {
+                            let _ = stream.set_nonblocking(false);
+                            let _ = stream
+                                .set_read_timeout(Some(std::time::Duration::from_millis(100)));
+                            let mut bytes = Vec::new();
+                            let _ = std::io::Read::read_to_end(&mut stream, &mut bytes);
+                            let id = bytes
+                                .windows(4)
+                                .position(|window| window == b"\r\n\r\n")
+                                .and_then(|offset| {
+                                    serde_json::from_slice::<serde_json::Value>(
+                                        &bytes[offset + 4..],
+                                    )
+                                    .ok()
+                                })
+                                .and_then(|body| {
+                                    body.get("id")
+                                        .and_then(serde_json::Value::as_str)
+                                        .map(str::to_owned)
+                                });
+                            if let Some(id) = id {
+                                let body = serde_json::json!({
+                                    "id": id,
+                                    "ok": true,
+                                    "result": {"output": {"sent": true}}
+                                })
+                                .to_string();
+                                let response = format!(
+                                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                                    body.len(), body
+                                );
+                                let _ = std::io::Write::write_all(&mut stream, response.as_bytes());
+                            }
+                        }
                         drop(stream);
                     }
                     Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
@@ -38,7 +76,12 @@ impl TransportServer {
             stop,
             thread: Some(thread),
             calls,
+            respond_ok,
         }
+    }
+    #[allow(dead_code)]
+    pub fn response_switch(&self) -> std::sync::Arc<std::sync::atomic::AtomicBool> {
+        self.respond_ok.clone()
     }
 }
 impl Drop for TransportServer {
@@ -70,7 +113,13 @@ pub fn extra_manifests() -> Vec<Value> {
     oauth["network"] = json!({"allowedHosts":["example.invalid"]});
     let mut check = manifest();
     check["key"] = json!("copy-check-toolkit");
-    vec![routed, oauth, check]
+    let mut external = manifest();
+    external["key"] = json!("copy-external-toolkit");
+    external["auth"] = json!({
+        "type": "external_bearer",
+        "setup": {"mode": "external_bearer", "fields": []}
+    });
+    vec![routed, oauth, check, external]
 }
 
 // Both callers construct actual backend services; only the expectations are shared.
@@ -365,6 +414,45 @@ pub async fn assert_service_failures(
         "replay execution must retain its new failure request ID"
     );
     assert_ne!(failure.request_id(), Some("original-copy-request"));
+    let before = runner_calls.load(std::sync::atomic::Ordering::SeqCst);
+    let failure = data
+        .execute_detailed(request(
+            Op::ReplayTrace,
+            "original-external-copy-request",
+            &[],
+        ))
+        .await
+        .unwrap_err();
+    assert_eq!(failure.classification(), Error::Unavailable);
+    assert_eq!(failure.cause(), FailureCause::CredentialsUnavailable);
+    assert_eq!(
+        failure.outcome(),
+        appcall_web::ExecutionOutcome::NotDispatched,
+        "missing external replay credential must fence the runner"
+    );
+    assert_eq!(
+        runner_calls.load(std::sync::atomic::Ordering::SeqCst),
+        before,
+        "missing external replay credential must not reach the runner"
+    );
+    let failure = data
+        .execute_detailed(request(
+            Op::ReplayTrace,
+            "original-external-copy-request",
+            &[("callerToken", "synthetic-browser-caller-token")],
+        ))
+        .await
+        .unwrap_err();
+    assert_eq!(failure.classification(), Error::Unavailable);
+    assert_eq!(failure.cause(), FailureCause::Unknown);
+    assert!(
+        runner_calls.load(std::sync::atomic::Ordering::SeqCst) > before,
+        "provided external replay credential must reach the runner"
+    );
+    assert!(
+        !format!("{failure:?}").contains("synthetic-browser-caller-token"),
+        "replay failures must not expose the transient caller credential"
+    );
     for operation in [Op::TestConnection, Op::ReplayTrace] {
         let failure = data
             .execute_detailed(request(operation, "missing-copy-resource", &[]))

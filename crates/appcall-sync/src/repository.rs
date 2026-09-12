@@ -2,11 +2,14 @@ use crate::*;
 use postgres::{Client, GenericClient, Row};
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use std::fmt::Write;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const MAX_EVENT_DETAIL_BYTES: usize = 1024;
 const MAX_EVENT_STRING_BYTES: usize = 96;
 const MAX_PAGE_RECORDS: u64 = 10_000;
 const MAX_RETRY_DELAY_MS: u64 = 86_400_000;
+const MAX_RECOVERIES_PER_CLAIM: usize = 32;
 
 fn job(r: Row) -> Job {
     Job {
@@ -19,6 +22,7 @@ fn job(r: Row) -> Job {
         worker_id: r.get("worker_id"),
         attempts: r.get::<_, i32>("attempts").max(0) as u32,
         leased_until: r.get("leased_until"),
+        connection_generation: r.get("connection_generation"),
     }
 }
 
@@ -143,7 +147,14 @@ fn event_detail(kind: &str, detail: &Value) -> Result<()> {
             }
         }
         "cancelled" => {
-            if object.get("reason").and_then(Value::as_str) != Some("operator_cancelled") {
+            if !matches!(
+                object.get("reason").and_then(Value::as_str),
+                Some(
+                    "operator_cancelled"
+                        | "connection_generation_changed"
+                        | "connection_generation_unknown",
+                )
+            ) {
                 return Err(Error::InvalidInput);
             }
         }
@@ -215,6 +226,44 @@ fn retry_detail(delay: Duration, code: &str) -> Value {
     })
 }
 
+fn configured_max_attempts(policy: Option<&Value>) -> Result<u32> {
+    let Some(value) = policy.and_then(|value| value.get("maxAttempts")) else {
+        return Ok(DEFAULT_MAX_ATTEMPTS);
+    };
+    let value = value.as_u64().ok_or(Error::InvalidInput)?;
+    u32::try_from(value)
+        .ok()
+        .filter(|value| *value > 0 && *value <= i32::MAX as u32)
+        .ok_or(Error::InvalidInput)
+}
+
+fn cancel_stale_jobs<C: GenericClient>(db: &mut C) -> Result<()> {
+    for _ in 0..MAX_RECOVERIES_PER_CLAIM {
+        let Some(row) = db.query_opt(
+            "SELECT j.id FROM sync_jobs AS j JOIN connections AS c ON c.id=j.connection_id AND c.project_id=j.project_id WHERE j.status IN ('pending','running') AND j.connection_generation<>c.connection_generation ORDER BY j.created_at,j.id FOR UPDATE OF j,c SKIP LOCKED LIMIT 1",
+            &[],
+        )? else {
+            return Ok(());
+        };
+        let id: String = row.get("id");
+        if db.execute(
+            "UPDATE sync_jobs SET status='cancelled',worker_id='',leased_until=NULL,run_after=clock_timestamp(),last_error='connection generation changed',updated_at=clock_timestamp() WHERE id=$1 AND status IN ('pending','running')",
+            &[&id],
+        )? != 1 {
+            return Err(Error::Conflict);
+        }
+        db.execute("DELETE FROM sync_job_checkpoints WHERE job_id=$1", &[&id])?;
+        db.execute("DELETE FROM sync_job_cursor_visits WHERE job_id=$1", &[&id])?;
+        append_event(
+            db,
+            &id,
+            "cancelled",
+            &json!({"reason":"connection_generation_changed"}),
+        )?;
+    }
+    Ok(())
+}
+
 fn failure_code(error: Option<&Error>) -> &'static str {
     match error {
         Some(Error::InvalidInput) => "INVALID_INPUT",
@@ -227,6 +276,7 @@ fn failure_code(error: Option<&Error>) -> &'static str {
         Some(Error::Conflict) => "CONFLICT",
         Some(Error::Storage) | None => "SYNC_PROCESSING_FAILED",
         Some(Error::LeaseLost) => "LEASE_LOST",
+        Some(Error::StaleGeneration) => "STALE_CONNECTION_GENERATION",
     }
 }
 
@@ -245,7 +295,7 @@ pub fn enqueue<C: GenericClient>(db: &mut C, r: &ScheduleRequest) -> Result<Job>
         return Err(Error::InvalidInput);
     }
     let mut tx = db.transaction()?;
-    let current = tx.query_opt("INSERT INTO sync_jobs(id,project_id,connection_id,operation,status,run_after,dedup_key,input) SELECT $1,$2,c.id,$4,'pending',now(),$5,$6 FROM connections c WHERE c.id=$3 AND c.project_id=$2 ON CONFLICT DO NOTHING RETURNING sync_jobs.*",&[&r.id,&r.project_id,&r.connection_id,&r.operation,&r.dedup_key,&r.input])?;
+    let current = tx.query_opt("INSERT INTO sync_jobs(id,project_id,connection_id,operation,status,run_after,dedup_key,input,connection_generation) SELECT $1,$2,c.id,$4,'pending',now(),$5,$6,c.connection_generation FROM connections c WHERE c.id=$3 AND c.project_id=$2 ON CONFLICT DO NOTHING RETURNING sync_jobs.*",&[&r.id,&r.project_id,&r.connection_id,&r.operation,&r.dedup_key,&r.input])?;
     let (result, inserted) = if let Some(row) = current {
         (job(row), true)
     } else {
@@ -290,6 +340,15 @@ impl Repository {
     }
     pub fn enqueue(&mut self, r: &ScheduleRequest) -> Result<Job> {
         enqueue(&mut self.client, r)
+    }
+    pub fn connection_generation(&mut self, project_id: &str, connection_id: &str) -> Result<i64> {
+        self.client
+            .query_opt(
+                "SELECT connection_generation FROM connections WHERE project_id=$1 AND id=$2",
+                &[&project_id, &connection_id],
+            )?
+            .map(|row| row.get("connection_generation"))
+            .ok_or(Error::NotFound)
     }
     pub fn control(
         &mut self,
@@ -339,34 +398,78 @@ impl Repository {
             return Err(Error::InvalidInput);
         }
         let millis = lease.as_millis() as i64;
-        let mut tx = self.client.transaction()?;
-        let row = tx.query_opt("WITH candidate AS (SELECT j.id,j.status AS previous_status FROM sync_jobs j JOIN connections c ON c.id=j.connection_id AND c.project_id=j.project_id WHERE ((j.status='pending' AND j.run_after<=now()) OR (j.status='running' AND j.leased_until<=now())) AND NOT EXISTS(SELECT 1 FROM sync_jobs earlier WHERE earlier.connection_id=j.connection_id AND earlier.operation=j.operation AND earlier.status IN ('pending','running') AND (earlier.created_at,earlier.id)<(j.created_at,j.id)) ORDER BY j.run_after,j.created_at,j.id FOR UPDATE OF c,j SKIP LOCKED LIMIT 1), updated AS (UPDATE sync_jobs SET status='running',worker_id=$1,leased_until=clock_timestamp()+($2::bigint*interval '1 millisecond'),updated_at=now() FROM candidate WHERE sync_jobs.id=candidate.id RETURNING sync_jobs.*,candidate.previous_status AS previous_status) SELECT * FROM updated",&[&worker,&millis])?;
-        let Some(row) = row else {
-            tx.commit()?;
-            return Ok(None);
-        };
-        let previous_status: String = row.get("previous_status");
-        let claimed = job(row);
-        if previous_status == "running" {
-            append_event(&mut tx, &claimed.id, "lease_expired", &simple_detail())?;
-        }
-        let detail = policy
-            .map(|policy| json!({"policy": policy}))
+        let max_attempts = configured_max_attempts(policy)?;
+        let claim_detail = policy
+            .map(|policy| {
+                let detail = json!({"policy": policy});
+                event_detail("claimed", &detail)?;
+                Ok::<Value, Error>(detail)
+            })
+            .transpose()?
             .unwrap_or_else(simple_detail);
-        append_event(&mut tx, &claimed.id, "claimed", &detail)?;
+        let mut tx = self.client.transaction()?;
+        cancel_stale_jobs(&mut tx)?;
+        for _ in 0..MAX_RECOVERIES_PER_CLAIM {
+            let row = tx.query_opt("SELECT j.* FROM sync_jobs AS j JOIN connections AS c ON c.id=j.connection_id AND c.project_id=j.project_id WHERE j.connection_generation=c.connection_generation AND ((j.status='pending' AND j.run_after<=clock_timestamp()) OR (j.status='running' AND j.leased_until<=clock_timestamp())) AND NOT EXISTS(SELECT 1 FROM sync_jobs AS earlier WHERE earlier.connection_id=j.connection_id AND earlier.operation=j.operation AND earlier.connection_generation=c.connection_generation AND earlier.status IN ('pending','running') AND (earlier.created_at,earlier.id)<(j.created_at,j.id)) ORDER BY j.run_after,j.created_at,j.id FOR UPDATE OF c,j SKIP LOCKED LIMIT 1", &[])?;
+            let Some(row) = row else {
+                tx.commit()?;
+                return Ok(None);
+            };
+            let previous_status: String = row.get("status");
+            let previous = job(row);
+            let abandoned = previous_status == "running";
+            if abandoned {
+                let attempts = previous.attempts.saturating_add(1).min(max_attempts);
+                if attempts >= max_attempts {
+                    tx.execute(
+                        "UPDATE sync_jobs SET status='failed',attempts=$2,worker_id='',leased_until=NULL,run_after=clock_timestamp(),last_error='sync lease expired',updated_at=clock_timestamp() WHERE id=$1",
+                        &[&previous.id, &(attempts as i32)],
+                    )?;
+                    append_event(&mut tx, &previous.id, "lease_expired", &simple_detail())?;
+                    append_event(
+                        &mut tx,
+                        &previous.id,
+                        "failed",
+                        &json!({"code":"LEASE_EXPIRED"}),
+                    )?;
+                    continue;
+                }
+                let row = tx.query_one(
+                    "UPDATE sync_jobs SET status='running',attempts=$4,worker_id=$2,leased_until=clock_timestamp()+($3::bigint*interval '1 millisecond'),updated_at=clock_timestamp() WHERE id=$1 RETURNING *",
+                    &[&previous.id, &worker, &millis, &(attempts as i32)],
+                )?;
+                let claimed = job(row);
+                append_event(&mut tx, &claimed.id, "lease_expired", &simple_detail())?;
+                append_event(&mut tx, &claimed.id, "claimed", &claim_detail)?;
+                tx.commit()?;
+                return Ok(Some(claimed));
+            }
+            let row = tx.query_one(
+                "UPDATE sync_jobs SET status='running',worker_id=$2,leased_until=clock_timestamp()+($3::bigint*interval '1 millisecond'),updated_at=clock_timestamp() WHERE id=$1 RETURNING *",
+                &[&previous.id, &worker, &millis],
+            )?;
+            let claimed = job(row);
+            append_event(&mut tx, &claimed.id, "claimed", &claim_detail)?;
+            tx.commit()?;
+            return Ok(Some(claimed));
+        }
         tx.commit()?;
-        Ok(Some(claimed))
+        Ok(None)
     }
     pub fn cursor(&mut self, j: &Job) -> Result<String> {
         let mut tx = self.client.transaction()?;
         lock(&mut tx, j)?;
-        let cursor = tx
+        let checkpoint = tx
             .query_opt(
-                "SELECT cursor FROM sync_job_checkpoints WHERE job_id=$1",
+                "SELECT cursor,connection_generation FROM sync_job_checkpoints WHERE job_id=$1",
                 &[&j.id],
             )?
-            .map(|r| r.get(0))
-            .unwrap_or_default();
+            .map(|r| (r.get::<_, String>(0), r.get::<_, i64>(1)));
+        let cursor = match checkpoint {
+            Some((cursor, generation)) if generation == j.connection_generation => cursor,
+            Some(_) => return Err(Error::StaleGeneration),
+            None => String::new(),
+        };
         tx.commit()?;
         Ok(cursor)
     }
@@ -396,16 +499,20 @@ impl Repository {
         let mut tx = self.client.transaction()?;
         lock(&mut tx, j)?;
         if let Some(c) = connection {
-            if tx.query_opt("SELECT id FROM connections WHERE id=$1 AND project_id=$2 AND connector=$3 AND status='active' AND coalesce(secret_ref_id,'')=$4 AND coalesce(external_account_id,'')=$5 AND auth_type=$6 AND credential_owner=$7 FOR SHARE",&[&c.id,&c.project_id,&c.connector,&c.secret_ref_id,&c.external_account_id,&c.auth_type.as_str(),&c.credential_owner.as_str()])?.is_none(){return Err(Error::Unavailable)}
+            if tx.query_opt("SELECT id FROM connections WHERE id=$1 AND project_id=$2 AND connector=$3 AND status='active' AND coalesce(secret_ref_id,'')=$4 AND coalesce(external_account_id,'')=$5 AND auth_type=$6 AND credential_owner=$7 AND connection_generation=$8 FOR SHARE",&[&c.id,&c.project_id,&c.connector,&c.secret_ref_id,&c.external_account_id,&c.auth_type.as_str(),&c.credential_owner.as_str(),&j.connection_generation])?.is_none(){return Err(Error::StaleGeneration)}
         }
 
-        let persisted: String = tx
+        let persisted = tx
             .query_opt(
-                "SELECT cursor FROM sync_job_checkpoints WHERE job_id=$1",
+                "SELECT cursor,connection_generation FROM sync_job_checkpoints WHERE job_id=$1",
                 &[&j.id],
             )?
-            .map(|r| r.get(0))
-            .unwrap_or_default();
+            .map(|r| (r.get::<_, String>(0), r.get::<_, i64>(1)));
+        let persisted = match persisted {
+            Some((cursor, generation)) if generation == j.connection_generation => cursor,
+            Some(_) => return Err(Error::StaleGeneration),
+            None => String::new(),
+        };
         if persisted != cursor {
             return Err(Error::LeaseLost);
         }
@@ -421,7 +528,7 @@ impl Repository {
         }
         if tx.execute("INSERT INTO sync_job_cursor_visits(job_id,cursor) VALUES($1,$2) ON CONFLICT DO NOTHING",&[&j.id,&cursor])?!=1{return Err(Error::CursorCycle)}
         for m in &page.records {
-            tx.execute("INSERT INTO synced_messages(id,project_id,connection_id,provider,provider_message_id,channel_id,sender_id,text,model_version,raw) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(project_id,connection_id,id) DO UPDATE SET provider=EXCLUDED.provider,provider_message_id=EXCLUDED.provider_message_id,channel_id=EXCLUDED.channel_id,sender_id=EXCLUDED.sender_id,text=EXCLUDED.text,model_version=EXCLUDED.model_version,raw=EXCLUDED.raw,updated_at=now()",&[&m.id,&j.project_id,&j.connection_id,&m.provider,&m.provider_message_id,&m.channel_id,&m.sender_id,&m.text,&m.model_version,&m.raw])?;
+            tx.execute("INSERT INTO synced_messages(id,project_id,connection_id,connection_generation,provider,provider_message_id,channel_id,sender_id,text,model_version,raw) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(project_id,connection_id,id) DO UPDATE SET connection_generation=EXCLUDED.connection_generation,provider=EXCLUDED.provider,provider_message_id=EXCLUDED.provider_message_id,channel_id=EXCLUDED.channel_id,sender_id=EXCLUDED.sender_id,text=EXCLUDED.text,model_version=EXCLUDED.model_version,raw=EXCLUDED.raw,created_at=CASE WHEN synced_messages.connection_generation IS DISTINCT FROM EXCLUDED.connection_generation THEN now() ELSE synced_messages.created_at END,updated_at=now()",&[&m.id,&j.project_id,&j.connection_id,&j.connection_generation,&m.provider,&m.provider_message_id,&m.channel_id,&m.sender_id,&m.text,&m.model_version,&m.raw])?;
         }
         if !page.records.is_empty() {
             let hash = Sha256::digest(cursor.as_bytes());
@@ -430,7 +537,7 @@ impl Repository {
             let quantity = page.records.len() as i64;
             tx.execute("WITH inserted AS (INSERT INTO usage_events(id,project_id,connection_id,connector,action,kind,occurred_at,external_account_id,quantity) SELECT $1,c.project_id,c.id,c.connector,$3,'synced_record',now(),COALESCE(c.external_account_id,''),$4 FROM connections c WHERE c.id=$2 AND c.project_id=$5 ON CONFLICT(id) DO NOTHING RETURNING project_id,external_account_id,kind) INSERT INTO usage_monthly_rollups(project_id,external_account_id,month,kind,quantity) SELECT project_id,external_account_id,to_char(now() AT TIME ZONE 'UTC','YYYY-MM'),kind,$4 FROM inserted ON CONFLICT(project_id,external_account_id,month,kind) DO UPDATE SET quantity=usage_monthly_rollups.quantity+EXCLUDED.quantity,updated_at=now()",&[&id,&j.connection_id,&j.operation,&quantity,&j.project_id])?;
         }
-        tx.execute("INSERT INTO sync_job_checkpoints(job_id,cursor) VALUES($1,$2) ON CONFLICT(job_id) DO UPDATE SET cursor=EXCLUDED.cursor",&[&j.id,&page.next_cursor])?;
+        tx.execute("INSERT INTO sync_job_checkpoints(job_id,cursor,connection_generation) VALUES($1,$2,$3) ON CONFLICT(job_id) DO UPDATE SET cursor=EXCLUDED.cursor,connection_generation=EXCLUDED.connection_generation",&[&j.id,&page.next_cursor,&j.connection_generation])?;
         let status = if page.next_cursor.is_empty() {
             "succeeded"
         } else {
@@ -458,7 +565,7 @@ impl Repository {
         lock(&mut tx, j)?;
         let millis = delay.as_millis().min(MAX_RETRY_DELAY_MS as u128) as i64;
         let status = if terminal { "failed" } else { "pending" };
-        tx.execute("UPDATE sync_jobs SET status=$2,attempts=attempts+1,worker_id='',leased_until=NULL,run_after=now()+($3::bigint*interval '1 millisecond'),last_error='sync processing failed',updated_at=now() WHERE id=$1",&[&j.id,&status,&millis])?;
+        tx.execute("UPDATE sync_jobs SET status=$2,attempts=CASE WHEN attempts < 2147483647 THEN attempts+1 ELSE attempts END,worker_id='',leased_until=NULL,run_after=now()+($3::bigint*interval '1 millisecond'),last_error='sync processing failed',updated_at=now() WHERE id=$1",&[&j.id,&status,&millis])?;
         let code = failure_code(error);
         if terminal {
             append_event(&mut tx, &j.id, "failed", &json!({"code": code}))?;
@@ -470,6 +577,31 @@ impl Repository {
                 &retry_detail(Duration::from_millis(millis as u64), code),
             )?;
         }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn cancel_stale(&mut self, j: &Job) -> Result<()> {
+        let mut tx = self.client.transaction()?;
+        let updated = tx.query_opt(
+            "UPDATE sync_jobs AS j SET status='cancelled',worker_id='',leased_until=NULL,run_after=clock_timestamp(),last_error='connection generation changed',updated_at=clock_timestamp() FROM connections AS c WHERE j.id=$1 AND j.project_id=$2 AND j.connection_id=c.id AND c.project_id=j.project_id AND j.status='running' AND j.worker_id=$3 AND j.leased_until=$4 AND j.connection_generation<>c.connection_generation RETURNING j.id",
+            &[&j.id, &j.project_id, &j.worker_id, &j.leased_until],
+        )?;
+        if updated.is_none() {
+            tx.commit()?;
+            return Err(Error::LeaseLost);
+        }
+        tx.execute("DELETE FROM sync_job_checkpoints WHERE job_id=$1", &[&j.id])?;
+        tx.execute(
+            "DELETE FROM sync_job_cursor_visits WHERE job_id=$1",
+            &[&j.id],
+        )?;
+        append_event(
+            &mut tx,
+            &j.id,
+            "cancelled",
+            &json!({"reason":"connection_generation_changed"}),
+        )?;
         tx.commit()?;
         Ok(())
     }
@@ -511,26 +643,35 @@ fn control_in_transaction_inner<C: GenericClient>(
     }
     let job = db
         .query_opt(
-            "SELECT connection_id,status,COALESCE(status='running' AND leased_until>clock_timestamp(),false) AS active_lease FROM sync_jobs WHERE id=$1 AND project_id=$2 FOR UPDATE",
+            "SELECT connection_id,status,connection_generation,last_error,COALESCE(status='running' AND leased_until>clock_timestamp(),false) AS active_lease FROM sync_jobs WHERE id=$1 AND project_id=$2 FOR UPDATE",
             &[&job_id, &project_id],
         )?
         .ok_or(Error::NotFound)?;
     let connection_id: String = job.get("connection_id");
-    if db
+    let connection = db
         .query_opt(
-            "SELECT id FROM connections WHERE id=$1 AND project_id=$2 AND ($3='' OR (external_account_id=$3 AND credential_owner<>'platform')) FOR UPDATE",
+            "SELECT id,connection_generation FROM connections WHERE id=$1 AND project_id=$2 AND ($3='' OR (external_account_id=$3 AND credential_owner<>'platform')) FOR UPDATE",
             &[&connection_id, &project_id, &account_id],
         )?
-        .is_none()
-    {
-        return Err(Error::NotFound);
-    }
+        .ok_or(Error::NotFound)?;
+    let current_generation: i64 = connection.get("connection_generation");
     let status: String = job.get("status");
+    let job_generation: i64 = job.get("connection_generation");
+    let last_error: String = job.get("last_error");
     let active_lease: bool = job.get("active_lease");
+    let stale_restart = job_generation != current_generation;
+    let stale_cancelled = status == "cancelled"
+        && (last_error == "connection generation changed"
+            || last_error == "connection generation unknown; restart required");
     let allowed = match action {
-        OperatorAction::RunNow => (status == "pending") || (status == "running" && !active_lease),
+        OperatorAction::RunNow => {
+            (status == "pending") || (status == "running" && !active_lease) || stale_cancelled
+        }
         OperatorAction::ResetAttempts => {
-            status == "pending" || status == "failed" || (status == "running" && !active_lease)
+            status == "pending"
+                || status == "failed"
+                || (status == "running" && !active_lease)
+                || stale_cancelled
         }
         OperatorAction::Cancel => status == "pending" || status == "running",
     };
@@ -539,12 +680,12 @@ fn control_in_transaction_inner<C: GenericClient>(
     }
     let updated = match action {
         OperatorAction::RunNow => db.execute(
-            "UPDATE sync_jobs SET status='pending',worker_id='',leased_until=NULL,run_after=clock_timestamp(),updated_at=clock_timestamp() WHERE id=$1 AND project_id=$2",
-            &[&job_id, &project_id],
+            "UPDATE sync_jobs SET status='pending',worker_id='',leased_until=NULL,run_after=clock_timestamp(),connection_generation=$3,last_error=CASE WHEN $4 THEN '' ELSE last_error END,updated_at=clock_timestamp() WHERE id=$1 AND project_id=$2",
+            &[&job_id, &project_id, &current_generation, &stale_restart],
         )?,
         OperatorAction::ResetAttempts => db.execute(
-            "UPDATE sync_jobs SET status='pending',attempts=0,worker_id='',leased_until=NULL,run_after=clock_timestamp(),last_error='',updated_at=clock_timestamp() WHERE id=$1 AND project_id=$2",
-            &[&job_id, &project_id],
+            "UPDATE sync_jobs SET status='pending',attempts=0,worker_id='',leased_until=NULL,run_after=clock_timestamp(),connection_generation=$3,last_error='',updated_at=clock_timestamp() WHERE id=$1 AND project_id=$2",
+            &[&job_id, &project_id, &current_generation],
         )?,
         OperatorAction::Cancel => db.execute(
             "UPDATE sync_jobs SET status='cancelled',worker_id='',leased_until=NULL,run_after=clock_timestamp(),last_error='cancelled by operator',updated_at=clock_timestamp() WHERE id=$1 AND project_id=$2",
@@ -553,6 +694,20 @@ fn control_in_transaction_inner<C: GenericClient>(
     };
     if updated != 1 {
         return Err(Error::Conflict);
+    }
+    if matches!(
+        action,
+        OperatorAction::RunNow | OperatorAction::ResetAttempts
+    ) && stale_restart
+    {
+        db.execute(
+            "DELETE FROM sync_job_checkpoints WHERE job_id=$1",
+            &[&job_id],
+        )?;
+        db.execute(
+            "DELETE FROM sync_job_cursor_visits WHERE job_id=$1",
+            &[&job_id],
+        )?;
     }
     match action {
         OperatorAction::RunNow => {
@@ -572,6 +727,153 @@ fn control_in_transaction_inner<C: GenericClient>(
 }
 
 fn lock(tx: &mut postgres::Transaction<'_>, j: &Job) -> Result<()> {
-    if tx.query_opt("SELECT id FROM sync_jobs WHERE id=$1 AND project_id=$2 AND connection_id=$3 AND operation=$4 AND worker_id=$5 AND leased_until=$6 AND input=$7 AND status='running' AND leased_until>clock_timestamp() FOR UPDATE",&[&j.id,&j.project_id,&j.connection_id,&j.operation,&j.worker_id,&j.leased_until,&j.input])?.is_none(){return Err(Error::LeaseLost)}
-    Ok(())
+    if tx.query_opt("SELECT j.id FROM sync_jobs AS j JOIN connections AS c ON c.id=j.connection_id AND c.project_id=j.project_id WHERE j.id=$1 AND j.project_id=$2 AND j.connection_id=$3 AND j.operation=$4 AND j.worker_id=$5 AND j.leased_until=$6 AND j.input=$7 AND j.connection_generation=c.connection_generation AND j.status='running' AND j.leased_until>clock_timestamp() FOR UPDATE OF c,j",&[&j.id,&j.project_id,&j.connection_id,&j.operation,&j.worker_id,&j.leased_until,&j.input])?.is_some(){return Ok(())}
+    if tx.query_opt("SELECT j.id FROM sync_jobs AS j JOIN connections AS c ON c.id=j.connection_id AND c.project_id=j.project_id WHERE j.id=$1 AND j.project_id=$2 AND j.connection_generation<>c.connection_generation",&[&j.id,&j.project_id])?.is_some(){return Err(Error::StaleGeneration)}
+    Err(Error::LeaseLost)
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+struct StoredMessageCursor {
+    version: u8,
+    project_id: String,
+    account_id: String,
+    connection_id: String,
+    connection_generation: i64,
+    channel_id: Option<String>,
+    created_at_micros: i64,
+    id: String,
+}
+
+fn encode_stored_message_cursor(
+    query: &StoredMessageQuery,
+    generation: i64,
+    created_at: SystemTime,
+    id: &str,
+) -> Result<String> {
+    let micros = created_at
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| Error::InvalidInput)?
+        .as_micros();
+    let created_at_micros = i64::try_from(micros).map_err(|_| Error::InvalidInput)?;
+    let value = StoredMessageCursor {
+        version: 1,
+        project_id: query.project_id.clone(),
+        account_id: query.account_id.clone(),
+        connection_id: query.connection_id.clone(),
+        connection_generation: generation,
+        channel_id: query.channel_id.clone(),
+        created_at_micros,
+        id: id.to_owned(),
+    };
+    let bytes = serde_json::to_vec(&value).map_err(|_| Error::InvalidInput)?;
+    let mut encoded = String::with_capacity(bytes.len().saturating_mul(2));
+    for byte in bytes {
+        write!(&mut encoded, "{byte:02x}").map_err(|_| Error::InvalidInput)?;
+    }
+    Ok(encoded)
+}
+
+fn decode_stored_message_cursor(
+    query: &StoredMessageQuery,
+) -> Result<Option<(i64, SystemTime, String)>> {
+    if query.cursor.is_empty() {
+        return Ok(None);
+    }
+    if !query.cursor.len().is_multiple_of(2) {
+        return Err(Error::InvalidInput);
+    }
+    let mut raw = Vec::with_capacity(query.cursor.len() / 2);
+    for pair in query.cursor.as_bytes().chunks_exact(2) {
+        let byte = std::str::from_utf8(pair)
+            .ok()
+            .and_then(|pair| u8::from_str_radix(pair, 16).ok())
+            .ok_or(Error::InvalidInput)?;
+        raw.push(byte);
+    }
+    let cursor: StoredMessageCursor =
+        serde_json::from_slice(&raw).map_err(|_| Error::InvalidInput)?;
+    if cursor.version != 1
+        || cursor.project_id != query.project_id
+        || cursor.account_id != query.account_id
+        || cursor.connection_id != query.connection_id
+        || cursor.connection_generation <= 0
+        || cursor.channel_id != query.channel_id
+        || cursor.created_at_micros < 0
+        || cursor.id.is_empty()
+        || cursor.id.len() > 512
+        || cursor.id.chars().any(char::is_control)
+    {
+        return Err(Error::InvalidInput);
+    }
+    Ok(Some((
+        cursor.connection_generation,
+        UNIX_EPOCH
+            .checked_add(Duration::from_micros(cursor.created_at_micros as u64))
+            .ok_or(Error::InvalidInput)?,
+        cursor.id,
+    )))
+}
+
+pub fn list_stored_messages<C: GenericClient>(
+    db: &mut C,
+    query: &StoredMessageQuery,
+) -> Result<StoredMessagePage> {
+    query.validate()?;
+    let cursor = decode_stored_message_cursor(query)?;
+    let generation: i64 = db
+        .query_opt(
+            "SELECT connection_generation FROM connections WHERE project_id=$1 AND id=$2 AND ($3='' OR external_account_id=$3 OR credential_owner='platform')",
+            &[&query.project_id, &query.connection_id, &query.account_id],
+        )?
+        .map(|row| row.get("connection_generation"))
+        .ok_or(Error::NotFound)?;
+    if let Some((cursor_generation, _, _)) = cursor.as_ref() {
+        if *cursor_generation != generation {
+            return Err(Error::StaleGeneration);
+        }
+    }
+    let channel = query.channel_id.as_deref().unwrap_or("");
+    let limit = i64::try_from(query.limit + 1).map_err(|_| Error::InvalidInput)?;
+    let rows = match cursor {
+        Some((_, created_at, id)) => db.query(
+            "SELECT m.id,m.provider,m.provider_message_id,m.channel_id,m.sender_id,m.text,m.model_version,m.raw,m.created_at FROM synced_messages AS m JOIN connections AS c ON c.id=m.connection_id AND c.project_id=m.project_id AND m.connection_generation=c.connection_generation WHERE m.project_id=$1 AND ($2='' OR c.external_account_id=$2 OR c.credential_owner='platform') AND m.connection_id=$3 AND m.connection_generation=$4 AND ($5='' OR m.channel_id=$5) AND (m.created_at,m.id)<($6,$7) ORDER BY m.created_at DESC,m.id DESC LIMIT $8",
+            &[&query.project_id, &query.account_id, &query.connection_id, &generation, &channel, &created_at, &id, &limit],
+        )?,
+        None => db.query(
+            "SELECT m.id,m.provider,m.provider_message_id,m.channel_id,m.sender_id,m.text,m.model_version,m.raw,m.created_at FROM synced_messages AS m JOIN connections AS c ON c.id=m.connection_id AND c.project_id=m.project_id AND m.connection_generation=c.connection_generation WHERE m.project_id=$1 AND ($2='' OR c.external_account_id=$2 OR c.credential_owner='platform') AND m.connection_id=$3 AND m.connection_generation=$4 AND ($5='' OR m.channel_id=$5) ORDER BY m.created_at DESC,m.id DESC LIMIT $6",
+            &[&query.project_id, &query.account_id, &query.connection_id, &generation, &channel, &limit],
+        )?,
+    };
+    let has_more = rows.len() > query.limit;
+    let rows = rows.into_iter().take(query.limit).collect::<Vec<_>>();
+    let mut messages = Vec::with_capacity(rows.len());
+    let mut last = None;
+    for row in rows {
+        last = Some((
+            row.get::<_, SystemTime>("created_at"),
+            row.get::<_, String>("id"),
+        ));
+        messages.push(Message {
+            id: row.get("id"),
+            provider: row.get("provider"),
+            provider_message_id: row.get("provider_message_id"),
+            channel_id: row.get("channel_id"),
+            sender_id: row.get("sender_id"),
+            text: row.get("text"),
+            model_version: row.get("model_version"),
+            raw: row.get("raw"),
+        });
+    }
+    let next_cursor = if has_more {
+        let (created_at, id) = last.ok_or(Error::Storage)?;
+        encode_stored_message_cursor(query, generation, created_at, &id)?
+    } else {
+        String::new()
+    };
+    Ok(StoredMessagePage {
+        messages,
+        next_cursor,
+        has_more,
+    })
 }

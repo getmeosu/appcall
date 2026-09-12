@@ -406,7 +406,7 @@ impl<B: Backend> Api<B> {
     }
 }
 
-fn error_response(error: ApiError) -> Response {
+pub(crate) fn error_response(error: ApiError) -> Response {
     // Setup adapters share the established provider-route status and safe text.
     let setup = match error.code {
         "MISSING_SETUP_FIELD" => match error.evidence.as_deref() {
@@ -462,6 +462,21 @@ fn error_response(error: ApiError) -> Response {
         "RUNS_FAILED" => (500, "Durable runs could not be loaded."),
         "RUN_NOT_FOUND" => (404, "Durable run was not found."),
         "RUN_STATE_CONFLICT" => (409, "Durable run state changed; refresh before retrying."),
+        "INVALID_ACTION_CLAIM_INPUT" => (400, "Action claim input is invalid."),
+        "ACTION_CLAIM_NOT_FOUND" => (404, "Action claim was not found."),
+        "ACTION_CLAIM_REQUEST_MISMATCH" => (409, "Action claim request identity does not match."),
+        "ACTION_CLAIM_OWNERSHIP_UNKNOWN" => (409, "Action claim ownership is unknown."),
+        "ACTION_CLAIM_LIVE" => (409, "Action claim is still live."),
+        "ACTION_CLAIM_NOT_DISPATCHED" => (409, "Action claim has no dispatch evidence."),
+        "ACTION_CLAIM_ALREADY_COMPLETED" => (409, "Action claim was already reconciled."),
+        "ACTION_CLAIM_RESERVATION_IDENTITY_UNKNOWN"
+        | "ACTION_CLAIM_RESERVATION_MISMATCH"
+        | "ACTION_CLAIM_RESERVATION_CONFLICT"
+        | "ACTION_CLAIM_RESERVATION_STATE_CONFLICT" => {
+            (409, "Action claim reservation identity or state conflicts.")
+        }
+        "SYNC_MESSAGES_STALE" => (409, "Stored messages changed; restart pagination."),
+        "SYNC_MESSAGES_FAILED" => (500, "Stored messages could not be loaded."),
         "WEBHOOK_REPLAY_FAILED" => (500, "Webhook event could not be replayed."),
         "WEBHOOK_SIGNATURE_INVALID" => (401, "Webhook signature is invalid."),
         "INVALID_WEBHOOK_PAYLOAD" => (400, "Webhook payload could not be read."),

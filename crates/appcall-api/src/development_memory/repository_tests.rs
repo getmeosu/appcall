@@ -253,6 +253,39 @@ async fn proven_not_dispatched_finalizer_releases_memory_admission() {
         Acquisition::Acquired
     ));
 }
+
+#[tokio::test]
+async fn no_dispatch_cleanup_releases_pending_claim_only_for_exact_owner() {
+    let r = repository(MemoryLimits::default());
+    r.create_connection(connection("c", "proj_dev", "brand"), None)
+        .unwrap();
+    let owner = attempt("owner", "pending-cleanup");
+    r.acquire(&owner).await.unwrap();
+    let reservation = appcall_actions::PolicyReservation::default();
+    let mut stale = owner.clone();
+    stale.request_id = "stale-owner".into();
+
+    r.release_not_dispatched_with_reservation(&stale, &reservation)
+        .await
+        .unwrap();
+    {
+        let data = r.lock().unwrap();
+        assert_eq!(data.action_claims.len(), 1);
+        assert_eq!(data.pending_actions, 1);
+        assert!(data.bytes_reserved > 0);
+        assert_eq!(data.active_effects, 0);
+    }
+
+    r.release_not_dispatched_with_reservation(&owner, &reservation)
+        .await
+        .unwrap();
+    let data = r.lock().unwrap();
+    assert!(data.action_claims.is_empty());
+    assert_eq!(data.pending_actions, 0);
+    assert_eq!(data.bytes_reserved, 0);
+    assert_eq!(data.histories_reserved, 0);
+    assert_eq!(data.active_effects, 0);
+}
 #[tokio::test]
 async fn capacity_reserved_before_dispatch_and_unknown_never_retries() {
     let r = repository(MemoryLimits {

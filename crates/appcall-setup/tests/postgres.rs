@@ -98,6 +98,16 @@ impl Database {
             .unwrap();
         client
             .batch_execute(include_str!(
+                "../../../migrations/202609110001_event_connection_dedup.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202609120001_connection_revision.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
                 "../../../migrations/202609120004_secret_retention.sql"
             ))
             .unwrap();
@@ -496,6 +506,105 @@ fn setup_composes_oauth_callback_and_brand_reconnect() {
             .connection
             .id,
         result.connection.id
+    );
+}
+
+#[test]
+#[ignore = "explicit PostgreSQL isolated schema"]
+fn failed_oauth_start_does_not_leave_a_disconnected_connection() {
+    let db = Database::new();
+    let lifecycle = Lifecycle::new(
+        db.store.clone(),
+        registry(),
+        BTreeMap::new(),
+        StateSigner::new(&[1; 32]).unwrap(),
+        Arc::new(Provider {
+            calls: AtomicUsize::new(0),
+            fail: false,
+        }),
+    )
+    .with_clock(Arc::new(|| 1_800_000_000));
+    let service = appcall_setup::Service::new(
+        db.store.clone(),
+        registry(),
+        Arc::new(lifecycle),
+        Arc::new(Validate),
+    );
+    let brand = appcall_setup::SetupScope::new("p", Some("brand")).unwrap();
+
+    assert!(matches!(
+        service.start(&brand, "google-workspace", None),
+        Err(appcall_setup::Error::OAuth(Error::NotConfigured))
+    ));
+    let connections = service.list(&brand).unwrap();
+    assert_eq!(connections.len(), 1);
+    assert_eq!(connections[0].id, "c");
+}
+
+#[test]
+#[ignore = "explicit PostgreSQL isolated schema"]
+fn cancelled_after_oauth_connection_create_removes_only_owned_row() {
+    use std::sync::atomic::AtomicUsize;
+
+    let db = Database::new();
+    let service = setup(&db);
+    let scope = appcall_setup::SetupScope::new("p", Some("brand")).unwrap();
+    let calls = AtomicUsize::new(0);
+    let active = || calls.fetch_add(1, Ordering::SeqCst) < 3;
+
+    assert!(matches!(
+        service.start_checked(&scope, "google-workspace", None, &active),
+        Err(appcall_setup::Error::Cancelled)
+    ));
+    let connections = service.list(&scope).unwrap();
+    assert_eq!(connections.len(), 1);
+    assert_eq!(connections[0].id, "c");
+}
+
+#[test]
+#[ignore = "explicit PostgreSQL isolated schema"]
+fn cancelled_after_create_preserves_concurrent_connection_update() {
+    let db = Database::new();
+    let service = setup(&db);
+    let scope = appcall_setup::SetupScope::new("p", Some("brand")).unwrap();
+    let calls = AtomicUsize::new(0);
+    let active = || {
+        let call = calls.fetch_add(1, Ordering::SeqCst);
+        if call == 3 {
+            let mut other = db.client().unwrap();
+            assert_eq!(
+                other
+                    .execute(
+                        "UPDATE connections SET status='active' WHERE project_id='p' AND id<>'c'",
+                        &[],
+                    )
+                    .unwrap(),
+                1
+            );
+        }
+        call < 3
+    };
+
+    assert!(matches!(
+        service.start_checked(&scope, "google-workspace", None, &active),
+        Err(appcall_setup::Error::Cancelled)
+    ));
+    let connections = service.list(&scope).unwrap();
+    let created = connections
+        .iter()
+        .find(|connection| connection.id != "c")
+        .expect("concurrent update must preserve the new connection");
+    assert_eq!(created.status, Status::Active);
+    let mut client = db.client().unwrap();
+    assert_eq!(
+        client
+            .query_one(
+                "SELECT connection_revision FROM connections WHERE project_id='p' AND id=$1",
+                &[&created.id],
+            )
+            .unwrap()
+            .get::<_, i64>(0),
+        2
     );
 }
 

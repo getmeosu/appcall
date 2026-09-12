@@ -298,9 +298,14 @@ function dynamicOptionsFixture() {
     wrap.querySelector = () => link; node('tk-panel-' + name, { hidden: index !== 0 }); return link;
   });
   node('tk-tabs', { querySelectorAll: () => tabs });
-  node('tk-connection', { value: 'active_1', options: [{ value: 'active_1', disabled: false }] });
+  node('tk-connection', { value: 'active_1', options: [{ value: 'active_1', disabled: false }, { value: 'active_2', disabled: false }] });
   node('tk-selection-connection', { value: '' });
   node('tk-selected-action', { value: 'mail.read' });
+  node('tk-action', { value: 'mail.read' });
+  node('tk-test-fields', { attrs: { 'data-fields-valid': 'true', 'aria-busy': 'false' } });
+  const run = node('run', { disabled: false });
+  node('tk-run-control', { querySelector: () => run, querySelectorAll: () => [run] });
+  node('tk-runinput', { attrs: { 'data-actor-id': 'one' } });
   node('tk-status');
   const search = node('tk-search-f.actor', { value: '',
     attrs: { role: 'combobox', 'aria-controls': 'tk-opts-f.actor', 'data-options-source': '/app/connectors/provider/options' },
@@ -331,7 +336,7 @@ function dynamicOptionsFixture() {
     for (const fn of listeners[type] ?? []) { fn(event); if (event.stopped) break; }
     return event;
   };
-  return { document, nodes, node, search, hidden, list, optionOne, optionTwo, commandSearch, commandList, emit,
+  return { document, nodes, node, search, hidden, list, optionOne, optionTwo, commandSearch, commandList, run, emit,
     on(type, fn) { (listeners[type] ??= []).push(fn); },
     removeOption(option) { listOptions = listOptions.filter(candidate => candidate !== option); },
     flush() { while (microtasks.length) microtasks.shift()(); } };
@@ -364,6 +369,77 @@ test('dynamic options provide combobox listbox keyboard selection and announceme
   assert.equal(f.search.attrs['aria-expanded'], 'false');
   assert.equal(f.list.hidden, true);
 });
+test('editing an actor label clears the committed hidden actor selection', () => {
+  const f = dynamicOptionsFixture();
+  f.hidden.value = 'one';
+  f.search.value = 'Two';
+  f.emit('input', f.search);
+  assert.equal(f.hidden.value, '');
+});
+test('actor schema readiness is fenced to the current actor and ignores stale responses', () => {
+  const f = dynamicOptionsFixture();
+  const fetch = (type, el, argsRaw = {}) => f.emit('datastar-fetch', el, { detail: { type, el, argsRaw } });
+  f.optionOne.dataset = { detail: 'actors.input_schema', value: 'one', field: 'f.actor', key: 'provider' };
+  f.optionTwo.dataset = { detail: 'actors.input_schema', value: 'two', field: 'f.actor', key: 'provider' };
+  f.hidden.value = 'one';
+  fetch('started', f.optionOne);
+  f.flush();
+  assert.equal(f.run.disabled, true);
+  f.hidden.value = 'two';
+  fetch('started', f.optionTwo);
+  f.nodes.get('tk-runinput').setAttribute('data-actor-id', 'one');
+  fetch('datastar-patch-elements', f.optionOne, { selector: '#tk-runinput', elements: '<div id="tk-runinput" data-actor-id="one"></div>' });
+  fetch('finished', f.optionOne);
+  assert.equal(f.run.disabled, true);
+  f.nodes.get('tk-runinput').setAttribute('data-actor-id', 'two');
+  fetch('datastar-patch-elements', f.optionTwo, { selector: '#tk-runinput', elements: '<div id="tk-runinput" data-actor-id="two"></div>' });
+  fetch('finished', f.optionTwo);
+  assert.equal(f.run.disabled, false);
+  f.nodes.get('tk-runinput').setAttribute('data-actor-id', 'one');
+  fetch('datastar-patch-elements', f.optionOne, { selector: '#tk-runinput', elements: '<div id="tk-runinput" data-actor-id="one"></div>' });
+  assert.equal(f.run.disabled, true);
+  f.search.value = 'edited';
+  f.emit('input', f.search);
+  assert.equal(f.hidden.value, '');
+  assert.equal(f.run.disabled, true);
+});
+test('actor schema failures keep execution blocked until a fresh selection', () => {
+  const f = dynamicOptionsFixture();
+  const fetch = (type, el, argsRaw = {}) => f.emit('datastar-fetch', el, { detail: { type, el, argsRaw } });
+  f.optionOne.dataset = { detail: 'actors.input_schema', value: 'one', field: 'f.actor', key: 'provider' };
+  f.hidden.value = 'one';
+  fetch('started', f.optionOne);
+  f.flush();
+  assert.equal(f.run.disabled, true);
+  fetch('error', f.optionOne);
+  fetch('finished', f.optionOne);
+  assert.equal(f.run.disabled, true);
+});
+test('account changes invalidate a previously ready actor schema', () => {
+  const f = dynamicOptionsFixture();
+  const fetch = (type, el, argsRaw = {}) => f.emit('datastar-fetch', el, { detail: { type, el, argsRaw } });
+  f.optionOne.dataset = { detail: 'actors.input_schema', value: 'one', field: 'f.actor', key: 'provider' };
+  f.hidden.value = 'one';
+  fetch('started', f.optionOne);
+  f.nodes.get('tk-runinput').setAttribute('data-actor-id', 'one');
+  fetch('datastar-patch-elements', f.optionOne, { selector: '#tk-runinput', elements: '<div id="tk-runinput" data-actor-id="one"></div>' });
+  fetch('finished', f.optionOne);
+  assert.equal(f.run.disabled, false);
+  const account = f.nodes.get('tk-connection');
+  account.value = 'active_2';
+  f.emit('change', account);
+  assert.equal(f.run.disabled, true);
+});
+test('late actor responses do not clear readiness for a current action schema', () => {
+  const f = dynamicOptionsFixture();
+  const fetch = (type, el, argsRaw = {}) => f.emit('datastar-fetch', el, { detail: { type, el, argsRaw } });
+  assert.equal(f.run.disabled, false);
+  f.hidden.value = '';
+  f.nodes.get('tk-runinput').removeAttribute('data-actor-id');
+  f.optionOne.dataset = { detail: 'actors.input_schema', value: 'one', field: 'f.actor', key: 'provider' };
+  fetch('datastar-patch-elements', f.optionOne, { selector: '#tk-runinput', elements: '<div id="tk-runinput" data-actor-id="one"></div>' });
+  assert.equal(f.run.disabled, false);
+});
 test('dynamic options expose loading and error states through the live status', () => {
   const f = dynamicOptionsFixture();
   f.search.focus();
@@ -395,7 +471,7 @@ test('dynamic options require an explicit active option in a visible ready list'
   f.hidden.value = 'seed';
   f.emit('input', f.search); f.flush();
   f.emit('keydown', f.search, { key: 'Enter' });
-  assert.equal(f.hidden.value, 'seed');
+  assert.equal(f.hidden.value, '');
   assert.equal(f.optionOne.clicked || 0, 0);
   f.list.setAttribute('aria-busy', 'true');
   f.emit('keydown', f.search, { key: 'ArrowDown' });
@@ -426,13 +502,13 @@ test('dynamic option clicks ignore hidden and busy stale options', () => {
   f.list.hidden = true;
   f.search.setAttribute('aria-expanded', 'false');
   f.emit('click', f.optionOne);
-  assert.equal(f.hidden.value, 'seed');
+  assert.equal(f.hidden.value, '');
 
   f.list.hidden = false;
   f.search.setAttribute('aria-expanded', 'true');
   f.list.setAttribute('aria-busy', 'true');
   f.emit('click', f.optionTwo);
-  assert.equal(f.hidden.value, 'seed');
+  assert.equal(f.hidden.value, '');
 });
 test('dynamic option capture blocks stale Datastar effects but allows one valid effect', () => {
   const f = dynamicOptionsFixture();

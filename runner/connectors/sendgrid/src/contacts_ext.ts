@@ -80,11 +80,15 @@ export function validateListDeleteInput(input: unknown): ListDeleteInput {
 
 // ─── Client ───────────────────────────────────────────────────────────────────
 
-export function createContactsExtClient(options: { apiKey: string; fetch?: typeof fetch }) {
+export function createContactsExtClient(options: { apiKey: string; fetch?: typeof fetch; operation?: string }) {
   return {
     async upsert(input: unknown) {
       const payload = validateContactUpsertInput(input);
-      const client = createSendGridClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "contacts.upsert" });
+      const client = createSendGridClient({
+        apiKey: options.apiKey,
+        fetch: options.fetch,
+        operation: options.operation ?? "contacts.upsert",
+      });
       const sgContacts = payload.contacts.map((c) => ({
         email: c.email,
         first_name: c.firstName,
@@ -94,9 +98,12 @@ export function createContactsExtClient(options: { apiKey: string; fetch?: typeo
       const body: Record<string, unknown> = { contacts: sgContacts };
       if (payload.listIds) body.list_ids = payload.listIds;
       const response = await client.fetchJSON("/marketing/contacts", { method: "PUT", body: JSON.stringify(body) });
-      if (response.status === 200 || response.status === 202) {
-        const b = response.body as Record<string, unknown>;
-        return { ok: true as const, jobId: typeof b.job_id === "string" ? b.job_id : "" };
+      if (response.status === 200 || response.status === 201 || response.status === 202) {
+        const b = isRecord(response.body) ? response.body : {};
+        if (typeof b.job_id !== "string" || b.job_id.length === 0) {
+          return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: "SendGrid did not return a queued job ID." } };
+        }
+        return { ok: true as const, jobId: b.job_id };
       }
       const rl = parseSendGridRateLimit(response.status, response.headers);
       if (rl.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED" as const, message: "SendGrid rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };

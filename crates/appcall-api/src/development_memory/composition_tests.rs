@@ -137,6 +137,24 @@ async fn copy_dashboard_failures_have_backend_parity_memory() {
             Some(("api_key", br#"{"apiKey":"synthetic-copy-key"}"#)),
         )
         .unwrap();
+    backend
+        .core
+        .repository
+        .create_connection(
+            Connection {
+                id: "copy-external-connection".into(),
+                project_id: "proj_dev".into(),
+                external_account_id: "brand".into(),
+                connector: "copy-external-toolkit".into(),
+                auth_type: AuthType::ExternalBearer,
+                status: Status::Active,
+                secret_ref_id: String::new(),
+                last_test_status: TestStatus::Unknown,
+                credential_owner: CredentialOwner::Brand,
+            },
+            None,
+        )
+        .unwrap();
     backend.core.repository.lock().unwrap().replay_logs.insert(
         "copy-replay".into(),
         super::state::ReplayLog {
@@ -153,6 +171,25 @@ async fn copy_dashboard_failures_have_backend_parity_memory() {
                 lease_ms: 1000,
             },
             sanitized_input: serde_json::json!([]),
+            created_at: chrono::Utc::now(),
+        },
+    );
+    backend.core.repository.lock().unwrap().replay_logs.insert(
+        "copy-external-replay".into(),
+        super::state::ReplayLog {
+            id: "copy-external-replay".into(),
+            attempt: appcall_actions::Attempt {
+                request_id: "original-external-copy-request".into(),
+                project_id: "proj_dev".into(),
+                connection_id: "copy-external-connection".into(),
+                connector: "copy-external-toolkit".into(),
+                external_account_id: "brand".into(),
+                action: "write".into(),
+                key: String::new(),
+                input_hash: String::new(),
+                lease_ms: 1000,
+            },
+            sanitized_input: serde_json::json!({"count": 1}),
             created_at: chrono::Utc::now(),
         },
     );
@@ -304,7 +341,15 @@ fn composition_with_manifest_and_runner(
         ))
     });
     let setup = Arc::new(MemorySetup::new(repo.clone(), validator, oauth.clone()));
-    let actions = memory_actions(repo.clone(), None, Default::default(), oauth).unwrap();
+    let actions = memory_actions(
+        repo.clone(),
+        runner_endpoint.map(|endpoint| {
+            appcall_runner_client::RunnerClient::new(endpoint, "", Default::default()).unwrap()
+        }),
+        Default::default(),
+        oauth,
+    )
+    .unwrap();
     let events = Arc::new(MemoryEvents::new(repo.clone(), None, None));
     let core = Arc::new(MemoryCore::new(repo, actions, setup, events, 0));
     let key = appcall_auth::StaticApiKey::from_hash(
@@ -1154,6 +1199,64 @@ async fn replay_dispatches_shared_action_service_and_records_usage() {
     };
     assert!(backend.auxiliary_route(&wrong, &request).await.is_err());
     assert_eq!(backend.core.usage(&wrong, "").unwrap()["actionCalls"], 0);
+}
+
+#[tokio::test]
+async fn memory_dashboard_replay_returns_fresh_request_id_and_original_request_id() {
+    let (backend, dashboard) = composition();
+    backend
+        .core
+        .repository
+        .create_connection(
+            Connection {
+                id: "replay-connection".into(),
+                project_id: "proj_dev".into(),
+                external_account_id: "brand".into(),
+                connector: "test".into(),
+                auth_type: AuthType::ApiKey,
+                status: Status::Active,
+                secret_ref_id: String::new(),
+                last_test_status: TestStatus::Unknown,
+                credential_owner: CredentialOwner::Brand,
+            },
+            Some(("api_key", br#"{"apiKey":"stored-replay-key"}"#)),
+        )
+        .unwrap();
+    backend.core.repository.lock().unwrap().replay_logs.insert(
+        "replay-log".into(),
+        super::state::ReplayLog {
+            id: "replay-log".into(),
+            attempt: appcall_actions::Attempt {
+                request_id: "original-replay-request".into(),
+                project_id: "proj_dev".into(),
+                connection_id: "replay-connection".into(),
+                connector: "test".into(),
+                external_account_id: "brand".into(),
+                action: "write".into(),
+                key: String::new(),
+                input_hash: String::new(),
+                lease_ms: 1000,
+            },
+            sanitized_input: serde_json::json!({}),
+            created_at: chrono::Utc::now(),
+        },
+    );
+
+    let value = dashboard
+        .execute_detailed(DashboardRequest {
+            principal: appcall_auth::Principal::project("proj_dev").unwrap(),
+            operation: DashboardOperation::ReplayTrace,
+            resource: Some("original-replay-request".into()),
+            account_id: Some("brand".into()),
+            fields: Default::default(),
+            form_values: Default::default(),
+        })
+        .await
+        .unwrap();
+    let request_id = value["requestId"].as_str().unwrap();
+    assert_ne!(request_id, "original-replay-request");
+    assert!(request_id.starts_with("req_"));
+    assert_eq!(value["originalRequestId"], "original-replay-request");
 }
 
 fn mail_setup_api() -> Api<MemoryBackend> {

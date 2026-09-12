@@ -69,7 +69,7 @@ test('invalid submit never starts busy and a finished request before microtask d
   f.form.checkValidity=()=>true;f.emit('submit',f.form);f.fetch('finished');f.flush();assert.equal(f.button.disabled,false);
 });
 test('absent catalog form installs no request submit or transport handler',()=>{
-  const f=fixture(false);assert.equal(f.listeners.submit,undefined);assert.equal(f.listeners['datastar-fetch'],undefined);
+  const f=fixture(false);assert.equal(f.listeners.submit?.length,1);assert.equal(f.listeners['datastar-fetch'],undefined);
 });
 test('unrelated forms and their transport events cannot start or finish the catalog attempt',()=>{
   const f=fixture(),other=f.node('another-form');assert.equal(f.emit('submit',other).stopped,undefined);

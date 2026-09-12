@@ -517,6 +517,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
                 | "/app/events"
                 | "/app/events/stream"
                 | "/app/logs"
+                | "/app/action-claims"
                 | "/app/certification"
                 | "/app/docs"
                 | "/app/support"
@@ -578,6 +579,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
                 | "/app/settings/account/mfa/disable"
                 | "/app/settings/billing/checkout"
                 | "/app/settings/billing/portal"
+                | "/app/action-claims/reconcile"
         )
     {
         return true;
@@ -619,6 +621,24 @@ fn web_error(error: appcall_web::Error) -> ApiError {
         appcall_web::Error::Conflict => "RUN_STATE_CONFLICT",
         _ => "STORAGE_UNAVAILABLE",
     })
+}
+
+fn action_claim_error(error: appcall_actions::ClaimErrorCode) -> appcall_web::Error {
+    match error {
+        appcall_actions::ClaimErrorCode::InvalidInput => appcall_web::Error::Invalid,
+        appcall_actions::ClaimErrorCode::NotFound => appcall_web::Error::NotFound,
+        appcall_actions::ClaimErrorCode::RequestMismatch
+        | appcall_actions::ClaimErrorCode::OwnershipUnknown
+        | appcall_actions::ClaimErrorCode::IdentityUnknown
+        | appcall_actions::ClaimErrorCode::ClaimLive
+        | appcall_actions::ClaimErrorCode::NotDispatched
+        | appcall_actions::ClaimErrorCode::AlreadyCompleted
+        | appcall_actions::ClaimErrorCode::ReservationIdentityUnknown
+        | appcall_actions::ClaimErrorCode::ReservationMismatch
+        | appcall_actions::ClaimErrorCode::ReservationConflict
+        | appcall_actions::ClaimErrorCode::ReservationStateConflict => appcall_web::Error::Conflict,
+        appcall_actions::ClaimErrorCode::StorageUnavailable => appcall_web::Error::Unavailable,
+    }
 }
 
 pub type BrowserActions = appcall_actions::Service<
@@ -755,7 +775,10 @@ impl ApiDashboard {
             return Err(Error::Forbidden.into());
         }
         let operator_authorized = self.operator_authorized(&r.principal);
-        if matches!(r.operation, Op::RunNow | Op::ResetRun | Op::CancelRun) && !operator_authorized
+        if matches!(
+            r.operation,
+            Op::RunNow | Op::ResetRun | Op::CancelRun | Op::ActionClaims | Op::ReconcileActionClaim
+        ) && !operator_authorized
         {
             return Err(Error::Forbidden.into());
         }
@@ -779,6 +802,91 @@ impl ApiDashboard {
         })?;
         ensure_active()?;
         match r.operation {
+            Op::ActionClaims => {
+                let key = field("idempotencyKey");
+                let expected_request_id = field("expectedRequestId");
+                let requested_account = field("externalAccountId");
+                let mut result = json!({
+                    "accountId": account,
+                    "idempotencyKey": key,
+                    "expectedRequestId": expected_request_id,
+                    "claim": Value::Null,
+                });
+                if key.is_empty() && expected_request_id.is_empty() && requested_account.is_empty() {
+                    return Ok(result);
+                }
+                if key.is_empty() || expected_request_id.is_empty() || account.is_empty() {
+                    return Err(Error::Invalid.into());
+                }
+                let scope = appcall_actions::ActionClaimScope::new(
+                    identity.project_id.clone(),
+                    account.to_owned(),
+                    key,
+                    expected_request_id,
+                )
+                .map_err(|error| action_claim_error(error.code))?;
+                let claim = self.db(|client| {
+                    let inspection = appcall_actions::inspect_action_claim(client, &scope)
+                        .map_err(|error| action_claim_error(error.code))?;
+                    serde_json::to_value(inspection).map_err(|_| Error::Unavailable)
+                })?;
+                result["claim"] = claim;
+                Ok(result)
+            }
+            Op::ReconcileActionClaim => {
+                let key = field("idempotencyKey");
+                let expected_request_id = field("expectedRequestId");
+                let evidence_ref = field("evidenceRef");
+                let requested_account = field("externalAccountId");
+                if key.is_empty()
+                    || expected_request_id.is_empty()
+                    || evidence_ref.is_empty()
+                    || requested_account.is_empty()
+                    || account.is_empty()
+                    || requested_account != account
+                {
+                    return Err(Error::Invalid.into());
+                }
+                let resolution = match field("resolution") {
+                    "provenNotDispatched" if field("providerSucceeded").is_empty() => {
+                        appcall_actions::ClaimResolution::ProvenNotDispatched
+                    }
+                    "providerOutcomeKnown" => {
+                        let provider_succeeded = match field("providerSucceeded") {
+                            "true" => true,
+                            "false" => false,
+                            _ => return Err(Error::Invalid.into()),
+                        };
+                        appcall_actions::ClaimResolution::ProviderOutcomeKnown {
+                            provider_succeeded,
+                        }
+                    }
+                    _ => return Err(Error::Invalid.into()),
+                };
+                let scope = appcall_actions::ActionClaimScope::new(
+                    identity.project_id.clone(),
+                    account.to_owned(),
+                    key,
+                    expected_request_id,
+                )
+                .map_err(|error| action_claim_error(error.code))?;
+                let actor_id = r.principal.user_id.clone().ok_or(Error::Forbidden)?;
+                let command = appcall_actions::ActionClaimReconciliation::new(
+                    scope,
+                    actor_id,
+                    evidence_ref,
+                    resolution,
+                )
+                .map_err(|error| action_claim_error(error.code))?;
+                Ok(self.db(|client| {
+                    let mut tx = client.transaction().map_err(|_| Error::Unavailable)?;
+                    let result = appcall_actions::reconcile_action_claim(&mut tx, &command)
+                        .map_err(|error| action_claim_error(error.code))?;
+                    ensure_active()?;
+                    tx.commit().map_err(|_| Error::Unavailable)?;
+                    serde_json::to_value(result).map_err(|_| Error::Unavailable)
+                })?)
+            }
             Op::Catalog=>Ok(json!({"connectors":self.registry.public_list().map(|c|catalog_item(c.manifest())).collect::<Vec<_>>()})),
             Op::Connector|Op::TestForm=>{let c=self.registry.public_connector(resource).map_err(|_|Error::Invalid)?;let mut item=catalog_item(c.manifest());item["setup"]=serde_json::to_value(&c.manifest().auth.setup).map_err(|_|Error::Unavailable)?;
                 let selected=selected_action(c.manifest(),field("action"))?;
@@ -827,7 +935,7 @@ impl ApiDashboard {
                     Ok(json!({"runId":run_id,"action":match action {appcall_sync::OperatorAction::RunNow=>"run-now",appcall_sync::OperatorAction::ResetAttempts=>"reset",appcall_sync::OperatorAction::Cancel=>"cancel"}}))
                 }).map_err(DashboardFailure::from)
             },
-            Op::ReplayTrace=>{let command=self.db(|client| Ok(crate::data_routes::prepare_replay(client,&identity,resource,true)))?.map_err(dashboard_failure::map_api_error)?;let mut execute=command.execute;execute.admin_scope=account.is_empty();ensure_active()?;let result=self.core.execute(execute).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"requestId":command.request_id,"replayLogId":command.log_id,"output":result.output}))},
+            Op::ReplayTrace=>{let caller_credential=field("callerToken").to_owned();let command=self.db(|client| Ok(crate::data_routes::prepare_replay_with_credentials(client,&identity,resource,true,"",&caller_credential)))?.map_err(dashboard_failure::map_api_error)?;let mut execute=command.execute;execute.admin_scope=account.is_empty();ensure_active()?;let result=self.core.execute(execute).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"requestId":result.request_id,"originalRequestId":command.original_request_id,"replayLogId":command.log_id,"output":result.output}))},
             Op::ReplayEvent=>self.db(|client|Ok(crate::data_routes::webhook_replay(client,&r.principal,resource,&mut appcall_worker::SyncDispatchSink)))?.map(|r|r.body).map_err(dashboard_failure::map_api_error),
             Op::Usage=>{let month=field("month");let mut usage=if month.is_empty(){self.usage(&identity)?}else{self.usage_at(&identity,month)?};usage["toolCalls"]=usage["actionCalls"].clone();Ok(usage)},
             Op::Certification=>self.db(|client|{let rows=client.query("SELECT connector,overall,results::text,to_char(last_run_at AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"'),total,passed,failed,not_certified FROM qa_connector_status ORDER BY connector LIMIT 1000",&[]).map_err(|_|Error::Unavailable)?;Ok(json!({"certifications":rows.iter().map(|r|{let result:Value=serde_json::from_str(&r.get::<_,String>(2)).unwrap_or(Value::Null);json!({"connector":r.get::<_,String>(0),"status":r.get::<_,String>(1),"manifestFingerprint":result.get("manifestDigest").cloned().unwrap_or(Value::Null),"certifiedAt":r.get::<_,String>(3),"total":r.get::<_,i32>(4),"passed":r.get::<_,i32>(5),"failed":r.get::<_,i32>(6),"notCertified":r.get::<_,i32>(7),"drifted":self.registry.public_connector(&r.get::<_,String>(0)).ok().is_none_or(|c|result.get("manifestDigest").and_then(Value::as_str)!=Some(c.manifest_digest()))})}).collect::<Vec<_>>()}))}).map_err(DashboardFailure::from),

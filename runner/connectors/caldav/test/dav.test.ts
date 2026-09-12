@@ -8,6 +8,7 @@ import {
   toCalDAVDateTime,
   parseMultiStatus,
   buildVEvent,
+  mergeVEvent,
   parseVEvent,
   generateUid,
 } from "../src/dav";
@@ -287,6 +288,25 @@ describe("parseVEvent", () => {
     expect(parsed.uid).toBeUndefined();
     expect(parsed.summary).toBeUndefined();
   });
+
+  test("parses quoted URI parameters and unfolds continuation whitespace exactly once", () => {
+    const parsed = parseVEvent([
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT",
+      "UID:quoted-parse-001",
+      'SUMMARY;ALTREP="cid:part@example.org":Quoted summary',
+      'DESCRIPTION;ALTREP="cid:description@example.org',
+      ' ":First line',
+      "  Second line",
+      'LOCATION;ALTREP="cid:location@example.org":Quoted location',
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n"));
+
+    expect(parsed.summary).toBe("Quoted summary");
+    expect(parsed.description).toBe("First line Second line");
+    expect(parsed.location).toBe("Quoted location");
+  });
 });
 
 // ─── buildVEvent ──────────────────────────────────────────────────────────────
@@ -320,6 +340,45 @@ describe("buildVEvent", () => {
     });
     expect(ics).toContain("DESCRIPTION:My notes");
     expect(ics).toContain("LOCATION:Office");
+  });
+
+  test("escapes embedded newlines and rejects CRLF injection", () => {
+    const ics = buildVEvent({
+      uid: "text-uid",
+      summary: "Line one\nLine two",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+      description: "Notes\ncontinue",
+    });
+    expect(ics).toContain("SUMMARY:Line one\\nLine two");
+    expect(ics).toContain("DESCRIPTION:Notes\\ncontinue");
+    expect(ics).not.toContain("Line one\r\nLine two");
+
+    expect(() => buildVEvent({
+      uid: "uid\r\nX-INJECTED:value",
+      summary: "Summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    })).toThrow(/line break|control character/i);
+    expect(() => buildVEvent({
+      uid: "uid\nX-INJECTED:value",
+      summary: "Summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    })).toThrow(/line break|control character/i);
+    expect(() => buildVEvent({
+      uid: "uid",
+      summary: "Summary\r\nX-INJECTED:value",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    })).toThrow(/line break|control character/i);
+    expect(() => buildVEvent({
+      uid: "uid",
+      summary: "Summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+      attendees: ["alice@example.com\r\nX-INJECTED:value"],
+    })).toThrow(/address|line break|control character/i);
   });
 
   test("includes ATTENDEE lines when attendees provided", () => {
@@ -356,6 +415,268 @@ describe("buildVEvent", () => {
     const parsed = parseVEvent(ics);
     expect(parsed.uid).toBe("roundtrip-uid");
     expect(parsed.summary).toBe("Roundtrip Test");
+  });
+});
+
+describe("mergeVEvent", () => {
+  test("preserves quoted URI parameters while replacing direct properties", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:quoted-parameter-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;ALTREP="cid:part@example.org":Old summary',
+      'DESCRIPTION;ALTREP="cid:description@example.org":Old description',
+      'LOCATION;ALTREP="cid:location@example.org":Old location',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+
+    const updated = mergeVEvent(resource, {
+      uid: "quoted-parameter-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+      description: "New description",
+      location: "New location",
+    });
+
+    expect(updated).toContain('SUMMARY;ALTREP="cid:part@example.org":New summary');
+    expect(updated).toContain('DESCRIPTION;ALTREP="cid:description@example.org":New description');
+    expect(updated).toContain('LOCATION;ALTREP="cid:location@example.org":New location');
+  });
+
+  test("treats backslashes as quoted parameter data when finding the delimiter", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:backslash-parameter-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;X-PATH="C:\\":Old summary',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+
+    const updated = mergeVEvent(resource, {
+      uid: "backslash-parameter-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    });
+
+    expect(updated).toContain('SUMMARY;X-PATH="C:\\":New summary');
+  });
+
+  test("preserves complete prefixes when quoted parameters are folded", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:folded-parameter-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;ALTREP="cid:part@example.org',
+      ' ":Old summary',
+      'DESCRIPTION;ALTREP="cid:description@example.org',
+      ' ":Old description',
+      'LOCATION;ALTREP="cid:location@example.org',
+      ' ":Old location',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+
+    const updated = mergeVEvent(resource, {
+      uid: "folded-parameter-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+      description: "New description",
+      location: "New location",
+    });
+
+    expect(updated).toContain('SUMMARY;ALTREP="cid:part@example.org":New summary');
+    expect(updated).toContain('DESCRIPTION;ALTREP="cid:description@example.org":New description');
+    expect(updated).toContain('LOCATION;ALTREP="cid:location@example.org":New location');
+  });
+
+  test("rejects malformed quoted parameters before changing the resource", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:malformed-quote-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;ALTREP="cid:part@example.org:Old summary',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+
+    expect(() => mergeVEvent(resource, {
+      uid: "malformed-quote-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    })).toThrow(/quoted parameter|malformed|safely updated/i);
+  });
+
+  test("updates the master while preserving unrelated properties, exceptions, and alarms", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "X-WR-CALNAME:Shared Calendar",
+      "BEGIN:VEVENT",
+      "UID:series-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      "SUMMARY:Original",
+      "ORGANIZER;CN=Owner:mailto:owner@example.com",
+      "RRULE:FREQ=WEEKLY",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Reminder",
+      "TRIGGER:-PT15M",
+      "END:VALARM",
+      "END:VEVENT",
+      "BEGIN:VEVENT",
+      "UID:series-001",
+      "RECURRENCE-ID:20240622T100000Z",
+      "DTSTART:20240622T120000Z",
+      "DTEND:20240622T130000Z",
+      "SUMMARY:Exception",
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+
+    const updated = mergeVEvent(resource, {
+      uid: "series-001",
+      summary: "Updated",
+      start: "2024-06-15T14:00:00Z",
+      end: "2024-06-15T15:00:00Z",
+    });
+
+    expect(updated).toContain("X-WR-CALNAME:Shared Calendar");
+    expect(updated).toContain("SUMMARY:Updated");
+    expect(updated).toContain("DTSTART:20240615T140000Z");
+    expect(updated).toContain("ORGANIZER;CN=Owner:mailto:owner@example.com");
+    expect(updated).toContain("RRULE:FREQ=WEEKLY");
+    expect(updated).toContain("BEGIN:VALARM");
+    expect(updated).toContain("RECURRENCE-ID:20240622T100000Z");
+    expect(updated).toContain("SUMMARY:Exception");
+    expect(updated.endsWith("\r\n")).toBe(true);
+  });
+
+  test("fails closed for unsupported resources", () => {
+    expect(() => mergeVEvent("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", {
+      uid: "missing",
+      summary: "Updated",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    })).toThrow(/cannot be safely updated|VEVENT/i);
+  });
+
+  test("fails closed for duplicate UID masters", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:duplicate-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      "SUMMARY:First",
+      "END:VEVENT",
+      "BEGIN:VEVENT",
+      "UID:duplicate-001",
+      "DTSTART:20240616T100000Z",
+      "DTEND:20240616T110000Z",
+      "SUMMARY:Second",
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+    expect(() => mergeVEvent(resource, {
+      uid: "duplicate-001",
+      summary: "Updated",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    })).toThrow(/missing or ambiguous|safely updated/i);
+  });
+
+  test("fails closed for duplicate UID properties and malformed nesting", () => {
+    const duplicateUid = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:duplicate-property-001",
+      "UID:duplicate-property-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      "SUMMARY:Duplicate",
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+    expect(() => mergeVEvent(duplicateUid, {
+      uid: "duplicate-property-001",
+      summary: "Updated",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    })).toThrow(/UID.*duplicated/i);
+
+    const malformed = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:malformed-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      "SUMMARY:Malformed",
+      "BEGIN:VALARM",
+      "END:VEVENT",
+      "END:VALARM",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+    expect(() => mergeVEvent(malformed, {
+      uid: "malformed-001",
+      summary: "Updated",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    })).toThrow(/malformed component nesting/i);
+  });
+
+  test("replaces all-day duration fields with a valid updated date-time pair", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:all-day-001",
+      "DTSTART;VALUE=DATE:20240615",
+      "DURATION:P1D",
+      "SUMMARY:All day",
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+    const updated = mergeVEvent(resource, {
+      uid: "all-day-001",
+      summary: "Timed event",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    });
+    expect(updated).toContain("DTSTART:20240615T100000Z");
+    expect(updated).toContain("DTEND:20240615T110000Z");
+    expect(updated).not.toContain("DTSTART;VALUE=DATE");
+    expect(updated).not.toContain("DURATION:P1D");
   });
 });
 
