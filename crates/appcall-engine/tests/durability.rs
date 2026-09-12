@@ -408,6 +408,10 @@ fn strip_issue_93_attempt_fields(db: &std::path::Path) {
         })
         .unwrap();
     let mut record: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    record["tasks"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("execution");
     let attempt = record["tasks"][0]["attempt"].as_object_mut().unwrap();
     for field in ["started_at_ms", "retry_started_at_ms", "retry_policy"] {
         assert!(attempt.remove(field).is_some(), "missing field {field}");
@@ -427,6 +431,10 @@ fn rewrite_issue_93_legacy_attempt_at(db: &std::path::Path, attempt_number: u64)
         })
         .unwrap();
     let mut record: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    record["tasks"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("execution");
     let attempt = record["tasks"][0]["attempt"].as_object_mut().unwrap();
     attempt.insert("attempt".into(), serde_json::json!(attempt_number));
     for field in ["started_at_ms", "retry_started_at_ms", "retry_policy"] {
@@ -948,6 +956,203 @@ impl PayloadResolver for Local {
         Ok(Some(b"native private content".to_vec()))
     }
 }
+
+struct MissingUntilRestart;
+impl PayloadResolver for MissingUntilRestart {
+    fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+        Ok(None)
+    }
+}
+
+struct RestoredAfterRestart;
+impl PayloadResolver for RestoredAfterRestart {
+    fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
+        Ok(Some(b"restored after restart".to_vec()))
+    }
+}
+
+#[test]
+fn known_unexecuted_payload_dispatch_does_not_consume_retry_budget() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let policy = retry_policy(1, 1, 1, 1);
+    let mut initial = Engine::open(&db).unwrap();
+    initial.set_retry_policy(policy).unwrap();
+    initial.register_workflow("one", "v1", read_one).unwrap();
+    initial
+        .register_activity_fn("lookup", "v1", |_, bytes| {
+            assert_eq!(bytes, b"restored after restart");
+            Ok(PayloadRef::durable("done").unwrap())
+        })
+        .unwrap();
+    initial
+        .start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    let attempt = match initial.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("unexpected first outcome: {other:?}"),
+    };
+    assert_eq!(attempt.attempt, 1);
+    assert!(initial
+        .prepare_registered(&attempt, &MissingUntilRestart)
+        .unwrap()
+        .is_none());
+    assert_eq!(initial.status("r").unwrap(), RunState::NeedsInput);
+    drop(initial);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened.set_retry_policy(policy).unwrap();
+    reopened.register_workflow("one", "v1", read_one).unwrap();
+    reopened
+        .register_activity_fn("lookup", "v1", |_, bytes| {
+            assert_eq!(bytes, b"restored after restart");
+            Ok(PayloadRef::durable("done").unwrap())
+        })
+        .unwrap();
+    reopened.resume("r").unwrap();
+    let restored = match reopened
+        .drive_with_resolver("r", 60_000, &RestoredAfterRestart)
+        .unwrap()
+    {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("restored payload must dispatch once: {other:?}"),
+    };
+    assert_eq!(restored.attempt, 2);
+    let invocation = reopened
+        .prepare_registered(&restored, &RestoredAfterRestart)
+        .unwrap()
+        .expect("restored payload should invoke");
+    reopened.finish_registered(invocation.run()).unwrap();
+    assert!(matches!(
+        reopened
+            .drive_with_resolver("r", 60_000, &RestoredAfterRestart)
+            .unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
+
+#[test]
+fn known_unexecuted_payload_can_resume_without_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_retry_policy(retry_policy(1, 1, 1, 1)).unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity_fn("lookup", "v1", |_, _| {
+        Ok(PayloadRef::durable("done").unwrap())
+    })
+    .unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    let first = match e.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("unexpected first outcome: {other:?}"),
+    };
+    assert!(e
+        .prepare_registered(&first, &MissingUntilRestart)
+        .unwrap()
+        .is_none());
+    e.resume("r").unwrap();
+    let second = match e
+        .drive_with_resolver("r", 1, &RestoredAfterRestart)
+        .unwrap()
+    {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("restored payload must dispatch immediately: {other:?}"),
+    };
+    assert_eq!(second.attempt, 2);
+    let invocation = e
+        .prepare_registered_at(&second, &RestoredAfterRestart, 1)
+        .unwrap()
+        .expect("restored payload should invoke");
+    e.finish_registered(invocation.run()).unwrap();
+    assert!(matches!(
+        e.drive_with_resolver("r", 1, &RestoredAfterRestart)
+            .unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
+
+#[test]
+fn known_unexecuted_missing_implementation_can_resume_after_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let policy = retry_policy(1, 1, 1, 1);
+    let mut initial = Engine::open(&db).unwrap();
+    initial.set_retry_policy(policy).unwrap();
+    initial.register_workflow("one", "v1", read_one).unwrap();
+    initial.register_activity("lookup", "v1").unwrap();
+    initial
+        .start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let first = match initial.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("unexpected first outcome: {other:?}"),
+    };
+    initial
+        .reject_dispatch(&first, RunFailure::MissingActivityImplementation)
+        .unwrap();
+    assert_eq!(initial.status("r").unwrap(), RunState::NeedsImplementation);
+    drop(initial);
+
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened.set_retry_policy(policy).unwrap();
+    reopened.register_workflow("one", "v1", read_one).unwrap();
+    reopened
+        .register_activity_fn("lookup", "v1", |_, _| {
+            Ok(PayloadRef::durable("done").unwrap())
+        })
+        .unwrap();
+    reopened.resume("r").unwrap();
+    let second = match reopened.drive("r", 60_000).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("implementation restoration must dispatch once: {other:?}"),
+    };
+    assert_eq!(second.attempt, 2);
+    let invocation = reopened
+        .prepare_registered(&second, &RestoredAfterRestart)
+        .unwrap()
+        .expect("registered implementation should invoke");
+    reopened.finish_registered(invocation.run()).unwrap();
+    assert!(matches!(
+        reopened
+            .drive_with_resolver("r", 60_000, &RestoredAfterRestart)
+            .unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
+
+#[test]
+fn invocation_timestamp_starts_retry_elapsed_budget_after_payload_resolution() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let policy = retry_policy(2, 10, 1, 1);
+    let mut e = Engine::open(&db).unwrap();
+    e.set_retry_policy(policy).unwrap();
+    e.register_workflow("one", "v1", read_one).unwrap();
+    e.register_activity_fn("lookup", "v1", |_, _| {
+        Ok(PayloadRef::durable("done").unwrap())
+    })
+    .unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+
+    let first = match e.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("unexpected dispatch: {other:?}"),
+    };
+    e.prepare_registered_at(&first, &Local, 100)
+        .unwrap()
+        .expect("payload should be available");
+    e.fail_at(&first, ActivityFailure::Retryable, 100).unwrap();
+    let second = match e.drive("r", 109).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("invocation-time retry window should still be open: {other:?}"),
+    };
+    assert_eq!(second.attempt, 2);
+}
+
 #[test]
 fn native_activities_signal_child_join_and_select_survive_restart() {
     let d = tempfile::tempdir().unwrap();

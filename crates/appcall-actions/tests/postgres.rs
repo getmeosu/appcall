@@ -4,7 +4,7 @@ use serde_json::json;
 fn database() -> Option<Client> {
     let url = std::env::var("APPCALL_TEST_DATABASE_URL").ok()?;
     let mut c = Client::connect(&url, NoTls).unwrap();
-    c.batch_execute("CREATE TEMP TABLE projects(id text primary key,disabled_at timestamptz);CREATE TEMP TABLE connections(id text primary key,project_id text,connector text,status text,auth_type text,external_account_id text,secret_ref_id text);CREATE TEMP TABLE action_idempotency_claims(project_id text,idempotency_key text,connection_id text,action text,input_hash text,request_id text,leased_until timestamptz,dispatched_at timestamptz,primary key(project_id,idempotency_key));CREATE TEMP TABLE action_idempotency_records(project_id text,idempotency_key text,connection_id text,action text,input_hash text,output jsonb,primary key(project_id,idempotency_key));CREATE TEMP TABLE action_logs(id text primary key,request_id text,project_id text,connection_id text,connector text,action text,status text,error_code text,external_account_id text);CREATE TEMP TABLE action_replay_logs(id text primary key,project_id text,connection_id text,connector text,action text,request_id text,sanitized_input jsonb,external_account_id text);CREATE TEMP TABLE usage_events(id text primary key,project_id text,connection_id text,connector text,action text,kind text,occurred_at timestamptz,external_account_id text,quantity bigint,metering_event_key text,unique(project_id,metering_event_key));CREATE TEMP TABLE usage_monthly_rollups(project_id text,external_account_id text,month text,kind text,quantity bigint,updated_at timestamptz default now(),primary key(project_id,external_account_id,month,kind));CREATE TEMP TABLE action_usage_reservations(id text primary key,project_id text,month text,connection_id text,connector text,action text,external_account_id text default '',state text,expires_at timestamptz,created_at timestamptz default now(),dispatched_at timestamptz,settled_at timestamptz,released_at timestamptz);INSERT INTO projects VALUES('p',NULL);INSERT INTO connections VALUES('c','p','test','active','api_key','brand',NULL);").unwrap();
+    c.batch_execute("CREATE TEMP TABLE projects(id text primary key,disabled_at timestamptz);CREATE TEMP TABLE connections(id text primary key,project_id text,connector text,status text,auth_type text,external_account_id text,secret_ref_id text);CREATE TEMP TABLE action_idempotency_claims(project_id text,idempotency_key text,connection_id text,action text,input_hash text,request_id text,external_account_id text,connector text,leased_until timestamptz,dispatched_at timestamptz,created_at timestamptz default now(),primary key(project_id,idempotency_key));CREATE TEMP TABLE action_idempotency_records(project_id text,idempotency_key text,connection_id text,action text,input_hash text,output jsonb,primary key(project_id,idempotency_key));CREATE TEMP TABLE action_logs(id text primary key,request_id text,project_id text,connection_id text,connector text,action text,status text,error_code text,external_account_id text);CREATE TEMP TABLE action_replay_logs(id text primary key,project_id text,connection_id text,connector text,action text,request_id text,sanitized_input jsonb,external_account_id text);CREATE TEMP TABLE usage_events(id text primary key,project_id text,connection_id text,connector text,action text,kind text,occurred_at timestamptz,external_account_id text,quantity bigint,metering_event_key text,unique(project_id,metering_event_key));CREATE TEMP TABLE usage_monthly_rollups(project_id text,external_account_id text,month text,kind text,quantity bigint,updated_at timestamptz default now(),primary key(project_id,external_account_id,month,kind));CREATE TEMP TABLE action_usage_reservations(id text primary key,project_id text,month text,connection_id text,connector text,action text,external_account_id text,idempotency_key text,request_id text,input_hash text,state text,expires_at timestamptz,created_at timestamptz default now(),dispatched_at timestamptz,settled_at timestamptz,released_at timestamptz);CREATE TEMP TABLE action_usage_reservation_charges(reservation_id text,charge_kind text,action_class text default '',window_kind text,window_key text,quantity bigint default 1,spend_micros bigint default 0,refunded_at timestamptz,primary key(reservation_id,charge_kind,action_class,window_kind,window_key));CREATE TEMP TABLE action_claim_reconciliation_audits(id text primary key,project_id text,idempotency_key text,request_id text,connection_id text,external_account_id text,connector text,action text,input_hash text,resolution text,provider_succeeded boolean,actor_id text,evidence_ref text,created_at timestamptz default now());INSERT INTO projects VALUES('p',NULL);INSERT INTO connections VALUES('c','p','test','active','api_key','brand',NULL);").unwrap();
     Some(c)
 }
 fn attempt() -> Attempt {
@@ -315,13 +315,197 @@ fn postgres_expired_pending_owner_cannot_dispatch() {
 }
 
 #[test]
+fn postgres_read_failure_releases_claim_for_recovery() {
+    let Some(client) = database() else { return };
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let a = attempt();
+    rt.block_on(repo.acquire(&a)).unwrap();
+    rt.block_on(repo.mark_dispatched(&a)).unwrap();
+
+    rt.block_on(repo.finish_read_failure_with_reservation(
+        &a,
+        &PolicyReservation::default(),
+        "CONNECTOR_UNAVAILABLE",
+    ))
+    .unwrap();
+
+    let mut retry = a.clone();
+    retry.request_id = "read-retry".into();
+    assert!(matches!(
+        rt.block_on(repo.acquire(&retry)).unwrap(),
+        Acquisition::Acquired
+    ));
+    assert_eq!(
+        shared
+            .lock()
+            .unwrap()
+            .query_one("SELECT error_code FROM action_logs", &[])
+            .unwrap()
+            .get::<_, String>(0),
+        "CONNECTOR_UNAVAILABLE"
+    );
+}
+
+#[test]
+fn postgres_read_timeout_releases_dispatched_claim_for_recovery() {
+    let Some(client) = database() else { return };
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let a = attempt();
+    rt.block_on(repo.acquire(&a)).unwrap();
+    rt.block_on(repo.mark_dispatched(&a)).unwrap();
+
+    rt.block_on(repo.finish_read_timeout(&a, ActionDispatchOutcome::Unknown))
+        .unwrap();
+
+    let mut retry = a.clone();
+    retry.request_id = "read-timeout-retry".into();
+    assert!(matches!(
+        rt.block_on(repo.acquire(&retry)).unwrap(),
+        Acquisition::Acquired
+    ));
+    let db = &mut *shared.lock().unwrap();
+    let row = db
+        .query_one(
+            "SELECT status,error_code FROM action_logs WHERE request_id=$1",
+            &[&a.request_id],
+        )
+        .unwrap();
+    assert_eq!(row.get::<_, String>(0), "failed");
+    assert_eq!(row.get::<_, String>(1), "ACTION_TIMEOUT");
+}
+
+#[test]
+fn postgres_reconciliation_audit_fences_matching_and_conflicting_retries() {
+    let Some(client) = database() else { return };
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+
+    let mut retained = attempt();
+    retained.key = "audit-retained".into();
+    retained.request_id = "audit-retained-request".into();
+    rt.block_on(repo.acquire(&retained)).unwrap();
+    rt.block_on(repo.mark_dispatched(&retained)).unwrap();
+    shared
+        .lock()
+        .unwrap()
+        .execute(
+            "INSERT INTO action_claim_reconciliation_audits(
+                 id,project_id,idempotency_key,request_id,connection_id,
+                 external_account_id,connector,action,input_hash,resolution,
+                 provider_succeeded,actor_id,evidence_ref
+             ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'provider_outcome_known',false,$10,$11)",
+            &[
+                &"audit-retained-audit",
+                &retained.project_id,
+                &retained.key,
+                &retained.request_id,
+                &retained.connection_id,
+                &retained.external_account_id,
+                &retained.connector,
+                &retained.action,
+                &retained.input_hash,
+                &"operator",
+                &"evidence/retained",
+            ],
+        )
+        .unwrap();
+    let mut retained_retry = retained.clone();
+    retained_retry.request_id = "audit-retained-retry".into();
+    let error = rt.block_on(repo.acquire(&retained_retry)).unwrap_err();
+    assert_eq!(error.code, "ACTION_CLAIM_ALREADY_COMPLETED");
+
+    let mut deleted = attempt();
+    deleted.key = "audit-deleted".into();
+    deleted.request_id = "audit-deleted-request".into();
+    rt.block_on(repo.acquire(&deleted)).unwrap();
+    rt.block_on(repo.mark_dispatched(&deleted)).unwrap();
+    {
+        let mut db = shared.lock().unwrap();
+        db.execute(
+            "INSERT INTO action_claim_reconciliation_audits(
+                 id,project_id,idempotency_key,request_id,connection_id,
+                 external_account_id,connector,action,input_hash,resolution,
+                 provider_succeeded,actor_id,evidence_ref
+             ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'provider_outcome_known',true,$10,$11)",
+            &[
+                &"audit-deleted-audit",
+                &deleted.project_id,
+                &deleted.key,
+                &deleted.request_id,
+                &deleted.connection_id,
+                &deleted.external_account_id,
+                &deleted.connector,
+                &deleted.action,
+                &deleted.input_hash,
+                &"operator",
+                &"evidence/deleted",
+            ],
+        )
+        .unwrap();
+        db.execute(
+            "DELETE FROM action_idempotency_claims
+              WHERE project_id=$1 AND idempotency_key=$2",
+            &[&deleted.project_id, &deleted.key],
+        )
+        .unwrap();
+    }
+
+    let mut deleted_retry = deleted.clone();
+    deleted_retry.request_id = "audit-deleted-retry".into();
+    let error = rt.block_on(repo.acquire(&deleted_retry)).unwrap_err();
+    assert_eq!(error.code, "ACTION_CLAIM_ALREADY_COMPLETED");
+
+    let mut conflicting_retry = deleted_retry.clone();
+    conflicting_retry.input_hash = "different-input".into();
+    let error = rt.block_on(repo.acquire(&conflicting_retry)).unwrap_err();
+    assert_eq!(error.code, "IDEMPOTENCY_CONFLICT");
+
+    let mut released = attempt();
+    released.key = "audit-released".into();
+    released.request_id = "audit-released-request".into();
+    shared
+        .lock()
+        .unwrap()
+        .execute(
+            "INSERT INTO action_claim_reconciliation_audits(
+                 id,project_id,idempotency_key,request_id,connection_id,
+                 external_account_id,connector,action,input_hash,resolution,
+                 provider_succeeded,actor_id,evidence_ref
+             ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'proven_not_dispatched',NULL,$10,$11)",
+            &[
+                &"audit-released-audit",
+                &released.project_id,
+                &released.key,
+                &released.request_id,
+                &released.connection_id,
+                &released.external_account_id,
+                &released.connector,
+                &released.action,
+                &released.input_hash,
+                &"operator",
+                &"evidence/released",
+            ],
+        )
+        .unwrap();
+    assert!(matches!(
+        rt.block_on(repo.acquire(&released)).unwrap(),
+        Acquisition::Acquired
+    ));
+}
+
+#[test]
 fn concurrent_completion_is_visible_before_new_claim() {
     let Ok(url) = std::env::var("APPCALL_TEST_DATABASE_URL") else {
         return;
     };
     let schema = format!("action_test_{}", uuid::Uuid::new_v4().simple());
     let mut owner = Client::connect(&url, NoTls).unwrap();
-    owner.batch_execute(&format!("CREATE SCHEMA {schema}; SET search_path TO {schema}; CREATE TABLE projects(id text primary key,disabled_at timestamptz); INSERT INTO projects VALUES('p',NULL); CREATE TABLE action_idempotency_claims(project_id text,idempotency_key text,connection_id text,action text,input_hash text,request_id text,leased_until timestamptz,dispatched_at timestamptz,primary key(project_id,idempotency_key)); CREATE TABLE action_idempotency_records(project_id text,idempotency_key text,connection_id text,action text,input_hash text,output jsonb,primary key(project_id,idempotency_key));")).unwrap();
+    owner.batch_execute(&format!("CREATE SCHEMA {schema}; SET search_path TO {schema}; CREATE TABLE projects(id text primary key,disabled_at timestamptz); INSERT INTO projects VALUES('p',NULL); CREATE TABLE action_idempotency_claims(project_id text,idempotency_key text,connection_id text,action text,input_hash text,request_id text,external_account_id text,connector text,leased_until timestamptz,dispatched_at timestamptz,primary key(project_id,idempotency_key)); CREATE TABLE action_idempotency_records(project_id text,idempotency_key text,connection_id text,action text,input_hash text,output jsonb,primary key(project_id,idempotency_key)); CREATE TABLE action_claim_reconciliation_audits(id text primary key,project_id text,idempotency_key text,request_id text,connection_id text,external_account_id text,connector text,action text,input_hash text,resolution text,provider_succeeded boolean,actor_id text,evidence_ref text);")).unwrap();
     let mut contender = Client::connect(&url, NoTls).unwrap();
     contender
         .batch_execute(&format!("SET search_path TO {schema}"))
@@ -453,15 +637,39 @@ fn policies_reserve_all_windows_atomically_and_quarantine_exact_brand() {
         0
     );
     shared.lock().unwrap().batch_execute("UPDATE provider_subaccounts SET provider_account_id='replacement' WHERE external_account_id='brand'").unwrap();
-    rt.block_on(policy.observe_failure(&r, &c, &reservation, "CONNECTOR_ACCOUNT_RESTRICTED"))
-        .unwrap();
+    rt.block_on(policy.observe_failure_with_outcome(
+        &r,
+        &c,
+        &reservation,
+        "CONNECTOR_ACCOUNT_RESTRICTED",
+        ActionDispatchOutcome::Unknown,
+    ))
+    .unwrap();
     assert!(
         rt.block_on(policy.prepare_input(&r, &c, json!({}))).is_ok(),
         "old account restriction must not quarantine replacement"
     );
+    rt.block_on(policy.observe_failure_with_outcome(
+        &r,
+        &c,
+        &reservation,
+        "CONNECTOR_UNAVAILABLE",
+        ActionDispatchOutcome::Unknown,
+    ))
+    .unwrap();
+    assert!(
+        rt.block_on(policy.prepare_input(&r, &c, json!({}))).is_ok(),
+        "non-restriction failures must not quarantine the provider account"
+    );
     shared.lock().unwrap().batch_execute("UPDATE provider_subaccounts SET provider_account_id='trusted' WHERE external_account_id='brand'").unwrap();
-    rt.block_on(policy.observe_failure(&r, &c, &reservation, "CONNECTOR_ACCOUNT_RESTRICTED"))
-        .unwrap();
+    rt.block_on(policy.observe_failure_with_outcome(
+        &r,
+        &c,
+        &reservation,
+        "CONNECTOR_ACCOUNT_RESTRICTED",
+        ActionDispatchOutcome::Unknown,
+    ))
+    .unwrap();
     assert_eq!(
         rt.block_on(policy.prepare_input(&r, &c, json!({})))
             .unwrap_err()
@@ -761,6 +969,237 @@ fn production_migrations_support_action_finish_and_policy() {
 }
 
 #[test]
+fn action_claim_migration_backfills_only_proven_immutable_identity() {
+    let Ok(url) = std::env::var("APPCALL_TEST_DATABASE_URL") else {
+        return;
+    };
+    let mut client = Client::connect(&url, NoTls).unwrap();
+    let schema = format!("action_claim_migration_{}", uuid::Uuid::new_v4().simple());
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema};SET search_path TO {schema}"
+        ))
+        .unwrap();
+    let mut migrations =
+        std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../../migrations"))
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().is_some_and(|extension| extension == "sql"))
+            .collect::<Vec<_>>();
+    migrations.sort();
+    for migration in migrations.iter().filter(|path| {
+        path.file_name()
+            .is_some_and(|name| name != "202609120006_action_reconciliation.sql")
+    }) {
+        client
+            .batch_execute(&std::fs::read_to_string(migration).unwrap())
+            .unwrap();
+    }
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','claims migration');
+             INSERT INTO connections(id,project_id,connector,status,auth_type,external_account_id,credential_owner)
+             VALUES ('c1','p','fixture','active','none','brand-a','brand'),
+                    ('c2','p','fixture','active','none','brand-b','brand');
+             ALTER TABLE action_logs ALTER COLUMN external_account_id DROP NOT NULL;
+             INSERT INTO action_idempotency_claims(project_id,idempotency_key,connection_id,action,input_hash,request_id,leased_until)
+             VALUES ('p','proven-key','c1','messages.send','hash-proof','request-proof',now()),
+                    ('p','null-key','c1','messages.send','hash-null','request-null',now()),
+                    ('p','collision-key','c1','messages.send','hash-collision','request-collision',now()),
+                    ('p','mixed-key','c1','messages.send','hash-mixed','request-mixed',now());
+             INSERT INTO action_logs(id,request_id,project_id,connection_id,connector,action,status,external_account_id)
+             VALUES ('log-proof','request-proof','p','c1','fixture','messages.send','failed','brand-a'),
+                    ('log-null','request-null','p','c1','fixture','messages.send','failed',NULL),
+                    ('log-collision','request-collision','p','c2','fixture','messages.read','failed','brand-b'),
+                    ('log-mixed-a','request-mixed','p','c1','fixture','messages.send','failed','brand-a'),
+                    ('log-mixed-b','request-mixed','p','c1','fixture','messages.send','failed','brand-b');",
+        )
+        .unwrap();
+    client
+        .batch_execute(
+            &std::fs::read_to_string(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../migrations/202609120006_action_reconciliation.sql"
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+
+    let rows = client
+        .query(
+            "SELECT idempotency_key,external_account_id,connector
+               FROM action_idempotency_claims
+              ORDER BY idempotency_key",
+            &[],
+        )
+        .unwrap();
+    assert_eq!(rows.len(), 4);
+    assert_eq!(rows[0].get::<_, String>(0), "collision-key");
+    assert!(rows[0].get::<_, Option<String>>(1).is_none());
+    assert!(rows[0].get::<_, Option<String>>(2).is_none());
+    assert_eq!(rows[1].get::<_, String>(0), "mixed-key");
+    assert!(rows[1].get::<_, Option<String>>(1).is_none());
+    assert!(rows[1].get::<_, Option<String>>(2).is_none());
+    assert_eq!(rows[2].get::<_, String>(0), "null-key");
+    assert!(rows[2].get::<_, Option<String>>(1).is_none());
+    assert!(rows[2].get::<_, Option<String>>(2).is_none());
+    assert_eq!(rows[3].get::<_, String>(0), "proven-key");
+    assert_eq!(
+        rows[3].get::<_, Option<String>>(1).as_deref(),
+        Some("brand-a")
+    );
+    assert_eq!(
+        rows[3].get::<_, Option<String>>(2).as_deref(),
+        Some("fixture")
+    );
+
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+fn proven_nondispatch_refunds_original_send_spend_and_linkedin_windows_once() {
+    let Some(mut client) = database() else { return };
+    client.batch_execute("CREATE TEMP TABLE project_plans(project_id text primary key,plan_key text,status text,overrides jsonb);CREATE TEMP TABLE provider_subaccounts(project_id text,external_account_id text,connector text,channel text,provider_account_id text,status text,created_at timestamptz default now(),updated_at timestamptz default now());CREATE TEMP TABLE action_send_caps(project_id text,external_account_id text,window_key text,send_count bigint,spend_micros bigint,updated_at timestamptz,primary key(project_id,external_account_id,window_key));CREATE TEMP TABLE linkedin_action_counters(project_id text,external_account_id text,action_class text,window_kind text,window_key text,count bigint,last_sent_at timestamptz,updated_at timestamptz,primary key(project_id,external_account_id,action_class,window_kind,window_key));INSERT INTO provider_subaccounts(project_id,external_account_id,connector,channel,provider_account_id,status,created_at) VALUES('p','brand','unipile','LINKEDIN','trusted','connected',now()-interval '60 days');").unwrap();
+    let shared = std::sync::Arc::new(std::sync::Mutex::new(client));
+    let repo = PgActionRepository::with_shared_client(shared.clone());
+    let policy = PgPolicy::new(
+        repo.clone(),
+        PolicyConfig {
+            defaults: Entitlements {
+                send_cap: 1,
+                spend_cap_micros: 5,
+                ..Default::default()
+            },
+            send_cost_micros: 3,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let request = ExecuteRequest {
+        project_id: "p".into(),
+        connection_id: "c".into(),
+        external_account_id: "brand".into(),
+        admin_scope: false,
+        action: "linkedin.invitation.send".into(),
+        idempotency_key: "refund-windows".into(),
+        input: json!({"account_id":"forged","message":"hello"}),
+        caller_credential: String::new(),
+    };
+    let connection = Connection {
+        id: "c".into(),
+        project_id: "p".into(),
+        external_account_id: String::new(),
+        connector: "unipile".into(),
+        status: "active".into(),
+        auth_type: "api_key".into(),
+        secret_ref_id: None,
+    };
+    let operation = Operation {
+        read_only: false,
+        timeout_ms: 1_000,
+        max_input_bytes: 1_024,
+        max_response_bytes: 1_024,
+        credential_fields: vec![],
+    };
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let routed = rt
+        .block_on(policy.prepare_input(&request, &connection, request.input.clone()))
+        .unwrap();
+    let reservation = rt
+        .block_on(policy.reserve(&request, &connection, &operation, &routed))
+        .unwrap();
+    let attempt = Attempt {
+        request_id: "refund-request".into(),
+        project_id: request.project_id.clone(),
+        connection_id: request.connection_id.clone(),
+        connector: connection.connector.clone(),
+        external_account_id: request.external_account_id.clone(),
+        action: request.action.clone(),
+        key: request.idempotency_key.clone(),
+        input_hash: scoped_input_hash(&request.input, &request.external_account_id).unwrap(),
+        lease_ms: 60_000,
+    };
+    rt.block_on(repo.acquire(&attempt)).unwrap();
+    rt.block_on(repo.bind_reservation_identity(&attempt, &reservation))
+        .unwrap();
+    let revision = rt.block_on(repo.connection("p", "c")).unwrap();
+    rt.block_on(repo.mark_dispatched_checked_with_reservation(&attempt, &revision, &reservation))
+        .unwrap();
+    let reservation_id: String = shared
+        .lock()
+        .unwrap()
+        .query_one(
+            "SELECT id FROM action_usage_reservations WHERE idempotency_key=$1",
+            &[&request.idempotency_key],
+        )
+        .unwrap()
+        .get(0);
+
+    let (send_window, send_before) = {
+        let db = &mut *shared.lock().unwrap();
+        let row = db
+            .query_one(
+                "SELECT window_key,send_count FROM action_send_caps WHERE external_account_id='brand'",
+                &[],
+            )
+            .unwrap();
+        (row.get::<_, String>(0), row.get::<_, i64>(1))
+    };
+    assert_eq!(send_before, 1);
+    shared
+        .lock()
+        .unwrap()
+        .execute(
+            "INSERT INTO action_send_caps(project_id,external_account_id,window_key,send_count,spend_micros,updated_at) VALUES('p','brand','2099-01-01',7,7,now())",
+            &[],
+        )
+        .unwrap();
+
+    rt.block_on(repo.finish_not_dispatched_with_reservation(&attempt, &reservation, "RUNNER_BUSY"))
+        .unwrap();
+    // A repeated recovery callback sees a released reservation and cannot
+    // decrement either the original day or a newer UTC window again.
+    rt.block_on(repo.release_not_dispatched_with_reservation(&attempt, &reservation))
+        .unwrap();
+
+    let mut db = shared.lock().unwrap();
+    let send = db
+        .query_one(
+            "SELECT send_count,spend_micros FROM action_send_caps WHERE external_account_id='brand' AND window_key=$1",
+            &[&send_window],
+        )
+        .unwrap();
+    assert_eq!((send.get::<_, i64>(0), send.get::<_, i64>(1)), (0, 0));
+    let newer = db
+        .query_one(
+            "SELECT send_count,spend_micros FROM action_send_caps WHERE window_key='2099-01-01'",
+            &[],
+        )
+        .unwrap();
+    assert_eq!((newer.get::<_, i64>(0), newer.get::<_, i64>(1)), (7, 7));
+    assert_eq!(
+        db.query_one(
+            "SELECT count FROM linkedin_action_counters WHERE action_class='invitation' AND window_kind='day'",
+            &[],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        0
+    );
+    assert_eq!(
+        db.query_one(
+            "SELECT count(*) FROM action_usage_reservation_charges WHERE reservation_id=$1 AND refunded_at IS NOT NULL",
+            &[&reservation_id],
+        )
+        .unwrap()
+        .get::<_, i64>(0),
+        5
+    );
+}
+
+#[test]
 fn replay_history_and_logs_preserve_calling_brand_for_shared_platform_connection() {
     let Some(mut client) = database() else { return };
     client
@@ -898,7 +1337,8 @@ fn concurrent_quota_reservation_admits_only_one_final_slot() {
              CREATE TABLE projects(id text primary key, disabled_at timestamptz);
              CREATE TABLE project_plans(project_id text primary key, plan_key text, status text, overrides jsonb);
              CREATE TABLE usage_monthly_rollups(project_id text, external_account_id text, month text, kind text, quantity bigint, updated_at timestamptz default now(), primary key(project_id, external_account_id, month, kind));
-             CREATE TABLE action_usage_reservations(id text primary key, project_id text not null, month text not null, connection_id text not null, connector text not null, action text not null, external_account_id text not null default '', state text not null, expires_at timestamptz not null, created_at timestamptz not null default now(), dispatched_at timestamptz, settled_at timestamptz, released_at timestamptz);
+             CREATE TABLE action_usage_reservations(id text primary key, project_id text not null, month text not null, connection_id text not null, connector text not null, action text not null, external_account_id text not null default '', idempotency_key text, request_id text, input_hash text, state text not null, expires_at timestamptz not null, created_at timestamptz not null default now(), dispatched_at timestamptz, settled_at timestamptz, released_at timestamptz);
+             CREATE TABLE action_usage_reservation_charges(reservation_id text, charge_kind text, action_class text default '', window_kind text, window_key text, quantity bigint default 1, spend_micros bigint default 0, refunded_at timestamptz, primary key(reservation_id, charge_kind, action_class, window_kind, window_key));
              INSERT INTO projects VALUES ('p', NULL);"
         ))
         .unwrap();

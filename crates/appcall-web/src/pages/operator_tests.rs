@@ -97,6 +97,20 @@ fn authorized_runs_render_each_allowed_action_with_signal_confirmation_copy() {
 }
 
 #[test]
+fn action_claim_recovery_link_is_operator_only() {
+    let authorized = render(Op::Runs, &authorized_runs_payload(), None).unwrap();
+    assert!(authorized.contains("id=\"runs-action-claims-link\""));
+    assert!(authorized.contains("href=\"/app/action-claims\""));
+
+    let mut ordinary_payload = authorized_runs_payload();
+    ordinary_payload["operatorAuthorized"] = json!(false);
+    ordinary_payload["operatorControlsUnavailable"] = json!(true);
+    let ordinary = render(Op::Runs, &ordinary_payload, None).unwrap();
+    assert!(!ordinary.contains("id=\"runs-action-claims-link\""));
+    assert!(!ordinary.contains("href=\"/app/action-claims\""));
+}
+
+#[test]
 fn runs_renderer_requires_explicit_operator_authorization_and_available_controls() {
     let cases: [(&str, Option<Value>, Option<Value>); 6] = [
         ("operator authorization missing", None, Some(json!(false))),

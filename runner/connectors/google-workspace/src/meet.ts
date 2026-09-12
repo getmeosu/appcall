@@ -35,15 +35,15 @@ async function handleMeetResponse(
       },
     };
   }
-  if (response.status === 204 || response.body.trim() === "") {
-    return { ok: true, body: {} };
-  }
   let body: Record<string, unknown> = {};
   try { body = JSON.parse(response.body); } catch { /* ignore */ }
   if (!isRecord(body)) body = {};
   if (response.status >= 400) {
     const parsed = parseGoogleError(body);
     return { ok: false, error: parsed ?? { code: "CONNECTOR_UPSTREAM_ERROR", message: "Google Meet / Calendar API error." } };
+  }
+  if (response.status === 204 || response.body.trim() === "") {
+    return { ok: true, body: {} };
   }
   return { ok: true, body };
 }
@@ -190,11 +190,12 @@ export function validateListConferenceRecordsInput(input: unknown): ListConferen
 
 // ─── response normalizers ─────────────────────────────────────────────────────
 
-function normalizeMeetEventResponse(b: Record<string, unknown>): MeetEventResult["event"] {
+function normalizeMeetEventResponse(b: Record<string, unknown>): MeetEventResult["event"] | null {
+  if (typeof b.id !== "string" || b.id.length === 0) return null;
   const start = isRecord(b.start) ? b.start : {};
   const end = isRecord(b.end) ? b.end : {};
   return {
-    eventId: requireString(b.id, "id"),
+    eventId: b.id,
     htmlLink: typeof b.htmlLink === "string" ? b.htmlLink : "",
     summary: typeof b.summary === "string" ? b.summary : "",
     status: typeof b.status === "string" ? b.status : "confirmed",
@@ -205,13 +206,20 @@ function normalizeMeetEventResponse(b: Record<string, unknown>): MeetEventResult
   };
 }
 
-function normalizeMeetSpace(b: Record<string, unknown>): MeetSpaceResult["space"] {
+function normalizeMeetSpace(b: Record<string, unknown>): MeetSpaceResult["space"] | null {
+  if (typeof b.name !== "string" || b.name.length === 0 || typeof b.meetingUri !== "string" || b.meetingUri.length === 0) {
+    return null;
+  }
   return {
-    name: typeof b.name === "string" ? b.name : "",
-    meetingUri: typeof b.meetingUri === "string" ? b.meetingUri : "",
+    name: b.name,
+    meetingUri: b.meetingUri,
     meetingCode: typeof b.meetingCode === "string" ? b.meetingCode : "",
     config: isRecord(b.config) ? (b.config as Record<string, unknown>) : null,
   };
+}
+
+function incompleteMeetResponse(resource: string): ConnectorError {
+  return { code: "CONNECTOR_UPSTREAM_ERROR", message: `Google Meet API returned an incomplete ${resource} response.` };
 }
 
 // ─── client ───────────────────────────────────────────────────────────────────
@@ -271,7 +279,8 @@ export function createMeetClient(options: {
       });
       const res = await handleMeetResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
-      return { ok: true, event: normalizeMeetEventResponse(res.body) };
+      const event = normalizeMeetEventResponse(res.body);
+      return event ? { ok: true, event } : { ok: false, error: incompleteMeetResponse("event") };
     },
 
     async addMeetToEvent(input: unknown): Promise<MeetEventResult> {
@@ -293,7 +302,8 @@ export function createMeetClient(options: {
       });
       const res = await handleMeetResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
-      return { ok: true, event: normalizeMeetEventResponse(res.body) };
+      const event = normalizeMeetEventResponse(res.body);
+      return event ? { ok: true, event } : { ok: false, error: incompleteMeetResponse("event") };
     },
 
     async createSpace(input: unknown): Promise<MeetSpaceResult> {
@@ -307,7 +317,8 @@ export function createMeetClient(options: {
       });
       const res = await handleMeetResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
-      return { ok: true, space: normalizeMeetSpace(res.body) };
+      const space = normalizeMeetSpace(res.body);
+      return space ? { ok: true, space } : { ok: false, error: incompleteMeetResponse("space") };
     },
 
     async getSpace(input: unknown): Promise<MeetSpaceResult> {
@@ -319,7 +330,8 @@ export function createMeetClient(options: {
       const response = await createClient.fetchText(url, { headers: authHeaders });
       const res = await handleMeetResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
-      return { ok: true, space: normalizeMeetSpace(res.body) };
+      const space = normalizeMeetSpace(res.body);
+      return space ? { ok: true, space } : { ok: false, error: incompleteMeetResponse("space") };
     },
 
     async listConferenceRecords(input: unknown): Promise<ConferenceRecordsListResult> {

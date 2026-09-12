@@ -25,6 +25,8 @@ pub enum DashboardOperation {
     RunNow,
     ResetRun,
     CancelRun,
+    ActionClaims,
+    ReconcileActionClaim,
     Trace,
     ReplayTrace,
     Certification,
@@ -310,6 +312,8 @@ impl DashboardRenderer<'_> {
                     | DashboardOperation::SaveBranding
                     | DashboardOperation::RequestConnector
                     | DashboardOperation::Stream
+                    | DashboardOperation::ActionClaims
+                    | DashboardOperation::ReconcileActionClaim
             ) {
             Some(segments[2].to_owned())
         } else {
@@ -326,9 +330,20 @@ impl DashboardRenderer<'_> {
         }
         let account_id = if matches!(
             operation,
-            DashboardOperation::Runs | DashboardOperation::RunDetail
+            DashboardOperation::Runs
+                | DashboardOperation::RunDetail
+                | DashboardOperation::ActionClaims
+                | DashboardOperation::ReconcileActionClaim
         ) {
-            (!run_account_filter.is_empty()).then(|| run_account_filter.to_owned())
+            if matches!(
+                operation,
+                DashboardOperation::ActionClaims | DashboardOperation::ReconcileActionClaim
+            ) {
+                let account = r.field("externalAccountId")?;
+                (!account.is_empty()).then(|| account.to_owned())
+            } else {
+                (!run_account_filter.is_empty()).then(|| run_account_filter.to_owned())
+            }
         } else {
             fields
                 .get("externalAccountId")
@@ -827,6 +842,8 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
         ("GET", "/app/certification") => Certification,
         ("GET", "/app/usage") => Usage,
         ("GET", "/app/runs") => Runs,
+        ("GET", "/app/action-claims") => ActionClaims,
+        ("POST", "/app/action-claims/reconcile") => ReconcileActionClaim,
         ("GET", "/app/settings/white-labeling") => Branding,
         ("POST", "/app/settings/white-labeling") => SaveBranding,
         ("GET", "/app/docs" | "/app/support") => return Some(None),
@@ -1092,6 +1109,122 @@ mod run_detail_route_tests {
         ));
         assert!(!response.body.contains("status="));
         assert!(!response.body.contains("action="));
+    }
+}
+
+#[cfg(test)]
+mod action_claim_route_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn action_claim_routes_are_bounded_and_csrf_relevant() {
+        assert_eq!(
+            resolve("GET", "/app/action-claims"),
+            Some(Some(DashboardOperation::ActionClaims))
+        );
+        assert_eq!(
+            resolve("POST", "/app/action-claims/reconcile"),
+            Some(Some(DashboardOperation::ReconcileActionClaim))
+        );
+        assert_eq!(resolve("GET", "/app/action-claims/reconcile"), None);
+        assert_eq!(resolve("POST", "/app/action-claims"), None);
+        assert_eq!(resolve("POST", "/app/action-claims/reconcile/extra"), None);
+    }
+
+    #[test]
+    fn action_claim_lookup_renders_scoped_inputs_and_no_actor_field() {
+        let html = crate::pages::render(
+            DashboardOperation::ActionClaims,
+            &json!({"accountId":"brand-a","claim":null}),
+            None,
+        )
+        .unwrap();
+        for expected in [
+            "id=\"action-claims-page\"",
+            "Action claim recovery",
+            "name=\"externalAccountId\"",
+            "name=\"idempotencyKey\"",
+            "name=\"expectedRequestId\"",
+            "Inspect claim",
+        ] {
+            assert!(html.contains(expected), "missing {expected}: {html}");
+        }
+        assert!(!html.contains("name=\"actorId\""));
+        assert!(!html.contains("inputHash"));
+    }
+
+    #[test]
+    fn action_claim_detail_exposes_only_typed_resolution_and_bounded_evidence() {
+        let html = crate::pages::render(
+            DashboardOperation::ActionClaims,
+            &json!({
+                "accountId":"brand-a",
+                "claim": {
+                    "projectId":"proj_tenant-a",
+                    "idempotencyKey":"claim-key",
+                    "requestId":"req-1",
+                    "connectionId":"connection-original",
+                    "externalAccountId":"brand-a",
+                    "connector":"fixture",
+                    "action":"messages.send",
+                    "inputHash":"hash-original",
+                    "dispatched":true,
+                    "leaseExpired":true,
+                    "ownershipProven":true,
+                    "reconciliationAllowed":true,
+                    "leasedUntil":"2026-09-12T10:00:00Z",
+                    "dispatchedAt":"2026-09-12T09:00:00Z",
+                    "createdAt":"2026-09-12T08:00:00Z",
+                    "reservation":{"id":"reservation-1","state":"dispatched","month":"2026-09","expiresAt":"2026-09-13T08:00:00Z","identityBound":true}
+                }
+            }),
+            None,
+        )
+        .unwrap();
+        for expected in [
+            "claim-key",
+            "req-1",
+            "messages.send",
+            "Reconcile this claim",
+            "provenNotDispatched",
+            "providerOutcomeKnown",
+            "providerSucceeded",
+            "evidenceRef",
+            "No provider call or automatic retry is performed",
+            "name=\"expectedRequestId\"",
+            "value=\"req-1\"",
+        ] {
+            assert!(html.contains(expected), "missing {expected}: {html}");
+        }
+        assert!(!html.contains("name=\"actorId\""));
+        assert!(!html.contains("name=\"input\""));
+    }
+
+    #[test]
+    fn action_claim_reconciliation_result_is_explicitly_audited() {
+        let html = crate::pages::render(
+            DashboardOperation::ReconcileActionClaim,
+            &json!({
+                "auditId":"recon_123",
+                "resolution":{"kind":"provenNotDispatched"},
+                "reservationState":"released",
+                "chargesRefunded":true,
+                "usageRecorded":false
+            }),
+            None,
+        )
+        .unwrap();
+        for expected in [
+            "Reconciliation recorded",
+            "recon_123",
+            "released",
+            "Charges refunded",
+            "No provider call or automatic retry was performed",
+            "/app/action-claims",
+        ] {
+            assert!(html.contains(expected), "missing {expected}: {html}");
+        }
     }
 }
 

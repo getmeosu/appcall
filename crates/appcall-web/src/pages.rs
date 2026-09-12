@@ -8,6 +8,7 @@ pub(crate) fn title(op: Op) -> &'static str {
         Op::Events => "Events",
         Op::Logs | Op::Trace => "Logs",
         Op::Runs | Op::RunDetail | Op::RunNow | Op::ResetRun | Op::CancelRun => "Runs",
+        Op::ActionClaims | Op::ReconcileActionClaim => "Action claim recovery",
         Op::Certification => "Certification",
         Op::Usage => "Usage",
         Op::Branding => "White Labeling",
@@ -449,6 +450,15 @@ fn runs(v: &Value) -> Result<String, Error> {
     let operator_controls_unavailable = !operator_controls_available;
     if operator_controls_unavailable {
         body.push_str("<div id=\"runs-operator-controls-unavailable\" role=\"note\" class=\"runs-card runs-operator-notice\"><h3>Operator controls unavailable</h3><p>Run, reset, and cancel require a trusted operator principal. Queue state remains available as read-only evidence.</p></div>");
+    } else {
+        let action_claims_link = runs_link_button(
+            "Inspect action claims",
+            crate::ui::ButtonVariant::Secondary,
+            "/app/action-claims",
+        )?;
+        body.push_str(&format!(
+            "<div id=\"runs-action-claims-link\" class=\"runs-card runs-recovery\"><p class=\"runs-recovery-message\">Inspect durable action claims and record an explicit recovery decision.</p>{action_claims_link}</div>"
+        ));
     }
     body.push_str(
         "<form id=\"runs-filters\" class=\"runs-card runs-filters\" method=\"get\" action=\"/app/runs\" role=\"search\" aria-label=\"Filter runs\"><div class=\"runs-filter-grid\">",
@@ -644,7 +654,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
     let search_id=crate::forms::presentation_id("search",field);
     let status_id=format!("{list_id}-status");
     let mut body=format!("<div id=\"{}\" class=\"tk-opts\" role=\"listbox\" aria-label=\"Options for {}\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" data-input-id=\"{}\" data-value-id=\"{}\" data-status-id=\"{}\">",escape(&list_id),escape(field),escape(&search_id),escape(field),escape(&status_id));
-    let click=escape("document.getElementById(el.dataset.field).value=el.dataset.value; if(el.dataset.detail){@get('/app/connectors/' + encodeURIComponent(el.dataset.key) + '/runinput-fields?connectionId=' + encodeURIComponent(document.getElementById('tk-connection').value) + '&actorId=' + encodeURIComponent(el.dataset.value) + '&source=' + encodeURIComponent(el.dataset.detail))}");
+    let click=escape("document.getElementById(el.dataset.field).value=el.dataset.value; if(el.dataset.detail){window.__appcallBeginRunInputRequest?.(document.getElementById('tk-connection').value,el.dataset.field,el.dataset.value,el); @get('/app/connectors/' + encodeURIComponent(el.dataset.key) + '/runinput-fields?connectionId=' + encodeURIComponent(document.getElementById('tk-connection').value) + '&actorId=' + encodeURIComponent(el.dataset.value) + '&source=' + encodeURIComponent(el.dataset.detail),{requestCancellation:window.__appcallRunInputRequestController})}");
     for (index, item) in rows(v, &["options", "items"])?.iter().enumerate() {
         let value = string(item, &["value", "id"]);
         let label = string(item, &["label", "name"]);
@@ -683,10 +693,12 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
     body.push_str("</div>");
     body
   },
-  Op::RunInputFields=>{let schema=v.get("inputSchema").or_else(||v.get("schema")).unwrap_or(v);format!("<div id=\"tk-runinput\" aria-live=\"polite\"><input type=\"hidden\" name=\"runInputSchema\" value=\"{}\">{}</div>",escape(&schema.to_string()),crate::forms::render_guided_fields(schema,&Value::Null,"f.runInput",resource)?)},
+  Op::RunInputFields=>{let schema=v.get("inputSchema").or_else(||v.get("schema")).unwrap_or(v);let actor_id=string(v,&["actorId"]);let actor_attr=if actor_id.is_empty(){String::new()}else{format!(" data-actor-id=\"{}\"",escape(actor_id))};format!("<div id=\"tk-runinput\" aria-live=\"polite\"{actor_attr}><input type=\"hidden\" name=\"runInputSchema\" value=\"{}\">{}</div>",escape(&schema.to_string()),crate::forms::render_guided_fields(schema,&Value::Null,"f.runInput",resource)?)},
   Op::Connections=>crate::connections::render(v)?,
   Op::Runs=>runs(v)?,
   Op::RunDetail=>crate::run_detail::standalone(v, resource.ok_or(Error::Invalid)?)?,
+  Op::ActionClaims=>crate::action_claims::render_lookup(v)?,
+  Op::ReconcileActionClaim=>crate::action_claims::render_reconciliation(v)?,
   Op::Logs=>crate::logs::render(v, &crate::logs::Filters::default(), v.get("hasFilters").and_then(Value::as_bool)==Some(true))?,
   Op::Events=>crate::remaining_pages::events(v)?,
   Op::Trace=>crate::trace::standalone(v, resource.ok_or(Error::Invalid)?)?,

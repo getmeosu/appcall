@@ -6,6 +6,7 @@ import {
   buildCalendarQueryReport,
   buildFreeBusyReport,
   buildVEvent,
+  mergeVEvent,
   parseVEvent,
   parseMultiStatus,
   generateUid,
@@ -361,7 +362,36 @@ export function validateEventsUpdateInput(input: unknown): EventsUpdateInput {
 export async function runEventsUpdate(input: Record<string, unknown>): Promise<{ ok: true; href: string; etag: string } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validateEventsUpdateInput(input);
   const client = createCalDAVClient(clientOpts(input, "events.update"));
-  const calendarData = buildVEvent({ uid: payload.uid, summary: payload.summary, start: payload.start, end: payload.end, description: payload.description, location: payload.location, timezone: payload.timezone, attendees: payload.attendees });
+  // Validate all caller-controlled iCalendar values before reading the remote
+  // resource. The PUT body is merged below so provider-owned fields and
+  // components survive the update.
+  buildVEvent({ uid: payload.uid, summary: payload.summary, start: payload.start, end: payload.end, description: payload.description, location: payload.location, timezone: payload.timezone, attendees: payload.attendees });
+  const current = await client.get(payload.eventHref);
+  if (current.status !== 200) {
+    if (current.status === 412) {
+      return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "CalDAV conflict: event was modified by another client (ETag mismatch)." } };
+    }
+    return handleError(current.status, current.headers, "CalDAV events.update read failed.");
+  }
+  const currentEtag = current.headers["etag"] ?? current.headers["ETag"] ?? "";
+  if (!currentEtag || currentEtag !== payload.etag) {
+    return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "CalDAV conflict: event was modified by another client (ETag mismatch)." } };
+  }
+  let calendarData: string;
+  try {
+    calendarData = mergeVEvent(current.body, {
+      uid: payload.uid,
+      summary: payload.summary,
+      start: payload.start,
+      end: payload.end,
+      description: payload.description,
+      location: payload.location,
+      timezone: payload.timezone,
+      attendees: payload.attendees,
+    });
+  } catch {
+    return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "CalDAV event resource cannot be safely updated." } };
+  }
   const response = await client.putUpdate(payload.eventHref, payload.etag, calendarData);
   if (response.status === 201 || response.status === 200 || response.status === 204) {
     const newEtag = response.headers["etag"] ?? response.headers["ETag"] ?? "";

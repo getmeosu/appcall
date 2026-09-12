@@ -48,13 +48,42 @@ export function renderTemplate(template: unknown, context: TemplateContext): unk
 // an unresolved placeholder throws the same `<field> is required` error the
 // hand-written validators raise, and resolved values are URL-encoded.
 export function renderPath(path: string, context: TemplateContext): string {
-  return path.replace(placeholderPattern, (_match, expression: string) => {
+  const renderedPath = path.replace(placeholderPattern, (match, expression: string, offset: number) => {
     const value = resolvePath(expression, context);
     if (value === undefined || value === null || value === "") {
       throw new Error(`${lastSegment(expression)} is required`);
     }
-    return encodeURIComponent(String(value));
+    const rendered = encodeURIComponent(String(value));
+    assertSafePathSegment(path, offset, match.length, rendered);
+    return rendered;
   });
+  assertSafePathSegments(renderedPath);
+  return renderedPath;
+}
+
+/** Reject substitutions that would make a complete URL path segment traversal token. */
+export function assertSafePathSegment(path: string, offset: number, matchLength: number, value: string): void {
+  const startsSegment = offset === 0 || path[offset - 1] === "/";
+  const endsSegment = offset + matchLength === path.length || path[offset + matchLength] === "/";
+  if (startsSegment && endsSegment && (value === "." || value === "..")) {
+    throw new Error("dot path segment is not allowed");
+  }
+}
+
+/** Reject both static and composed dot segments after all substitutions finish. */
+export function assertSafePathSegments(path: string): void {
+  if (path.split("/").some((segment) => {
+    let decoded = segment;
+    try {
+      decoded = decodeURIComponent(segment);
+    } catch {
+      // Leave malformed static escapes to the URL boundary; they are not a
+      // dot segment after decoding and cannot be normalized as one.
+    }
+    return decoded === "." || decoded === "..";
+  })) {
+    throw new Error("dot path segment is not allowed");
+  }
 }
 
 export function hasPlaceholder(template: unknown): boolean {

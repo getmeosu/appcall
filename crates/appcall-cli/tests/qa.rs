@@ -40,6 +40,59 @@ fn assertions_have_go_object_path_and_byte_length_semantics() {
         );
     }
 }
+
+#[test]
+fn assertions_compare_json_numbers_without_f64_rounding() {
+    let output = json!({
+        "small": 2,
+        "large": 9007199254740993u64,
+        "larger": 9007199254740994u64,
+        "nested": {"items": [9007199254740993u64, {"id": 18446744073709551615u64}]},
+        "minimum": -9223372036854775808i64,
+        "zero": 0,
+        "maximum": 18446744073709551615u64
+    });
+    for (path, op, value, expected) in [
+        ("large", "eq", json!(9007199254740993u64), true),
+        ("large", "neq", json!(9007199254740994u64), true),
+        ("larger", "gt", json!(9007199254740993u64), true),
+        ("large", "lt", json!(9007199254740994u64), true),
+        (
+            "nested.items",
+            "eq",
+            json!([9007199254740993u64, {"id": 18446744073709551615u64}]),
+            true,
+        ),
+        (
+            "nested.items",
+            "neq",
+            json!([9007199254740994u64, {"id": 18446744073709551615u64}]),
+            true,
+        ),
+        ("minimum", "lt", json!(-9223372036854775807i64), true),
+        ("small", "eq", json!(2.0), true),
+        ("small", "lt", json!(2.5), true),
+        ("small", "gt", json!(1.5), true),
+        ("large", "gt", json!(9007199254740992.0), true),
+        ("large", "neq", json!(9007199254740992.0), true),
+        ("zero", "lt", json!(0.25), true),
+        ("zero", "gt", json!(-0.25), true),
+        ("maximum", "lt", json!(2f64.powi(128)), true),
+    ] {
+        assert_eq!(
+            check_assertion(
+                &output,
+                &Assertion {
+                    path: path.into(),
+                    op: op.into(),
+                    value,
+                }
+            ),
+            expected,
+            "{path} {op}"
+        );
+    }
+}
 struct Mock(std::sync::Mutex<Vec<String>>);
 impl Executor for Mock {
     async fn execute(

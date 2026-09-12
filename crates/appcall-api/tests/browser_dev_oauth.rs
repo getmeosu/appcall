@@ -421,8 +421,8 @@ fn browser_setup_local_callback_and_production_managed_fallback_guards() {
             &[],
         ).unwrap().get(0);
         assert_eq!(
-            normal_after, normal_before + 1,
-            "normal OAuth setup must have persisted its disconnected candidate before credential configuration failed"
+            normal_after, normal_before,
+            "invalid managed OAuth configuration must be rejected before persisting a candidate"
         );
         let blocked = host.request("GET", forbidden_callback, &cookie, "");
         // Production does not install the local adapter, so this cookie-only

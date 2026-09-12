@@ -193,11 +193,12 @@ export function validateGetEventInput(input: unknown): GetEventInput {
   };
 }
 
-function normalizeEventResponse(b: Record<string, unknown>): CalendarEventActionResult["event"] {
+function normalizeEventResponse(b: Record<string, unknown>): CalendarEventActionResult["event"] | null {
+  if (typeof b.id !== "string" || b.id.length === 0) return null;
   const start = isRecord(b.start) ? b.start : {};
   const end = isRecord(b.end) ? b.end : {};
   return {
-    eventId: requireString(b.id, "id"),
+    eventId: b.id,
     htmlLink: typeof b.htmlLink === "string" ? b.htmlLink : "",
     summary: typeof b.summary === "string" ? b.summary : "",
     status: typeof b.status === "string" ? b.status : "confirmed",
@@ -213,9 +214,6 @@ async function handleCalendarResponse(response: { status: number; headers: Recor
   if (rateLimit.limited) {
     return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Calendar rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
   }
-  if (response.status === 204 || response.body.trim() === "") {
-    return { ok: true, body: {} };
-  }
   let body: Record<string, unknown> = {};
   try { body = JSON.parse(response.body); } catch { /* ignore */ }
   if (!isRecord(body)) body = {};
@@ -223,7 +221,14 @@ async function handleCalendarResponse(response: { status: number; headers: Recor
     const parsed = parseGoogleError(body);
     return { ok: false, error: parsed ?? { code: "CONNECTOR_UPSTREAM_ERROR", message: "Calendar API error." } };
   }
+  if (response.status === 204 || response.body.trim() === "") {
+    return { ok: true, body: {} };
+  }
   return { ok: true, body };
+}
+
+function incompleteCalendarResponse(resource: string): ConnectorError {
+  return { code: "CONNECTOR_UPSTREAM_ERROR", message: `Google Calendar API returned an incomplete ${resource} response.` };
 }
 
 export type CalendarActionsClient = {
@@ -256,7 +261,8 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
       );
       const res = await handleCalendarResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
-      return { ok: true, event: normalizeEventResponse(res.body) };
+      const event = normalizeEventResponse(res.body);
+      return event ? { ok: true, event } : { ok: false, error: incompleteCalendarResponse("event") };
     },
 
     async updateEvent(input: unknown): Promise<CalendarEventActionResult> {
@@ -273,7 +279,8 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
       );
       const res = await handleCalendarResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
-      return { ok: true, event: normalizeEventResponse(res.body) };
+      const event = normalizeEventResponse(res.body);
+      return event ? { ok: true, event } : { ok: false, error: incompleteCalendarResponse("event") };
     },
 
     async deleteEvent(input: unknown): Promise<DeleteEventResult> {
@@ -304,7 +311,8 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
       );
       const res = await handleCalendarResponse(response);
       if (!res.ok) return { ok: false, error: res.error };
-      return { ok: true, event: normalizeEventResponse(res.body) };
+      const event = normalizeEventResponse(res.body);
+      return event ? { ok: true, event } : { ok: false, error: incompleteCalendarResponse("event") };
     },
 
     async listCalendars(_input: unknown): Promise<CalendarListResult> {

@@ -563,3 +563,32 @@ async fn evidence_timeout_before_rpc_during_rpc_and_retry_sleep() {
         assert_eq!(error.evidence.origin, origin);
     }
 }
+
+#[tokio::test]
+async fn retry_backoff_deadline_after_known_nondispatch_does_not_open_circuit() {
+    let circuit = Circuit::new(1, std::time::Duration::from_secs(60));
+    let service = Service::new(
+        Repo {
+            state: Arc::new(Mutex::new(State::default())),
+            brand: "owner".into(),
+        },
+        ShortCatalog,
+        Credentials,
+        TimedRunner(false),
+        Allow,
+    )
+    .with_circuit(circuit);
+
+    let mut first = request("owner");
+    first.idempotency_key = "backoff-timeout-first".into();
+    let first_error = service.execute(first).await.unwrap_err();
+    assert_eq!(first_error.code, "ACTION_TIMEOUT");
+    assert_eq!(first_error.evidence.outcome, NotDispatched);
+
+    let mut second = request("owner");
+    second.idempotency_key = "backoff-timeout-second".into();
+    assert_eq!(
+        service.execute(second).await.unwrap_err().code,
+        "ACTION_TIMEOUT"
+    );
+}

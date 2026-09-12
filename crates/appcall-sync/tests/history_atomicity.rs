@@ -35,7 +35,7 @@ fn fixture() -> (Client, String) {
         .unwrap();
     client
         .batch_execute(
-            "CREATE TABLE connections(id text primary key,project_id text,connector text,external_account_id text,credential_owner text NOT NULL DEFAULT 'brand');CREATE TABLE sync_jobs(id text primary key,project_id text,connection_id text,operation text,status text,worker_id text NOT NULL DEFAULT '',attempts integer NOT NULL DEFAULT 0,run_after timestamptz,leased_until timestamptz,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz DEFAULT now(),last_error text NOT NULL DEFAULT '',dedup_key text,input jsonb,UNIQUE(project_id,dedup_key));INSERT INTO connections(id,project_id,connector,external_account_id) VALUES('c','p','slack','brand')",
+            "CREATE TABLE connections(id text primary key,project_id text,connector text,external_account_id text,credential_owner text NOT NULL DEFAULT 'brand',connection_generation bigint NOT NULL DEFAULT 1);CREATE TABLE sync_jobs(id text primary key,project_id text,connection_id text,operation text,status text,worker_id text NOT NULL DEFAULT '',attempts integer NOT NULL DEFAULT 0,run_after timestamptz,leased_until timestamptz,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz DEFAULT now(),last_error text NOT NULL DEFAULT '',dedup_key text,input jsonb,connection_generation bigint NOT NULL DEFAULT 1,UNIQUE(project_id,dedup_key));INSERT INTO connections(id,project_id,connector,external_account_id) VALUES('c','p','slack','brand')",
         )
         .unwrap();
     client

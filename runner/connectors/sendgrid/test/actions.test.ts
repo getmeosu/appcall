@@ -47,7 +47,7 @@ describe("createContact", () => {
     expect(() => createContact(null)).toThrow("input must be an object");
   });
 
-  it("creates contact with apiKey using mock fetch (202)", async () => {
+  it("queues contact creation with apiKey using mock fetch (202)", async () => {
     const mockFetch = async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
       return new Response(JSON.stringify(createContactFixture), {
         status: 202,
@@ -59,15 +59,11 @@ describe("createContact", () => {
     expect(result.connector).toBe("sendgrid");
     expect(result.action).toBe("contacts.create");
     expect(result.source).toBe("connector");
-    expect(result.contact).toBeDefined();
-    const contact = result.contact as Record<string, unknown>;
-    expect(contact.id).toBe("sg-contact:c-new-001");
-    expect(contact.email).toBe("newuser@example.com");
-    expect(contact.firstName).toBe("New");
-    expect(contact.lastName).toBe("User");
+    expect(result.jobId).toBe("job-create-001");
+    expect(result.contact).toBeUndefined();
   });
 
-  it("creates contact with apiKey using mock fetch (200)", async () => {
+  it("returns the queued job identity for a 200 response", async () => {
     const mockFetch = async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
       return new Response(JSON.stringify(createContactFixture), {
         status: 200,
@@ -76,11 +72,10 @@ describe("createContact", () => {
     };
 
     const result = await createContact({ apiKey: "SG.test-key", email: "newuser@example.com", fetch: mockFetch }) as Record<string, unknown>;
-    const contact = result.contact as Record<string, unknown>;
-    expect(contact.id).toBe("sg-contact:c-new-001");
+    expect(result.jobId).toBe("job-create-001");
   });
 
-  it("creates contact with apiKey using mock fetch (201)", async () => {
+  it("returns the queued job identity for a 201 response", async () => {
     const mockFetch = async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
       return new Response(JSON.stringify(createContactFixture), {
         status: 201,
@@ -89,8 +84,7 @@ describe("createContact", () => {
     };
 
     const result = await createContact({ apiKey: "SG.test-key", email: "newuser@example.com", fetch: mockFetch }) as Record<string, unknown>;
-    const contact = result.contact as Record<string, unknown>;
-    expect(contact.id).toBe("sg-contact:c-new-001");
+    expect(result.jobId).toBe("job-create-001");
   });
 
   it("throws rate limit error on 429", async () => {
@@ -126,7 +120,7 @@ describe("createContact", () => {
     }
   });
 
-  it("handles empty new_contacts array by using email as fallback id", async () => {
+  it("fails when SendGrid omits the queued job identity", async () => {
     const mockFetch = async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
       return new Response(JSON.stringify({ new_contacts: [] }), {
         status: 202,
@@ -134,9 +128,29 @@ describe("createContact", () => {
       });
     };
 
-    const result = await createContact({ apiKey: "SG.test-key", email: "fallback@example.com", fetch: mockFetch }) as Record<string, unknown>;
-    const contact = result.contact as Record<string, unknown>;
-    expect(contact.id).toBe("sg-contact:fallback@example.com");
-    expect(contact.email).toBe("fallback@example.com");
+    await expect(createContact({ apiKey: "SG.test-key", email: "fallback@example.com", fetch: mockFetch }))
+      .rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  it("places list IDs at the request top level", async () => {
+    let sentBody: Record<string, unknown> = {};
+    const mockFetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      sentBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(JSON.stringify({ job_id: "job-list-001" }), {
+        status: 202,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+
+    const result = await createContact({
+      apiKey: "SG.test-key",
+      email: "listed@example.com",
+      firstName: "Listed",
+      listIds: ["list-1", "list-2"],
+      fetch: mockFetch,
+    }) as Record<string, unknown>;
+    expect(result.jobId).toBe("job-list-001");
+    expect(sentBody.list_ids).toEqual(["list-1", "list-2"]);
+    expect((sentBody.contacts as Array<Record<string, unknown>>)[0]?.list_ids).toBeUndefined();
   });
 });

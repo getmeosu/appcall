@@ -78,6 +78,19 @@ describe("renderPath", () => {
   it("stringifies a numeric path value", () => {
     expect(renderPath("/lists/{{listId}}", { listId: 42 })).toBe("/lists/42");
   });
+
+  it("rejects dot path segments", () => {
+    expect(() => renderPath("/records/{{recordId}}", { recordId: "." })).toThrow(/dot path segment/);
+    expect(() => renderPath("/records/{{recordId}}", { recordId: ".." })).toThrow(/dot path segment/);
+    expect(() => renderPath("/parent/.{{recordId}}", { recordId: "." })).toThrow(/dot path segment/);
+    expect(() => renderPath("/parent/{{left}}{{right}}", { left: ".", right: "." })).toThrow(/dot path segment/);
+    expect(() => renderPath("/parent/../child", {})).toThrow(/dot path segment/);
+    expect(() => renderPath("/parent/%2e%2e/child", {})).toThrow(/dot path segment/);
+  });
+
+  it("allows dot characters inside a non-segment value", () => {
+    expect(renderPath("/records/{{recordId}}", { recordId: "v1.2" })).toBe("/records/v1.2");
+  });
 });
 
 describe("hasPlaceholder", () => {

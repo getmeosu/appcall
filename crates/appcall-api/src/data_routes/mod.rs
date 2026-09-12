@@ -395,6 +395,64 @@ pub fn trace(client: &mut impl GenericClient, identity: &Identity, id: &str) -> 
     }
     Ok(result)
 }
+
+fn stored_messages_error(error: appcall_sync::Error) -> ApiError {
+    match error {
+        appcall_sync::Error::InvalidInput => ApiError::new("INVALID_CURSOR"),
+        appcall_sync::Error::NotFound => ApiError::new("CONNECTION_NOT_FOUND"),
+        appcall_sync::Error::StaleGeneration => ApiError::new("SYNC_MESSAGES_STALE"),
+        _ => ApiError::new("SYNC_MESSAGES_FAILED"),
+    }
+}
+
+fn stored_messages_query(
+    identity: &Identity,
+    connection_id: &str,
+    url: &url::Url,
+) -> Result<appcall_sync::StoredMessageQuery> {
+    let values = first_query_values(url);
+    for key in ["accountId", "externalAccountId"] {
+        if let Some(account) = values.get(key) {
+            if account != &identity.account_id {
+                return Err(ApiError::new("CONNECTION_NOT_FOUND"));
+            }
+        }
+    }
+    let limit = match values.get("limit").map(String::as_str) {
+        None | Some("") => 50,
+        Some(raw) => raw
+            .parse::<usize>()
+            .ok()
+            .filter(|limit| (1..=100).contains(limit))
+            .ok_or_else(|| ApiError::new("INVALID_LIMIT"))?,
+    };
+    let channel_id = values
+        .get("channelId")
+        .filter(|channel| !channel.is_empty())
+        .cloned();
+    let query = appcall_sync::StoredMessageQuery {
+        project_id: identity.project_id.clone(),
+        account_id: identity.account_id.clone(),
+        connection_id: connection_id.to_owned(),
+        channel_id,
+        cursor: values.get("cursor").cloned().unwrap_or_default(),
+        limit,
+    };
+    query.validate().map_err(stored_messages_error)?;
+    Ok(query)
+}
+
+pub fn stored_messages(
+    client: &mut impl GenericClient,
+    identity: &Identity,
+    connection_id: &str,
+    url: &url::Url,
+) -> Result<Value> {
+    let query = stored_messages_query(identity, connection_id, url)?;
+    let page = appcall_sync::list_stored_messages(client, &query).map_err(stored_messages_error)?;
+    serde_json::to_value(page).map_err(|_| ApiError::new("SYNC_MESSAGES_FAILED"))
+}
+
 pub fn read(
     client: &mut impl GenericClient,
     identity: &Identity,
@@ -436,6 +494,15 @@ pub fn read(
         ),
         ["v1", "webhook-events", id] => detail(client, identity, LogKind::Webhook, id, false),
         ["v1", "requests", id] => trace(client, identity, id),
+        ["v1", "connections", id, "messages"] => stored_messages(client, identity, id, url),
+        ["v1", "messages"] => {
+            let connection_id = first_query_values(url)
+                .get("connectionId")
+                .cloned()
+                .filter(|id| !id.is_empty())
+                .ok_or_else(|| ApiError::new("INVALID_REQUEST"))?;
+            stored_messages(client, identity, &connection_id, url)
+        }
         ["v1", "sync-runs"] => runs::list(client, identity, &RunQuery::parse(url)?),
         ["v1", "sync-runs", id, "history"] => {
             run_history::read(client, identity, id, &RunHistoryQuery::parse(url)?)
@@ -449,6 +516,7 @@ pub fn read(
                 Some("replay-logs") => "REPLAY_LOGS_FAILED",
                 Some("webhook-events") => "WEBHOOK_EVENTS_FAILED",
                 Some("sync-runs") => "RUNS_FAILED",
+                Some("connections") | Some("messages") => "SYNC_MESSAGES_FAILED",
                 _ => "REQUEST_TRACE_FAILED",
             })
         } else {
@@ -532,7 +600,9 @@ fn db_error(_: postgres::Error) -> ApiError {
 /// execution still obtains a fresh request id and re-evaluates current policy.
 pub struct ReplayCommand {
     pub log_id: String,
+    /// Compatibility alias used by the browser replay adapter.
     pub request_id: String,
+    pub original_request_id: String,
     pub execute: appcall_actions::ExecuteRequest,
 }
 pub fn prepare_replay(
@@ -541,10 +611,23 @@ pub fn prepare_replay(
     id: &str,
     by_request: bool,
 ) -> Result<ReplayCommand> {
+    prepare_replay_with_credentials(client, identity, id, by_request, "", "")
+}
+
+pub fn prepare_replay_with_credentials(
+    client: &mut impl GenericClient,
+    identity: &Identity,
+    id: &str,
+    by_request: bool,
+    idempotency_key: &str,
+    caller_credential: &str,
+) -> Result<ReplayCommand> {
     let log = detail(client, identity, LogKind::Replay, id, by_request)?;
+    let original_request_id = log["requestId"].as_str().unwrap().to_owned();
     Ok(ReplayCommand {
         log_id: log["id"].as_str().unwrap().into(),
-        request_id: log["requestId"].as_str().unwrap().into(),
+        request_id: original_request_id.clone(),
+        original_request_id,
         execute: appcall_actions::ExecuteRequest {
             project_id: identity.project_id.clone(),
             external_account_id: identity.account_id.clone(),
@@ -552,8 +635,8 @@ pub fn prepare_replay(
             connection_id: log["connectionId"].as_str().unwrap().into(),
             action: log["action"].as_str().unwrap().into(),
             input: log["sanitizedInput"].clone(),
-            idempotency_key: String::new(),
-            caller_credential: String::new(),
+            idempotency_key: idempotency_key.to_owned(),
+            caller_credential: caller_credential.to_owned(),
         },
     })
 }
@@ -592,5 +675,53 @@ mod query_contract_tests {
         let url = url::Url::parse("http://x/?errorCode=RUNNER_BUSY").unwrap();
         let query = LogQuery::parse(&url).unwrap();
         assert_eq!(query.get("errorCode"), "RUNNER_BUSY");
+    }
+
+    #[test]
+    fn stored_message_query_is_bound_to_authenticated_account_and_cursor() {
+        let identity = Identity {
+            project_id: "project-a".into(),
+            account_id: "brand-a".into(),
+            admin_scope: false,
+        };
+        let url = url::Url::parse(
+            "http://x/v1/connections/connection-a/messages?accountId=brand-a&channelId=channel-a&limit=7&cursor=opaque",
+        )
+        .unwrap();
+        let query = stored_messages_query(&identity, "connection-a", &url).unwrap();
+        assert_eq!(query.project_id, "project-a");
+        assert_eq!(query.account_id, "brand-a");
+        assert_eq!(query.connection_id, "connection-a");
+        assert_eq!(query.channel_id.as_deref(), Some("channel-a"));
+        assert_eq!(query.limit, 7);
+        assert_eq!(query.cursor, "opaque");
+
+        let foreign =
+            url::Url::parse("http://x/v1/connections/connection-a/messages?accountId=brand-b")
+                .unwrap();
+        assert_eq!(
+            stored_messages_query(&identity, "connection-a", &foreign)
+                .unwrap_err()
+                .code,
+            "CONNECTION_NOT_FOUND"
+        );
+        let foreign_alias = url::Url::parse(
+            "http://x/v1/connections/connection-a/messages?externalAccountId=brand-b",
+        )
+        .unwrap();
+        assert_eq!(
+            stored_messages_query(&identity, "connection-a", &foreign_alias)
+                .unwrap_err()
+                .code,
+            "CONNECTION_NOT_FOUND"
+        );
+        let invalid_limit =
+            url::Url::parse("http://x/v1/connections/connection-a/messages?limit=101").unwrap();
+        assert_eq!(
+            stored_messages_query(&identity, "connection-a", &invalid_limit)
+                .unwrap_err()
+                .code,
+            "INVALID_LIMIT"
+        );
     }
 }

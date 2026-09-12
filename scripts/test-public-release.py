@@ -12,6 +12,20 @@ SCRIPT = Path(__file__).with_name('public-release.py')
 
 
 class ReleaseGateTests(unittest.TestCase):
+    def test_smoke_safety_fixture_is_allowlisted_without_widening_scripts(self):
+        self.legal()
+        fixture = 'scripts/test-smoke-prod.sh'
+        unrelated = 'scripts/unreviewed.sh'
+        self.put(fixture, '#!/usr/bin/env bash\nprintf "%s\\n" safe\n')
+        self.put(unrelated, '#!/usr/bin/env bash\nprintf "%s\\n" unreviewed\n')
+
+        result = self.run_gate('check')
+        payload = json.loads(result.stdout)
+        denied = {(entry['path'], entry['rule']) for entry in payload['errors']}
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn((fixture, 'path-not-allowed'), denied)
+        self.assertIn((unrelated, 'path-not-allowed'), denied)
+
     def test_web_contract_is_allowlisted_without_widening_markdown(self):
         self.legal()
         contract = 'crates/appcall-web/CONTRACT.md'

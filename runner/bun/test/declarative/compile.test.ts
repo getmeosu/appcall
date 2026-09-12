@@ -105,6 +105,30 @@ const reservedQueryManifest = {
   },
 };
 
+const structuredPathManifest = {
+  key: "structured-path",
+  name: "Structured Path",
+  runtime: "bun",
+  auth: { type: "api_key", scopes: [] },
+  network: { allowedHosts: ["api.structured-path.test"] },
+  http: {
+    baseUrl: "https://api.structured-path.test",
+    auth: { field: "apiKey", in: "header", name: "Authorization", value: "Bearer {{apiKey}}" },
+  },
+  operations: {
+    "records.get": {
+      kind: "action",
+      inputSchema: { type: "object", properties: { recordId: { type: "string" } }, required: ["recordId"] },
+      request: {
+        method: "GET",
+        path: "/records/{{recordId}}",
+        parameters: [{ wireName: "recordId", inputName: "recordId", in: "path", style: "simple", explode: false }],
+        success: [200],
+      },
+    },
+  },
+};
+
 function okResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
 }
@@ -249,6 +273,62 @@ describe("compileDeclarativeConnector", () => {
 
     expect(seenUrl).toBe("https://api.reserved-query.test/search?q=a%23b");
     expect(new URL(seenUrl).searchParams.get("q")).toBe("a#b");
+  });
+
+  it("rejects dot path segments from structured path serialization", async () => {
+    const compiled = compileDeclarativeConnector(structuredPathManifest as never);
+    let fetchCalls = 0;
+    await expect(compiled.actions["records.get"]!({
+      apiKey: "k",
+      recordId: "..",
+      fetch: async () => {
+        fetchCalls += 1;
+        return okResponse({});
+      },
+    })).rejects.toMatchObject({ ok: false, code: "INVALID_ACTION_INPUT" });
+    expect(fetchCalls).toBe(0);
+  });
+
+  it("rejects composed dot segments from structured path serialization", async () => {
+    const composedManifest = {
+      ...structuredPathManifest,
+      operations: {
+        "records.get": {
+          ...structuredPathManifest.operations["records.get"],
+          request: {
+            ...structuredPathManifest.operations["records.get"].request,
+            path: "/parent/.{{recordId}}",
+          },
+        },
+      },
+    };
+    const compiled = compileDeclarativeConnector(composedManifest as never);
+    let fetchCalls = 0;
+    await expect(compiled.actions["records.get"]!({
+      apiKey: "k",
+      recordId: ".",
+      fetch: async () => {
+        fetchCalls += 1;
+        return okResponse({});
+      },
+    })).rejects.toMatchObject({ ok: false, code: "INVALID_ACTION_INPUT" });
+    expect(fetchCalls).toBe(0);
+  });
+
+  it("rejects static dot path segments while compiling a manifest", () => {
+    const unsafeManifest = {
+      ...structuredPathManifest,
+      operations: {
+        "records.get": {
+          ...structuredPathManifest.operations["records.get"],
+          request: {
+            ...structuredPathManifest.operations["records.get"].request,
+            path: "/records/../child",
+          },
+        },
+      },
+    };
+    expect(() => compileDeclarativeConnector(unsafeManifest as never)).toThrow(/dot path segment/);
   });
 
   it("returns the raw body under data when the operation declares no result mapping", async () => {

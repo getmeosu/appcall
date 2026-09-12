@@ -92,13 +92,26 @@ fn quota_months_to_lock(
 }
 
 fn expire_pending_quota(tx: &mut Transaction<'_>, project: &str, month: &str) -> Result<()> {
-    tx.execute(
-        "UPDATE action_usage_reservations
-            SET state='released', released_at=now()
-          WHERE project_id=$1 AND month=$2 AND state='pending' AND expires_at<=now()",
-        &[&project, &month],
-    )
-    .map_err(|_| unavailable())?;
+    let rows = tx
+        .query(
+            "SELECT id
+               FROM action_usage_reservations
+              WHERE project_id=$1 AND month=$2 AND state='pending' AND expires_at<=now()
+              FOR UPDATE",
+            &[&project, &month],
+        )
+        .map_err(|_| unavailable())?;
+    for row in rows {
+        let id: String = row.get(0);
+        crate::postgres_store::refund_reservation_charges(tx, project, &id)?;
+        tx.execute(
+            "UPDATE action_usage_reservations
+                SET state='released', released_at=now()
+              WHERE id=$1 AND project_id=$2 AND state='pending'",
+            &[&id, &project],
+        )
+        .map_err(|_| unavailable())?;
+    }
     Ok(())
 }
 
@@ -262,12 +275,13 @@ impl PolicyGate for PgPolicy {
         o: &Operation,
         input: &Value,
     ) -> Result<PolicyReservation> {
-        let (project, connection_id, brand, action, connector) = (
+        let (project, connection_id, brand, action, connector, idempotency_key) = (
             r.project_id.clone(),
             r.connection_id.clone(),
             r.external_account_id.clone(),
             r.action.clone(),
             c.connector.clone(),
+            r.idempotency_key.clone(),
         );
         let noted = r
             .input
@@ -282,6 +296,8 @@ impl PolicyGate for PgPolicy {
         let read = o.read_only;
         let config = self.config.clone();
         let reservation_lease_ms = (o.timeout_ms as i64).saturating_add(60_000).max(1);
+        let input_hash = scoped_input_hash(&r.input, &brand)
+            .map_err(|_| ActionError::new("INVALID_ACTION_INPUT"))?;
         self.repository.run(move|c|{
             let mut tx=c.transaction().map_err(|_|unavailable())?;
             let e=entitlements(&mut tx,&project,&config)?;
@@ -311,7 +327,7 @@ impl PolicyGate for PgPolicy {
                 return Err(error);
             }
             let mut reservation=PolicyReservation {usage, quota_id: quota_id.clone(), quota_month: month.clone(), ..Default::default()};
-            tx.execute("INSERT INTO action_usage_reservations(id,project_id,month,connection_id,connector,action,external_account_id,state,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,'pending',now()+($8::bigint * interval '1 millisecond'))",&[&quota_id,&project,&month,&connection_id,&connector,&action,&brand,&reservation_lease_ms]).map_err(|_|unavailable())?;
+            tx.execute("INSERT INTO action_usage_reservations(id,project_id,month,connection_id,connector,action,external_account_id,idempotency_key,input_hash,state,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',now()+($10::bigint * interval '1 millisecond'))",&[&quota_id,&project,&month,&connection_id,&connector,&action,&brand,&idempotency_key,&input_hash,&reservation_lease_ms]).map_err(|_|unavailable())?;
             if connector=="unipile" {
                 reservation.channel=channel(&action).into();
                 reservation.class=linkedin_class(&action).into();
@@ -326,7 +342,13 @@ impl PolicyGate for PgPolicy {
                     }
                 }
             }
-            if !read {claim_send(&mut tx,&project,&brand,&e,config.send_cost_micros)?;}
+            if !read {
+                let send_window = claim_send(&mut tx,&project,&brand,&e,config.send_cost_micros)?;
+                tx.execute("INSERT INTO action_usage_reservation_charges(reservation_id,charge_kind,window_kind,window_key,quantity,spend_micros) VALUES($1,'send','day',$2,1,$3)",&[&quota_id,&send_window,&config.send_cost_micros]).map_err(|_|unavailable())?;
+            }
+            for (window_kind, window_key) in &reservation.windows {
+                tx.execute("INSERT INTO action_usage_reservation_charges(reservation_id,charge_kind,action_class,window_kind,window_key,quantity,spend_micros) VALUES($1,'linkedin',$2,$3,$4,1,0)",&[&quota_id,&reservation.class,window_kind,window_key]).map_err(|_|unavailable())?;
+            }
             tx.commit().map_err(|_|unavailable())?;Ok(reservation)
         }).await
     }
@@ -362,6 +384,41 @@ impl PolicyGate for PgPolicy {
             tx.commit().map_err(|_|unavailable())
         }).await
     }
+    async fn observe_failure_with_outcome(
+        &self,
+        r: &ExecuteRequest,
+        c: &Connection,
+        reservation: &PolicyReservation,
+        code: &str,
+        _outcome: ActionDispatchOutcome,
+    ) -> Result<()> {
+        // Counter refunds are performed by the repository's atomic
+        // proven-nondispatch transition. Keep this hook for account
+        // quarantine, which is independent of dispatch certainty.
+        if code != "CONNECTOR_ACCOUNT_RESTRICTED"
+            || c.connector != "unipile"
+            || reservation.channel.is_empty()
+        {
+            return Ok(());
+        }
+        let expected_account = reservation.provider_account_id.clone();
+        let (project, brand, channel) = (
+            r.project_id.clone(),
+            r.external_account_id.clone(),
+            reservation.channel.clone(),
+        );
+        self.repository
+            .run(move |c| {
+                let mut tx = c.transaction().map_err(|_| unavailable())?;
+                tx.execute(
+                    "UPDATE provider_subaccounts SET status='needs_reconnect',updated_at=now() WHERE project_id=$1 AND external_account_id=$2 AND connector='unipile' AND channel=$3 AND provider_account_id=$4",
+                    &[&project, &brand, &channel, &expected_account],
+                )
+                .map_err(|_| unavailable())?;
+                tx.commit().map_err(|_| unavailable())
+            })
+            .await
+    }
 }
 fn claim_send(
     tx: &mut Transaction<'_>,
@@ -369,11 +426,14 @@ fn claim_send(
     brand: &str,
     e: &Entitlements,
     cost: i64,
-) -> Result<()> {
-    let window = Utc::now().format("%Y-%m-%d").to_string();
+) -> Result<String> {
+    let window: String = tx
+        .query_one("SELECT to_char(now() AT TIME ZONE 'UTC','YYYY-MM-DD')", &[])
+        .map_err(|_| unavailable())?
+        .get(0);
     let row=tx.query_opt("INSERT INTO action_send_caps(project_id,external_account_id,window_key,send_count,spend_micros,updated_at) SELECT $1,$2,$3,1,$4,now() WHERE ($5::bigint=0 OR 1<=$5) AND ($6::bigint=0 OR $4::bigint<=$6) ON CONFLICT(project_id,external_account_id,window_key) DO UPDATE SET send_count=action_send_caps.send_count+1,spend_micros=action_send_caps.spend_micros+EXCLUDED.spend_micros,updated_at=now() WHERE ($5::bigint=0 OR action_send_caps.send_count+1<=$5) AND ($6::bigint=0 OR action_send_caps.spend_micros+EXCLUDED.spend_micros<=$6) RETURNING send_count",&[&project,&brand,&window,&cost,&e.send_cap,&e.spend_cap_micros]).map_err(|_|unavailable())?;
     if row.is_some() {
-        return Ok(());
+        return Ok(window);
     }
     let current=tx.query_opt("SELECT send_count FROM action_send_caps WHERE project_id=$1 AND external_account_id=$2 AND window_key=$3",&[&project,&brand,&window]).map_err(|_|unavailable())?;
     let send = current.map(|r| r.get::<_, i64>(0)).unwrap_or(0);
@@ -383,7 +443,12 @@ fn claim_send(
         "SPEND_CAP_EXCEEDED"
     }))
 }
-fn linkedin_lock(tx: &mut Transaction<'_>, project: &str, brand: &str, class: &str) -> Result<()> {
+pub(crate) fn linkedin_lock(
+    tx: &mut Transaction<'_>,
+    project: &str,
+    brand: &str,
+    class: &str,
+) -> Result<()> {
     // Match the existing Go FNV-1a advisory lock, including trailing NULs.
     let mut hash = 0xcbf29ce484222325_u64;
     for part in [project, brand, class] {

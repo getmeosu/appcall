@@ -188,28 +188,29 @@ fn drive<S: Store>(
                         .reject_dispatch(&attempt, RunFailure::MissingActivityImplementation)?;
                     continue;
                 }
-                let invocation = match api
-                    .engine_mut()
-                    .prepare_registered(&attempt, resolver.as_ref())
-                {
-                    Ok(invocation) => invocation,
-                    Err(Error::Invalid(_) | Error::Nondeterminism) => {
-                        api.engine_mut()
-                            .reject_dispatch(&attempt, RunFailure::InvalidCommand)?;
-                        continue;
-                    }
-                    Err(Error::Limit) => {
-                        api.engine_mut()
-                            .reject_dispatch(&attempt, RunFailure::ResourceLimit)?;
-                        continue;
-                    }
-                    Err(Error::Unavailable) => {
-                        api.engine_mut()
-                            .reject_dispatch(&attempt, RunFailure::PayloadUnavailable)?;
-                        continue;
-                    }
-                    Err(error) => return Err(error),
-                };
+                let invocation =
+                    match api
+                        .engine_mut()
+                        .prepare_registered_at(&attempt, resolver.as_ref(), now())
+                    {
+                        Ok(invocation) => invocation,
+                        Err(Error::Invalid(_) | Error::Nondeterminism) => {
+                            api.engine_mut()
+                                .reject_dispatch(&attempt, RunFailure::InvalidCommand)?;
+                            continue;
+                        }
+                        Err(Error::Limit) => {
+                            api.engine_mut()
+                                .reject_dispatch(&attempt, RunFailure::ResourceLimit)?;
+                            continue;
+                        }
+                        Err(Error::Unavailable) => {
+                            api.engine_mut()
+                                .reject_dispatch(&attempt, RunFailure::PayloadUnavailable)?;
+                            continue;
+                        }
+                        Err(error) => return Err(error),
+                    };
                 if let Some(invocation) = invocation {
                     let sender = sender.clone();
                     thread::Builder::new()

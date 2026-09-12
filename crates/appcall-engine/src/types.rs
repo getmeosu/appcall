@@ -222,6 +222,7 @@ pub struct HistoryEvent {
 pub struct ActivityAttempt {
     pub run_id: String,
     pub effect_id: String,
+    /// Monotonic dispatch identity retained for stale-result fencing.
     pub attempt: u64,
     pub owner_epoch: u64,
     pub name: String,
@@ -262,12 +263,55 @@ pub struct RetryState {
 pub struct ActivityTask {
     pub attempt: ActivityAttempt,
     pub state: TaskState,
+    #[serde(default)]
+    pub(crate) execution: ExecutionAccounting,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub(crate) struct ExecutionAccounting {
+    /// Number of dispatches that reached an executor. A dispatch rejected
+    /// before payload/implementation resolution deliberately leaves this at
+    /// its previous value, so restoring the missing input does not debit the
+    /// retry budget.
+    pub execution_attempts: u64,
+    /// Dispatch sequence already charged to execution_attempts.
+    pub execution_dispatch_attempt: u64,
+    /// Set only when the host rejected this dispatch before native execution.
+    /// It prevents restart recovery from treating that known-unexecuted
+    /// dispatch as a historical execution.
+    pub known_unexecuted: bool,
+    /// Start of the actual execution retry window. Kept separate from the
+    /// dispatch timestamp for known-unexecuted suspensions.
+    pub execution_started_at_ms: i64,
+}
+impl Default for ExecutionAccounting {
+    fn default() -> Self {
+        Self {
+            execution_attempts: u64::MAX,
+            execution_dispatch_attempt: 0,
+            known_unexecuted: false,
+            execution_started_at_ms: 0,
+        }
+    }
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SignalEvent {
     pub name: String,
     pub value: PayloadRef,
     pub consumed: bool,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReconciliationAudit {
+    pub effect_id: String,
+    pub attempt: u64,
+    pub owner_epoch: u64,
+    /// Bounded operator/provider evidence reference, never the evidence body.
+    pub evidence_ref: String,
+    /// Wall-clock time at which this resolution was durably recorded.
+    pub recorded_at_ms: i64,
+    /// Only whether a durable provider observation was supplied is retained;
+    /// Payload references and freeform operator notes never enter the audit
+    /// record; only this boolean is retained.
+    pub observed: bool,
 }
 /// A transaction unit. Backends must atomically compare revision and write the
 /// complete run plus inserted children. Implementations must enforce one owner.
@@ -288,6 +332,8 @@ pub struct RunRecord {
     pub children: Vec<String>,
     pub output: Option<PayloadRef>,
     pub wakeup: Option<i64>,
+    #[serde(default)]
+    pub reconciliation_audit: Vec<ReconciliationAudit>,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RunResult {

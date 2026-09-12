@@ -19,6 +19,7 @@ import {
   validateEventsDeleteInput,
   validateFreeBusyQueryInput,
 } from "../src/actions";
+import { buildVEvent } from "../src/dav";
 
 const principalXml = await Bun.file(`${import.meta.dir}/../fixtures/principal.xml`).text();
 const calendarHomeXml = await Bun.file(`${import.meta.dir}/../fixtures/calendar_home.xml`).text();
@@ -316,11 +317,21 @@ describe("ETag action round trips", () => {
         end: "2024-06-15T13:00:00Z",
         fetch: async (input, init) => {
           updateRequests.push(new Request(input, init));
+          if ((init?.method ?? "GET") === "GET") {
+            return new Response(buildVEvent({
+              uid: `${scenario.name}-001`,
+              summary: "Existing Event",
+              start: "2024-06-15T10:00:00Z",
+              end: "2024-06-15T11:00:00Z",
+            }), { status: 200, headers: { etag } });
+          }
           return new Response("", { status: 204 });
         },
       });
-      expect(updateRequests).toHaveLength(1);
-      expect(updateRequests[0].headers.get("If-Match")).toBe(etag);
+      expect(updateRequests).toHaveLength(2);
+      expect(updateRequests[0].method).toBe("GET");
+      expect(updateRequests[1].method).toBe("PUT");
+      expect(updateRequests[1].headers.get("If-Match")).toBe(etag);
 
       const deleteRequests: Request[] = [];
       await deleteEvent({
@@ -454,6 +465,21 @@ describe("createEvent", () => {
     expect((result.uid as string).length).toBeGreaterThan(0);
   });
 
+  test("rejects invalid attendee addresses before any network call", async () => {
+    const requests: Request[] = [];
+    await expect(createEvent({
+      ...CREDS,
+      calendarHref: "/1234/calendars/home/",
+      summary: "S", start: "2024-06-15T10:00:00Z", end: "2024-06-15T11:00:00Z",
+      attendees: ["attendee@example.com\r\nATTENDEE:mailto:injected@example.com"],
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 201 });
+      },
+    })).rejects.toThrow(/address|line break|control character/i);
+    expect(requests).toHaveLength(0);
+  });
+
   test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
     await expect(createEvent({
       ...CREDS,
@@ -508,11 +534,16 @@ describe("updateEvent", () => {
       end: "2024-06-15T15:00:00Z",
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
+        if ((init?.method ?? "GET") === "GET") {
+          return new Response(eventIcs.replace("meeting-uid-001", "uid-001"), { status: 200, headers: { etag: '"current-etag"' } });
+        }
         return new Response("", { status: 204, headers: { "etag": '"updated-etag-001"' } });
       },
     }) as Record<string, unknown>;
-    expect(requests[0].method).toBe("PUT");
-    expect(requests[0].headers.get("If-Match")).toBe('"current-etag"');
+    expect(requests).toHaveLength(2);
+    expect(requests[0].method).toBe("GET");
+    expect(requests[1].method).toBe("PUT");
+    expect(requests[1].headers.get("If-Match")).toBe('"current-etag"');
     expect(result.href).toContain("uid-001.ics");
     expect(result.etag).toBe('"updated-etag-001"');
   });
@@ -529,6 +560,9 @@ describe("updateEvent", () => {
       end: "2024-06-15T15:00:00Z",
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
+        if ((init?.method ?? "GET") === "GET") {
+          return new Response(eventIcs.replace("meeting-uid-001", "uid-001"), { status: 200, headers: { etag: 'W/"current-etag"' } });
+        }
         return new Response("", { status: 204, headers: { "etag": 'W/"updated-etag-001"' } });
       },
     }) as Record<string, unknown>;
@@ -541,13 +575,14 @@ describe("updateEvent", () => {
         return new Response("", { status: 204 });
       },
     });
-    expect(requests).toHaveLength(2);
-    expect(requests[0].headers.get("If-Match")).toBe('W/"current-etag"');
+    expect(requests).toHaveLength(3);
+    expect(requests[0].method).toBe("GET");
+    expect(requests[1].headers.get("If-Match")).toBe('W/"current-etag"');
     expect(result.etag).toBe('W/"updated-etag-001"');
-    expect(requests[1].headers.get("If-Match")).toBe('W/"updated-etag-001"');
+    expect(requests[2].headers.get("If-Match")).toBe('W/"updated-etag-001"');
   });
 
-  test("maps 412 (conflict) to CONNECTOR_UPSTREAM_ERROR", async () => {
+  test("fails a stale ETag before sending a PUT", async () => {
     const requests: Request[] = [];
     await expect(updateEvent({
       ...CREDS,
@@ -557,11 +592,44 @@ describe("updateEvent", () => {
       summary: "S", start: "2024-06-15T10:00:00Z", end: "2024-06-15T11:00:00Z",
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
-        return new Response("", { status: 412 });
+        return new Response(eventIcs.replace("meeting-uid-001", "uid-001"), { status: 200, headers: { etag: 'W/"newer-etag"' } });
       },
     })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR", message: expect.stringContaining("conflict") });
     expect(requests).toHaveLength(1);
-    expect(requests[0].headers.get("If-Match")).toBe('W/"stale-update"');
+    expect(requests[0].method).toBe("GET");
+  });
+
+  test("fails closed when the resource is not a supported VEVENT", async () => {
+    const requests: Request[] = [];
+    await expect(updateEvent({
+      ...CREDS,
+      eventHref: "/1234/calendars/home/ev.ics",
+      etag: '"current"',
+      uid: "uid-001",
+      summary: "S", start: "2024-06-15T10:00:00Z", end: "2024-06-15T11:00:00Z",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", { status: 200, headers: { etag: '"current"' } });
+      },
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].method).toBe("GET");
+  });
+
+  test("rejects CRLF input before any read or write", async () => {
+    const requests: Request[] = [];
+    await expect(updateEvent({
+      ...CREDS,
+      eventHref: "/1234/calendars/home/ev.ics",
+      etag: '"current"',
+      uid: "uid-001",
+      summary: "S\r\nX-INJECTED:value", start: "2024-06-15T10:00:00Z", end: "2024-06-15T11:00:00Z",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 500 });
+      },
+    })).rejects.toThrow(/line break|control character/i);
+    expect(requests).toHaveLength(0);
   });
 
   test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {

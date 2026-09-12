@@ -82,6 +82,38 @@ describe("google-workspace Calendar actions", () => {
     }
   });
 
+  test("createEvent treats empty error responses as failures", async () => {
+    for (const status of [401, 403, 500, 503]) {
+      const client = createCalendarActionsClient({
+        accessToken: "token",
+        fetch: async () => new Response("", { status }),
+      });
+      const result = await client.createEvent({
+        calendarId: "primary",
+        summary: "Test",
+        startDateTime: "2024-01-15T09:00:00Z",
+        endDateTime: "2024-01-15T10:00:00Z",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+    }
+  });
+
+  test("createEvent rejects an incomplete successful response", async () => {
+    const client = createCalendarActionsClient({
+      accessToken: "token",
+      fetch: async () => Response.json({}),
+    });
+    const result = await client.createEvent({
+      calendarId: "primary",
+      summary: "Test",
+      startDateTime: "2024-01-15T09:00:00Z",
+      endDateTime: "2024-01-15T10:00:00Z",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
   // ─── calendar.events.update ─────────────────────────────────────────────
 
   test("validateUpdateEventInput accepts valid input", () => {
@@ -264,5 +296,25 @@ describe("google-workspace Calendar actions", () => {
     const result = await client.listCalendars({});
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
+  });
+
+  test("listCalendars treats empty error responses as failures", async () => {
+    for (const status of [401, 403, 500, 503]) {
+      const client = createCalendarActionsClient({
+        accessToken: "token",
+        fetch: async () => new Response("", { status }),
+      });
+      const result = await client.listCalendars({});
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+    }
+  });
+
+  test("listCalendars keeps an empty 204 success as an empty list", async () => {
+    const client = createCalendarActionsClient({
+      accessToken: "token",
+      fetch: async () => new Response("", { status: 204 }),
+    });
+    await expect(client.listCalendars({})).resolves.toEqual({ ok: true, calendars: [] });
   });
 });

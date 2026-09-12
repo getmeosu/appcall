@@ -55,7 +55,10 @@ impl MemoryDashboard {
         if r.operation == Op::RunDetail {
             return Err(Error::NotFound.into());
         }
-        if matches!(r.operation, Op::RunNow | Op::ResetRun | Op::CancelRun) {
+        if matches!(
+            r.operation,
+            Op::RunNow | Op::ResetRun | Op::CancelRun | Op::ActionClaims | Op::ReconcileActionClaim
+        ) {
             // The product has not defined a trusted operator principal yet;
             // keep browser mutations fail-closed while scoped reads remain
             // available to ordinary dashboard principals.
@@ -76,6 +79,7 @@ impl MemoryDashboard {
             return Err(Error::Unavailable.into());
         }
         match r.operation {
+            Op::ActionClaims | Op::ReconcileActionClaim => Err(Error::Forbidden.into()),
             Op::Catalog => Ok(
                 json!({"connectors":self.core.registry().public_list().map(|c|crate::browser_host::catalog_item(c.manifest())).collect::<Vec<_>>()}),
             ),

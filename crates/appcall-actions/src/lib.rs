@@ -3,6 +3,7 @@
 mod adapters;
 mod canonical;
 mod circuit;
+pub mod claims;
 mod credentials;
 mod evidence;
 mod normalized;
@@ -15,6 +16,7 @@ mod postgres_store;
 mod service;
 pub use canonical::scoped_input_hash;
 pub use circuit::*;
+pub use claims::*;
 pub use history::sanitize_replay_input;
 pub use policy::*;
 pub use postgres_store::*;
@@ -209,6 +211,12 @@ pub trait ActionRepository: Send + Sync {
         let _ = reservation;
         self.mark_dispatched_checked(attempt, revision).await
     }
+    /// Bind the immutable request identity to a policy reservation before the
+    /// dispatch fence is marked. PostgreSQL performs this in the same fenced
+    /// transaction as `mark_dispatched_checked_with_reservation`.
+    async fn bind_reservation_identity(&self, _: &Attempt, _: &PolicyReservation) -> Result<()> {
+        Ok(())
+    }
     /// Reserve replay storage before the external effect. Bounded stores must
     /// reject insufficient capacity here, never after a successful provider call.
     async fn prepare_replay(&self, _: &Attempt, _: &Value) -> Result<()> {
@@ -280,6 +288,32 @@ pub trait ActionRepository: Send + Sync {
     ) -> Result<()> {
         let _ = reservation;
         self.finish(attempt, output, error_code).await
+    }
+    /// Finalize a failed read after its bounded runner attempts are exhausted.
+    /// Reads have no external mutation to fence, so durable stores may clear
+    /// the dispatched claim while retaining an auditable failure log.
+    async fn finish_read_failure_with_reservation(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+        error_code: &str,
+    ) -> Result<()> {
+        self.finish_with_reservation(attempt, reservation, None, Some(error_code))
+            .await
+    }
+    /// Finalize an outer deadline for a safe read. Durable stores may clear a
+    /// dispatched read claim because a read has no provider mutation to fence;
+    /// mutation claims intentionally have no equivalent timeout cleanup.
+    async fn finish_read_timeout(
+        &self,
+        attempt: &Attempt,
+        outcome: ActionDispatchOutcome,
+    ) -> Result<()> {
+        if outcome == ActionDispatchOutcome::NotDispatched {
+            self.release_pending(attempt).await
+        } else {
+            self.finish(attempt, None, Some("ACTION_TIMEOUT")).await
+        }
     }
 }
 /// Credential fields and the exact connection revision that supplied them.
@@ -385,6 +419,22 @@ pub trait PolicyGate: Send + Sync {
         _: &str,
     ) -> Result<()> {
         Ok(())
+    }
+    /// Observe a failed attempt with the dispatch evidence that caused it.
+    /// Durable reservations refund capacity in the repository's atomic
+    /// proven-nondispatch transition; policy adapters must not refund an
+    /// ambiguous or provider-response failure.
+    async fn observe_failure_with_outcome(
+        &self,
+        request: &ExecuteRequest,
+        connection: &Connection,
+        reservation: &PolicyReservation,
+        code: &str,
+        outcome: ActionDispatchOutcome,
+    ) -> Result<()> {
+        let _ = outcome;
+        self.observe_failure(request, connection, reservation, code)
+            .await
     }
     async fn authorize(
         &self,

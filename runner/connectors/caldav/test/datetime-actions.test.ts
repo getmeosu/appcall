@@ -52,7 +52,23 @@ const REPORT_OFFSET_CASES = TRANSPORT_DATE_CASES.slice(0, 2);
 async function captureWriteBody(operation: "create" | "update", dates: TransportDateCase): Promise<string> {
   const requests: Request[] = [];
   const requestFetch: typeof fetch = async (input, init) => {
-    requests.push(new Request(input, init));
+    const request = new Request(input, init);
+    requests.push(request);
+    if (operation === "update" && request.method === "GET") {
+      return new Response([
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "BEGIN:VEVENT",
+        "UID:transport-update-001",
+        "DTSTAMP:20240615T120000Z",
+        "DTSTART:20240615T090000Z",
+        "DTEND:20240615T100000Z",
+        "SUMMARY:Transport datetime",
+        "END:VEVENT",
+        "END:VCALENDAR",
+        "",
+      ].join("\r\n"), { status: 200, headers: { etag: '"transport-etag"' } });
+    }
     return new Response("", { status: operation === "create" ? 201 : 204 });
   };
   const common = {
@@ -79,8 +95,10 @@ async function captureWriteBody(operation: "create" | "update", dates: Transport
     });
   }
 
-  expect(requests).toHaveLength(1);
-  return requests[0]!.text();
+  expect(requests).toHaveLength(operation === "create" ? 1 : 2);
+  const writeRequest = requests.find((request) => request.method === "PUT");
+  expect(writeRequest).toBeDefined();
+  return writeRequest!.text();
 }
 
 async function captureReportBody(operation: "events.list" | "freebusy.query", dates: TransportDateCase): Promise<string> {

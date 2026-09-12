@@ -14,7 +14,7 @@
 
 import { createConnectorHttpClient, ConnectorHttpError } from "../http";
 import { maxOperationResponseBytes } from "../budget";
-import { isRecord, renderPath, renderTemplate, resolvePath } from "./template";
+import { assertSafePathSegment, assertSafePathSegments, isRecord, renderPath, renderTemplate, resolvePath } from "./template";
 import { assertOutputSchema, validateAgainstSchema } from "./validate";
 import type {
   CompiledConnector,
@@ -132,6 +132,7 @@ function compileOperation(
 ): CompiledHandler {
   const http: DeclarativeHttp = manifest.http ?? { baseUrl: "" };
   const request: DeclarativeRequest = operation.request ?? {};
+  assertSafePathSegments(request.path ?? "");
   const schema = operation.inputSchema ?? { type: "object" };
   const credentialField = http.auth?.field;
   if(operation.enforceOutputSchema && operation.outputSchema?.type !== "object") throw new Error("Output enforcement requires object schema");
@@ -379,7 +380,7 @@ function renderRequestPath(
     return renderPath(path, input);
   }
 
-  return path.replace(parameterPlaceholderPattern, (_match, expression: string) => {
+  const renderedPath = path.replace(parameterPlaceholderPattern, (match, expression: string, offset: number) => {
     const parameter = pathParameters.find(
       (candidate) => candidate.inputName === expression || candidate.wireName === expression,
     );
@@ -387,8 +388,12 @@ function renderRequestPath(
     if (value === undefined || value === null || value === "") {
       throw new Error(`${lastParameterSegment(parameter?.inputName ?? expression)} is required`);
     }
-    return parameter ? serializePathParameter(parameter, value) : encodeURIComponent(String(value));
+    const rendered = parameter ? serializePathParameter(parameter, value) : encodeURIComponent(String(value));
+    assertSafePathSegment(path, offset, match.length, rendered);
+    return rendered;
   });
+  assertSafePathSegments(renderedPath);
+  return renderedPath;
 }
 
 function parameterInput(parameter: DeclarativeParameter, input: Record<string, unknown>): unknown {

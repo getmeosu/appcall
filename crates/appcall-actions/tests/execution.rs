@@ -14,6 +14,8 @@ struct State {
     fail_finish: bool,
     fail_replay: bool,
     replays: Vec<Value>,
+    read_failure_finalizers: usize,
+    read_timeout_finalizers: usize,
 }
 struct Repo {
     state: Arc<Mutex<State>>,
@@ -80,6 +82,26 @@ impl ActionRepository for Repo {
         if let Some(v) = v {
             s.cached = Some(v.clone())
         };
+        Ok(())
+    }
+    async fn finish_read_failure_with_reservation(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+        error_code: &str,
+    ) -> Result<()> {
+        {
+            let mut state = self.state.lock().unwrap();
+            state.read_failure_finalizers += 1;
+            state.marked = false;
+        }
+        self.finish_with_reservation(attempt, reservation, None, Some(error_code))
+            .await
+    }
+    async fn finish_read_timeout(&self, _: &Attempt, _: ActionDispatchOutcome) -> Result<()> {
+        let mut state = self.state.lock().unwrap();
+        state.read_timeout_finalizers += 1;
+        state.marked = false;
         Ok(())
     }
 }
@@ -348,6 +370,33 @@ async fn oversized_output_is_not_cached_and_dispatch_remains_fenced() {
         "IDEMPOTENCY_IN_PROGRESS"
     );
 }
+
+#[tokio::test]
+async fn oversized_read_output_clears_safe_read_claim_after_dispatch() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let svc = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        Catalog { read: true },
+        Credentials,
+        BoundaryRunner {
+            output: json!({"data":"x".repeat(1024)}),
+            delay_ms: 0,
+        },
+        Allow,
+    );
+    let error = svc.execute(request("owner")).await.unwrap_err();
+    assert_eq!(error.code, "ACTION_RESPONSE_TOO_LARGE");
+    let state = state.lock().unwrap();
+    assert_eq!(state.read_failure_finalizers, 1);
+    assert!(
+        !state.marked,
+        "safe reads may be retried after output failure"
+    );
+}
+
 #[tokio::test]
 async fn timeout_after_dispatch_does_not_allow_mutation_replay() {
     let state = Arc::new(Mutex::new(State::default()));
@@ -374,6 +423,108 @@ async fn timeout_after_dispatch_does_not_allow_mutation_replay() {
         "IDEMPOTENCY_IN_PROGRESS"
     );
 }
+
+struct ShortReadTimeoutCatalog;
+impl ActionCatalog for ShortReadTimeoutCatalog {
+    fn operation(&self, _: &str, _: &str) -> Result<Operation> {
+        Ok(Operation {
+            read_only: true,
+            timeout_ms: 10,
+            max_input_bytes: 1024,
+            max_response_bytes: 1024,
+            credential_fields: vec!["apiKey".into()],
+        })
+    }
+
+    fn validate_input(&self, _: &str, _: &str, value: &Value) -> Result<()> {
+        value
+            .is_object()
+            .then_some(())
+            .ok_or_else(|| ActionError::new("INVALID_ACTION_INPUT"))
+    }
+
+    fn validate_output(&self, _: &str, _: &str, _: &Value) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn timeout_after_safe_read_dispatch_clears_read_claim() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let svc = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        ShortReadTimeoutCatalog,
+        Credentials,
+        BoundaryRunner {
+            output: json!({"ok":true}),
+            delay_ms: 100,
+        },
+        Allow,
+    );
+    assert_eq!(
+        svc.execute(request("owner")).await.unwrap_err().code,
+        "ACTION_TIMEOUT"
+    );
+    let state = state.lock().unwrap();
+    assert_eq!(state.read_timeout_finalizers, 1);
+    assert!(!state.marked, "safe read timeout must release its claim");
+}
+
+struct RejectingOutputCatalog;
+impl ActionCatalog for RejectingOutputCatalog {
+    fn operation(&self, _: &str, _: &str) -> Result<Operation> {
+        Ok(Operation {
+            read_only: true,
+            timeout_ms: 1_000,
+            max_input_bytes: 1024,
+            max_response_bytes: 1024,
+            credential_fields: vec!["apiKey".into()],
+        })
+    }
+
+    fn validate_input(&self, _: &str, _: &str, value: &Value) -> Result<()> {
+        value
+            .is_object()
+            .then_some(())
+            .ok_or_else(|| ActionError::new("INVALID_ACTION_INPUT"))
+    }
+
+    fn validate_output(&self, _: &str, _: &str, _: &Value) -> Result<()> {
+        Err(ActionError::new("INVALID_ACTION_INPUT"))
+    }
+}
+
+#[tokio::test]
+async fn invalid_read_output_schema_clears_safe_read_claim() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let svc = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        RejectingOutputCatalog,
+        Credentials,
+        BoundaryRunner {
+            output: json!({"ok":true}),
+            delay_ms: 0,
+        },
+        Allow,
+    );
+    assert_eq!(
+        svc.execute(request("owner")).await.unwrap_err().code,
+        "INVALID_ACTION_INPUT"
+    );
+    let state = state.lock().unwrap();
+    assert_eq!(state.read_failure_finalizers, 1);
+    assert!(
+        !state.marked,
+        "safe read schema failure must release its claim"
+    );
+}
+
 #[tokio::test]
 async fn oversized_caller_input_is_rejected_before_claim() {
     let state = Arc::new(Mutex::new(State::default()));
@@ -789,4 +940,163 @@ async fn rebuilt_service_retains_injected_circuit_state() {
         );
     }
     assert_eq!(calls.lock().unwrap().len(), 1);
+}
+
+struct ShortTimeoutCatalog;
+impl ActionCatalog for ShortTimeoutCatalog {
+    fn operation(&self, _: &str, _: &str) -> Result<Operation> {
+        Ok(Operation {
+            read_only: false,
+            timeout_ms: 10,
+            max_input_bytes: 1024,
+            max_response_bytes: 1024,
+            credential_fields: vec!["apiKey".into()],
+        })
+    }
+
+    fn validate_input(&self, _: &str, _: &str, value: &Value) -> Result<()> {
+        value
+            .is_object()
+            .then_some(())
+            .ok_or_else(|| ActionError::new("INVALID_ACTION_INPUT"))
+    }
+
+    fn validate_output(&self, _: &str, _: &str, _: &Value) -> Result<()> {
+        Ok(())
+    }
+}
+
+struct CountingBoundaryRunner {
+    calls: Arc<Mutex<Vec<Value>>>,
+    delay_ms: u64,
+}
+
+struct DelayPolicy {
+    delay_ms: Arc<Mutex<u64>>,
+}
+impl PolicyGate for DelayPolicy {
+    async fn authorize(&self, _: &ExecuteRequest, _: &Connection, _: &Operation) -> Result<()> {
+        Ok(())
+    }
+
+    async fn reserve(
+        &self,
+        _: &ExecuteRequest,
+        _: &Connection,
+        _: &Operation,
+        _: &Value,
+    ) -> Result<PolicyReservation> {
+        let delay_ms = *self.delay_ms.lock().unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        Ok(PolicyReservation::default())
+    }
+}
+impl ActionRunner for CountingBoundaryRunner {
+    async fn execute(
+        &self,
+        _: &Attempt,
+        input: Value,
+        _: u64,
+    ) -> std::result::Result<Value, RunnerFailure> {
+        self.calls.lock().unwrap().push(input);
+        tokio::time::sleep(std::time::Duration::from_millis(self.delay_ms)).await;
+        Ok(json!({"ok": true}))
+    }
+}
+
+#[tokio::test]
+async fn runner_entered_deadline_failure_opens_circuit_before_next_fresh_key() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let service = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        ShortTimeoutCatalog,
+        Credentials,
+        CountingBoundaryRunner {
+            calls: calls.clone(),
+            delay_ms: 100,
+        },
+        Allow,
+    )
+    .with_circuit(Circuit::new(1, std::time::Duration::from_secs(60)));
+
+    let mut first = request("owner");
+    first.idempotency_key = "deadline-first".into();
+    assert_eq!(
+        service.execute(first).await.unwrap_err().code,
+        "ACTION_TIMEOUT"
+    );
+    assert_eq!(calls.lock().unwrap().len(), 1);
+
+    // The second request has a distinct key; only circuit admission should
+    // prevent a second runner entry after the first entered the runner.
+    state.lock().unwrap().marked = false;
+    let mut second = request("owner");
+    second.idempotency_key = "deadline-second".into();
+    assert_eq!(
+        service.execute(second).await.unwrap_err().code,
+        "CIRCUIT_OPEN"
+    );
+    assert_eq!(calls.lock().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn preparation_deadline_does_not_clear_prior_circuit_failures() {
+    let state = Arc::new(Mutex::new(State::default()));
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let delay_ms = Arc::new(Mutex::new(0));
+    let service = Service::new(
+        Repo {
+            state: state.clone(),
+            brand: "owner".into(),
+        },
+        ShortTimeoutCatalog,
+        Credentials,
+        CountingBoundaryRunner {
+            calls: calls.clone(),
+            delay_ms: 100,
+        },
+        DelayPolicy {
+            delay_ms: delay_ms.clone(),
+        },
+    )
+    .with_circuit(Circuit::new(2, std::time::Duration::from_secs(60)));
+
+    let mut first = request("owner");
+    first.idempotency_key = "prep-history-first".into();
+    assert_eq!(
+        service.execute(first).await.unwrap_err().code,
+        "ACTION_TIMEOUT"
+    );
+    state.lock().unwrap().marked = false;
+
+    *delay_ms.lock().unwrap() = 100;
+    let mut preparation = request("owner");
+    preparation.idempotency_key = "prep-history-preparation".into();
+    assert_eq!(
+        service.execute(preparation).await.unwrap_err().code,
+        "ACTION_TIMEOUT"
+    );
+    state.lock().unwrap().marked = false;
+
+    *delay_ms.lock().unwrap() = 0;
+    let mut second = request("owner");
+    second.idempotency_key = "prep-history-second".into();
+    assert_eq!(
+        service.execute(second).await.unwrap_err().code,
+        "ACTION_TIMEOUT"
+    );
+    assert_eq!(calls.lock().unwrap().len(), 2);
+
+    state.lock().unwrap().marked = false;
+    let mut blocked = request("owner");
+    blocked.idempotency_key = "prep-history-blocked".into();
+    assert_eq!(
+        service.execute(blocked).await.unwrap_err().code,
+        "CIRCUIT_OPEN"
+    );
+    assert_eq!(calls.lock().unwrap().len(), 2);
 }

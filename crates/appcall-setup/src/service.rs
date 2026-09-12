@@ -84,6 +84,50 @@ fn check_store_active(active: &dyn Fn() -> bool) -> std::result::Result<(), appc
     }
 }
 impl Service {
+    fn remove_failed_oauth_connection(
+        &self,
+        scope: &SetupScope,
+        expected: &Connection,
+    ) -> std::result::Result<(), appcall_store::Error> {
+        self.store
+            .lock()
+            .map_err(|_| appcall_store::Error::Conflict)?
+            .transaction(|tx| {
+                let current = match tx.lock_connection(&scope.scope, &expected.id) {
+                    Ok(current) => current,
+                    Err(appcall_store::Error::NotFound) => return Ok(()),
+                    Err(error) => return Err(error),
+                };
+                let revision: i64 = tx
+                    .client()
+                    .query_one(
+                        "SELECT connection_revision FROM connections WHERE project_id=$1 AND id=$2",
+                        &[&expected.project_id, &expected.id],
+                    )?
+                    .get(0);
+                if revision != 1 {
+                    return Ok(());
+                }
+                if current != *expected {
+                    return Ok(());
+                }
+                tx.client().execute(
+                    "DELETE FROM connections WHERE project_id=$1 AND id=$2 AND connection_revision=1 AND connector=$3 AND auth_type=$4 AND status=$5 AND COALESCE(secret_ref_id,'')=$6 AND COALESCE(external_account_id,'')=$7 AND credential_owner=$8",
+                    &[
+                        &expected.project_id,
+                        &expected.id,
+                        &expected.connector,
+                        &expected.auth_type.as_str(),
+                        &expected.status.as_str(),
+                        &expected.secret_ref_id,
+                        &expected.external_account_id,
+                        &expected.credential_owner.as_str(),
+                    ],
+                )?;
+                Ok(())
+            })
+    }
+
     pub fn database_health(&self) -> Option<bool> {
         let store = match self.store.try_lock() {
             Ok(store) => store.database_health(),
@@ -410,6 +454,11 @@ impl Service {
         if self.describe(connector)?.setup.mode != "oauth2" {
             return Err(Error::Unsupported);
         }
+        // Validate connector/app/redirect configuration before creating a
+        // connection. A failed configuration check must not leave a row that
+        // looks like an abandoned OAuth attempt.
+        self.oauth.validate_start(connector).map_err(Error::OAuth)?;
+        let created = existing.is_none();
         let connection = match existing {
             Some(id) => self
                 .store
@@ -451,11 +500,32 @@ impl Service {
                     })?
             }
         };
-        check_active(active)?;
-        let result = self
+        if let Err(error) = check_active(active) {
+            if created
+                && self
+                    .remove_failed_oauth_connection(scope, &connection)
+                    .is_err()
+            {
+                return Err(Error::Persistence);
+            }
+            return Err(error);
+        }
+        let result = match self
             .oauth
             .start_checked(&scope.scope, &connection.id, connector, active)
-            .map_err(Error::OAuth)?;
+        {
+            Ok(result) => result,
+            Err(error) => {
+                if created
+                    && self
+                        .remove_failed_oauth_connection(scope, &connection)
+                        .is_err()
+                {
+                    return Err(Error::Persistence);
+                }
+                return Err(Error::OAuth(error));
+            }
+        };
         let connection = self
             .store
             .lock()

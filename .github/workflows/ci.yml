@@ -134,3 +134,20 @@ jobs:
         run: docker build -f Dockerfile.api -t appcall-api:ci .
       - name: runner image
         run: docker build -f Dockerfile.runner -t appcall-runner:ci .
+
+  smoke-prod:
+    name: production topology smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: smoke safety fixture
+        run: scripts/test-smoke-prod.sh
+      - name: production topology smoke
+        env:
+          APPCALL_SMOKE_PORT: "0"
+          APPCALL_SMOKE_START_TIMEOUT_SECONDS: "900"
+          APPCALL_SMOKE_COMMAND_TIMEOUT_SECONDS: "120"
+          APPCALL_SMOKE_CLEANUP_TIMEOUT_SECONDS: "60"
+          APPCALL_SMOKE_CLEANUP_STOP_TIMEOUT_SECONDS: "10"
+        run: timeout --kill-after=30s 20m ./scripts/smoke-prod.sh

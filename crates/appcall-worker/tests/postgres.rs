@@ -46,11 +46,13 @@ fn fixture() -> (Client, String) {
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
         include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
         include_str!("../../../migrations/202609120001_connection_revision.sql"),
+        include_str!("../../../migrations/202609120002_connection_generation.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
         include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
         include_str!("../../../migrations/202605290002_provider_subaccounts.sql"),
         include_str!("../../../migrations/202609090001_sync_job_history.sql"),
         include_str!("../../../migrations/202609120004_secret_retention.sql"),
+        include_str!("../../../migrations/202609120005_sync_generation.sql"),
     ] {
         db.batch_execute(migration).unwrap();
     }
@@ -629,7 +631,10 @@ fn run_event(mode: u8) {
     );
     assert_eq!(report.pages_completed, usize::from(!disconnect));
     if disconnect {
-        assert_eq!(report.job_failures[0].1, appcall_sync::Error::Unavailable);
+        assert_eq!(
+            report.job_failures[0].1,
+            appcall_sync::Error::StaleGeneration
+        );
         server.join().unwrap();
         for table in ["synced_messages", "sync_job_checkpoints"] {
             assert_eq!(

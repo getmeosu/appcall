@@ -28,7 +28,7 @@ fn signal_dynamic_runinput_initial_and_patch_declare_live_regions() {
     let initial = crate::connector::test_fields(&fixture(), "provider").unwrap();
     let patch = render(
         Op::RunInputFields,
-        &json!({"schema":{"type":"object","properties":{"query":{"type":"string"}}}}),
+        &json!({"schema":{"type":"object","properties":{"query":{"type":"string"}}},"actorId":"actor-1"}),
         Some("provider"),
     )
     .unwrap();
@@ -44,6 +44,9 @@ fn signal_dynamic_runinput_initial_and_patch_declare_live_regions() {
             opening.contains("aria-live=\"polite\""),
             "{kind} target needs its own live region"
         );
+        if kind == "replacement" {
+            assert!(opening.contains("data-actor-id=\"actor-1\""));
+        }
     }
 }
 

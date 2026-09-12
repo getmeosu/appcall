@@ -39,6 +39,7 @@ mod branding;
 mod development;
 pub use development::DevelopmentDashboard;
 
+mod action_claims;
 mod remaining_pages;
 #[cfg(test)]
 mod remaining_tests;

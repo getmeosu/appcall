@@ -241,8 +241,10 @@ fn signed_ingestion_verifies_then_persists_sanitized_event_and_durable_outbox() 
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
         include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
         include_str!("../../../migrations/202609120001_connection_revision.sql"),
+        include_str!("../../../migrations/202609120002_connection_generation.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
         include_str!("../../../migrations/202609090001_sync_job_history.sql"),
+        include_str!("../../../migrations/202609120005_sync_generation.sql"),
     ] {
         db.batch_execute(sql).unwrap();
     }
@@ -525,7 +527,10 @@ fn live_stream_retirement_releases_database_owners_before_blocking_cleanup() {
         include_str!("../../../migrations/202609070001_event_outbox.sql"),
         include_str!("../../../migrations/202609110001_event_connection_dedup.sql"),
         include_str!("../../../migrations/202609120001_connection_revision.sql"),
+        include_str!("../../../migrations/202609120002_connection_generation.sql"),
         include_str!("../../../migrations/202609070002_sync_recovery.sql"),
+        include_str!("../../../migrations/202609090001_sync_job_history.sql"),
+        include_str!("../../../migrations/202609120005_sync_generation.sql"),
     ] {
         admin.batch_execute(sql).unwrap();
     }

@@ -84,6 +84,7 @@ impl<C: CredentialResolver> Service<C> {
         if config.lease_duration < Duration::from_millis(10)
             || config.lease_duration > Duration::from_secs(3600)
             || config.max_attempts == 0
+            || config.max_attempts > i32::MAX as u32
             || config.retry_base.is_zero()
             || config.max_retry_delay.is_zero()
             || config.max_retry_delay > Duration::from_secs(86400)
@@ -118,10 +119,30 @@ impl<C: CredentialResolver> Service<C> {
         self.db(move |r| r.claim_with_policy(&worker, lease, Some(&policy)))
             .await
     }
+    async fn current_generation(&self, project_id: &str, connection_id: &str) -> Result<i64> {
+        let project_id = project_id.to_owned();
+        let connection_id = connection_id.to_owned();
+        self.db(move |repository| repository.connection_generation(&project_id, &connection_id))
+            .await
+    }
+    async fn cancel_stale(&self, job: &Job) -> Result<()> {
+        let job = job.clone();
+        self.db(move |repository| match repository.cancel_stale(&job) {
+            Ok(()) | Err(Error::LeaseLost) => Ok(()),
+            Err(error) => Err(error),
+        })
+        .await
+    }
     /// One durable page per claim. Progress does not spend a failure attempt.
     pub async fn process(&self, job: Job) -> Result<()> {
         let claim = job.clone();
-        let cursor = self.db(move |r| r.cursor(&claim)).await?;
+        let cursor = match self.db(move |r| r.cursor(&claim)).await {
+            Err(Error::StaleGeneration) => {
+                self.cancel_stale(&job).await?;
+                return Err(Error::StaleGeneration);
+            }
+            result => result?,
+        };
         let outcome = self.fetch(&job, &cursor).await;
         let result = match outcome {
             Ok((page, connection)) => {
@@ -132,6 +153,10 @@ impl<C: CredentialResolver> Service<C> {
             Err(e) => Err(e),
         };
         if let Err(cause) = result {
+            if cause == Error::StaleGeneration {
+                self.cancel_stale(&job).await?;
+                return Err(cause);
+            }
             if cause == Error::LeaseLost {
                 return Err(cause);
             }
@@ -163,6 +188,13 @@ impl<C: CredentialResolver> Service<C> {
             .ok_or(Error::LeaseLost)?;
         if deadline <= SystemTime::now() {
             return Err(Error::LeaseLost);
+        }
+        if self
+            .current_generation(&j.project_id, &j.connection_id)
+            .await?
+            != j.connection_generation
+        {
+            return Err(Error::StaleGeneration);
         }
         let connections = self.connections.clone();
         let project = j.project_id.clone();
@@ -220,6 +252,13 @@ impl<C: CredentialResolver> Service<C> {
             return Err(Error::Unavailable);
         }
         let c = resolved.connection;
+        if self
+            .current_generation(&j.project_id, &j.connection_id)
+            .await?
+            != j.connection_generation
+        {
+            return Err(Error::StaleGeneration);
+        }
         let mut input = j.input.as_object().ok_or(Error::InvalidInput)?.clone();
         input.extend(resolved.fields);
         input.remove("cursor");

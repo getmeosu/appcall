@@ -1,5 +1,6 @@
 use crate::lifecycle::{persistence, random_id, Pending};
 use crate::*;
+use appcall_connectors::OAuthConfig;
 use appcall_store::{Scope, Status};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as BASE64, Engine as _};
 use sha2::{Digest, Sha256};
@@ -11,20 +12,16 @@ fn digest(state: &str) -> String {
     BASE64.encode(Sha256::digest(state.as_bytes()))
 }
 impl Lifecycle {
-    pub fn start(&self, scope: &Scope, id: &str, connector: &str) -> Result<StartResult> {
-        self.start_checked(scope, id, connector, &|| true)
+    /// Validate every local input used by an authorization start before the
+    /// setup service creates a connection for the attempt.
+    pub fn validate_start(&self, connector: &str) -> Result<()> {
+        self.start_configuration(connector).map(|_| ())
     }
-    /// Cancellation is checked after contention and before committing authorization state.
-    pub fn start_checked(
+
+    fn start_configuration(
         &self,
-        scope: &Scope,
-        id: &str,
         connector: &str,
-        active: &dyn Fn() -> bool,
-    ) -> Result<StartResult> {
-        if !active() {
-            return Err(Error::ConnectionUnavailable);
-        }
+    ) -> Result<(OAuthConfig, &AppCredentials, String)> {
         let spec = self.spec(connector)?;
         let app = self.apps.get(connector).ok_or(Error::NotConfigured)?;
         let redirect = reqwest::Url::parse(&app.redirect_uri).map_err(|_| Error::InvalidInput)?;
@@ -37,7 +34,7 @@ impl Lifecycle {
         {
             return Err(Error::InvalidInput);
         }
-        let mut url = reqwest::Url::parse(&spec.authorize_url).map_err(|_| Error::InvalidInput)?;
+        let url = reqwest::Url::parse(&spec.authorize_url).map_err(|_| Error::InvalidInput)?;
         let reserved = [
             "client_id",
             "client_secret",
@@ -58,6 +55,33 @@ impl Lifecycle {
         {
             return Err(Error::InvalidInput);
         }
+        let scopes = self
+            .registry
+            .connector(connector)
+            .map_err(|_| Error::Unsupported)?
+            .manifest()
+            .auth
+            .scopes
+            .join(" ");
+        Ok((spec, app, scopes))
+    }
+
+    pub fn start(&self, scope: &Scope, id: &str, connector: &str) -> Result<StartResult> {
+        self.start_checked(scope, id, connector, &|| true)
+    }
+    /// Cancellation is checked after contention and before committing authorization state.
+    pub fn start_checked(
+        &self,
+        scope: &Scope,
+        id: &str,
+        connector: &str,
+        active: &dyn Fn() -> bool,
+    ) -> Result<StartResult> {
+        if !active() {
+            return Err(Error::ConnectionUnavailable);
+        }
+        let (spec, app, scopes) = self.start_configuration(connector)?;
+        let mut url = reqwest::Url::parse(&spec.authorize_url).map_err(|_| Error::InvalidInput)?;
         let verifier = Zeroizing::new(if spec.pkce {
             random_id("")?
         } else {
@@ -85,14 +109,6 @@ impl Lifecycle {
    if !active() { return Err(appcall_store::Error::Conflict); }
    Ok(Ok(state))
   }).map_err(persistence)??;
-        let scopes = self
-            .registry
-            .connector(connector)
-            .map_err(|_| Error::Unsupported)?
-            .manifest()
-            .auth
-            .scopes
-            .join(" ");
         {
             let mut query = url.query_pairs_mut();
             query

@@ -12,7 +12,10 @@ impl Executor for ExecutorSpy {
         let fail = request.action == "fail";
         self.0.lock().unwrap().push(request);
         if fail {
-            return Err(ApiError::new("ACTION_FAILED"));
+            let mut error = ApiError::new("ACTION_FAILED");
+            error.request_id = "failed-request".into();
+            error.retry_after_seconds = Some(7);
+            return Err(error);
         }
         Ok(ExecuteResult {
             request_id: "new-request".into(),
@@ -144,10 +147,35 @@ fn data_routes_dispatch_with_authenticated_scope_and_replay_once() {
         assert_eq!(replay.status, 200);
         assert_eq!(
             replay.body,
-            json!({"requestId":"original-request","replayLogId":"r","output":{"sent":true}})
+            json!({"requestId":"new-request","originalRequestId":"original-request","replayLogId":"new-replay","originalReplayLogId":"r","output":{"sent":true}})
         );
         assert_eq!(calls.lock().unwrap().len(), 1);
         assert_eq!(calls.lock().unwrap()[0].external_account_id, "brand");
+        assert!(calls.lock().unwrap()[0].idempotency_key.is_empty());
+        assert!(calls.lock().unwrap()[0].caller_credential.is_empty());
+        let replay_with_current_credentials = Request {
+            method: "POST".into(),
+            uri: "/v1/replay-logs/r/replay".into(),
+            headers: vec![
+                ("X-Api-Key".into(), "hello".into()),
+                ("X-External-Account-Id".into(), "brand".into()),
+                ("X-Connector-Token".into(), "Bearer fresh-token".into()),
+                ("Idempotency-Key".into(), "replay-key".into()),
+            ],
+            body: Vec::new(),
+        };
+        let replay = api.handle(replay_with_current_credentials).await;
+        assert_eq!(replay.status, 200);
+        assert_eq!(replay.body["requestId"], "new-request");
+        assert_eq!(replay.body["originalRequestId"], "original-request");
+        assert_eq!(replay.body["replayLogId"], "new-replay");
+        assert_eq!(replay.body["originalReplayLogId"], "r");
+        {
+            let calls = calls.lock().unwrap();
+            assert_eq!(calls.len(), 2);
+            assert_eq!(calls[1].idempotency_key, "replay-key");
+            assert_eq!(calls[1].caller_credential, "fresh-token");
+        }
         let failed = api
             .handle(request(
                 "POST",
@@ -156,10 +184,12 @@ fn data_routes_dispatch_with_authenticated_scope_and_replay_once() {
                 Value::Null,
             ))
             .await;
-        assert_eq!(failed.status, 502);
-        assert_eq!(failed.body["error"]["code"], "CONNECTOR_FAILED");
-        assert_eq!(failed.body["error"]["requestId"], "failed-original");
-        assert_eq!(failed.body["error"]["replayLogId"], "rf");
+        assert_eq!(failed.status, 500);
+        assert_eq!(failed.body["error"]["code"], "ACTION_FAILED");
+        assert_eq!(failed.body["error"]["requestId"], "failed-request");
+        assert_eq!(failed.body["error"]["originalRequestId"], "failed-original");
+        assert_eq!(failed.body["error"]["originalReplayLogId"], "rf");
+        assert_eq!(failed.body["error"]["retryAfterSeconds"], 7);
         let post = api
             .handle(request(
                 "POST",
@@ -170,7 +200,108 @@ fn data_routes_dispatch_with_authenticated_scope_and_replay_once() {
             .await;
         assert_eq!(post.status, 200);
         assert_eq!(post.body["model"], "post");
-        assert_eq!(calls.lock().unwrap().len(), 3);
+        assert_eq!(calls.lock().unwrap().len(), 4);
+    });
+    drop(api);
+    drop(rt);
+    let mut admin = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated APPCALL_ENGINE_POSTGRES_URL"]
+fn stored_messages_http_route_pages_and_rejects_foreign_account() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut client = postgres::Client::connect(&url, postgres::NoTls).unwrap();
+    let schema = format!("messages_host_test_{}", uuid::Uuid::new_v4().simple());
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    let mut scoped_url = url::Url::parse(&url).unwrap();
+    scoped_url
+        .query_pairs_mut()
+        .append_pair("options", &format!("-csearch_path={schema}"));
+    appcall_runtime::SqlxMigration::new(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../../migrations"),
+        scoped_url.as_str(),
+        std::time::Duration::from_secs(30),
+    )
+    .unwrap()
+    .apply()
+    .unwrap();
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','p');
+             INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner)
+             VALUES('c','p','slack','api_key','active','brand','brand');
+             INSERT INTO synced_messages(id,project_id,connection_id,connection_generation,provider,provider_message_id,channel_id,sender_id,text,model_version,raw,created_at)
+             VALUES
+             ('m1','p','c',1,'slack','1','C1','U1','one','v1','{}',now()-interval '3 seconds'),
+             ('m2','p','c',1,'slack','2','C1','U1','two','v1','{}',now()-interval '2 seconds'),
+             ('m3','p','c',1,'slack','3','C2','U1','three','v1','{}',now()-interval '1 second');",
+        )
+        .unwrap();
+    let key = StaticApiKey::from_hash(
+        "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        Principal::project("p").unwrap(),
+    )
+    .unwrap();
+    let api = Api {
+        registry: appcall_connectors::Registry::load(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../runner/connectors"
+        ))
+        .unwrap(),
+        backend: Services::new(
+            Store::new(client, LocalProvider::new(&[7; 32]).unwrap()),
+            Arc::new(key),
+            ExecutorSpy(Arc::new(Mutex::new(vec![]))),
+            NoCredentials,
+            RunnerClient::new("http://127.0.0.1:1", "", ClientOptions::default()).unwrap(),
+        ),
+    };
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let request = |path: &str| Request {
+            method: "GET".into(),
+            uri: path.into(),
+            headers: vec![
+                ("X-Api-Key".into(), "hello".into()),
+                ("X-External-Account-Id".into(), "brand".into()),
+            ],
+            body: vec![],
+        };
+        let first = api
+            .handle(request("/v1/connections/c/messages?limit=2"))
+            .await;
+        assert_eq!(first.status, 200, "{first:?}");
+        assert_eq!(first.body["messages"].as_array().unwrap().len(), 2);
+        assert_eq!(first.body["messages"][0]["id"], "m3");
+        assert_eq!(first.body["hasMore"], true);
+        let cursor = first.body["nextCursor"].as_str().unwrap();
+        assert!(!cursor.is_empty());
+
+        let second = api
+            .handle(request(&format!(
+                "/v1/connections/c/messages?limit=2&cursor={cursor}"
+            )))
+            .await;
+        assert_eq!(second.status, 200, "{second:?}");
+        assert_eq!(second.body["messages"].as_array().unwrap().len(), 1);
+        assert_eq!(second.body["messages"][0]["id"], "m1");
+        assert_eq!(second.body["hasMore"], false);
+
+        let foreign = api
+            .handle(request(
+                "/v1/connections/c/messages?externalAccountId=other",
+            ))
+            .await;
+        assert_eq!(foreign.status, 404, "{foreign:?}");
+        assert_eq!(foreign.body["error"]["code"], "CONNECTION_NOT_FOUND");
     });
     drop(api);
     drop(rt);

@@ -146,7 +146,15 @@ impl<
                 Ok(result)
             }
             Ok(Err(error)) => Err(evidence.attach(error)),
-            Err(_) => Err(evidence.attach(ActionError::new("ACTION_TIMEOUT"))),
+            Err(_) => {
+                evidence.resolve_deadline();
+                if operation.read_only {
+                    self.repository
+                        .finish_read_timeout(&attempt, evidence.outcome())
+                        .await?;
+                }
+                Err(evidence.attach(ActionError::new("ACTION_TIMEOUT")))
+            }
         }
     }
     async fn dispatch(
@@ -160,9 +168,9 @@ impl<
         let prepared = self.prepare(request, connection, operation, attempt).await;
         let Prepared {
             input,
-            admission,
             replay_input,
             revision,
+            admission,
         } = match prepared {
             Ok(v) => v,
             Err(e) => {
@@ -171,6 +179,7 @@ impl<
                 return Err(e);
             }
         };
+        evidence.set_admission(admission);
         let connection = &revision;
         let deadline = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -196,15 +205,40 @@ impl<
         };
         if let Err(e) = self
             .repository
+            .bind_reservation_identity(attempt, &reservation)
+            .await
+        {
+            self.repository
+                .release_not_dispatched_with_reservation(attempt, &reservation)
+                .await?;
+            // Some in-memory adapters only implement the dispatched cleanup
+            // half of the composite hook. The claim is still pending when
+            // binding fails, so finish the safe pending cleanup as a fallback;
+            // durable adapters have already made this a no-op atomically.
+            self.repository.release_pending(attempt).await?;
+            return Err(e);
+        }
+        if let Err(e) = self
+            .repository
             .mark_dispatched_checked_with_reservation(attempt, connection, &reservation)
             .await
         {
             self.policy
-                .observe_failure(request, connection, &reservation, "INVALID_ACTION_INPUT")
+                .observe_failure_with_outcome(
+                    request,
+                    connection,
+                    &reservation,
+                    "INVALID_ACTION_INPUT",
+                    ActionDispatchOutcome::NotDispatched,
+                )
                 .await?;
             self.repository
-                .release_pending_with_reservation(attempt, &reservation)
+                .release_not_dispatched_with_reservation(attempt, &reservation)
                 .await?;
+            // See the binding failure path above: a rejected dispatch fence
+            // leaves an in-memory claim pending even though durable adapters
+            // release it in the composite transition.
+            self.repository.release_pending(attempt).await?;
             return Err(e);
         }
         let attempts = if operation.read_only { 3 } else { 1 };
@@ -214,7 +248,7 @@ impl<
             evidence.finish_attempt(prior, outcome.as_ref().err());
             match outcome {
                 Ok(output) => {
-                    admission.resolve(false);
+                    evidence.resolve_admission(false);
                     let valid = if encoded_len(&output)? > operation.max_response_bytes {
                         Err(ActionError::response_too_large(
                             encoded_len(&output)?,
@@ -228,14 +262,23 @@ impl<
                         )
                     };
                     if let Err(e) = valid {
-                        // A provider response may have caused an external
-                        // effect even when its payload fails local validation.
-                        // Keep the dispatched reservation and mutation fence;
-                        // bounded recovery meters it once if finish cannot
-                        // record a valid output.
-                        self.repository
-                            .finish_with_reservation(attempt, &reservation, None, Some(&e.code))
-                            .await?;
+                        if operation.read_only {
+                            self.repository
+                                .finish_read_failure_with_reservation(
+                                    attempt,
+                                    &reservation,
+                                    &e.code,
+                                )
+                                .await?;
+                        } else {
+                            // A provider response may have caused an external
+                            // effect even when its payload fails local
+                            // validation. Keep the dispatched reservation and
+                            // mutation fence.
+                            self.repository
+                                .finish_with_reservation(attempt, &reservation, None, Some(&e.code))
+                                .await?;
+                        }
                         return Err(e);
                     }
                     let replay_log_id = self
@@ -254,7 +297,7 @@ impl<
                             .await;
                         continue;
                     }
-                    admission.resolve(failure.transient);
+                    evidence.resolve_admission(failure.transient);
                     let code = safe_runner_code(&failure.code);
                     let outcome = evidence.outcome();
                     if outcome == ActionDispatchOutcome::NotDispatched {
@@ -266,6 +309,19 @@ impl<
                         self.repository
                             .finish_not_dispatched_with_reservation(attempt, &reservation, code)
                             .await?;
+                    } else if operation.read_only
+                        && outcome == ActionDispatchOutcome::ResponseReceived
+                    {
+                        self.repository
+                            .release_quota_with_reservation(attempt, &reservation)
+                            .await?;
+                        self.repository
+                            .finish_read_failure_with_reservation(attempt, &reservation, code)
+                            .await?;
+                    } else if operation.read_only && outcome == ActionDispatchOutcome::Unknown {
+                        // A read is retryable after explicit response or
+                        // nondispatch evidence. A mixed/unknown history keeps
+                        // its claim until bounded recovery can inspect it.
                     } else if outcome == ActionDispatchOutcome::ResponseReceived {
                         // A typed provider failure releases quota capacity,
                         // but its dispatched claim still fences mutation
@@ -275,9 +331,15 @@ impl<
                             .await?;
                     }
                     self.policy
-                        .observe_failure(request, connection, &reservation, &failure.code)
+                        .observe_failure_with_outcome(
+                            request,
+                            connection,
+                            &reservation,
+                            &failure.code,
+                            outcome,
+                        )
                         .await?;
-                    if outcome != ActionDispatchOutcome::NotDispatched {
+                    if outcome != ActionDispatchOutcome::NotDispatched && !operation.read_only {
                         self.repository
                             .finish_with_reservation(attempt, &reservation, None, Some(code))
                             .await?;

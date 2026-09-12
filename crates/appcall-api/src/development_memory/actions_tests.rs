@@ -1,6 +1,11 @@
 use super::actions::*;
 use appcall_actions::{ActionRunner, Attempt};
 use serde_json::json;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
+use std::time::Duration;
 fn attempt() -> Attempt {
     Attempt {
         request_id: "request".into(),
@@ -104,7 +109,7 @@ fn usage_read_models_preserve_go_shapes_and_reject_invalid_dates_or_quantities()
     );
 }
 fn repository() -> super::MemoryRepository {
-    let manifest = json!({"key":"test","name":"Test","version":"1","runtime":"bun","models":["item"],"auth":{"type":"none"},"network":{"egress":"none"},"operations":{"write":{"kind":"action","timeoutMs":1000,"maxInputBytes":1024,"maxResponseBytes":1024,"sideEffect":"write"},"normalized.post.create":{"kind":"action","timeoutMs":1000,"maxInputBytes":1024,"maxResponseBytes":1024,"sideEffect":"write"}}});
+    let manifest = json!({"key":"test","name":"Test","version":"1","runtime":"bun","models":["item"],"auth":{"type":"none"},"network":{"egress":"none"},"operations":{"read":{"kind":"action","timeoutMs":50,"maxInputBytes":1024,"maxResponseBytes":1024,"sideEffect":"read"},"write":{"kind":"action","timeoutMs":1000,"maxInputBytes":1024,"maxResponseBytes":1024,"sideEffect":"write"},"normalized.post.create":{"kind":"action","timeoutMs":1000,"maxInputBytes":1024,"maxResponseBytes":1024,"sideEffect":"write"}}});
     let registry =
         appcall_connectors::Registry::from_connectors([appcall_connectors::Connector::from_bytes(
             &serde_json::to_vec(&manifest).unwrap(),
@@ -298,6 +303,11 @@ fn request(key: &str) -> appcall_actions::ExecuteRequest {
         caller_credential: String::new(),
     }
 }
+fn read_request(key: &str) -> appcall_actions::ExecuteRequest {
+    let mut request = request(key);
+    request.action = "read".into();
+    request
+}
 #[tokio::test]
 async fn shared_action_service_local_simulation_replay_and_counters_are_consistent() {
     let repo = repository();
@@ -333,6 +343,194 @@ impl ActionRunner for KnownBusyRunner {
             ..Default::default()
         })
     }
+}
+
+struct ReadFailureThenSuccess(Arc<AtomicUsize>);
+impl ActionRunner for ReadFailureThenSuccess {
+    async fn execute(
+        &self,
+        _: &Attempt,
+        _: serde_json::Value,
+        _: u64,
+    ) -> std::result::Result<serde_json::Value, appcall_actions::RunnerFailure> {
+        if self.0.fetch_add(1, Ordering::SeqCst) == 0 {
+            Err(appcall_actions::RunnerFailure {
+                code: "READ_FAILED".into(),
+                outcome: appcall_actions::ActionDispatchOutcome::ResponseReceived,
+                ..Default::default()
+            })
+        } else {
+            Ok(json!({"ok":true}))
+        }
+    }
+}
+
+struct ReadTimeoutThenSuccess(Arc<AtomicUsize>);
+impl ActionRunner for ReadTimeoutThenSuccess {
+    async fn execute(
+        &self,
+        _: &Attempt,
+        _: serde_json::Value,
+        _: u64,
+    ) -> std::result::Result<serde_json::Value, appcall_actions::RunnerFailure> {
+        if self.0.fetch_add(1, Ordering::SeqCst) == 0 {
+            tokio::time::sleep(Duration::from_millis(250)).await;
+            Ok(json!({"late":true}))
+        } else {
+            Ok(json!({"ok":true}))
+        }
+    }
+}
+
+struct UnknownMutationRunner;
+impl ActionRunner for UnknownMutationRunner {
+    async fn execute(
+        &self,
+        _: &Attempt,
+        _: serde_json::Value,
+        _: u64,
+    ) -> std::result::Result<serde_json::Value, appcall_actions::RunnerFailure> {
+        Err(appcall_actions::RunnerFailure {
+            code: "MUTATION_UNKNOWN".into(),
+            outcome: appcall_actions::ActionDispatchOutcome::Unknown,
+            ..Default::default()
+        })
+    }
+}
+
+fn service_with_runner<D: ActionRunner>(
+    repo: super::MemoryRepository,
+    runner: D,
+) -> appcall_actions::Service<
+    super::MemoryRepository,
+    appcall_connectors::Registry,
+    MemoryCredentials,
+    D,
+    super::DevelopmentPolicy,
+> {
+    let oauth = std::sync::Arc::new(
+        super::MemoryOAuth::new(
+            repo.clone(),
+            Default::default(),
+            std::sync::Arc::new(NoTokens),
+        )
+        .unwrap(),
+    );
+    appcall_actions::Service::new(
+        repo.clone(),
+        (**repo.registry()).clone(),
+        MemoryCredentials::new(repo.clone(), oauth),
+        runner,
+        super::DevelopmentPolicy::new(repo, Default::default()).unwrap(),
+    )
+}
+
+#[tokio::test]
+async fn read_failure_releases_same_key_and_retains_failure_history() {
+    let repo = repository();
+    connect(&repo);
+    let calls = Arc::new(AtomicUsize::new(0));
+    let service = service_with_runner(repo.clone(), ReadFailureThenSuccess(calls.clone()));
+
+    assert_eq!(
+        service
+            .execute(read_request("read-failure"))
+            .await
+            .unwrap_err()
+            .code,
+        "READ_FAILED"
+    );
+    {
+        let data = repo.lock().unwrap();
+        assert!(data.action_claims.is_empty());
+        assert!(data.usage_reserved.is_empty());
+        assert_eq!(data.active_effects, 0);
+        assert_eq!(data.action_logs.len(), 1);
+        assert_eq!(data.usage_events.len(), 0);
+    }
+    let retry = service.execute(read_request("read-failure")).await.unwrap();
+    assert_eq!(retry.output, json!({"ok":true}));
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+    let data = repo.lock().unwrap();
+    assert_eq!(data.action_claims.len(), 1);
+    assert!(data.usage_reserved.is_empty());
+    assert_eq!(data.active_effects, 0);
+    assert_eq!(data.action_logs.len(), 2);
+    assert_eq!(data.usage_events.len(), 1);
+    assert!(data
+        .action_logs
+        .values()
+        .any(|log| log.error_code == "READ_FAILED"));
+}
+
+#[tokio::test]
+async fn read_timeout_releases_same_key_and_retains_timeout_history() {
+    let repo = repository();
+    connect(&repo);
+    let calls = Arc::new(AtomicUsize::new(0));
+    let service = service_with_runner(repo.clone(), ReadTimeoutThenSuccess(calls.clone()));
+
+    assert_eq!(
+        service
+            .execute(read_request("read-timeout"))
+            .await
+            .unwrap_err()
+            .code,
+        "ACTION_TIMEOUT"
+    );
+    {
+        let data = repo.lock().unwrap();
+        assert!(data.action_claims.is_empty());
+        assert!(data.usage_reserved.is_empty());
+        assert_eq!(data.active_effects, 0);
+        assert_eq!(data.action_logs.len(), 1);
+        assert_eq!(data.usage_events.len(), 1);
+    }
+    let retry = service.execute(read_request("read-timeout")).await.unwrap();
+    assert_eq!(retry.output, json!({"ok":true}));
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+    let data = repo.lock().unwrap();
+    assert_eq!(data.action_claims.len(), 1);
+    assert!(data.usage_reserved.is_empty());
+    assert_eq!(data.active_effects, 0);
+    assert_eq!(data.action_logs.len(), 2);
+    assert_eq!(data.usage_events.len(), 2);
+    assert!(data
+        .action_logs
+        .values()
+        .any(|log| log.error_code == "ACTION_TIMEOUT"));
+}
+
+#[tokio::test]
+async fn unknown_mutation_failure_keeps_same_key_fenced() {
+    let repo = repository();
+    connect(&repo);
+    let service = service_with_runner(repo.clone(), UnknownMutationRunner);
+
+    assert_eq!(
+        service
+            .execute(request("mutation-unknown"))
+            .await
+            .unwrap_err()
+            .code,
+        "MUTATION_UNKNOWN"
+    );
+    {
+        let data = repo.lock().unwrap();
+        assert_eq!(data.action_claims.len(), 1);
+        assert_eq!(
+            data.action_claims.values().next().unwrap().phase,
+            super::state::ClaimPhase::OutcomeUnknown
+        );
+    }
+    assert_eq!(
+        service
+            .execute(request("mutation-unknown"))
+            .await
+            .unwrap_err()
+            .code,
+        "IDEMPOTENCY_IN_PROGRESS"
+    );
 }
 
 #[tokio::test]

@@ -1,6 +1,69 @@
 use super::*;
 
 #[tokio::test]
+async fn runtime_preview_serves_dynamic_actor_options_and_schema() {
+    let data = ScenarioData::new(Scenario::Preview);
+    let options = dispatch_preview(
+        "GET",
+        "/app/connectors/connector-3/options?connectionId=preview_active_1&source=actors.options&fieldName=f.actorId&detailSource=actors.input_schema&q=alpha",
+        b"",
+        &data,
+    )
+    .await
+    .unwrap();
+    assert_eq!(options.status, 200);
+    assert!(options.body.contains("preview_actor_alpha"));
+
+    let detail = dispatch_preview(
+        "GET",
+        "/app/connectors/connector-3/runinput-fields?connectionId=preview_active_1&source=actors.input_schema&actorId=preview_actor_alpha",
+        b"",
+        &data,
+    )
+    .await
+    .unwrap();
+    assert_eq!(detail.status, 200);
+    assert!(detail
+        .body
+        .contains("data-actor-id=\"preview_actor_alpha\""));
+    assert!(detail.body.contains("f.runInput.message"));
+}
+
+#[tokio::test]
+async fn runtime_preview_serves_action_claim_inspection_and_typed_reconciliation() {
+    let data = ScenarioData::new(Scenario::Preview);
+    let detail = dispatch_preview(
+        "GET",
+        "/app/action-claims?externalAccountId=preview_account&idempotencyKey=preview_claim_key&expectedRequestId=preview_request_1",
+        b"",
+        &data,
+    )
+    .await
+    .unwrap();
+    assert_eq!(detail.status, 200);
+    assert!(detail.body.contains("Action claim recovery"));
+    assert!(detail.body.contains("preview_claim_key"));
+    assert!(detail.body.contains("providerOutcomeKnown"));
+    assert!(detail
+        .body
+        .contains("No provider call or automatic retry is performed"));
+    assert!(!detail.body.contains("synthetic-input-hash-never-rendered"));
+    assert!(!detail.body.contains("name=\"actorId\""));
+
+    let reconciled = dispatch_preview(
+        "POST",
+        "/app/action-claims/reconcile",
+        b"externalAccountId=preview_account&idempotencyKey=preview_claim_key&expectedRequestId=preview_request_1&evidenceRef=ticket%3A%2F%2Fincident%2Fpreview&resolution=provenNotDispatched",
+        &data,
+    )
+    .await
+    .unwrap();
+    assert_eq!(reconciled.status, 200);
+    assert!(reconciled.body.contains("Reconciliation recorded"));
+    assert!(reconciled.body.contains("Charges refunded"));
+}
+
+#[tokio::test]
 async fn advertised_trace_ids_use_the_actual_trace_dto() {
     let data = ScenarioData::new(Scenario::Populated);
     for id in ["preview_original", "preview_current"] {

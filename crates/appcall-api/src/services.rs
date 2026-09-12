@@ -316,6 +316,8 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
                 "/v1/usage/action-calls/decision",
                 "/v1/entitlements",
                 "/v1/sync-runs",
+                "/v1/connections/",
+                "/v1/messages",
             ]
             .iter()
             .any(|prefix| {
@@ -385,6 +387,8 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
         let Some((id, by_request)) = target else {
             return Ok(None);
         };
+        let idempotency_key = header(&request.headers, "Idempotency-Key").to_owned();
+        let caller_credential = connector_token(&request.headers).to_owned();
         let id = percent_encoding::percent_decode_str(&id)
             .decode_utf8()
             .map_err(|_| ApiError::new("INVALID_REQUEST"))?
@@ -393,45 +397,72 @@ impl<K: ApiKeyVerifier + 'static, E: Executor, C: CredentialResolver> Backend
         let command = self
             .database(move |store| {
                 store.transaction(|tx| {
-                    Ok(data_routes::prepare_replay(
+                    Ok(data_routes::prepare_replay_with_credentials(
                         tx.client(),
                         &identity,
                         &id,
                         by_request,
+                        &idempotency_key,
+                        &caller_credential,
                     ))
                 })
             })
             .await??;
-        let result = match self.execute(command.execute).await {
+        let data_routes::ReplayCommand {
+            log_id,
+            original_request_id,
+            execute,
+            ..
+        } = command;
+        let result = match self.execute(execute).await {
             Ok(result) => result,
             Err(error) => {
-                let (code, message) = match error.code {
-                    "CONNECTOR_RATE_LIMITED" => (
-                        "CONNECTOR_RATE_LIMITED",
-                        "The upstream provider rate limited this request.",
-                    ),
-                    "CONNECTOR_UNAVAILABLE" => (
-                        "CONNECTOR_UNAVAILABLE",
-                        "The upstream provider is unavailable.",
-                    ),
-                    _ => ("CONNECTOR_FAILED", "The connector request failed."),
-                };
-                return Ok(Some(Response {
-                    status: 502,
-                    headers: vec![],
-                    body: serde_json::json!({"error":{"code":code,"message":message,"requestId":command.request_id,"replayLogId":command.log_id}}),
-                }));
+                return Ok(Some(replay_error_response(
+                    error,
+                    &original_request_id,
+                    &log_id,
+                )));
             }
         };
         Ok(Some(Response {
             status: 200,
-            body: serde_json::json!({"requestId":command.request_id,"replayLogId":command.log_id,"output":result.output}),
+            body: serde_json::json!({
+                "requestId": result.request_id,
+                "originalRequestId": original_request_id,
+                "replayLogId": result.replay_log_id,
+                "originalReplayLogId": log_id,
+                "output": result.output
+            }),
             headers: vec![],
         }))
     }
     async fn execute(&self, request: ExecuteRequest) -> Result<ExecuteResult> {
         self.executor.execute_action(request).await
     }
+}
+
+fn replay_error_response(
+    mut error: ApiError,
+    original_request_id: &str,
+    original_replay_log_id: &str,
+) -> Response {
+    // Action evidence carries provider retry guidance without exposing provider
+    // details. Preserve an explicitly supplied adapter hint if one exists.
+    if error.retry_after_seconds.is_none() {
+        if let Some(ApiFailureEvidence::Action(evidence)) = error.evidence.as_deref() {
+            error.retry_after_seconds = evidence.retry_after_seconds;
+        }
+    }
+    let mut response = crate::error_response(error);
+    if let Some(object) = response
+        .body
+        .get_mut("error")
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        object.insert("originalRequestId".into(), original_request_id.into());
+        object.insert("originalReplayLogId".into(), original_replay_log_id.into());
+    }
+    response
 }
 impl<K, E, C> Services<K, E, C> {
     async fn sync_control(

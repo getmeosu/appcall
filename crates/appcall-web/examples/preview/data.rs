@@ -100,7 +100,7 @@ impl ScenarioData {
                 value
             }
             Op::Test => fixture_run(&r).await?,
-            Op::Options | Op::RunInputFields => fixture_dynamic(&r)?,
+            Op::Options | Op::RunInputFields => dynamic_fixture(&r)?,
             Op::Branding => json!({"appName":"Sample App","tagColor":"#67e8f9"}),
             Op::Overview if self.scenario == Scenario::Unavailable => {
                 return Err(Error::Unavailable.into())
@@ -108,6 +108,14 @@ impl ScenarioData {
             Op::Overview => overview_fixture(self.scenario),
             Op::Runs => runs_fixture(self.scenario, &r)?,
             Op::RunDetail => run_history_fixture(self.scenario, &r)?,
+            Op::ActionClaims => action_claim_fixture(),
+            Op::ReconcileActionClaim => json!({
+                "auditId":"recon_preview_claim",
+                "resolution":{"kind":"provenNotDispatched"},
+                "reservationState":"released",
+                "chargesRefunded":true,
+                "usageRecorded":false
+            }),
             Op::Usage => match self.scenario {
                 Scenario::Unavailable => return Err(Error::Unavailable.into()),
                 Scenario::Empty => {
@@ -150,6 +158,93 @@ impl ScenarioData {
         })
     }
 }
+
+fn action_claim_fixture() -> Value {
+    json!({
+        "synthetic": true,
+        "accountId": "preview_account",
+        "idempotencyKey": "preview_claim_key",
+        "expectedRequestId": "preview_request_1",
+        "claim": {
+            "projectId": "proj_preview",
+            "idempotencyKey": "preview_claim_key",
+            "requestId": "preview_request_1",
+            "connectionId": "preview_connection",
+            "externalAccountId": "preview_account",
+            "connector": "synthetic-mail",
+            "action": "messages.send",
+            "inputHash": "synthetic-input-hash-never-rendered",
+            "dispatched": true,
+            "leaseExpired": true,
+            "ownershipProven": true,
+            "reconciliationAllowed": true,
+            "leasedUntil": "2026-09-12T10:00:00Z",
+            "dispatchedAt": "2026-09-12T09:00:00Z",
+            "createdAt": "2026-09-12T08:00:00Z",
+            "reservation": {
+                "id": "preview_reservation",
+                "state": "dispatched",
+                "month": "2026-09",
+                "expiresAt": "2026-09-13T08:00:00Z",
+                "identityBound": true
+            }
+        }
+    })
+}
+
+/// Runtime dynamic actor fixture. Keep this beside `ScenarioData` so the
+/// browser preview and test-only `Data` adapter exercise the same transport.
+fn dynamic_fixture(r: &DashboardRequest) -> Result<Value, Error> {
+    let field = |name: &str| r.fields.get(name).map(String::as_str).unwrap_or("");
+    if r.resource.as_deref() != Some("connector-3")
+        || !matches!(
+            field("connectionId"),
+            "preview_active_1" | "preview_active_2"
+        )
+    {
+        return Err(Error::Invalid);
+    }
+    match r.operation {
+        DashboardOperation::Options => {
+            if field("source") != "actors.options"
+                || field("fieldName") != "f.actorId"
+                || field("detailSource") != "actors.input_schema"
+                || field("q").len() > 256
+            {
+                return Err(Error::Invalid);
+            }
+            let search = field("q").to_lowercase();
+            let options: Vec<_> = [
+                ("preview_actor_alpha", "Synthetic Alpha actor"),
+                ("preview_actor_beta", "Synthetic Beta actor"),
+            ]
+            .into_iter()
+            .filter(|(_, label)| label.to_lowercase().contains(&search))
+            .map(|(value, label)| json!({"value":value,"label":label}))
+            .collect();
+            Ok(json!({"options":options}))
+        }
+        DashboardOperation::RunInputFields => {
+            if field("source") != "actors.input_schema" {
+                return Err(Error::Invalid);
+            }
+            let schema = match field("actorId") {
+                "preview_actor_alpha" => {
+                    json!({"type":"object","required":["message"],"properties":{
+                        "message":{"type":"string","title":"Alpha message","description":"Synthetic additional input for Alpha; no message is sent."}
+                    }})
+                }
+                "preview_actor_beta" => json!({"type":"object","required":["count"],"properties":{
+                    "count":{"type":"integer","title":"Beta count","description":"Synthetic additional input for Beta; no provider is called."}
+                }}),
+                _ => return Err(Error::Invalid),
+            };
+            Ok(json!({"actorId":field("actorId"),"inputSchema":schema,"schema":schema}))
+        }
+        _ => Err(Error::Invalid),
+    }
+}
+
 fn overview_fixture(scenario: Scenario) -> Value {
     if scenario == Scenario::Empty {
         return json!({

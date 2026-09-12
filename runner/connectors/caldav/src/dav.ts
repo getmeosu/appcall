@@ -302,6 +302,7 @@ export type ParsedVEvent = {
 
 /** Build a full VCALENDAR/VEVENT iCalendar string */
 export function buildVEvent(input: VEventInput): string {
+  validateVEventInput(input);
   const now = toCalDAVDateTime(Temporal.Now.instant().toString());
   const dtstart = toCalDAVDateTime(input.start, input.timezone);
   const dtend = toCalDAVDateTime(input.end, input.timezone);
@@ -312,7 +313,7 @@ export function buildVEvent(input: VEventInput): string {
     "PRODID:-//CalDAV Connector//EN",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
-    `UID:${input.uid}`,
+    `UID:${foldICalLine(input.uid)}`,
     `DTSTAMP:${now}`,
     `DTSTART:${dtstart}`,
     `DTEND:${dtend}`,
@@ -327,7 +328,7 @@ export function buildVEvent(input: VEventInput): string {
   }
   if (input.attendees) {
     for (const att of input.attendees) {
-      lines.push(`ATTENDEE:mailto:${att}`);
+      lines.push(`ATTENDEE:mailto:${normalizeCalendarAddress(att)}`);
     }
   }
 
@@ -337,8 +338,215 @@ export function buildVEvent(input: VEventInput): string {
 
 /** Fold long iCalendar property values (basic — escape special chars) */
 function foldICalLine(value: string): string {
+  assertSafeText(value);
   // Escape commas and semicolons per RFC 5545
   return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\n/g, "\\n");
+}
+
+function assertSafeText(value: string): void {
+  if (/[\r\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)) {
+    throw new Error("iCalendar text must not contain line breaks or control characters.");
+  }
+}
+
+function validateVEventInput(input: VEventInput): void {
+  if (typeof input.uid !== "string" || input.uid.length === 0) {
+    throw new Error("uid is required");
+  }
+  if (typeof input.summary !== "string") {
+    throw new Error("summary is required");
+  }
+  assertSafeText(input.uid);
+  if (/\r|\n/.test(input.uid)) {
+    throw new Error("iCalendar UID must not contain line breaks.");
+  }
+  assertSafeText(input.summary);
+  if (input.description !== undefined) assertSafeText(input.description);
+  if (input.location !== undefined) assertSafeText(input.location);
+  if (input.attendees !== undefined) {
+    for (const attendee of input.attendees) normalizeCalendarAddress(attendee);
+  }
+}
+
+function normalizeCalendarAddress(value: string): string {
+  if (typeof value !== "string") throw new Error("attendee must be a valid calendar address.");
+  assertSafeText(value);
+  const address = value.replace(/^mailto:/i, "");
+  if (!/^[^@\s<>;,]+@[^@\s<>;,]+$/.test(address)) {
+    throw new Error("attendee must be a valid calendar address.");
+  }
+  return address;
+}
+
+type ICalProperty = { name: string; prefix: string; start: number; end: number };
+
+/**
+ * Apply an update to the matching master VEVENT while retaining the original
+ * calendar envelope, other VEVENTs, alarms, organizers, and unknown fields.
+ * Ambiguous or malformed resources are rejected so a partial replacement can
+ * never discard provider-owned data.
+ */
+export function mergeVEvent(calendarData: string, input: VEventInput): string {
+  validateVEventInput(input);
+  const dtstart = toCalDAVDateTime(input.start, input.timezone);
+  const dtend = toCalDAVDateTime(input.end, input.timezone);
+  const lines = splitCalendarLines(calendarData);
+  validateComponentNesting(lines);
+  const events = findVEventRanges(lines);
+  for (const event of events) {
+    if (directProperties(lines, event, "UID").length !== 1) {
+      throw new Error("CalDAV event resource cannot be safely updated: VEVENT UID is missing or duplicated.");
+    }
+  }
+  const matching = events.filter((event) => directPropertyValue(lines, event, "UID") === input.uid);
+  const masters = matching.filter((event) => directProperty(lines, event, "RECURRENCE-ID") === undefined);
+  if (masters.length !== 1) {
+    throw new Error("CalDAV event resource cannot be safely updated: matching master VEVENT is missing or ambiguous.");
+  }
+
+  const event = masters[0];
+  const eventLines = lines.slice(event.start + 1, event.end);
+  replaceDirectProperty(eventLines, "SUMMARY", foldICalLine(input.summary));
+  replaceDirectProperty(eventLines, "DTSTART", dtstart, true);
+  removeDirectProperties(eventLines, "DURATION");
+  replaceDirectProperty(eventLines, "DTEND", dtend, true);
+  if (input.description !== undefined) replaceDirectProperty(eventLines, "DESCRIPTION", foldICalLine(input.description));
+  if (input.location !== undefined) replaceDirectProperty(eventLines, "LOCATION", foldICalLine(input.location));
+  if (input.attendees !== undefined) {
+    removeDirectProperties(eventLines, "ATTENDEE");
+    for (const attendee of input.attendees) {
+      insertBeforeEnd(eventLines, `ATTENDEE:mailto:${normalizeCalendarAddress(attendee)}`);
+    }
+  }
+  lines.splice(event.start + 1, event.end - event.start - 1, ...eventLines);
+  return `${lines.join("\r\n")}\r\n`;
+}
+
+function splitCalendarLines(calendarData: string): string[] {
+  if (typeof calendarData !== "string" || calendarData.length === 0) {
+    throw new Error("CalDAV event resource cannot be safely updated: calendar data is empty.");
+  }
+  const normalized = calendarData.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = normalized.split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  if (lines.length < 4 || lines[0]?.toUpperCase() !== "BEGIN:VCALENDAR" || lines.at(-1)?.toUpperCase() !== "END:VCALENDAR") {
+    throw new Error("CalDAV event resource cannot be safely updated: unsupported calendar structure.");
+  }
+  return lines;
+}
+
+function findVEventRanges(lines: string[]): Array<{ start: number; end: number }> {
+  const ranges: Array<{ start: number; end: number }> = [];
+  let start: number | undefined;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.toUpperCase();
+    if (line === "BEGIN:VEVENT") {
+      if (start !== undefined) throw new Error("CalDAV event resource cannot be safely updated: nested VEVENT.");
+      start = index;
+    } else if (line === "END:VEVENT") {
+      if (start === undefined) throw new Error("CalDAV event resource cannot be safely updated: unmatched END:VEVENT.");
+      ranges.push({ start, end: index });
+      start = undefined;
+    }
+  }
+  if (start !== undefined || ranges.length === 0) {
+    throw new Error("CalDAV event resource cannot be safely updated: VEVENT is missing or incomplete.");
+  }
+  return ranges;
+}
+
+function validateComponentNesting(lines: string[]): void {
+  const stack: string[] = [];
+  for (const line of lines) {
+    const begin = line.match(/^BEGIN:([^:;]+)$/i);
+    if (begin) {
+      stack.push(begin[1].toUpperCase());
+      continue;
+    }
+    const end = line.match(/^END:([^:;]+)$/i);
+    if (!end) continue;
+    const expected = stack.pop();
+    if (!expected || expected !== end[1].toUpperCase()) {
+      throw new Error("CalDAV event resource cannot be safely updated: malformed component nesting.");
+    }
+  }
+  if (stack.length !== 0) {
+    throw new Error("CalDAV event resource cannot be safely updated: malformed component nesting.");
+  }
+}
+
+function directProperty(lines: string[], range: { start: number; end: number }, name: string): ICalProperty | undefined {
+  return directProperties(lines, range, name)[0];
+}
+
+function directProperties(lines: string[], range: { start: number; end: number }, name: string): ICalProperty[] {
+  const eventLines = lines.slice(range.start + 1, range.end);
+  return directPropertiesInBlock(eventLines, name).map((property) => ({
+    ...property,
+    start: property.start + range.start + 1,
+    end: property.end + range.start + 1,
+  }));
+}
+
+function directPropertyValue(lines: string[], range: { start: number; end: number }, name: string): string | undefined {
+  const property = directProperty(lines, range, name);
+  if (!property) return undefined;
+  const unfolded = lines.slice(property.start, property.end).map((line, index) => index === 0 ? line : line.trimStart()).join("");
+  const colon = unfolded.indexOf(":");
+  return colon < 0 ? undefined : unfoldICalLine(unfolded.slice(colon + 1));
+}
+
+function directPropertyInBlock(lines: string[], name: string): ICalProperty | undefined {
+  return directPropertiesInBlock(lines, name)[0];
+}
+
+function directPropertiesInBlock(lines: string[], name: string): ICalProperty[] {
+  let componentDepth = 0;
+  const properties: ICalProperty[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    const upper = line.toUpperCase();
+    if (upper.startsWith("BEGIN:")) {
+      componentDepth += 1;
+      continue;
+    }
+    if (upper.startsWith("END:")) {
+      componentDepth = Math.max(0, componentDepth - 1);
+      continue;
+    }
+    if (componentDepth !== 0 || line.startsWith(" ") || line.startsWith("\t")) continue;
+    const colon = line.indexOf(":");
+    if (colon < 0) continue;
+    const prefix = line.slice(0, colon);
+    if (prefix.split(";", 1)[0]?.toUpperCase() !== name) continue;
+    let end = index + 1;
+    while (end < lines.length && /^[ \t]/.test(lines[end] ?? "")) end += 1;
+    properties.push({ name, prefix, start: index, end });
+    index = end - 1;
+  }
+  return properties;
+}
+
+function removeDirectProperties(lines: string[], name: string): void {
+  for (;;) {
+    const property = directPropertyInBlock(lines, name);
+    if (!property) return;
+    lines.splice(property.start, property.end - property.start);
+  }
+}
+
+function replaceDirectProperty(lines: string[], name: string, value: string, replacePrefix = false): void {
+  const property = directPropertyInBlock(lines, name);
+  if (property) {
+    lines.splice(property.start, property.end - property.start, `${replacePrefix ? name : property.prefix}:${value}`);
+    return;
+  }
+  insertBeforeEnd(lines, `${name}:${value}`);
+}
+
+function insertBeforeEnd(lines: string[], line: string): void {
+  const firstNestedComponent = lines.findIndex((candidate) => candidate.toUpperCase().startsWith("BEGIN:"));
+  lines.splice(firstNestedComponent < 0 ? lines.length : firstNestedComponent, 0, line);
 }
 
 /** Parse key fields from a VEVENT string */

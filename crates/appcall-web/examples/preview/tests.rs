@@ -165,8 +165,30 @@ async fn dynamic_preview_renders_existing_option_and_runinput_targets() {
     let detail = dashboard.handle(&request).await.unwrap();
     assert_eq!(detail.status, 200);
     assert!(detail.body.contains("id=\"tk-runinput\""));
+    assert!(detail
+        .body
+        .contains("data-actor-id=\"preview_actor_alpha\""));
     assert!(detail.body.contains("name=\"runInputSchema\""));
     assert!(detail.body.contains("name=\"f.runInput.message\""));
+
+    let baseline = dashboard
+        .handle(&Request {
+            method: "GET",
+            path: "/app/connectors/connector-0",
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields: std::collections::BTreeMap::from([
+                ("tab".into(), vec!["tools".into()]),
+                ("action".into(), vec!["messages.list".into()]),
+                ("connectionId".into(), vec!["preview_active_1".into()]),
+            ]),
+            now: 0,
+        })
+        .await
+        .unwrap();
+    assert!(baseline.body.contains("name=\"f.query.__omit\""));
+    assert!(baseline.body.contains("Omit when blank"));
 }
 
 #[tokio::test]

@@ -186,6 +186,7 @@ impl<S: Store> Engine<S> {
             return Err(Error::Conflict);
         }
         task.state = TaskState::Ready;
+        task.execution.known_unexecuted = true;
         run.state = failure_state(reason);
         run.failure_reason = Some(reason);
         run.wakeup = None;
@@ -194,6 +195,9 @@ impl<S: Store> Engine<S> {
     }
     pub fn history(&self, id: &str) -> Result<Vec<HistoryEvent>> {
         Ok(self.store.load(id)?.history)
+    }
+    pub fn reconciliation_audit(&self, id: &str) -> Result<Vec<ReconciliationAudit>> {
+        Ok(self.store.load(id)?.reconciliation_audit)
     }
     pub fn next_wakeup(&self) -> Result<Option<i64>> {
         self.store.next_wakeup()
@@ -438,15 +442,12 @@ impl<S: Store> Engine<S> {
                     .retry_policy
                     .unwrap_or(self.retry_policy);
                 retry_policy.validate()?;
-                let retry_deadline = r.tasks[index]
-                    .attempt
-                    .retry_policy
-                    .filter(|_| r.tasks[index].attempt.attempt > 0)
-                    .map(|_| {
-                        elapsed_retry_deadline(
-                            r.tasks[index].attempt.retry_started_at_ms,
-                            retry_policy,
-                        )
+                let task = &mut r.tasks[index];
+                infer_prior_execution(&mut task.attempt, &mut task.execution);
+                let execution_attempts = task.execution.execution_attempts;
+                let retry_deadline =
+                    (execution_attempts > 0 && task.attempt.retry_policy.is_some()).then(|| {
+                        elapsed_retry_deadline(task.execution.execution_started_at_ms, retry_policy)
                     });
                 if retry_deadline.is_some_and(|deadline| now_ms >= deadline) {
                     r.tasks[index].state = TaskState::Ready;
@@ -454,7 +455,7 @@ impl<S: Store> Engine<S> {
                     self.save(&mut r, &children)?;
                     return Ok(DriveOutcome::Suspended(r.state));
                 }
-                if r.tasks[index].attempt.attempt >= retry_policy.max_attempts {
+                if execution_attempts >= retry_policy.max_attempts {
                     r.tasks[index].state = TaskState::Ready;
                     mark_retry_exhausted(&mut r);
                     self.save(&mut r, &children)?;
@@ -472,6 +473,9 @@ impl<S: Store> Engine<S> {
                     task.attempt.retry_policy = Some(self.retry_policy);
                     if task.attempt.attempt > 1 {
                         task.attempt.retry_started_at_ms = now_ms;
+                        if task.execution.execution_attempts > 0 {
+                            task.execution.execution_started_at_ms = now_ms;
+                        }
                     }
                 }
                 task.state = TaskState::InFlight;
@@ -571,6 +575,12 @@ impl<S: Store> Engine<S> {
                             retry_policy: None,
                         },
                         state: TaskState::Ready,
+                        execution: ExecutionAccounting {
+                            execution_attempts: 0,
+                            execution_dispatch_attempt: 0,
+                            known_unexecuted: false,
+                            execution_started_at_ms: 0,
+                        },
                     });
                 }
                 if *detached_wait {
@@ -709,6 +719,8 @@ impl<S: Store> Engine<S> {
         let mut r = self.store.load(&attempt.run_id)?;
         {
             let task = owned_attempt(&mut r, attempt, self.store.owner_epoch())?;
+            let started_at_ms = task.attempt.started_at_ms;
+            mark_execution(&mut task.attempt, &mut task.execution, started_at_ms)?;
             task.state = TaskState::Done(output);
         }
         if r.state == RunState::OutcomeUnknown && !has_unresolved_effect(&r) {
@@ -726,7 +738,8 @@ impl<S: Store> Engine<S> {
                 Some(0)
             };
         }
-        self.save(&mut r, &[])
+        self.save(&mut r, &[])?;
+        Ok(())
     }
     pub fn fail(&mut self, attempt: &ActivityAttempt, failure: ActivityFailure) -> Result<()> {
         self.fail_at(attempt, failure, current_time_ms())
@@ -753,6 +766,8 @@ impl<S: Store> Engine<S> {
         let mut retrying = false;
         {
             let task = owned_attempt(&mut r, attempt, self.store.owner_epoch())?;
+            let started_at_ms = task.attempt.started_at_ms;
+            mark_execution(&mut task.attempt, &mut task.execution, started_at_ms)?;
             let safe = matches!(
                 task.attempt.policy,
                 EffectPolicy::Read | EffectPolicy::Idempotent
@@ -760,17 +775,13 @@ impl<S: Store> Engine<S> {
             if safe && matches!(failure, ActivityFailure::Retryable) {
                 let policy = task.attempt.retry_policy.unwrap_or(self.retry_policy);
                 policy.validate()?;
-                if task.attempt.attempt >= policy.max_attempts {
+                if task.execution.execution_attempts >= policy.max_attempts {
                     task.state = TaskState::Ready;
                     exhausted = true;
                 } else {
-                    let retry_started_at_ms = if task.attempt.attempt == 1 {
-                        task.attempt.started_at_ms
-                    } else {
-                        task.attempt.retry_started_at_ms
-                    };
-                    let next_attempt_at_ms =
-                        failed_at_ms.saturating_add(backoff_ms(policy, task.attempt.attempt));
+                    let retry_started_at_ms = task.execution.execution_started_at_ms;
+                    let next_attempt_at_ms = failed_at_ms
+                        .saturating_add(backoff_ms(policy, task.execution.execution_attempts));
                     task.state = TaskState::Retrying(RetryState {
                         next_attempt_at_ms,
                         retry_started_at_ms,
@@ -790,7 +801,8 @@ impl<S: Store> Engine<S> {
             r.state = RunState::OutcomeUnknown;
             r.wakeup = None;
         }
-        self.save(&mut r, &[])
+        self.save(&mut r, &[])?;
+        Ok(())
     }
     /// Prepare exactly one owned invocation. Send it to a bounded host executor;
     /// the engine remains available while native code runs. Always finish results,
@@ -799,6 +811,16 @@ impl<S: Store> Engine<S> {
         &mut self,
         attempt: &ActivityAttempt,
         resolver: &dyn PayloadResolver,
+    ) -> Result<Option<NativeInvocation>> {
+        self.prepare_registered_at(attempt, resolver, current_time_ms())
+    }
+    /// Prepare an invocation while allowing a host/daemon to supply its
+    /// monotonic clock value for deterministic retry-window accounting.
+    pub fn prepare_registered_at(
+        &mut self,
+        attempt: &ActivityAttempt,
+        resolver: &dyn PayloadResolver,
+        started_at_ms: i64,
     ) -> Result<Option<NativeInvocation>> {
         let mut r = self.store.load(&attempt.run_id)?;
         if !matches!(
@@ -813,7 +835,9 @@ impl<S: Store> Engine<S> {
             .and_then(Clone::clone)
             .ok_or(Error::Unavailable)?;
         let Some(bytes) = resolver.resolve(&attempt.input)? else {
-            owned_task(&mut r, attempt, self.store.owner_epoch())?.state = TaskState::Ready;
+            let task = owned_task(&mut r, attempt, self.store.owner_epoch())?;
+            task.state = TaskState::Ready;
+            task.execution.known_unexecuted = true;
             self.suspend(&mut r, RunState::NeedsInput)?;
             self.release_dispatch(attempt)?;
             return Ok(None);
@@ -821,7 +845,11 @@ impl<S: Store> Engine<S> {
         if bytes.len() > 1024 * 1024 {
             return Err(Error::Limit);
         }
-        owned_task(&mut r, attempt, self.store.owner_epoch())?.state = TaskState::Invoking;
+        {
+            let task = owned_task(&mut r, attempt, self.store.owner_epoch())?;
+            start_execution(&mut task.attempt, &mut task.execution, started_at_ms)?;
+            task.state = TaskState::Invoking;
+        }
         self.save(&mut r, &[])?;
         Ok(Some(NativeInvocation {
             attempt: attempt.clone(),
@@ -854,16 +882,85 @@ impl<S: Store> Engine<S> {
         effect_id: &str,
         observed: Option<PayloadRef>,
     ) -> Result<()> {
+        self.reconcile_inner(id, effect_id, None, None, observed, "engine")
+            .map(|_| ())
+    }
+    /// Reconcile one uncertain effect only when the caller supplies the exact
+    /// attempt and owner epoch it observed. This prevents a delayed provider
+    /// result from resolving a newer dispatch of the same stable effect.
+    pub fn reconcile_fenced(
+        &mut self,
+        id: &str,
+        effect_id: &str,
+        expected_attempt: u64,
+        expected_owner_epoch: u64,
+        observed: Option<PayloadRef>,
+    ) -> Result<ReconciliationAudit> {
+        self.reconcile_fenced_with_evidence(
+            id,
+            effect_id,
+            expected_attempt,
+            expected_owner_epoch,
+            "engine",
+            observed,
+        )
+    }
+    /// Fenced reconciliation with a bounded operator/provider evidence
+    /// reference. The reference is recorded for audit, while its contents are
+    /// intentionally never accepted or persisted by the engine.
+    pub fn reconcile_fenced_with_evidence(
+        &mut self,
+        id: &str,
+        effect_id: &str,
+        expected_attempt: u64,
+        expected_owner_epoch: u64,
+        evidence_ref: &str,
+        observed: Option<PayloadRef>,
+    ) -> Result<ReconciliationAudit> {
+        if expected_attempt == 0 {
+            return Err(Error::Invalid("invalid reconciliation attempt"));
+        }
+        self.reconcile_inner(
+            id,
+            effect_id,
+            Some(expected_attempt),
+            Some(expected_owner_epoch),
+            observed,
+            evidence_ref,
+        )
+    }
+    fn reconcile_inner(
+        &mut self,
+        id: &str,
+        effect_id: &str,
+        expected_attempt: Option<u64>,
+        expected_owner_epoch: Option<u64>,
+        observed: Option<PayloadRef>,
+        evidence_ref: &str,
+    ) -> Result<ReconciliationAudit> {
+        validate(effect_id)?;
+        validate(evidence_ref)?;
         let mut r = self.store.load(id)?;
         if r.state != RunState::OutcomeUnknown {
             return Err(Error::Conflict);
         }
+        if r.reconciliation_audit.len() >= 256 {
+            return Err(Error::Limit);
+        }
+        let observed_present = observed.is_some();
         self.recover(&mut r)?;
         let task = r
             .tasks
             .iter_mut()
             .find(|t| t.attempt.effect_id == effect_id && matches!(t.state, TaskState::Uncertain))
             .ok_or(Error::Conflict)?;
+        if expected_attempt.is_some_and(|expected| task.attempt.attempt != expected)
+            || expected_owner_epoch.is_some_and(|expected| task.attempt.owner_epoch != expected)
+        {
+            return Err(Error::Conflict);
+        }
+        let resolved_attempt = task.attempt.attempt;
+        let resolved_owner_epoch = task.attempt.owner_epoch;
         task.state = observed.map_or(TaskState::Ready, TaskState::Done);
         r.state = if has_unresolved_effect(&r) {
             RunState::OutcomeUnknown
@@ -877,7 +974,19 @@ impl<S: Store> Engine<S> {
         } else {
             Some(0)
         };
-        self.save(&mut r, &[])
+        r.reconciliation_audit.push(ReconciliationAudit {
+            effect_id: effect_id.into(),
+            attempt: resolved_attempt,
+            owner_epoch: resolved_owner_epoch,
+            evidence_ref: evidence_ref.into(),
+            recorded_at_ms: current_time_ms(),
+            observed: observed_present,
+        });
+        self.save(&mut r, &[])?;
+        r.reconciliation_audit
+            .last()
+            .cloned()
+            .ok_or(Error::Conflict)
     }
     fn recover(&mut self, r: &mut RunRecord) -> Result<()> {
         let retry_exhausted =
@@ -894,6 +1003,7 @@ impl<S: Store> Engine<S> {
         }
         let mut changed = false;
         for task in &mut r.tasks {
+            normalize_legacy_attempt(&mut task.attempt, &mut task.execution);
             if matches!(task.state, TaskState::InFlight | TaskState::Invoking)
                 && (task.attempt.owner_epoch != self.store.owner_epoch()
                     || (retry_exhausted
@@ -942,6 +1052,7 @@ fn new_run(id: &str, name: &str, version: &str, input: PayloadRef) -> Result<Run
         children: vec![],
         output: None,
         wakeup: Some(0),
+        reconciliation_audit: vec![],
     })
 }
 fn ensure_active(r: &RunRecord) -> Result<()> {
@@ -978,6 +1089,78 @@ fn mark_retry_exhausted(r: &mut RunRecord) {
         RunState::Failed
     };
     r.wakeup = None;
+}
+
+fn normalize_legacy_attempt(attempt: &mut ActivityAttempt, execution: &mut ExecutionAccounting) {
+    if execution.execution_attempts != u64::MAX {
+        return;
+    }
+    // Records written before execution accounting existed have no way to
+    // distinguish a dispatched attempt from one that actually ran. Preserve
+    // their historical debit and fence the currently persisted sequence.
+    execution.execution_attempts = attempt.attempt;
+    execution.execution_dispatch_attempt = attempt.attempt;
+    execution.execution_started_at_ms = attempt.retry_started_at_ms;
+}
+
+fn infer_prior_execution(attempt: &mut ActivityAttempt, execution: &mut ExecutionAccounting) {
+    normalize_legacy_attempt(attempt, execution);
+    if execution.known_unexecuted || execution.execution_attempts != 0 || attempt.attempt == 0 {
+        return;
+    }
+    // A pre-restart in-flight dispatch may have reached native code. Preserve
+    // the historical attempt debit before issuing the next fenced dispatch.
+    execution.execution_attempts = attempt.attempt;
+    execution.execution_dispatch_attempt = attempt.attempt;
+    execution.execution_started_at_ms = attempt.retry_started_at_ms;
+}
+
+fn mark_execution(
+    attempt: &mut ActivityAttempt,
+    execution: &mut ExecutionAccounting,
+    started_at_ms: i64,
+) -> Result<()> {
+    if !execution.known_unexecuted {
+        infer_prior_execution(attempt, execution);
+    } else if execution.execution_attempts == u64::MAX {
+        execution.execution_attempts = 0;
+    }
+    if execution.execution_dispatch_attempt == attempt.attempt {
+        execution.known_unexecuted = false;
+        return Ok(());
+    }
+    execution.execution_attempts = execution
+        .execution_attempts
+        .checked_add(1)
+        .ok_or(Error::Limit)?;
+    execution.execution_dispatch_attempt = attempt.attempt;
+    execution.known_unexecuted = false;
+    if execution.execution_attempts == 1 {
+        execution.execution_started_at_ms = started_at_ms;
+    }
+    Ok(())
+}
+
+fn start_execution(
+    attempt: &mut ActivityAttempt,
+    execution: &mut ExecutionAccounting,
+    started_at_ms: i64,
+) -> Result<()> {
+    normalize_legacy_attempt(attempt, execution);
+    if execution.execution_dispatch_attempt == attempt.attempt {
+        execution.known_unexecuted = false;
+        return Ok(());
+    }
+    execution.execution_attempts = execution
+        .execution_attempts
+        .checked_add(1)
+        .ok_or(Error::Limit)?;
+    execution.execution_dispatch_attempt = attempt.attempt;
+    execution.known_unexecuted = false;
+    if execution.execution_attempts == 1 {
+        execution.execution_started_at_ms = started_at_ms;
+    }
+    Ok(())
 }
 
 fn take_signal(r: &mut RunRecord, name: &str) -> Option<PayloadRef> {

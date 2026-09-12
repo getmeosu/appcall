@@ -46,6 +46,7 @@ impl PgActionRepository {
         reservation: &PolicyReservation,
         allow_dispatched: bool,
         clear_claim: bool,
+        refund_charges: bool,
     ) -> Result<()> {
         if reservation.quota_id.is_empty() {
             return self.release_pending(attempt).await;
@@ -69,6 +70,9 @@ impl PgActionRepository {
             let can_clear_claim = state.as_deref() == Some("pending")
                 || (allow_dispatched && state.as_deref() == Some("dispatched"));
             if can_clear_claim {
+                if refund_charges {
+                    refund_reservation_charges(&mut tx, &a.project_id, &quota_id)?;
+                }
                 tx.execute(
                     "UPDATE action_usage_reservations
                         SET state='released', released_at=now()
@@ -113,8 +117,36 @@ impl ActionRepository for PgActionRepository {
   let disabled=tx.query_opt("SELECT disabled_at IS NOT NULL FROM projects WHERE id=$1",&[&a.project_id]).map_err(|_|storage())?.map(|r|r.get::<_,bool>(0)).unwrap_or(true);if disabled{return Err(ActionError::new("PROJECT_DISABLED"))}
   if a.key.is_empty(){tx.commit().map_err(|_|storage())?;return Ok(Acquisition::Acquired)}
   if let Some(row)=tx.query_opt("SELECT connection_id,action,input_hash,output FROM action_idempotency_records WHERE project_id=$1 AND idempotency_key=$2",&[&a.project_id,&a.key]).map_err(|_|storage())?{if row.get::<_,String>(0)!=a.connection_id||row.get::<_,String>(1)!=a.action||row.get::<_,String>(2)!=a.input_hash{return Err(ActionError::new("IDEMPOTENCY_CONFLICT"))};let output=row.get(3);tx.commit().map_err(|_|storage())?;return Ok(Acquisition::Cached(output))}
-  let row=tx.query_opt("INSERT INTO action_idempotency_claims(project_id,idempotency_key,connection_id,action,input_hash,request_id,leased_until) VALUES($1,$2,$3,$4,$5,$6,now()+($7::bigint*interval '1 millisecond')) ON CONFLICT(project_id,idempotency_key) DO UPDATE SET request_id=EXCLUDED.request_id,leased_until=EXCLUDED.leased_until WHERE action_idempotency_claims.connection_id=EXCLUDED.connection_id AND action_idempotency_claims.action=EXCLUDED.action AND action_idempotency_claims.input_hash=EXCLUDED.input_hash AND action_idempotency_claims.leased_until<=now() AND action_idempotency_claims.dispatched_at IS NULL RETURNING request_id",&[&a.project_id,&a.key,&a.connection_id,&a.action,&a.input_hash,&a.request_id,&a.lease_ms]).map_err(|_|storage())?;
-  if row.is_none(){let row=tx.query_one("SELECT connection_id,action,input_hash FROM action_idempotency_claims WHERE project_id=$1 AND idempotency_key=$2",&[&a.project_id,&a.key]).map_err(|_|storage())?;let matching=row.get::<_,String>(0)==a.connection_id&&row.get::<_,String>(1)==a.action&&row.get::<_,String>(2)==a.input_hash;return Err(ActionError::new(if matching{"IDEMPOTENCY_IN_PROGRESS"}else{"IDEMPOTENCY_CONFLICT"}))}
+  // Migration 006 is required by the action repository. Look up terminal
+  // reconciliation audits by the immutable project/key pair first, then
+  // compare the full request identity. A provider-known outcome fences the
+  // key even after its claim row was removed; a different identity preserves
+  // the existing idempotency-conflict contract.
+  let terminal_audits = tx
+      .query(
+          "SELECT connection_id,connector,action,input_hash,external_account_id
+             FROM action_claim_reconciliation_audits
+            WHERE project_id=$1 AND idempotency_key=$2
+              AND resolution='provider_outcome_known'",
+          &[&a.project_id, &a.key],
+      )
+      .map_err(|_| storage())?;
+  if !terminal_audits.is_empty() {
+      let all_identities_match = terminal_audits.iter().all(|row| {
+          row.get::<_, String>(0) == a.connection_id
+              && row.get::<_, String>(1) == a.connector
+              && row.get::<_, String>(2) == a.action
+              && row.get::<_, String>(3) == a.input_hash
+              && row.get::<_, String>(4) == a.external_account_id
+      });
+      return Err(ActionError::new(if all_identities_match {
+          "ACTION_CLAIM_ALREADY_COMPLETED"
+      } else {
+          "IDEMPOTENCY_CONFLICT"
+      }));
+  }
+  let row=tx.query_opt("INSERT INTO action_idempotency_claims(project_id,idempotency_key,connection_id,action,input_hash,request_id,external_account_id,connector,leased_until) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now()+($9::bigint*interval '1 millisecond')) ON CONFLICT(project_id,idempotency_key) DO UPDATE SET request_id=EXCLUDED.request_id,leased_until=EXCLUDED.leased_until WHERE action_idempotency_claims.connection_id=EXCLUDED.connection_id AND action_idempotency_claims.action=EXCLUDED.action AND action_idempotency_claims.input_hash=EXCLUDED.input_hash AND action_idempotency_claims.external_account_id=EXCLUDED.external_account_id AND action_idempotency_claims.connector=EXCLUDED.connector AND action_idempotency_claims.leased_until<=now() AND action_idempotency_claims.dispatched_at IS NULL RETURNING request_id",&[&a.project_id,&a.key,&a.connection_id,&a.action,&a.input_hash,&a.request_id,&a.external_account_id,&a.connector,&a.lease_ms]).map_err(|_|storage())?;
+  if row.is_none(){let row=tx.query_one("SELECT connection_id,action,input_hash,external_account_id,connector FROM action_idempotency_claims WHERE project_id=$1 AND idempotency_key=$2",&[&a.project_id,&a.key]).map_err(|_|storage())?;let matching=row.get::<_,String>(0)==a.connection_id&&row.get::<_,String>(1)==a.action&&row.get::<_,String>(2)==a.input_hash&&row.get::<_,Option<String>>(3).as_deref()==Some(a.external_account_id.as_str())&&row.get::<_,Option<String>>(4).as_deref()==Some(a.connector.as_str());return Err(ActionError::new(if matching{"IDEMPOTENCY_IN_PROGRESS"}else{"IDEMPOTENCY_CONFLICT"}))}
   // A legacy Go finisher does not take our advisory lock. Recheck after the
   // unique claim INSERT has waited for its deletion to avoid redispatching it.
   if let Some(row)=tx.query_opt("SELECT connection_id,action,input_hash,output FROM action_idempotency_records WHERE project_id=$1 AND idempotency_key=$2",&[&a.project_id,&a.key]).map_err(|_|storage())? {
@@ -150,6 +182,55 @@ impl ActionRepository for PgActionRepository {
             }
             tx.commit().map_err(|_|storage())
         }).await
+    }
+    async fn bind_reservation_identity(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+    ) -> Result<()> {
+        if reservation.quota_id.is_empty() || attempt.key.is_empty() {
+            return Ok(());
+        }
+        let a = attempt.clone();
+        let quota_id = reservation.quota_id.clone();
+        let quota_month = reservation.quota_month.clone();
+        self.run(move |client| {
+            let mut tx = client.transaction().map_err(|_| storage())?;
+            crate::policy_postgres::usage_quota_lock(&mut tx, &a.project_id, &quota_month)?;
+            let row = tx
+                .query_opt(
+                    "SELECT state,connection_id,connector,action,external_account_id,idempotency_key,request_id,input_hash
+                       FROM action_usage_reservations
+                      WHERE id=$1 AND project_id=$2 AND month=$3
+                      FOR UPDATE",
+                    &[&quota_id, &a.project_id, &quota_month],
+                )
+                .map_err(|_| storage())?
+                .ok_or_else(|| ActionError::new("USAGE_RESERVATION_INVALID"))?;
+            let state: String = row.get(0);
+            let identity_matches = row.get::<_, String>(1) == a.connection_id
+                && row.get::<_, String>(2) == a.connector
+                && row.get::<_, String>(3) == a.action
+                && row.get::<_, String>(4) == a.external_account_id
+                && row.get::<_, Option<String>>(5).as_deref() == Some(a.key.as_str())
+                && row.get::<_, Option<String>>(7).as_deref() == Some(a.input_hash.as_str());
+            if !identity_matches || !matches!(state.as_str(), "pending" | "dispatched") {
+                return Err(ActionError::new("USAGE_RESERVATION_INVALID"));
+            }
+            if let Some(request_id) = row.get::<_, Option<String>>(6) {
+                if request_id != a.request_id {
+                    return Err(ActionError::new("USAGE_RESERVATION_INVALID"));
+                }
+            } else {
+                tx.execute(
+                    "UPDATE action_usage_reservations SET request_id=$1 WHERE id=$2 AND project_id=$3 AND request_id IS NULL",
+                    &[&a.request_id, &quota_id, &a.project_id],
+                )
+                .map_err(|_| storage())?;
+            }
+            tx.commit().map_err(|_| storage())
+        })
+        .await
     }
     async fn mark_dispatched_checked_with_reservation(
         &self,
@@ -266,7 +347,7 @@ impl ActionRepository for PgActionRepository {
         attempt: &Attempt,
         reservation: &PolicyReservation,
     ) -> Result<()> {
-        self.release_quota_reservation(attempt, reservation, false, true)
+        self.release_quota_reservation(attempt, reservation, false, true, false)
             .await
     }
     async fn release_quota_with_reservation(
@@ -274,7 +355,7 @@ impl ActionRepository for PgActionRepository {
         attempt: &Attempt,
         reservation: &PolicyReservation,
     ) -> Result<()> {
-        self.release_quota_reservation(attempt, reservation, true, false)
+        self.release_quota_reservation(attempt, reservation, true, false, false)
             .await
     }
     async fn release_not_dispatched_with_reservation(
@@ -291,7 +372,7 @@ impl ActionRepository for PgActionRepository {
                             .execute(
                                 "DELETE FROM action_idempotency_claims
                                   WHERE project_id=$1 AND idempotency_key=$2
-                                    AND request_id=$3 AND dispatched_at IS NOT NULL",
+                                    AND request_id=$3",
                                 &[&a.project_id, &a.key, &a.request_id],
                             )
                             .map_err(|_| storage())?;
@@ -300,7 +381,7 @@ impl ActionRepository for PgActionRepository {
                 })
                 .await;
         }
-        self.release_quota_reservation(attempt, reservation, true, true)
+        self.release_quota_reservation(attempt, reservation, true, true, true)
             .await
     }
     async fn finish_not_dispatched_with_reservation(
@@ -381,6 +462,7 @@ impl ActionRepository for PgActionRepository {
                 return Err(ActionError::new("IDEMPOTENCY_IN_PROGRESS"));
             }
             write_log(&mut tx, &a, Some(&error))?;
+            refund_reservation_charges(&mut tx, &a.project_id, &quota_id)?;
             tx.execute(
                 "UPDATE action_usage_reservations
                     SET state='released', released_at=now()
@@ -527,7 +609,309 @@ impl ActionRepository for PgActionRepository {
         })
         .await
     }
+    async fn finish_read_failure_with_reservation(
+        &self,
+        attempt: &Attempt,
+        reservation: &PolicyReservation,
+        error_code: &str,
+    ) -> Result<()> {
+        let a = attempt.clone();
+        let error = error_code.to_owned();
+        if reservation.quota_id.is_empty() {
+            return self
+                .run(move |client| {
+                    let mut tx = client.transaction().map_err(|_| storage())?;
+                    lock_key(&mut tx, &a)?;
+                    if !a.key.is_empty()
+                        && tx
+                            .query_opt(
+                                "SELECT request_id
+                                   FROM action_idempotency_claims
+                                  WHERE project_id=$1 AND idempotency_key=$2
+                                    AND request_id=$3 AND dispatched_at IS NOT NULL
+                                  FOR UPDATE",
+                                &[&a.project_id, &a.key, &a.request_id],
+                            )
+                            .map_err(|_| storage())?
+                            .is_none()
+                    {
+                        return Err(ActionError::new("IDEMPOTENCY_IN_PROGRESS"));
+                    }
+                    write_log(&mut tx, &a, Some(&error))?;
+                    if !a.key.is_empty() {
+                        tx.execute(
+                            "DELETE FROM action_idempotency_claims
+                              WHERE project_id=$1 AND idempotency_key=$2 AND request_id=$3",
+                            &[&a.project_id, &a.key, &a.request_id],
+                        )
+                        .map_err(|_| storage())?;
+                    }
+                    tx.commit().map_err(|_| storage())
+                })
+                .await;
+        }
+
+        let quota_id = reservation.quota_id.clone();
+        let quota_month = reservation.quota_month.clone();
+        self.run(move |client| {
+            let mut tx = client.transaction().map_err(|_| storage())?;
+            crate::policy_postgres::usage_quota_lock(&mut tx, &a.project_id, &quota_month)?;
+            lock_key(&mut tx, &a)?;
+            let state = tx
+                .query_opt(
+                    "SELECT state
+                       FROM action_usage_reservations
+                      WHERE id=$1 AND project_id=$2 AND month=$3
+                      FOR UPDATE",
+                    &[&quota_id, &a.project_id, &quota_month],
+                )
+                .map_err(|_| storage())?
+                .ok_or_else(|| ActionError::new("USAGE_RESERVATION_INVALID"))?
+                .get::<_, String>(0);
+            let claim_exists = !a.key.is_empty()
+                && tx
+                    .query_opt(
+                        "SELECT request_id
+                           FROM action_idempotency_claims
+                          WHERE project_id=$1 AND idempotency_key=$2
+                            AND request_id=$3 AND dispatched_at IS NOT NULL
+                          FOR UPDATE",
+                        &[&a.project_id, &a.key, &a.request_id],
+                    )
+                    .map_err(|_| storage())?
+                    .is_some();
+            if !a.key.is_empty() && !claim_exists {
+                return Err(ActionError::new("IDEMPOTENCY_IN_PROGRESS"));
+            }
+            write_log(&mut tx, &a, Some(&error))?;
+            if state == "dispatched" {
+                write_usage(&mut tx, &a, Some(&quota_month), Some(&quota_id))?;
+                tx.execute(
+                    "UPDATE action_usage_reservations
+                        SET state='settled', settled_at=now()
+                      WHERE id=$1 AND state='dispatched'",
+                    &[&quota_id],
+                )
+                .map_err(|_| storage())?;
+            } else if state != "released" && state != "settled" {
+                return Err(ActionError::new("USAGE_RESERVATION_INVALID"));
+            }
+            if !a.key.is_empty() {
+                tx.execute(
+                    "DELETE FROM action_idempotency_claims
+                      WHERE project_id=$1 AND idempotency_key=$2 AND request_id=$3",
+                    &[&a.project_id, &a.key, &a.request_id],
+                )
+                .map_err(|_| storage())?;
+            }
+            tx.commit().map_err(|_| storage())
+        })
+        .await
+    }
+    async fn finish_read_timeout(
+        &self,
+        attempt: &Attempt,
+        outcome: ActionDispatchOutcome,
+    ) -> Result<()> {
+        if attempt.key.is_empty() {
+            return Ok(());
+        }
+        let a = attempt.clone();
+        self.run(move |client| {
+            let mut tx = client.transaction().map_err(|_| storage())?;
+            let reservation = tx
+                .query_opt(
+                    "SELECT id,month,state
+                       FROM action_usage_reservations
+                      WHERE project_id=$1 AND idempotency_key=$2
+                        AND connection_id=$3 AND connector=$4 AND action=$5
+                        AND external_account_id=$6 AND input_hash=$7
+                        AND state IN ('pending','dispatched')
+                        AND (request_id=$8 OR request_id IS NULL)
+                      ORDER BY created_at DESC
+                      LIMIT 1",
+                    &[
+                        &a.project_id,
+                        &a.key,
+                        &a.connection_id,
+                        &a.connector,
+                        &a.action,
+                        &a.external_account_id,
+                        &a.input_hash,
+                        &a.request_id,
+                    ],
+                )
+                .map_err(|_| storage())?;
+            let (quota_id, quota_month, reservation_state) = reservation
+                .map(|row| {
+                    (
+                        Some(row.get::<_, String>(0)),
+                        Some(row.get::<_, String>(1)),
+                        Some(row.get::<_, String>(2)),
+                    )
+                })
+                .unwrap_or((None, None, None));
+            if let Some(month) = quota_month.as_deref() {
+                crate::policy_postgres::usage_quota_lock(&mut tx, &a.project_id, month)?;
+            }
+            lock_key(&mut tx, &a)?;
+            let claim = tx
+                .query_opt(
+                    "SELECT dispatched_at IS NOT NULL
+                       FROM action_idempotency_claims
+                      WHERE project_id=$1 AND idempotency_key=$2 AND request_id=$3
+                      FOR UPDATE",
+                    &[&a.project_id, &a.key, &a.request_id],
+                )
+                .map_err(|_| storage())?;
+            let Some(claim) = claim else {
+                tx.commit().map_err(|_| storage())?;
+                return Ok(());
+            };
+            let dispatched: bool = claim.get(0);
+            if let (Some(quota_id), Some(month), Some(state)) = (
+                quota_id.as_deref(),
+                quota_month.as_deref(),
+                reservation_state.as_deref(),
+            ) {
+                if state == "pending" || state == "dispatched" {
+                    if state == "dispatched"
+                        && dispatched
+                        && outcome != ActionDispatchOutcome::NotDispatched
+                    {
+                        write_usage(&mut tx, &a, Some(month), Some(quota_id))?;
+                        tx.execute(
+                            "UPDATE action_usage_reservations
+                                SET state='settled', settled_at=now()
+                              WHERE id=$1 AND state='dispatched'",
+                            &[&quota_id],
+                        )
+                        .map_err(|_| storage())?;
+                    } else {
+                        refund_reservation_charges(&mut tx, &a.project_id, quota_id)?;
+                        tx.execute(
+                            "UPDATE action_usage_reservations
+                                SET state='released', released_at=now()
+                              WHERE id=$1 AND state IN ('pending','dispatched')",
+                            &[&quota_id],
+                        )
+                        .map_err(|_| storage())?;
+                    }
+                }
+            }
+            write_log(&mut tx, &a, Some("ACTION_TIMEOUT"))?;
+            tx.execute(
+                "DELETE FROM action_idempotency_claims
+                  WHERE project_id=$1 AND idempotency_key=$2 AND request_id=$3",
+                &[&a.project_id, &a.key, &a.request_id],
+            )
+            .map_err(|_| storage())?;
+            tx.commit().map_err(|_| storage())
+        })
+        .await
+    }
 }
+
+/// Refund only the immutable counter windows charged by this reservation.
+/// Each charge row is locked and timestamped in the same transaction as the
+/// reservation transition, so a retry cannot decrement a daily or LinkedIn
+/// counter twice and a UTC boundary cannot move the refund to a new window.
+pub(crate) fn refund_reservation_charges(
+    tx: &mut Transaction<'_>,
+    project: &str,
+    reservation_id: &str,
+) -> Result<()> {
+    let external_account_id = tx
+        .query_opt(
+            "SELECT external_account_id
+               FROM action_usage_reservations
+              WHERE id=$1 AND project_id=$2
+              FOR UPDATE",
+            &[&reservation_id, &project],
+        )
+        .map_err(|_| storage())?
+        .ok_or_else(|| ActionError::new("USAGE_RESERVATION_INVALID"))?
+        .get::<_, String>(0);
+    let charges = tx
+        .query(
+            "SELECT charge_kind,action_class,window_kind,window_key,quantity,spend_micros
+               FROM action_usage_reservation_charges
+              WHERE reservation_id=$1 AND refunded_at IS NULL
+              FOR UPDATE",
+            &[&reservation_id],
+        )
+        .map_err(|_| storage())?
+        .into_iter()
+        .map(|row| {
+            (
+                row.get::<_, String>(0),
+                row.get::<_, String>(1),
+                row.get::<_, String>(2),
+                row.get::<_, String>(3),
+                row.get::<_, i64>(4),
+                row.get::<_, i64>(5),
+            )
+        })
+        .collect::<Vec<_>>();
+    for (kind, class, window_kind, window_key, quantity, spend_micros) in charges {
+        match kind.as_str() {
+            "send" => {
+                let updated = tx
+                    .execute(
+                        "UPDATE action_send_caps
+                        SET send_count=GREATEST(send_count-$4,0),
+                            spend_micros=GREATEST(spend_micros-$5,0),
+                            updated_at=now()
+                      WHERE project_id=$1 AND external_account_id=$2 AND window_key=$3",
+                        &[
+                            &project,
+                            &external_account_id,
+                            &window_key,
+                            &quantity,
+                            &spend_micros,
+                        ],
+                    )
+                    .map_err(|_| storage())?;
+                if updated != 1 {
+                    return Err(ActionError::new("USAGE_RESERVATION_INVALID"));
+                }
+            }
+            "linkedin" => {
+                crate::policy_postgres::linkedin_lock(tx, project, &external_account_id, &class)?;
+                let updated = tx
+                    .execute(
+                        "UPDATE linkedin_action_counters
+                        SET count=GREATEST(count-$6,0),updated_at=now()
+                      WHERE project_id=$1 AND external_account_id=$2
+                        AND action_class=$3 AND window_kind=$4 AND window_key=$5",
+                        &[
+                            &project,
+                            &external_account_id,
+                            &class,
+                            &window_kind,
+                            &window_key,
+                            &quantity,
+                        ],
+                    )
+                    .map_err(|_| storage())?;
+                if updated != 1 {
+                    return Err(ActionError::new("USAGE_RESERVATION_INVALID"));
+                }
+            }
+            _ => return Err(ActionError::new("USAGE_RESERVATION_INVALID")),
+        }
+        tx.execute(
+            "UPDATE action_usage_reservation_charges
+                SET refunded_at=now()
+              WHERE reservation_id=$1 AND charge_kind=$2 AND action_class=$3
+                AND window_kind=$4 AND window_key=$5 AND refunded_at IS NULL",
+            &[&reservation_id, &kind, &class, &window_kind, &window_key],
+        )
+        .map_err(|_| storage())?;
+    }
+    Ok(())
+}
+
 fn write_log(tx: &mut Transaction<'_>, a: &Attempt, error: Option<&str>) -> Result<()> {
     let status = if error.is_some() {
         "failed"
