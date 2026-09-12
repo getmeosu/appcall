@@ -15,8 +15,14 @@ export type GoogleMeetClientOptions = { accessToken: string; fetch?: typeof fetc
 
 export function createGoogleMeetClient(options: GoogleMeetClientOptions) {
   const operation = options.operation ?? "meetings.list";
-  const maxResponseBytes = (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 5242880;
-  const httpClient = createConnectorHttpClient({ allowedHosts: manifest.network.allowedHosts as string[], maxResponseBytes, fetch: options.fetch });
+  const operationSpec = (manifest.operations as Record<string, { maxResponseBytes?: number; timeoutMs?: number }>)[operation];
+  const maxResponseBytes = operationSpec?.maxResponseBytes ?? 5242880;
+  const httpClient = createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts as string[],
+    maxResponseBytes,
+    timeoutMs: operationSpec?.timeoutMs,
+    fetch: options.fetch,
+  });
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
       const response = await httpClient.fetchText(`${BASE}${path}`, {

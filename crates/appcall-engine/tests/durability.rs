@@ -173,6 +173,52 @@ fn reopen_keeps_passive_signal_wait_asleep() {
 }
 
 #[test]
+fn reopen_rejects_malformed_running_record_without_rewriting_it() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut initial = Engine::open(&db).unwrap();
+    initial
+        .start(
+            "malformed",
+            "missing-workflow",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    drop(initial);
+
+    let raw = b"malformed durable record with no secret".to_vec();
+    let connection = rusqlite::Connection::open(&db).unwrap();
+    connection
+        .execute(
+            "UPDATE engine_runs
+                SET state='running',wakeup=?1,record=?2
+              WHERE id=?3",
+            rusqlite::params![4_242_i64, &raw, "malformed"],
+        )
+        .unwrap();
+    drop(connection);
+
+    let error = match SqliteStore::open(&db) {
+        Err(error) => error,
+        Ok(_) => panic!("malformed running record must fail database open"),
+    };
+    assert!(matches!(error, Error::Storage(message) if message == "invalid durable record"));
+
+    let connection = rusqlite::Connection::open(&db).unwrap();
+    let (state, wakeup, persisted): (String, i64, Vec<u8>) = connection
+        .query_row(
+            "SELECT state,wakeup,record FROM engine_runs WHERE id=?1",
+            ["malformed"],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(state, "running");
+    assert_eq!(wakeup, 4_242);
+    assert_eq!(persisted, raw);
+}
+
+#[test]
 fn reopen_keeps_passive_child_wait_asleep() {
     let d = tempfile::tempdir().unwrap();
     let db = d.path().join("db");
@@ -1423,6 +1469,117 @@ fn explicit_failure_reports_retry_safely_fence_stale_attempts_and_release_capaci
     e.fail_at(&reconciled, ActivityFailure::OutcomeUnknown, 0)
         .unwrap();
     assert_eq!(e.status("unknown").unwrap(), RunState::OutcomeUnknown);
+}
+
+fn mixed_detached_activities(c: &mut Context) -> WorkflowResult {
+    c.spawn_activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)?;
+    c.spawn_activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)?;
+    c.timer(100)?;
+    Ok(c.input().clone())
+}
+
+fn mixed_engine() -> (tempfile::TempDir, Engine) {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.set_dispatch_limit(2).unwrap();
+    e.set_retry_policy(retry_policy(1, 1_000, 10, 10)).unwrap();
+    e.register_workflow("mixed", "v1", mixed_detached_activities)
+        .unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "mixed", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    (d, e)
+}
+
+#[test]
+fn retry_exhaustion_preserves_an_earlier_unknown_sibling_for_reconciliation() {
+    let (_d, mut e) = mixed_engine();
+    let unknown = attempt_at(&mut e, "r", 0);
+    let retryable = attempt_at(&mut e, "r", 0);
+
+    e.fail_at(&unknown, ActivityFailure::OutcomeUnknown, 0)
+        .unwrap();
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    e.reconcile("r", &unknown.effect_id, None).unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::Failed);
+    assert_eq!(e.next_wakeup().unwrap(), None);
+}
+
+#[test]
+fn later_unknown_sibling_upgrades_retry_exhaustion_back_to_reconcilable_state() {
+    let (_d, mut e) = mixed_engine();
+    let unknown = attempt_at(&mut e, "r", 0);
+    let retryable = attempt_at(&mut e, "r", 0);
+
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    e.fail_at(&unknown, ActivityFailure::OutcomeUnknown, 0)
+        .unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert_eq!(
+        e.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    e.reconcile("r", &unknown.effect_id, None).unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::Failed);
+    assert_eq!(e.next_wakeup().unwrap(), None);
+}
+
+#[test]
+fn owned_sibling_completion_after_retry_exhaustion_preserves_terminal_failure() {
+    let (_d, mut e) = mixed_engine();
+    let unknown = attempt_at(&mut e, "r", 0);
+    let retryable = attempt_at(&mut e, "r", 0);
+
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    e.complete(&unknown, PayloadRef::durable("known").unwrap())
+        .unwrap();
+
+    assert_eq!(e.status("r").unwrap(), RunState::Failed);
+    assert_eq!(
+        e.result("r").unwrap(),
+        RunResult::Failed(Some(RunFailure::RetryExhausted))
+    );
+}
+
+#[test]
+fn unknown_sibling_reconciliation_after_retry_exhaustion_survives_restart() {
+    let (d, mut e) = mixed_engine();
+    let unknown = attempt_at(&mut e, "r", 0);
+    let retryable = attempt_at(&mut e, "r", 0);
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(matches!(
+        e.reconcile("r", &unknown.effect_id, None),
+        Err(Error::Conflict)
+    ));
+    drop(e);
+
+    let mut reopened = Engine::open(d.path().join("db")).unwrap();
+    assert_eq!(reopened.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(reopened
+        .complete(&unknown, PayloadRef::durable("late").unwrap())
+        .is_err());
+    reopened.reconcile("r", &unknown.effect_id, None).unwrap();
+    assert_eq!(reopened.status("r").unwrap(), RunState::Failed);
+    assert_eq!(reopened.next_wakeup().unwrap(), None);
 }
 
 fn rewrite_persisted_revision(db: &std::path::Path, id: &str, revision: u64) {

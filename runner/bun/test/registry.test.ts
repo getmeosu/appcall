@@ -142,6 +142,93 @@ describe("runner connector registry", () => {
     expect(called).toBe(false);
   });
 
+  test("executes an action-kind healthcheck through the registered healthcheck handler", async () => {
+    const registry = createConnectorRegistry({
+      manifests: [{
+        key: "healthcheck-action",
+        name: "Healthcheck Action",
+        version: "0.1.0",
+        runtime: "bun",
+        auth: { type: "none", scopes: [] },
+        network: { allowedHosts: ["runner.local"] },
+        operations: {
+          healthcheck: {
+            kind: "action",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
+            maxResponseBytes: 1_024,
+          },
+        },
+      }],
+      healthchecks: {
+        "healthcheck-action": (input) => ({
+          connector: "healthcheck-action",
+          status: "ok",
+          source: "connector",
+          input,
+        }),
+      },
+      actions: { "healthcheck-action": {} },
+    });
+
+    expect(registry.validate()).toEqual([]);
+    const result = registry.executeAction("healthcheck-action", "healthcheck", { probe: true });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.output).toEqual({
+        connector: "healthcheck-action",
+        status: "ok",
+        source: "connector",
+        input: { probe: true },
+      });
+    }
+  });
+
+  test("routes credentialed Slack and GitHub healthcheck actions to provider probes", async () => {
+    const slack = defaultConnectorRegistry.executeAction("slack", "healthcheck", {
+      token: "xoxb-test",
+      fetch: async () => Response.json({ ok: true }, { status: 200 }),
+    });
+    const github = defaultConnectorRegistry.executeAction("github", "healthcheck", {
+      accessToken: "gho-test",
+      fetch: async () => Response.json({ id: 1 }, { status: 200 }),
+    });
+
+    expect(slack.ok).toBe(true);
+    expect(github.ok).toBe(true);
+    if (slack.ok && github.ok) {
+      await expect(slack.output).resolves.toEqual({ connector: "slack", status: "ok", source: "provider" });
+      await expect(github.output).resolves.toEqual({ connector: "github", status: "ok", source: "provider" });
+    }
+  });
+
+  test("rejects credentialed static healthchecks without changing fixture validation", () => {
+    for (const connectorKey of ["google-workspace", "microsoft-365"]) {
+      const fixture = defaultConnectorRegistry.executeAction(connectorKey, "healthcheck", {});
+      expect(fixture.ok, `${connectorKey} fixture`).toBe(true);
+      if (fixture.ok) {
+        expect(fixture.output).toMatchObject({ source: "connector", status: "ok" });
+      }
+
+      expect(defaultConnectorRegistry.executeAction(connectorKey, "healthcheck", {
+        accessToken: "stored-credential",
+      }), `${connectorKey} credential`).toEqual({
+        ok: false,
+        code: "CONNECTOR_UPSTREAM_ERROR",
+        message: "Credentialed healthcheck did not confirm provider health.",
+      });
+
+      expect(defaultConnectorRegistry.healthcheck(connectorKey, {
+        accessToken: "stored-credential",
+      }), `${connectorKey} connector.healthcheck credential`).toEqual({
+        ok: false,
+        code: "CONNECTOR_UPSTREAM_ERROR",
+        message: "Credentialed healthcheck did not confirm provider health.",
+      });
+    }
+  });
+
   test("executes connector-owned actions through registered handlers", () => {
     const result = defaultConnectorRegistry.executeAction("whatsapp", "messages.send", {
       phoneNumberId: "123456789",

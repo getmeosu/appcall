@@ -43,7 +43,8 @@ export function resolveBaseUrl(baseUrl?: string): string {
 
 export function createCalDAVClient(options: CalDAVClientOptions) {
   const operation = options.operation ?? "calendars.list";
-  const maxResponseBytes = (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 5242880;
+  const operationSpec = (manifest.operations as Record<string, { maxResponseBytes?: number; timeoutMs?: number }>)[operation];
+  const maxResponseBytes = operationSpec?.maxResponseBytes ?? 5242880;
   const base = resolveBaseUrl(options.baseUrl);
   const baseURL = new URL(base);
   if(baseURL.protocol !== "https:" || baseURL.username || baseURL.password || (baseURL.port && baseURL.port !== "443")) throw new Error("CalDAV requires an HTTPS URL on port 443 without embedded credentials.");
@@ -55,7 +56,12 @@ export function createCalDAVClient(options: CalDAVClientOptions) {
     throw new Error(`CalDAV host "${baseHostname}" is not in the connector's allowedHosts list. Add it to the manifest to allow generic servers.`);
   }
 
-  const httpClient = createConnectorHttpClient({ allowedHosts, maxResponseBytes, fetch: options.fetch });
+  const httpClient = createConnectorHttpClient({
+    allowedHosts,
+    maxResponseBytes,
+    timeoutMs: operationSpec?.timeoutMs,
+    fetch: options.fetch,
+  });
   const authHeader = buildBasicAuth(options.username, options.password);
 
   return {

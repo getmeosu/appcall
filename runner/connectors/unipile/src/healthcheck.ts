@@ -1,3 +1,4 @@
+import { ConnectorHttpError } from "../../../bun/src/http";
 import { createUnipileClient, isRecord, parseUnipileRateLimit } from "./http";
 
 // Static result returned by the no-credential setup-validation path (the
@@ -29,9 +30,10 @@ export function healthcheck(input?: unknown): HealthcheckResult | Promise<Provid
 async function verifyCredentials(apiKey: string, dsn: string, fetchFn?: typeof fetch): Promise<ProviderHealthcheckResult> {
   let response: { status: number; headers: Record<string, string>; body: unknown };
   try {
-    const client = createUnipileClient({ apiKey, baseUrl: dsn, fetch: fetchFn, operation: "accounts.list" });
+    const client = createUnipileClient({ apiKey, baseUrl: dsn, fetch: fetchFn, operation: "healthcheck" });
     response = await client.fetchJSON("/accounts");
-  } catch {
+  } catch (error) {
+    if (error instanceof ConnectorHttpError) throw error;
     // A bad DSN (validateDsnHost) or a transport failure — not reachable.
     throw { ok: false, code: "CONNECTOR_UNAVAILABLE", message: "Unipile could not be reached (check the DSN)." };
   }

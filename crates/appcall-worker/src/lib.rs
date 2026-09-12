@@ -3,7 +3,7 @@ use appcall_sync::{CredentialResolver, ScheduleRequest, Service};
 use sha2::{Digest, Sha256};
 use std::{
     sync::{Arc, Mutex},
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 use tokio::sync::Semaphore;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -165,12 +165,49 @@ impl TickLimits {
         }
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SecretCleanupConfig {
+    pub retention: Duration,
+    pub batch: usize,
+}
+impl Default for SecretCleanupConfig {
+    fn default() -> Self {
+        Self {
+            retention: Duration::from_secs(7 * 24 * 3600),
+            batch: 100,
+        }
+    }
+}
+impl SecretCleanupConfig {
+    pub fn validate(&self) -> Result<()> {
+        if self.retention.is_zero()
+            || self.retention > Duration::from_secs(3650 * 24 * 3600)
+            || self.batch == 0
+            || self.batch > appcall_store::MAX_SECRET_CLEANUP_BATCH
+        {
+            Err(Error::InvalidConfig)
+        } else {
+            Ok(())
+        }
+    }
+    pub fn retention_days(&self) -> u64 {
+        self.retention.as_secs() / (24 * 3600)
+    }
+}
 #[derive(Debug, Default)]
 pub struct TickReport {
     pub outbox_completed: usize,
     pub outbox_failed: usize,
+    pub outbox_dead_lettered: usize,
     pub pages_completed: usize,
     pub job_failures: Vec<(String, appcall_sync::Error)>,
+    pub secret_envelopes_deleted: usize,
+    pub secret_cleanup_failed: bool,
+}
+#[derive(Clone)]
+struct SecretMaintenance {
+    store: Arc<Mutex<appcall_store::Store>>,
+    config: SecretCleanupConfig,
 }
 pub struct Worker<C> {
     events: Arc<Mutex<postgres::Client>>,
@@ -179,6 +216,7 @@ pub struct Worker<C> {
     limits: TickLimits,
     outbox_permits: Arc<Semaphore>,
     stopping: Arc<std::sync::atomic::AtomicBool>,
+    maintenance: Option<SecretMaintenance>,
 }
 impl<C: CredentialResolver + 'static> Worker<C> {
     pub fn database_health(&self) -> Option<bool> {
@@ -187,7 +225,14 @@ impl<C: CredentialResolver + 'static> Worker<C> {
             Err(std::sync::TryLockError::WouldBlock) => None,
             Err(std::sync::TryLockError::Poisoned(_)) => Some(false),
         };
-        let states = [events, self.sync.database_health()];
+        let mut states = vec![events, self.sync.database_health()];
+        if let Some(maintenance) = self.maintenance.as_ref() {
+            states.push(match maintenance.store.try_lock() {
+                Ok(store) => store.database_health(),
+                Err(std::sync::TryLockError::WouldBlock) => None,
+                Err(std::sync::TryLockError::Poisoned(_)) => Some(false),
+            });
+        }
         if states.contains(&Some(false)) {
             Some(false)
         } else if states.contains(&None) {
@@ -202,8 +247,38 @@ impl<C: CredentialResolver + 'static> Worker<C> {
             && self.permits.available_permits() == 1
             && self.outbox_permits.available_permits() == 1
             && self.sync.is_idle()
+            && self
+                .maintenance
+                .as_ref()
+                .is_none_or(|maintenance| Arc::strong_count(&maintenance.store) == 1)
     }
     pub fn new(events: postgres::Client, sync: Service<C>, limits: TickLimits) -> Result<Self> {
+        Self::build(events, sync, limits, None)
+    }
+    pub fn new_with_maintenance(
+        events: postgres::Client,
+        sync: Service<C>,
+        limits: TickLimits,
+        store: appcall_store::Store,
+        config: SecretCleanupConfig,
+    ) -> Result<Self> {
+        config.validate()?;
+        Self::build(
+            events,
+            sync,
+            limits,
+            Some(SecretMaintenance {
+                store: Arc::new(Mutex::new(store)),
+                config,
+            }),
+        )
+    }
+    fn build(
+        events: postgres::Client,
+        sync: Service<C>,
+        limits: TickLimits,
+        maintenance: Option<SecretMaintenance>,
+    ) -> Result<Self> {
         limits.validate()?;
         Ok(Self {
             events: Arc::new(Mutex::new(events)),
@@ -212,6 +287,7 @@ impl<C: CredentialResolver + 'static> Worker<C> {
             limits,
             outbox_permits: Arc::new(Semaphore::new(1)),
             stopping: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            maintenance,
         })
     }
     pub fn request_shutdown(&self) {
@@ -264,14 +340,27 @@ impl<C: CredentialResolver + 'static> Worker<C> {
         let sync = self.sync.clone();
         let limits = self.limits;
         let stopping = self.stopping.clone();
+        let maintenance = self.maintenance.clone();
         let worker_id = worker_id.to_owned();
         tokio::spawn(async move {
             let _permit = permit;
             let mut report = TickReport {
                 outbox_completed: dispatched.completed,
                 outbox_failed: dispatched.failed,
+                outbox_dead_lettered: dispatched.dead_lettered,
                 ..Default::default()
             };
+            // Do not start a new blocking maintenance query once shutdown has
+            // been requested. An already-running cleanup is bounded by the
+            // store statement timeout and is allowed to drain normally.
+            if !stopping.load(std::sync::atomic::Ordering::SeqCst) {
+                if let Some(maintenance) = maintenance {
+                    match run_secret_cleanup(maintenance).await {
+                        Ok(deleted) => report.secret_envelopes_deleted = deleted,
+                        Err(_) => report.secret_cleanup_failed = true,
+                    }
+                }
+            }
             for _ in 0..limits.jobs {
                 if stopping.load(std::sync::atomic::Ordering::SeqCst) {
                     break;
@@ -290,6 +379,21 @@ impl<C: CredentialResolver + 'static> Worker<C> {
         .await
         .map_err(|_| Error::Join)?
     }
+}
+
+async fn run_secret_cleanup(maintenance: SecretMaintenance) -> Result<usize> {
+    let cutoff = SystemTime::now()
+        .checked_sub(maintenance.config.retention)
+        .unwrap_or(SystemTime::UNIX_EPOCH);
+    tokio::task::spawn_blocking(move || {
+        let mut store = maintenance.store.lock().map_err(|_| Error::Storage)?;
+        let deleted = store
+            .cleanup_expired_secrets(cutoff, maintenance.config.batch)
+            .map_err(|_| Error::Storage)?;
+        usize::try_from(deleted).map_err(|_| Error::Storage)
+    })
+    .await
+    .map_err(|_| Error::Join)?
 }
 
 #[cfg(test)]

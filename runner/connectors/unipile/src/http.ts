@@ -134,10 +134,16 @@ export function validateDsnHost(dsn: string): URL {
 
 export function createUnipileClient(options: UnipileClientOptions) {
   const operation = options.operation ?? "accounts.list";
-  const maxResponseBytes = (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 5242880;
+  const operationSpec = (manifest.operations as Record<string, { maxResponseBytes?: number; timeoutMs?: number }>)[operation];
+  const maxResponseBytes = operationSpec?.maxResponseBytes ?? 5242880;
   const dsnUrl = validateDsnHost(options.baseUrl);
   const baseUrl = `${dsnUrl.protocol}//${dsnUrl.host}`.replace(/\/$/, "");
-  const httpClient = createConnectorHttpClient({ allowedHosts: manifest.network.allowedHosts as string[], maxResponseBytes, fetch: options.fetch });
+  const httpClient = createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts as string[],
+    maxResponseBytes,
+    timeoutMs: operationSpec?.timeoutMs,
+    fetch: options.fetch,
+  });
 
   return {
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {

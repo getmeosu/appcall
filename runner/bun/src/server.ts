@@ -14,10 +14,38 @@ export async function handleRPC(request: Request, admittedAt = Date.now()): Prom
   try {
     const reader = request.body?.getReader();
     const readSignal=AbortSignal.any([request.signal,AbortSignal.timeout(Math.max(0, started + maxOperationTimeoutMs - Date.now()))]);
-    const cancelRead=()=>{void reader?.cancel(readSignal.reason);};
+    const cancelRead=()=>{
+      if (!reader) return;
+      try {
+        void reader.cancel(readSignal.reason).catch(() => {});
+      } catch {
+        // A custom stream may throw while being canceled; the request is still
+        // already aborted and must retain the timeout response below.
+      }
+    };
+    // Adding an abort listener does not replay an abort that happened before
+    // registration. Cancel the stream explicitly before the first read so an
+    // already-aborted request cannot leave a custom ReadableStream pending.
+    if (readSignal.aborted) {
+      cancelRead();
+      return jsonResponse(504, undefined, {ok:false,error:{code:"OPERATION_TIMEOUT",message:"RPC request aborted."}});
+    }
     readSignal.addEventListener("abort",cancelRead,{once:true});
     const chunks: Uint8Array[] = []; let size = 0;
-    try { if(reader) while(true) { const {done,value}=await reader.read(); if(done)break; size+=value.byteLength; if(size>rpcRequestLimitBytes){await reader.cancel();return jsonResponse(413,undefined,{ok:false,error:{code:"INPUT_TOO_LARGE",message:"RPC body exceeds byte limit."}});} chunks.push(value); } } finally {readSignal.removeEventListener("abort",cancelRead);}
+    try {
+      if(reader) while(true) {
+        const {done,value}=await reader.read();
+        if(done)break;
+        size+=value.byteLength;
+        if(size>rpcRequestLimitBytes){await reader.cancel();return jsonResponse(413,undefined,{ok:false,error:{code:"INPUT_TOO_LARGE",message:"RPC body exceeds byte limit."}});}
+        chunks.push(value);
+      }
+    } catch (error) {
+      if (readSignal.aborted) {
+        return jsonResponse(504, undefined, {ok:false,error:{code:"OPERATION_TIMEOUT",message:"RPC request aborted."}});
+      }
+      throw error;
+    } finally {readSignal.removeEventListener("abort",cancelRead);}
     if(readSignal.aborted)return jsonResponse(504,undefined,{ok:false,error:{code:"OPERATION_TIMEOUT",message:"RPC request aborted."}});
     envelope = JSON.parse(Buffer.concat(chunks).toString());
     if (!isRecord(envelope) || (envelope.id !== undefined && (typeof envelope.id !== "string" || !envelope.id || envelope.id.length > 256)) || (envelope.params !== undefined && !isRecord(envelope.params)) || (envelope.deadlineUnixMs !== undefined && (!Number.isSafeInteger(envelope.deadlineUnixMs) || envelope.deadlineUnixMs < 0))) throw new Error("Invalid envelope");

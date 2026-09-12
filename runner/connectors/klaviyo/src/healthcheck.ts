@@ -1,4 +1,6 @@
 import { isRecord } from "./http";
+import { ConnectorHttpError, createConnectorHttpClient } from "../../../bun/src/http";
+import manifest from "../manifest.json";
 
 const REVISION = "2024-10-15";
 
@@ -26,9 +28,15 @@ export function healthcheck(input?: unknown): HealthcheckResult | Promise<Provid
 }
 
 async function verifyApiKey(apiKey: string, fetchFn: typeof fetch): Promise<ProviderHealthcheckResult> {
-  let response: Response;
+  const httpClient = createConnectorHttpClient({
+    allowedHosts: manifest.network.allowedHosts,
+    maxResponseBytes: manifest.operations.healthcheck.maxResponseBytes,
+    timeoutMs: manifest.operations.healthcheck.timeoutMs,
+    fetch: fetchFn,
+  });
+  let response: { status: number; headers: Record<string, string>; body: string };
   try {
-    response = await fetchFn("https://a.klaviyo.com/api/lists?page%5Bsize%5D=1", {
+    response = await httpClient.fetchText("https://a.klaviyo.com/api/lists?page%5Bsize%5D=1", {
       method: "GET",
       headers: {
         Authorization: `Klaviyo-API-Key ${apiKey}`,
@@ -36,6 +44,7 @@ async function verifyApiKey(apiKey: string, fetchFn: typeof fetch): Promise<Prov
       },
     });
   } catch (err) {
+    if (err instanceof ConnectorHttpError) throw err;
     const message = err instanceof Error ? err.message : String(err);
     throw { ok: false, code: "CONNECTOR_UNAVAILABLE", message: `Klaviyo could not be reached: ${message}` };
   }

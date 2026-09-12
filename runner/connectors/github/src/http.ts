@@ -53,10 +53,12 @@ export type GitHubClientOptions = {
 
 export function createGitHubClient(options: GitHubClientOptions) {
   const operation = options.operation ?? "issues.list";
-  const maxResponseBytes = (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 5242880;
+  const operationSpec = (manifest.operations as Record<string, { maxResponseBytes?: number; timeoutMs?: number }>)[operation];
+  const maxResponseBytes = operationSpec?.maxResponseBytes ?? 5242880;
   const httpClient = createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts as string[],
     maxResponseBytes,
+    timeoutMs: operationSpec?.timeoutMs,
     fetch: options.fetch,
   });
 

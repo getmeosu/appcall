@@ -59,7 +59,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
   let described=runner.describe(&appcall_runner_client::RequestContext::default()).await.map_err(|_|"runner unavailable")?;
   if ["absolute-deadline","bounded-rpc","cancellation"].iter().any(|cap|!described.durable_capabilities.iter().any(|v|v==cap)){return Err("runner durable capabilities unavailable");}
   if oneshot {let generation=host.current();let worker=&generation.worker;let cycle=worker.tick(&worker_id);tokio::pin!(cycle);
-   tokio::select!{r=&mut cycle=>{let r=r.map_err(|_|"worker cycle failed")?;if r.outbox_failed>0||!r.job_failures.is_empty(){return Err("worker cycle failed")}},_ = shutdown_signal()=>{worker.request_shutdown();tokio::time::timeout(Duration::from_secs(65),&mut cycle).await.map_err(|_|"worker drain timed out")?.map_err(|_|"worker cycle failed")?;},_ = tokio::time::sleep(Duration::from_secs(30))=>{worker.request_shutdown();let _=tokio::time::timeout(Duration::from_secs(65),&mut cycle).await;return Err("worker cycle timed out")}}
+   tokio::select!{r=&mut cycle=>{let r=r.map_err(|_|"worker cycle failed")?;if r.outbox_failed>0||!r.job_failures.is_empty()||r.secret_cleanup_failed{return Err("worker cycle failed")}},_ = shutdown_signal()=>{worker.request_shutdown();tokio::time::timeout(Duration::from_secs(65),&mut cycle).await.map_err(|_|"worker drain timed out")?.map_err(|_|"worker cycle failed")?;},_ = tokio::time::sleep(Duration::from_secs(30))=>{worker.request_shutdown();let _=tokio::time::timeout(Duration::from_secs(65),&mut cycle).await;return Err("worker cycle timed out")}}
    log("worker_cycle_completed",true);return Ok(())
   }
   daemon(host.clone(),worker_id,interval).await
@@ -111,7 +111,7 @@ async fn daemon(
             match &result {
                 Ok(report) => println!(
                     "{}",
-                    serde_json::json!({"level":if report.job_failures.is_empty(){"info"}else{"error"},"event":"worker_sync_cycle","jobs_processed":report.pages_completed,"jobs_failed":report.job_failures.len()})
+                    serde_json::json!({"level":if report.job_failures.is_empty()&& !report.secret_cleanup_failed{"info"}else{"error"},"event":"worker_sync_cycle","jobs_processed":report.pages_completed,"jobs_failed":report.job_failures.len(),"secret_envelopes_deleted":report.secret_envelopes_deleted,"secret_cleanup_failed":report.secret_cleanup_failed})
                 ),
                 Err(_) => log("worker_sync_cycle", false),
             }
@@ -131,7 +131,7 @@ async fn daemon(
             match &result {
                 Ok(report) => println!(
                     "{}",
-                    serde_json::json!({"level":if report.failed==0{"info"}else{"error"},"event":"worker_outbox_cycle","completed":report.completed,"failed":report.failed})
+                    serde_json::json!({"level":if report.failed==0&&report.dead_lettered==0{"info"}else{"error"},"event":"worker_outbox_cycle","completed":report.completed,"failed":report.failed,"dead_lettered":report.dead_lettered})
                 ),
                 Err(_) => log("worker_outbox_cycle", false),
             }

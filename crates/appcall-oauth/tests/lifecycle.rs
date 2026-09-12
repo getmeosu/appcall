@@ -87,6 +87,36 @@ impl Database {
             ))
             .unwrap();
         client
+            .batch_execute(include_str!(
+                "../../../migrations/202609070001_event_outbox.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202609110001_event_connection_dedup.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202609120001_connection_revision.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202609120002_connection_generation.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202605290002_provider_subaccounts.sql"
+            ))
+            .unwrap();
+        client
+            .batch_execute(include_str!(
+                "../../../migrations/202609120004_secret_retention.sql"
+            ))
+            .unwrap();
+        client
             .batch_execute("INSERT INTO projects(id,name) VALUES('p','test')")
             .unwrap();
         let mut store = Store::new(client, LocalProvider::new(&[7; 32]).unwrap());
@@ -224,6 +254,153 @@ fn authorization_is_bound_single_use_and_reconnect_supersedes_state() {
         .is_err());
     assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
 }
+
+#[test]
+#[ignore = "uses explicit local PostgreSQL private schema"]
+fn authorization_persists_pkce_reference_for_retention_gc() {
+    let db = Database::new();
+    let service = db.service(Arc::new(Provider {
+        calls: AtomicUsize::new(0),
+        fail: false,
+    }));
+    service
+        .start(&Scope::new("p", None).unwrap(), "c", "google-workspace")
+        .unwrap();
+    let (pkce_ref, kind, state) = db
+        .store
+        .lock()
+        .unwrap()
+        .transaction(|tx| {
+            let intent = tx.client().query_one(
+                "SELECT pkce_secret_ref_id,state FROM oauth_refresh_intents WHERE project_id='p' AND connection_id='c'",
+                &[],
+            )?;
+            let pkce_ref = intent
+                .get::<_, Option<String>>("pkce_secret_ref_id")
+                .ok_or(appcall_store::Error::Invalid)?;
+            let kind = tx
+                .client()
+                .query_one(
+                    "SELECT kind FROM secret_envelopes WHERE id=$1",
+                    &[&pkce_ref],
+                )?
+                .get::<_, String>(0);
+            Ok((Some(pkce_ref), kind, intent.get::<_, String>("state")))
+        })
+        .unwrap();
+    assert!(pkce_ref.is_some());
+    assert_eq!(kind, "oauth_pkce_c");
+    assert_eq!(state, "authorizing");
+}
+
+#[test]
+#[ignore = "uses explicit local PostgreSQL private schema"]
+fn authorization_accepts_legacy_signed_pkce_state_without_persisted_reference() {
+    let db = Database::new();
+    let provider = Arc::new(Provider {
+        calls: AtomicUsize::new(0),
+        fail: false,
+    });
+    let service = db.service(provider.clone());
+    let start = service
+        .start(&Scope::new("p", None).unwrap(), "c", "google-workspace")
+        .unwrap();
+    let state = reqwest::Url::parse(&start.authorization_url)
+        .unwrap()
+        .query_pairs()
+        .find(|(key, _)| key == "state")
+        .unwrap()
+        .1
+        .into_owned();
+    db.store
+        .lock()
+        .unwrap()
+        .transaction(|tx| {
+            tx.client().execute(
+                "UPDATE oauth_refresh_intents SET pkce_secret_ref_id=NULL WHERE project_id='p' AND connection_id='c'",
+                &[],
+            )?;
+            Ok(())
+        })
+        .unwrap();
+    assert!(service
+        .callback("google-workspace", Some("p"), "code", &state)
+        .is_ok());
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+#[ignore = "uses explicit local PostgreSQL private schema"]
+fn completed_authorization_releases_pkce_for_conservative_cleanup() {
+    let db = Database::new();
+    let provider = Arc::new(Provider {
+        calls: AtomicUsize::new(0),
+        fail: false,
+    });
+    let service = db.service(provider);
+    let start = service
+        .start(&Scope::new("p", None).unwrap(), "c", "google-workspace")
+        .unwrap();
+    let state = reqwest::Url::parse(&start.authorization_url)
+        .unwrap()
+        .query_pairs()
+        .find(|(key, _)| key == "state")
+        .unwrap()
+        .1
+        .into_owned();
+    let pkce_ref = db
+        .store
+        .lock()
+        .unwrap()
+        .transaction(|tx| {
+            Ok(tx
+                .client()
+                .query_one(
+                    "SELECT pkce_secret_ref_id FROM oauth_refresh_intents WHERE project_id='p' AND connection_id='c'",
+                    &[],
+                )?
+                .get::<_, String>(0))
+        })
+        .unwrap();
+    service
+        .callback("google-workspace", Some("p"), "code", &state)
+        .unwrap();
+    db.store
+        .lock()
+        .unwrap()
+        .transaction(|tx| {
+            let intent = tx.client().query_one(
+                "SELECT state,pkce_secret_ref_id FROM oauth_refresh_intents WHERE project_id='p' AND connection_id='c'",
+                &[],
+            )?;
+            assert_eq!(intent.get::<_, String>(0), "completed");
+            assert_eq!(intent.get::<_, Option<String>>(1), None);
+            tx.client().execute(
+                "UPDATE secret_envelopes SET created_at=now()-interval '8 days' WHERE id=$1",
+                &[&pkce_ref],
+            )?;
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(
+        db.store
+            .lock()
+            .unwrap()
+            .cleanup_expired_secrets(
+                std::time::SystemTime::now() - std::time::Duration::from_secs(7 * 24 * 3600),
+                100,
+            )
+            .unwrap(),
+        1
+    );
+    assert!(db
+        .store
+        .lock()
+        .unwrap()
+        .load_secret("p", &pkce_ref)
+        .is_err());
+}
+
 struct Gated {
     calls: AtomicUsize,
     entered: std::sync::mpsc::Sender<()>,
@@ -317,6 +494,83 @@ fn independent_resolvers_never_double_refresh_and_reconnect_fences_old_result() 
         assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
     }
 }
+
+#[test]
+#[ignore = "uses explicit local PostgreSQL private schema"]
+fn managed_refresh_preserves_generation_but_manual_inflight_replacement_wins() {
+    fn generation(db: &Database) -> i64 {
+        db.store
+            .lock()
+            .unwrap()
+            .transaction(|tx| {
+                Ok(tx
+                    .client()
+                    .query_one(
+                        "SELECT connection_generation FROM connections WHERE project_id='p' AND id='c'",
+                        &[],
+                    )?
+                    .get(0))
+            })
+            .unwrap()
+    }
+
+    let db = Database::new();
+    let before = generation(&db);
+    let provider = Arc::new(Provider {
+        calls: AtomicUsize::new(0),
+        fail: false,
+    });
+    let service = db.service(provider.clone());
+    let scope = Scope::new("p", None).unwrap();
+    assert_eq!(
+        service
+            .resolve(&scope, "c", "google-workspace")
+            .unwrap()
+            .into_fields()["accessToken"],
+        "fresh"
+    );
+    assert_eq!(generation(&db), before);
+
+    let db = Database::new();
+    let before = generation(&db);
+    let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let provider = Arc::new(Gated {
+        calls: AtomicUsize::new(0),
+        entered: entered_tx,
+        release: Mutex::new(release_rx),
+    });
+    let service = db.service(provider.clone());
+    let refresh_scope = scope.clone();
+    let refresh =
+        std::thread::spawn(move || service.resolve(&refresh_scope, "c", "google-workspace"));
+    entered_rx
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .unwrap();
+
+    db.store
+        .lock()
+        .unwrap()
+        .store_secret("p", "manual", "oauth_tokens_c", br#"manual"#)
+        .unwrap();
+    db.store
+        .lock()
+        .unwrap()
+        .replace_credentials(&scope, "c", "manual", AuthType::OAuth2)
+        .unwrap();
+    assert_eq!(generation(&db), before + 1);
+
+    release_tx.send(()).unwrap();
+    assert!(matches!(
+        refresh.join().unwrap(),
+        Err(Error::ConnectionUnavailable)
+    ));
+    let final_connection = db.store.lock().unwrap().get(&scope, "c").unwrap();
+    assert_eq!(final_connection.secret_ref_id, "manual");
+    assert_eq!(final_connection.status, Status::Active);
+    assert_eq!(generation(&db), before + 1);
+}
+
 #[test]
 #[ignore = "uses explicit local PostgreSQL private schema"]
 fn ambiguous_provider_failure_stays_blocked() {

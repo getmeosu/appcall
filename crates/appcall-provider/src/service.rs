@@ -48,12 +48,9 @@ impl Credentials for StoreCredentials {
             )
         };
         let mut store = self.store.lock().map_err(|_| error())?;
-        let connection = store
-            .get_platform_connection(project, "unipile")
-            .map_err(|_| error())?;
-        if connection.status != Status::Active {
-            return Err(error());
-        }
+        let scope = appcall_store::Scope::new(project, None).map_err(|_| error())?;
+        let connection =
+            select_active_platform_connection(store.list(&scope).map_err(|_| error())?)?;
         let raw = store
             .load_secret(project, &connection.secret_ref_id)
             .map_err(|_| error())?;
@@ -67,6 +64,32 @@ impl Credentials for StoreCredentials {
         }
         Ok(WorkspaceCredentials { api_key: key, dsn })
     }
+}
+
+fn select_active_platform_connection<I>(connections: I) -> Result<appcall_store::Connection>
+where
+    I: IntoIterator<Item = appcall_store::Connection>,
+{
+    let mut active = connections.into_iter().filter(|connection| {
+        connection.connector == "unipile"
+            && connection.credential_owner == appcall_store::CredentialOwner::Platform
+            && connection.status == Status::Active
+    });
+    let Some(connection) = active.next() else {
+        return Err(Error::new(
+            502,
+            "UNIPILE_UNAVAILABLE",
+            "The Unipile workspace is not configured.",
+        ));
+    };
+    if active.next().is_some() {
+        return Err(Error::new(
+            502,
+            "UNIPILE_UNAVAILABLE",
+            "The Unipile workspace is not configured.",
+        ));
+    }
+    Ok(connection)
 }
 pub trait AccountGate: Send + Sync {
     fn database_health(&self) -> Option<bool> {
@@ -499,5 +522,44 @@ mod health_tests {
         }));
         let _held = service.db.lock().unwrap();
         assert_eq!(service.database_health(), Some(false));
+    }
+}
+
+#[cfg(test)]
+mod platform_selection_tests {
+    use super::*;
+
+    fn platform_connection(id: &str, status: Status) -> appcall_store::Connection {
+        appcall_store::Connection {
+            id: id.into(),
+            project_id: "project".into(),
+            connector: "unipile".into(),
+            auth_type: appcall_store::AuthType::ApiKey,
+            status,
+            secret_ref_id: "secret".into(),
+            last_test_status: appcall_store::TestStatus::Unknown,
+            external_account_id: String::new(),
+            credential_owner: appcall_store::CredentialOwner::Platform,
+        }
+    }
+
+    #[test]
+    fn active_platform_selection_ignores_inactive_shadow_rows() {
+        let selected = select_active_platform_connection([
+            platform_connection("inactive", Status::Disconnected),
+            platform_connection("active", Status::Active),
+        ])
+        .expect("the active platform connection should be selected");
+        assert_eq!(selected.id, "active");
+    }
+
+    #[test]
+    fn active_platform_selection_fails_closed_for_multiple_active_rows() {
+        let error = select_active_platform_connection([
+            platform_connection("active-a", Status::Active),
+            platform_connection("active-b", Status::Active),
+        ])
+        .expect_err("multiple active platform credentials must not be guessed");
+        assert_eq!(error.code, "UNIPILE_UNAVAILABLE");
     }
 }

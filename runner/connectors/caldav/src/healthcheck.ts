@@ -1,4 +1,5 @@
 import { runPrincipalDiscover } from "./actions";
+import { ConnectorHttpError } from "../../../bun/src/http";
 
 // Static result returned by the no-credential setup-validation path (the
 // connector is registered and reachable as code, but no provider call is made).
@@ -24,8 +25,9 @@ export function healthcheck(input?: unknown): HealthcheckResult | Promise<Provid
 async function verifyCredentials(input: Record<string, unknown>): Promise<ProviderHealthcheckResult> {
   let result: Awaited<ReturnType<typeof runPrincipalDiscover>>;
   try {
-    result = await runPrincipalDiscover(input);
+    result = await runPrincipalDiscover(input, "healthcheck");
   } catch (err) {
+    if (err instanceof ConnectorHttpError) throw err;
     // Network failure or non-allowlisted host — surface as unavailable.
     const message = err instanceof Error ? err.message : "CalDAV server could not be reached.";
     throw { ok: false, code: "CONNECTOR_UNAVAILABLE", message };

@@ -197,11 +197,16 @@ pub async fn assert_input_failures(data: &dyn DashboardData, principal: appcall_
         .form_values
         .insert("f.count".into(), vec!["private-invalid-integer".into()]);
     let failure = data.execute_detailed(omitted_number).await.unwrap_err();
-    assert_eq!(failure.classification(), Error::Unavailable);
     assert_eq!(
-        failure.cause(),
-        FailureCause::CredentialsUnavailable,
-        "omitted invalid number retains the actual earlier credential failure: {failure:?}"
+        failure.classification(),
+        Error::Invalid,
+        "malformed nonempty numeric input is rejected before backend dispatch: {failure:?}"
+    );
+    assert_eq!(failure.cause(), FailureCause::InvalidActionInput);
+    assert_eq!(
+        failure.outcome(),
+        appcall_web::ExecutionOutcome::NotDispatched,
+        "input validation must fence the runner before any provider effect: {failure:?}"
     );
     let non_object = request(
         Op::Test,

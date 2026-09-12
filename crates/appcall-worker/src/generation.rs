@@ -1,7 +1,7 @@
 //! Replace only physically lost PostgreSQL sessions; never replay failed work.
 use super::LiveWorker;
 use appcall_runtime::{Config, SessionHealth, SessionTracker};
-use appcall_worker::{LifecycleCredentials, TickLimits, Worker};
+use appcall_worker::{LifecycleCredentials, SecretCleanupConfig, TickLimits, Worker};
 use std::{
     sync::{
         atomic::{AtomicU8, AtomicUsize, Ordering},
@@ -93,12 +93,18 @@ impl Host {
                 appcall_sync::Config::default(),
             )
             .map_err(|_| "worker sync unavailable")?;
+            let maintenance = cfg.store().map_err(|_| "worker database unavailable")?;
             let generation = Arc::new(Generation {
                 worker: Arc::new(
-                    Worker::new(
+                    Worker::new_with_maintenance(
                         cfg.connect().map_err(|_| "worker database unavailable")?,
                         sync,
                         TickLimits { outbox: 100, jobs },
+                        maintenance,
+                        SecretCleanupConfig {
+                            retention: Duration::from_secs(cfg.secret_retention_days() * 24 * 3600),
+                            batch: cfg.secret_cleanup_batch(),
+                        },
                     )
                     .map_err(|_| "worker unavailable")?,
                 ),

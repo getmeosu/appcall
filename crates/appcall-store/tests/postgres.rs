@@ -331,6 +331,307 @@ fn stale_authorization_cleanup_skips_locked_connection_and_rechecks_intent() {
 }
 
 #[test]
+#[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
+fn secret_cleanup_keeps_current_intent_pkce_and_provider_references() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut client = Client::connect(&url, NoTls).unwrap();
+    let schema = format!(
+        "store_secret_gc_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+        include_str!("../../../migrations/202605290002_provider_subaccounts.sql"),
+        include_str!("../../../migrations/202609120004_secret_retention.sql"),
+    ] {
+        client.batch_execute(sql).unwrap();
+    }
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','test');
+             INSERT INTO connections(id,project_id,connector,auth_type,status,secret_ref_id,external_account_id,credential_owner)
+               VALUES('c','p','google-workspace','oauth2','active',NULL,'brand','brand'),
+                     ('other','p','google-workspace','oauth2','degraded',NULL,'other-brand','brand'),
+                     ('legacy','p','google-workspace','oauth2','disconnected',NULL,'legacy-brand','brand');
+             INSERT INTO provider_subaccounts(id,project_id,external_account_id,connector,provider_account_id,status,secret_ref_id)
+               VALUES('sub','p','brand','unipile','provider','connected',NULL);",
+        )
+        .unwrap();
+    let mut store = Store::new(client, LocalProvider::new(&[7; 32]).unwrap());
+    for (id, kind) in [
+        ("current", "oauth_tokens_c"),
+        ("provider", "provider_token"),
+        ("intent", "oauth_tokens_c"),
+        ("unknown", "oauth_tokens_c"),
+        ("pkce", "oauth_pkce_c"),
+        ("legacy-pkce", "oauth_pkce_legacy"),
+        ("orphan", "oauth_tokens_c"),
+    ] {
+        store.store_secret("p", id, kind, b"synthetic").unwrap();
+    }
+    store
+        .transaction(|tx| {
+            tx.client().batch_execute(
+                "UPDATE connections SET secret_ref_id='current' WHERE id='c';
+                 UPDATE provider_subaccounts SET secret_ref_id='provider' WHERE id='sub';
+                 INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,pkce_secret_ref_id)
+                   VALUES('p','c','attempt','intent','authorization','dispatched','pkce');
+                 INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,pkce_secret_ref_id)
+                   VALUES('p','legacy','legacy-attempt','','authorization','unknown',NULL);
+                 UPDATE secret_envelopes SET created_at=now()-interval '8 days';
+                 UPDATE oauth_refresh_intents SET secret_ref_id='intent',pkce_secret_ref_id='pkce',state='dispatched',operation='authorization' WHERE project_id='p' AND connection_id='c';
+                 INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state)
+                   VALUES('p','other','attempt','unknown','refresh','unknown');",
+            )?;
+            Ok(())
+        })
+        .unwrap();
+    let deleted = store
+        .cleanup_expired_secrets(
+            std::time::SystemTime::now() - std::time::Duration::from_secs(7 * 24 * 3600),
+            1,
+        )
+        .unwrap();
+    assert_eq!(deleted, 1);
+    let mut remaining = |id: &str| store.load_secret("p", id).is_ok();
+    assert!(remaining("current"));
+    assert!(remaining("provider"));
+    assert!(remaining("intent"));
+    assert!(remaining("unknown"));
+    assert!(remaining("pkce"));
+    assert!(remaining("legacy-pkce"));
+    assert!(!remaining("orphan"));
+    let mut client = store.into_client();
+    client
+        .batch_execute(&format!(
+            "UPDATE oauth_refresh_intents SET state='completed' WHERE project_id='p' AND connection_id='c';
+             UPDATE provider_subaccounts SET secret_ref_id=NULL WHERE id='sub';
+             UPDATE connections SET secret_ref_id=NULL WHERE id='c';
+             DROP SCHEMA {schema} CASCADE"
+        ))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
+fn secret_cleanup_uses_global_age_order_and_respects_batch_bound() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut client = Client::connect(&url, NoTls).unwrap();
+    let schema = format!(
+        "store_secret_gc_fair_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+        include_str!("../../../migrations/202605290002_provider_subaccounts.sql"),
+        include_str!("../../../migrations/202609120004_secret_retention.sql"),
+    ] {
+        client.batch_execute(sql).unwrap();
+    }
+    let mut store = Store::new(client, LocalProvider::new(&[7; 32]).unwrap());
+    for (project, id) in [
+        ("p1", "p1-old"),
+        ("p1", "p1-new"),
+        ("p2", "p2-old"),
+        ("p2", "p2-new"),
+    ] {
+        store
+            .transaction(|tx| {
+                tx.client().execute(
+                    "INSERT INTO projects(id,name) VALUES($1,$1) ON CONFLICT DO NOTHING",
+                    &[&project],
+                )?;
+                tx.store_secret(project, id, "api_key", b"synthetic")
+            })
+            .unwrap();
+    }
+    store
+        .transaction(|tx| {
+            tx.client().batch_execute(
+                "UPDATE secret_envelopes SET created_at=CASE id
+                   WHEN 'p1-old' THEN now()-interval '8 days'
+                   WHEN 'p1-new' THEN now()-interval '8 days'
+                   WHEN 'p2-old' THEN now()-interval '10 days'
+                   WHEN 'p2-new' THEN now()-interval '10 days'
+                 END",
+            )?;
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(
+        store
+            .cleanup_expired_secrets(
+                std::time::SystemTime::now() - std::time::Duration::from_secs(7 * 24 * 3600),
+                3,
+            )
+            .unwrap(),
+        3
+    );
+    assert!(store.load_secret("p1", "p1-old").is_ok());
+    assert!(store.load_secret("p1", "p1-new").is_err());
+    assert!(store.load_secret("p2", "p2-old").is_err());
+    assert!(store.load_secret("p2", "p2-new").is_err());
+    let mut client = store.into_client();
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
+fn secret_cleanup_advances_past_a_protected_scan_budget() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut client = Client::connect(&url, NoTls).unwrap();
+    let schema = format!(
+        "store_secret_gc_cursor_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    client
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+        include_str!("../../../migrations/202605290002_provider_subaccounts.sql"),
+        include_str!("../../../migrations/202609120004_secret_retention.sql"),
+    ] {
+        client.batch_execute(sql).unwrap();
+    }
+    client
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','test');
+             INSERT INTO secret_envelopes(id,project_id,kind,key_id,algorithm,nonce,ciphertext,created_at)
+               SELECT 'protected-' || n,'p','api_key','key','aes-256-gcm',decode(repeat('00',12),'hex'),decode(repeat('00',32),'hex'),now()-interval '10 days'
+               FROM generate_series(1,1001) AS numbers(n);
+             INSERT INTO provider_subaccounts(id,project_id,external_account_id,connector,provider_account_id,status,secret_ref_id)
+               SELECT 'sub-' || n,'p','brand','unipile','provider-' || n,'connected','protected-' || n
+               FROM generate_series(1,1001) AS numbers(n);
+             INSERT INTO secret_envelopes(id,project_id,kind,key_id,algorithm,nonce,ciphertext,created_at)
+               VALUES('orphan','p','api_key','key','aes-256-gcm',decode(repeat('00',12),'hex'),decode(repeat('00',32),'hex'),now()-interval '8 days');",
+        )
+        .unwrap();
+    let mut store = Store::new(client, LocalProvider::new(&[7; 32]).unwrap());
+    let cutoff = std::time::SystemTime::now() - std::time::Duration::from_secs(7 * 24 * 3600);
+    assert_eq!(store.cleanup_expired_secrets(cutoff, 1).unwrap(), 0);
+    assert_eq!(store.cleanup_expired_secrets(cutoff, 1).unwrap(), 1);
+    assert!(store.load_secret("p", "orphan").is_err());
+    let mut client = store.into_client();
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires isolated local APPCALL_ENGINE_POSTGRES_URL"]
+fn secret_cleanup_skips_when_reference_writer_holds_table_lock() {
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    let schema = format!("store_secret_gc_race_{}", std::process::id());
+    admin
+        .batch_execute(&format!(
+            "CREATE SCHEMA {schema}; SET search_path TO {schema}"
+        ))
+        .unwrap();
+    for sql in [
+        include_str!("../../../migrations/202605140001_init.sql"),
+        include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+        include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
+        include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+        include_str!("../../../migrations/202605290002_provider_subaccounts.sql"),
+        include_str!("../../../migrations/202609120004_secret_retention.sql"),
+    ] {
+        admin.batch_execute(sql).unwrap();
+    }
+    admin
+        .batch_execute(
+            "INSERT INTO projects(id,name) VALUES('p','test');
+             INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner)
+               VALUES('c','p','slack','api_key','active','brand','brand');",
+        )
+        .unwrap();
+    let mut store = Store::new(admin, LocalProvider::new(&[7; 32]).unwrap());
+    store
+        .store_secret("p", "old", "api_key", b"synthetic")
+        .unwrap();
+    store
+        .transaction(|tx| {
+            tx.client()
+                .batch_execute("UPDATE secret_envelopes SET created_at=now()-interval '8 days'")?;
+            Ok(())
+        })
+        .unwrap();
+    let mut writer = Client::connect(&url, NoTls).unwrap();
+    writer
+        .batch_execute(&format!(
+            "SET search_path TO {schema}; BEGIN; SELECT id FROM secret_envelopes WHERE id='old' FOR KEY SHARE"
+        ))
+        .unwrap();
+    assert_eq!(
+        store
+            .cleanup_expired_secrets(
+                std::time::SystemTime::now() - std::time::Duration::from_secs(7 * 24 * 3600),
+                100,
+            )
+            .unwrap(),
+        0
+    );
+    writer
+        .execute(
+            "UPDATE connections SET secret_ref_id='old' WHERE id='c'",
+            &[],
+        )
+        .unwrap();
+    writer.batch_execute("COMMIT").unwrap();
+    assert_eq!(
+        store
+            .transaction(|tx| Ok(tx
+                .client()
+                .query_one("SELECT secret_ref_id FROM connections WHERE id='c'", &[])
+                .unwrap()
+                .get::<_, Option<String>>(0)))
+            .unwrap()
+            .as_deref(),
+        Some("old")
+    );
+    let mut client = store.into_client();
+    client
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
 fn connection_wire_format_matches_go() {
     let json = r#"{"ID":"c","ProjectID":"p","Connector":"mock","AuthType":"api_key","Status":"active","SecretRefID":"","LastTestStatus":"unknown","ExternalAccountID":"a","CredentialOwner":"brand"}"#;
     let c: Connection = serde_json::from_str(json).unwrap();

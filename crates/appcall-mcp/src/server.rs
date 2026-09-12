@@ -149,25 +149,36 @@ impl Drop for ExecutionGuard {
     }
 }
 
-struct AbortOnDrop<T>(tokio::task::JoinHandle<T>);
+struct AbortOnDrop<T>(Option<tokio::task::JoinHandle<T>>);
 impl<T> AbortOnDrop<T> {
     fn new(handle: tokio::task::JoinHandle<T>) -> Self {
-        Self(handle)
+        Self(Some(handle))
     }
-    fn detach(self) {
-        std::mem::forget(self);
+    fn detach(mut self) {
+        // Dropping a JoinHandle detaches the task while releasing the runtime's
+        // join reference. Keep the task alive, but do not leak its output or
+        // handle when the caller no longer needs to await it.
+        self.0.take();
     }
 }
 impl<T> Future for AbortOnDrop<T> {
     type Output = Result<T, tokio::task::JoinError>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        Pin::new(&mut self.get_mut().0).poll(cx)
+        Pin::new(
+            self.get_mut()
+                .0
+                .as_mut()
+                .expect("detached task cannot be polled"),
+        )
+        .poll(cx)
     }
 }
 impl<T> Drop for AbortOnDrop<T> {
     fn drop(&mut self) {
-        self.0.abort();
+        if let Some(handle) = self.0.as_ref() {
+            handle.abort();
+        }
     }
 }
 
@@ -1141,5 +1152,95 @@ fn session_error(error: SessionError) -> HttpResponse {
             "MCP_SESSION_UNAVAILABLE",
             "MCP session could not be established.",
         ),
+    }
+}
+
+#[cfg(test)]
+mod abort_on_drop_tests {
+    use super::AbortOnDrop;
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
+    use std::time::Duration;
+    use tokio::sync::Notify;
+
+    struct DropProbe(Arc<AtomicUsize>);
+
+    impl Drop for DropProbe {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn detached_task_drops_its_join_handle_and_output() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let drops = Arc::new(AtomicUsize::new(0));
+                let task_drops = Arc::clone(&drops);
+                AbortOnDrop::new(tokio::task::spawn_local(async move {
+                    tokio::task::yield_now().await;
+                    DropProbe(task_drops)
+                }))
+                .detach();
+
+                tokio::time::timeout(Duration::from_millis(100), async {
+                    while drops.load(Ordering::SeqCst) == 0 {
+                        tokio::task::yield_now().await;
+                    }
+                })
+                .await
+                .expect("detached task output was retained");
+                assert_eq!(drops.load(Ordering::SeqCst), 1);
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn normal_completion_drops_output_when_the_joined_value_is_released() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let drops = Arc::new(AtomicUsize::new(0));
+                let task_drops = Arc::clone(&drops);
+                let output =
+                    AbortOnDrop::new(tokio::task::spawn_local(
+                        async move { DropProbe(task_drops) },
+                    ))
+                    .await
+                    .expect("normal task completion failed");
+                assert_eq!(drops.load(Ordering::SeqCst), 0);
+                drop(output);
+                assert_eq!(drops.load(Ordering::SeqCst), 1);
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn abort_on_drop_releases_in_progress_task_output() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let drops = Arc::new(AtomicUsize::new(0));
+                let task_drops = Arc::clone(&drops);
+                let started = Arc::new(Notify::new());
+                let task_started = Arc::clone(&started);
+                let task = AbortOnDrop::new(tokio::task::spawn_local(async move {
+                    let output = DropProbe(task_drops);
+                    task_started.notify_one();
+                    tokio::time::sleep(Duration::from_secs(60)).await;
+                    output
+                }));
+                started.notified().await;
+                drop(task);
+                tokio::time::timeout(Duration::from_millis(100), async {
+                    while drops.load(Ordering::SeqCst) == 0 {
+                        tokio::task::yield_now().await;
+                    }
+                })
+                .await
+                .expect("aborted task output was retained");
+                assert_eq!(drops.load(Ordering::SeqCst), 1);
+            })
+            .await;
     }
 }

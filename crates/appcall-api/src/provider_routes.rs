@@ -498,8 +498,10 @@ mod database_tests {
         for sql in [
             include_str!("../../../migrations/202605140001_init.sql"),
             include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+            include_str!("../../../migrations/202605290002_provider_subaccounts.sql"),
             include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
             include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+            include_str!("../../../migrations/202609120004_secret_retention.sql"),
         ] {
             db.batch_execute(sql).unwrap()
         }
@@ -750,8 +752,10 @@ mod database_tests {
         for sql in [
             include_str!("../../../migrations/202605140001_init.sql"),
             include_str!("../../../migrations/202605290001_connections_ownership.sql"),
+            include_str!("../../../migrations/202605290002_provider_subaccounts.sql"),
             include_str!("../../../migrations/202605290004_connections_owner_check.sql"),
             include_str!("../../../migrations/202609070004_oauth_refresh_intents.sql"),
+            include_str!("../../../migrations/202609120004_secret_retention.sql"),
         ] {
             db.batch_execute(sql).unwrap();
         }

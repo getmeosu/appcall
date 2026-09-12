@@ -1,8 +1,9 @@
 //! Optional server backend. It is not linked into the default embedded build.
 use appcall_engine::*;
-use postgres::{Client, Transaction};
+use postgres::{fallible_iterator::FallibleIterator, types::ToSql, Client, Transaction};
 use std::sync::{Mutex, MutexGuard};
 const OWNER_LOCK: i64 = 0x61707063616c6c;
+const RECOVERY_BATCH_SIZE: i64 = 64;
 /// A single host-configured session; TLS and credentials stay with its Client.
 /// Session advisory ownership is exclusive for this engine database. Use a
 /// dedicated database/schema with a stable search_path and direct sessions,
@@ -32,29 +33,7 @@ impl PostgresStore {
             )
             .map_err(safe)?
             .get(0);
-        let recovery_ids: Vec<String> = tx
-            .query(
-                "SELECT id,record FROM appcall_workflow_runs WHERE state='running'",
-                &[],
-            )
-            .map_err(safe)?
-            .into_iter()
-            .filter_map(|row| {
-                let id: String = row.get(0);
-                let record: Vec<u8> = row.get(1);
-                let recover = serde_json::from_slice::<RunRecord>(&record)
-                    .map(|run| requires_recovery(&run))
-                    .unwrap_or(false);
-                recover.then_some(id)
-            })
-            .collect();
-        for id in recovery_ids {
-            tx.execute(
-                "UPDATE appcall_workflow_runs SET wakeup=0 WHERE id=$1 AND state='running'",
-                &[&id],
-            )
-            .map_err(safe)?;
-        }
+        recover_running(&mut tx)?;
         tx.commit().map_err(safe)?;
         Ok(Self {
             client: Mutex::new(client),
@@ -79,6 +58,9 @@ fn encoded(run: &RunRecord) -> Result<Vec<u8>> {
     }
     Ok(bytes)
 }
+fn decode_record(record: &[u8]) -> Result<RunRecord> {
+    serde_json::from_slice(record).map_err(|_| Error::Storage("invalid durable record".into()))
+}
 fn state(r: &RunRecord) -> &'static str {
     if matches!(r.state, RunState::Running | RunState::CancelRequested) {
         "running"
@@ -94,6 +76,47 @@ fn requires_recovery(run: &RunRecord) -> bool {
                 TaskState::Ready | TaskState::InFlight | TaskState::Invoking
             )
         })
+}
+fn recover_running(tx: &mut Transaction<'_>) -> Result<()> {
+    let mut cursor = String::new();
+    loop {
+        let (recovery_ids, next_cursor) = {
+            let params: [&(dyn ToSql + Sync); 2] =
+                [&cursor as &(dyn ToSql + Sync), &RECOVERY_BATCH_SIZE];
+            let mut rows = tx
+                .query_raw(
+                    "SELECT id,record FROM appcall_workflow_runs
+                     WHERE state='running' AND id>$1
+                     ORDER BY id LIMIT $2",
+                    params,
+                )
+                .map_err(safe)?;
+            let mut recovery_ids = Vec::with_capacity(RECOVERY_BATCH_SIZE as usize);
+            let mut next_cursor = None;
+            while let Some(row) = rows.next().map_err(safe)? {
+                let id: String = row.get(0);
+                let record: Vec<u8> = row.get(1);
+                next_cursor = Some(id.clone());
+                let recover = requires_recovery(&decode_record(&record)?);
+                if recover {
+                    recovery_ids.push(id);
+                }
+            }
+            (recovery_ids, next_cursor)
+        };
+        let Some(next_cursor) = next_cursor else {
+            break;
+        };
+        for id in recovery_ids {
+            tx.execute(
+                "UPDATE appcall_workflow_runs SET wakeup=0 WHERE id=$1 AND state='running'",
+                &[&id],
+            )
+            .map_err(safe)?;
+        }
+        cursor = next_cursor;
+    }
+    Ok(())
 }
 fn insert(tx: &mut Transaction<'_>, run: &RunRecord) -> Result<()> {
     let revision = i64::try_from(run.revision).map_err(|_| Error::Limit)?;
@@ -131,7 +154,7 @@ impl Store for PostgresStore {
             .map_err(safe)?
             .ok_or(Error::NotFound)?;
         let bytes: Vec<u8> = row.get(0);
-        serde_json::from_slice(&bytes).map_err(|_| Error::Storage("invalid durable record".into()))
+        decode_record(&bytes)
     }
     fn insert(&mut self, run: &RunRecord) -> Result<()> {
         let mut client = self.client()?;

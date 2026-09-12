@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { maxOperationTimeoutMs } from "./budget";
 import { handleRPC } from "./server";
 
 export interface RunnerFetchOptions {
@@ -7,9 +8,19 @@ export interface RunnerFetchOptions {
   token?: string;
   maxConcurrent?: number;
   maxQueued?: number;
+  // Completed-job threshold for entering drain mode and requesting recycle.
+  // This is not a hard cap: requests already queued are admitted FIFO.
   maxJobs?: number;
   onRecycle?: () => void;
 }
+
+type QueueEntry = {
+  request: Request;
+  resolve: (admitted: boolean) => void;
+  onAbort: () => void;
+  timer: ReturnType<typeof setTimeout>;
+  settled: boolean;
+};
 
 // createFetchHandler builds the HTTP entrypoint: GET /healthz is always open
 // (liveness probes must work before/without auth), POST /rpc is gated by the
@@ -22,7 +33,19 @@ export function createFetchHandler(
   const maxQueued=options.maxQueued??128;
   if(!Number.isSafeInteger(maxConcurrent)||maxConcurrent<1||!Number.isSafeInteger(maxQueued)||maxQueued<0) throw new Error("Invalid runner admission limits");
   let active=0, completed=0, draining=false;
-  const queue:Array<()=>void>=[];
+  const queue: QueueEntry[]=[];
+  const removeQueued=(entry: QueueEntry)=>{
+    const index=queue.indexOf(entry);
+    if(index>=0)queue.splice(index,1);
+  };
+  const settleQueued=(entry: QueueEntry, admitted: boolean)=>{
+    if(entry.settled)return;
+    entry.settled=true;
+    clearTimeout(entry.timer);
+    entry.request.signal.removeEventListener("abort",entry.onAbort);
+    removeQueued(entry);
+    entry.resolve(admitted);
+  };
   const unavailable = (request: Request) => {
     const requestID = safeRequestID(request);
     return Response.json(
@@ -36,15 +59,37 @@ export function createFetchHandler(
   };
   const dispatch=async(request:Request):Promise<Response>=>{
     const admittedAt = Date.now();
-    if(draining || (active>=maxConcurrent && queue.length>=maxQueued))return unavailable(request);
-    if(active>=maxConcurrent) await new Promise<void>(resolve=>queue.push(resolve));
-    else active++;
+    if(draining || request.signal.aborted || (active>=maxConcurrent && queue.length>=maxQueued))return request.signal.aborted ? handleRPC(request,admittedAt) : unavailable(request);
+    if(active>=maxConcurrent) {
+      const admitted = await new Promise<boolean>(resolve=>{
+        let entry!: QueueEntry;
+        const onAbort=()=>settleQueued(entry,false);
+        entry={
+          request,
+          resolve,
+          onAbort,
+          timer:setTimeout(()=>settleQueued(entry,false),Math.max(0,admittedAt+maxOperationTimeoutMs-Date.now())),
+          settled:false,
+        };
+        queue.push(entry);
+        request.signal.addEventListener("abort",onAbort,{once:true});
+        // AbortSignal does not replay an abort that happened before listener
+        // registration; resolve the queue wait explicitly in that case.
+        if(request.signal.aborted)onAbort();
+      });
+      // A canceled/expired queue entry never held a concurrency permit and
+      // must not count toward maxJobs or trigger queue advancement.
+      if(!admitted)return handleRPC(request,admittedAt);
+    } else active++;
     try { return await handleRPC(request, admittedAt); }
     finally {
       completed++;
       if(options.maxJobs && completed>=options.maxJobs)draining=true;
       const next=queue.shift();
-      if(next)next(); else active--;
+      if(next) {
+        settleQueued(next,true);
+        // Transfer the finished permit directly to the next FIFO entry.
+      } else active--;
       if(draining && active===0)options.onRecycle?.();
     }
   };

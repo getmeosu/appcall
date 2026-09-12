@@ -79,7 +79,8 @@ impl Lifecycle {
    let claims=StateClaims{project_id:connection.project_id.clone(),connector:connector.into(),connection_id:id.into(),redirect_uri:app.redirect_uri.clone(),expires_at:expires.clone(),pkce_ref:pkce_ref.clone()};
    let state=match self.signer.sign(&claims){Ok(state)=>state,Err(error)=>return Ok(Err(error))};
    if spec.pkce{tx.store_secret(&connection.project_id,&pkce_ref,&format!("oauth_pkce_{id}"),verifier.as_bytes())?;}
-   tx.client().execute("INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,state_digest) VALUES($1,$2,$3,$4,'authorization','authorizing',$5) ON CONFLICT(project_id,connection_id) DO UPDATE SET attempt_id=EXCLUDED.attempt_id,secret_ref_id=EXCLUDED.secret_ref_id,operation='authorization',state='authorizing',state_digest=EXCLUDED.state_digest,created_at=now(),updated_at=now()",&[&connection.project_id,&id,&attempt,&connection.secret_ref_id,&digest(&state)])?;
+   let pkce_secret_ref_id=spec.pkce.then_some(pkce_ref.as_str());
+   tx.client().execute("INSERT INTO oauth_refresh_intents(project_id,connection_id,attempt_id,secret_ref_id,operation,state,state_digest,pkce_secret_ref_id) VALUES($1,$2,$3,$4,'authorization','authorizing',$5,$6) ON CONFLICT(project_id,connection_id) DO UPDATE SET attempt_id=EXCLUDED.attempt_id,secret_ref_id=EXCLUDED.secret_ref_id,operation='authorization',state='authorizing',state_digest=EXCLUDED.state_digest,pkce_secret_ref_id=EXCLUDED.pkce_secret_ref_id,created_at=now(),updated_at=now()",&[&connection.project_id,&id,&attempt,&connection.secret_ref_id,&digest(&state),&pkce_secret_ref_id])?;
    tx.update_status(scope,id,Status::Authorizing)?;
    if !active() { return Err(appcall_store::Error::Conflict); }
    Ok(Ok(state))
@@ -158,9 +159,11 @@ impl Lifecycle {
    let connection=tx.lock_connection(&scope,&claims.connection_id)?;
    if !active() { return Ok(Err(Error::ConnectionUnavailable)); }
    if connection.connector!=connector||connection.status!=Status::Authorizing{return Ok(Err(Error::ConnectionUnavailable))}
-   let row=tx.client().query_opt("SELECT attempt_id,secret_ref_id,state,state_digest,operation FROM oauth_refresh_intents WHERE project_id=$1 AND connection_id=$2 FOR UPDATE",&[&connection.project_id,&connection.id])?;
+   let row=tx.client().query_opt("SELECT attempt_id,secret_ref_id,state,state_digest,operation,pkce_secret_ref_id FROM oauth_refresh_intents WHERE project_id=$1 AND connection_id=$2 FOR UPDATE",&[&connection.project_id,&connection.id])?;
    let Some(row)=row else{return Ok(Err(Error::ConnectionUnavailable))};
    if row.get::<_,String>("state")!="authorizing"||row.get::<_,String>("operation")!="authorization"||row.get::<_,String>("state_digest")!=digest(state)||row.get::<_,String>("secret_ref_id")!=connection.secret_ref_id{return Ok(Err(Error::StateBinding))}
+   let persisted_pkce_ref=row.get::<_,Option<String>>("pkce_secret_ref_id");
+   if spec.pkce&&persisted_pkce_ref.is_some_and(|reference|reference!=claims.pkce_ref){return Ok(Err(Error::InvalidState))}
    let verifier=if spec.pkce{if tx.secret_kind(&connection.project_id,&claims.pkce_ref)?!=format!("oauth_pkce_{}",connection.id){return Ok(Err(Error::InvalidState))}let raw=tx.load_secret(&connection.project_id,&claims.pkce_ref)?;match std::str::from_utf8(raw.as_bytes()){Ok(value)=>Zeroizing::new(value.to_owned()),Err(_)=>return Ok(Err(Error::InvalidState))}}else{Zeroizing::new(String::new())};
    if !active() { return Ok(Err(Error::ConnectionUnavailable)); }
    let attempt:String=row.get("attempt_id");tx.client().execute("UPDATE oauth_refresh_intents SET state='dispatched',updated_at=now() WHERE project_id=$1 AND connection_id=$2 AND attempt_id=$3",&[&connection.project_id,&connection.id,&attempt])?;tx.update_status(&scope,&connection.id,Status::Degraded)?;

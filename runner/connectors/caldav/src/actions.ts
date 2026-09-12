@@ -66,9 +66,9 @@ export function validatePrincipalDiscoverInput(input: unknown): PrincipalDiscove
   };
 }
 
-export async function runPrincipalDiscover(input: Record<string, unknown>): Promise<{ ok: true; principalHref: string } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+export async function runPrincipalDiscover(input: Record<string, unknown>, operation = "principal.discover"): Promise<{ ok: true; principalHref: string } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
   const payload = validatePrincipalDiscoverInput(input);
-  const client = createCalDAVClient(clientOpts(input, "principal.discover"));
+  const client = createCalDAVClient(clientOpts(input, operation));
   const response = await client.propfind("/", "0", buildPrincipalPropfind());
   if (response.status === 207 || response.status === 200) {
     const parsed = parseMultiStatus(response.body);

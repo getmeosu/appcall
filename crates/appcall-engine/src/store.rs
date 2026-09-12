@@ -70,17 +70,16 @@ impl SqliteStore {
         let recovery_ids: Vec<String> = {
             let mut statement =
                 connection.prepare("SELECT id,record FROM engine_runs WHERE state='running'")?;
-            let rows = statement.query_map([], |row| {
+            let mut rows = statement.query([])?;
+            let mut recovery_ids = Vec::new();
+            while let Some(row) = rows.next()? {
                 let id: String = row.get(0)?;
-                let recover = serde_json::from_slice::<RunRecord>(&row.get::<_, Vec<u8>>(1)?)
-                    .map(|run| requires_recovery(&run))
-                    .unwrap_or(false);
-                Ok((id, recover))
-            })?;
-            rows.collect::<std::result::Result<Vec<_>, _>>()?
-                .into_iter()
-                .filter_map(|(id, recover)| recover.then_some(id))
-                .collect()
+                let record: Vec<u8> = row.get(1)?;
+                if requires_recovery(&decode_record(&record)?) {
+                    recovery_ids.push(id);
+                }
+            }
+            recovery_ids
         };
         for id in recovery_ids {
             connection.execute(
@@ -104,6 +103,9 @@ fn encoded(run: &RunRecord) -> Result<Vec<u8>> {
         return Err(Error::Limit);
     }
     Ok(bytes)
+}
+fn decode_record(record: &[u8]) -> Result<RunRecord> {
+    serde_json::from_slice(record).map_err(|_| Error::Storage("invalid durable record".into()))
 }
 fn state(run: &RunRecord) -> &'static str {
     if matches!(run.state, RunState::Running | RunState::CancelRequested) {
@@ -133,7 +135,7 @@ impl Store for SqliteStore {
             })
             .optional()?
             .ok_or(Error::NotFound)?;
-        serde_json::from_slice(&bytes).map_err(|_| Error::Storage("invalid durable record".into()))
+        decode_record(&bytes)
     }
     fn insert(&mut self, run: &RunRecord) -> Result<()> {
         let revision = i64::try_from(run.revision).map_err(|_| Error::Limit)?;

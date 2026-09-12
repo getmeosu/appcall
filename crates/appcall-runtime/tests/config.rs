@@ -193,3 +193,36 @@ fn malformed_mcp_origin_allowlist_fails_closed() {
     );
     assert!(Config::from_map(&e).is_err());
 }
+
+#[test]
+fn secret_cleanup_defaults_are_conservative_and_bounded() {
+    let config = Config::from_map(&env()).unwrap();
+    assert_eq!(config.secret_retention_days(), 7);
+    assert_eq!(config.secret_cleanup_batch(), 100);
+}
+
+#[test]
+fn secret_cleanup_configuration_rejects_zero_negative_and_excessive_values() {
+    for (key, values) in [
+        (
+            "APPCALL_SECRET_RETENTION_DAYS",
+            ["0", "-1", "3651", "9223372036854775808"],
+        ),
+        (
+            "APPCALL_SECRET_CLEANUP_BATCH",
+            ["0", "-1", "1001", "9223372036854775808"],
+        ),
+    ] {
+        for value in values {
+            let mut e = env();
+            e.insert(key.into(), value.into());
+            assert!(Config::from_map(&e).is_err(), "{key}={value}");
+        }
+    }
+    let mut e = env();
+    e.insert("APPCALL_SECRET_RETENTION_DAYS".into(), "3650".into());
+    e.insert("APPCALL_SECRET_CLEANUP_BATCH".into(), "1000".into());
+    let config = Config::from_map(&e).unwrap();
+    assert_eq!(config.secret_retention_days(), 3650);
+    assert_eq!(config.secret_cleanup_batch(), 1000);
+}

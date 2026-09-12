@@ -418,19 +418,9 @@ impl RunnerClient {
                 if error.code == "RUNNER_BUSY" && !admission_busy {
                     return Err(malformed());
                 }
-                let ambiguous = matches!(
-                    error.code.as_str(),
-                    "OPERATION_TIMEOUT" | "OUTBOUND_TIMEOUT"
-                );
                 Err(Error {
                     kind: ErrorKind::Runner,
-                    outcome: if admission_busy {
-                        DispatchOutcome::NotDispatched
-                    } else if ambiguous {
-                        DispatchOutcome::Unknown
-                    } else {
-                        DispatchOutcome::ResponseReceived
-                    },
+                    outcome: runner_error_outcome(status, &error.code),
                     code: Some(redact(&error.code, secrets)),
                     retry_after_seconds: error.retry_after_seconds,
                     message: redact(&error.message, secrets),
@@ -439,6 +429,48 @@ impl RunnerClient {
             _ => Err(malformed()),
         }
     }
+}
+
+/// Classify a structured runner failure by what the runner can prove about
+/// dispatch. Explicit provider rejection codes are response evidence, and
+/// runner admission/protocol failures happen before an action handler starts.
+/// Everything else remains ambiguous because a connector may have applied a
+/// side effect before the runner failed to return a usable result.
+fn runner_error_outcome(status: reqwest::StatusCode, code: &str) -> DispatchOutcome {
+    if status == reqwest::StatusCode::SERVICE_UNAVAILABLE && code == "RUNNER_BUSY" {
+        return DispatchOutcome::NotDispatched;
+    }
+    if matches!(
+        code,
+        "CONNECTOR_RATE_LIMITED"
+            | "CONNECTOR_ACCOUNT_RESTRICTED"
+            | "CONNECTOR_ACTION_NOT_PERMITTED"
+            | "CONNECTION_RESTRICTED"
+            | "ACTION_NOT_PERMITTED"
+    ) {
+        return DispatchOutcome::ResponseReceived;
+    }
+    if matches!(
+        code,
+        "ACTION_NOT_DECLARED"
+            | "ACTION_NOT_EXECUTABLE"
+            | "ACTION_HANDLER_MISSING"
+            | "UNKNOWN_ACTION"
+            | "UNKNOWN_CONNECTOR"
+            | "UNKNOWN_METHOD"
+            | "SYNC_NOT_DECLARED"
+            | "SYNC_NOT_EXECUTABLE"
+            | "SYNC_HANDLER_MISSING"
+            | "UNKNOWN_SYNC"
+            | "MALFORMED_REQUEST"
+            | "INPUT_TOO_LARGE"
+            | "ACTION_INPUT_TOO_LARGE"
+            | "REQUEST_TOO_LARGE"
+            | "UNSUPPORTED_OPERATION_BUDGET"
+    ) {
+        return DispatchOutcome::NotDispatched;
+    }
+    DispatchOutcome::Unknown
 }
 fn to_value(value: impl Serialize) -> Result<Value> {
     serde_json::to_value(value).map_err(|_| {

@@ -23,6 +23,85 @@ fn postgres_contract_guard_serializes_parallel_tests() {
 
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_reopen_rejects_malformed_running_record_without_rewriting_it() {
+    let _guard = postgres_contract_guard();
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_malformed_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut client = Client::connect(&url, NoTls).unwrap();
+        client
+            .batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        client
+    };
+
+    let mut initial = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    initial
+        .start(
+            "malformed",
+            "missing-workflow",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    drop(initial);
+
+    let raw = b"malformed durable record with no secret".to_vec();
+    let mut connection = connect();
+    connection
+        .execute(
+            "UPDATE appcall_workflow_runs
+                SET state='running',wakeup=$1,record=$2
+              WHERE id=$3",
+            &[&4_242_i64, &raw, &"malformed"],
+        )
+        .unwrap();
+    let epoch_before: i64 = connection
+        .query_one("SELECT epoch FROM appcall_workflow_owner WHERE id=1", &[])
+        .unwrap()
+        .get(0);
+    drop(connection);
+
+    let error = match PostgresStore::from_client(connect()) {
+        Err(error) => error,
+        Ok(_) => panic!("malformed running record must fail database open"),
+    };
+    assert!(matches!(error, Error::Storage(message) if message == "invalid durable record"));
+
+    let mut connection = connect();
+    let row = connection
+        .query_one(
+            "SELECT state,wakeup,record FROM appcall_workflow_runs WHERE id=$1",
+            &[&"malformed"],
+        )
+        .unwrap();
+    assert_eq!(row.get::<_, String>(0), "running");
+    assert_eq!(row.get::<_, i64>(1), 4_242);
+    assert_eq!(row.get::<_, Vec<u8>>(2), raw);
+    let epoch_after: i64 = connection
+        .query_one("SELECT epoch FROM appcall_workflow_owner WHERE id=1", &[])
+        .unwrap()
+        .get(0);
+    assert_eq!(epoch_after, epoch_before);
+    drop(connection);
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
 fn postgres_revision_overflow_returns_limit_and_conflict() {
     let _guard = postgres_contract_guard();
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
@@ -550,6 +629,171 @@ fn postgres_recovery_preserves_passive_waits_and_recovers_ready_tasks() {
     assert!(e.runnable(0, 10).unwrap().contains(&"ready-b".to_string()));
     drop(e);
 
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_recovery_visits_rows_added_after_the_first_bounded_batch() {
+    let _guard = postgres_contract_guard();
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_recovery_batch_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut c = Client::connect(&url, NoTls).unwrap();
+        c.batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        c
+    };
+
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.set_dispatch_limit(1).unwrap();
+    e.register_workflow("one", "v1", one_read).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("a", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    for i in 0..65 {
+        e.start(
+            &format!("busy-{i:03}"),
+            "one",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+    }
+    assert!(matches!(
+        e.drive("a", 0).unwrap(),
+        DriveOutcome::Activity(_)
+    ));
+    for i in 0..65 {
+        assert!(matches!(
+            e.drive(&format!("busy-{i:03}"), 0).unwrap(),
+            DriveOutcome::Waiting
+        ));
+    }
+    drop(e);
+
+    admin
+        .batch_execute(&format!(
+            "SET search_path TO {schema};
+             CREATE FUNCTION append_recovery_tail() RETURNS trigger LANGUAGE plpgsql AS $$
+             BEGIN
+                 IF NEW.id = 'a' AND OLD.wakeup IS NULL AND NEW.wakeup = 0 THEN
+                     INSERT INTO appcall_workflow_runs(id, revision, state, wakeup, record)
+                     VALUES ('zz', NEW.revision, 'running', NULL,
+                         convert_to(jsonb_set(convert_from(NEW.record, 'UTF8')::jsonb,
+                             '{{id}}', to_jsonb('zz'::text))::text, 'UTF8'))
+                     ON CONFLICT (id) DO NOTHING;
+                 END IF;
+                 RETURN NEW;
+             END;
+             $$;
+             CREATE TRIGGER append_recovery_tail AFTER UPDATE OF wakeup
+                 ON appcall_workflow_runs FOR EACH ROW EXECUTE FUNCTION append_recovery_tail();"
+        ))
+        .unwrap();
+
+    let recovered = PostgresStore::from_client(connect()).unwrap();
+    let tail_wakeup: Option<i64> = connect()
+        .query_one(
+            "SELECT wakeup FROM appcall_workflow_runs WHERE id=$1",
+            &[&"zz"],
+        )
+        .unwrap()
+        .get(0);
+    assert_eq!(tail_wakeup, Some(0));
+    drop(recovered);
+
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_unknown_sibling_direct_reconciliation_after_restart() {
+    let _guard = postgres_contract_guard();
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_unknown_reconcile_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut c = Client::connect(&url, NoTls).unwrap();
+        c.batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        c
+    };
+
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.set_dispatch_limit(2).unwrap();
+    e.set_retry_policy(RetryPolicy::new(1, 1_000, 10, 10).unwrap())
+        .unwrap();
+    e.register_workflow("mixed", "v1", |c| {
+        c.spawn_activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)?;
+        c.spawn_activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)?;
+        c.timer(100)?;
+        Ok(c.input().clone())
+    })
+    .unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "mixed", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let unknown = match e.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("{other:?}"),
+    };
+    let retryable = match e.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("{other:?}"),
+    };
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(matches!(
+        e.reconcile("r", &unknown.effect_id, None),
+        Err(Error::Conflict)
+    ));
+    drop(e);
+
+    let mut reopened = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    assert_eq!(reopened.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(reopened
+        .complete(&unknown, PayloadRef::durable("stale").unwrap())
+        .is_err());
+    reopened.reconcile("r", &unknown.effect_id, None).unwrap();
+    assert_eq!(reopened.status("r").unwrap(), RunState::Failed);
+    assert_eq!(
+        reopened.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    assert_eq!(
+        reopened.result("r").unwrap(),
+        RunResult::Failed(Some(RunFailure::RetryExhausted))
+    );
+
+    drop(reopened);
     admin
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
         .unwrap();
