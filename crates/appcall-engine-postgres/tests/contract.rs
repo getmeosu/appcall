@@ -644,6 +644,84 @@ fn postgres_recovery_visits_rows_added_after_the_first_bounded_batch() {
 
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
+fn postgres_unknown_sibling_direct_reconciliation_after_restart() {
+    let _guard = postgres_contract_guard();
+    let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
+    let schema = format!(
+        "engine_unknown_reconcile_test_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
+    let mut admin = Client::connect(&url, NoTls).unwrap();
+    admin
+        .batch_execute(&format!("CREATE SCHEMA {schema}"))
+        .unwrap();
+    let connect = || {
+        let mut c = Client::connect(&url, NoTls).unwrap();
+        c.batch_execute(&format!("SET search_path TO {schema}"))
+            .unwrap();
+        c
+    };
+
+    let mut e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    e.set_dispatch_limit(2).unwrap();
+    e.set_retry_policy(RetryPolicy::new(1, 1_000, 10, 10).unwrap())
+        .unwrap();
+    e.register_workflow("mixed", "v1", |c| {
+        c.spawn_activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)?;
+        c.spawn_activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)?;
+        c.timer(100)?;
+        Ok(c.input().clone())
+    })
+    .unwrap();
+    e.register_activity("unknown", "v1").unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "mixed", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let unknown = match e.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("{other:?}"),
+    };
+    let retryable = match e.drive("r", 0).unwrap() {
+        DriveOutcome::Activity(attempt) => attempt,
+        other => panic!("{other:?}"),
+    };
+    e.fail_at(&retryable, ActivityFailure::Retryable, 0)
+        .unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(matches!(
+        e.reconcile("r", &unknown.effect_id, None),
+        Err(Error::Conflict)
+    ));
+    drop(e);
+
+    let mut reopened = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    assert_eq!(reopened.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(reopened
+        .complete(&unknown, PayloadRef::durable("stale").unwrap())
+        .is_err());
+    reopened.reconcile("r", &unknown.effect_id, None).unwrap();
+    assert_eq!(reopened.status("r").unwrap(), RunState::Failed);
+    assert_eq!(
+        reopened.failure_reason("r").unwrap(),
+        Some(RunFailure::RetryExhausted)
+    );
+    assert_eq!(
+        reopened.result("r").unwrap(),
+        RunResult::Failed(Some(RunFailure::RetryExhausted))
+    );
+
+    drop(reopened);
+    admin
+        .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))
+        .unwrap();
+}
+
+#[test]
+#[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
 fn postgres_recovered_safe_attempt_fails_at_persisted_elapsed_deadline() {
     let _guard = postgres_contract_guard();
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();

@@ -858,6 +858,7 @@ impl<S: Store> Engine<S> {
         if r.state != RunState::OutcomeUnknown {
             return Err(Error::Conflict);
         }
+        self.recover(&mut r)?;
         let task = r
             .tasks
             .iter_mut()

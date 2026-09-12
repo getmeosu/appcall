@@ -1520,14 +1520,14 @@ fn unknown_sibling_reconciliation_after_retry_exhaustion_survives_restart() {
     e.fail_at(&retryable, ActivityFailure::Retryable, 0)
         .unwrap();
     assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(matches!(
+        e.reconcile("r", &unknown.effect_id, None),
+        Err(Error::Conflict)
+    ));
     drop(e);
 
     let mut reopened = Engine::open(d.path().join("db")).unwrap();
     assert_eq!(reopened.status("r").unwrap(), RunState::OutcomeUnknown);
-    assert!(matches!(
-        reopened.drive("r", 0).unwrap(),
-        DriveOutcome::Suspended(RunState::OutcomeUnknown)
-    ));
     assert!(reopened
         .complete(&unknown, PayloadRef::durable("late").unwrap())
         .is_err());
