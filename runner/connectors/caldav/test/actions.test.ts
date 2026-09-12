@@ -548,6 +548,83 @@ describe("updateEvent", () => {
     expect(result.etag).toBe('"updated-etag-001"');
   });
 
+  test("preserves quoted URI parameter prefixes in the update PUT body", async () => {
+    const current = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:quoted-action-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;ALTREP="cid:part@example.org":Old summary',
+      'DESCRIPTION;ALTREP="cid:description@example.org":Old description',
+      'LOCATION;ALTREP="cid:location@example.org":Old location',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+    const requests: Request[] = [];
+
+    await updateEvent({
+      ...CREDS,
+      eventHref: "/1234567890/calendars/home/quoted-action-001.ics",
+      etag: '"current-etag"',
+      uid: "quoted-action-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+      description: "New description",
+      location: "New location",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        if ((init?.method ?? "GET") === "GET") {
+          return new Response(current, { status: 200, headers: { etag: '"current-etag"' } });
+        }
+        return new Response("", { status: 204, headers: { etag: '"updated-etag"' } });
+      },
+    });
+
+    const putBody = await requests[1]?.text();
+    expect(putBody).toContain('SUMMARY;ALTREP="cid:part@example.org":New summary');
+    expect(putBody).toContain('DESCRIPTION;ALTREP="cid:description@example.org":New description');
+    expect(putBody).toContain('LOCATION;ALTREP="cid:location@example.org":New location');
+  });
+
+  test("rejects malformed quoted parameters before sending a PUT", async () => {
+    const current = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:malformed-action-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;ALTREP="cid:part@example.org:Old summary',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+    const requests: Request[] = [];
+
+    await expect(updateEvent({
+      ...CREDS,
+      eventHref: "/1234567890/calendars/home/malformed-action-001.ics",
+      etag: '"current-etag"',
+      uid: "malformed-action-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        if ((init?.method ?? "GET") === "GET") {
+          return new Response(current, { status: 200, headers: { etag: '"current-etag"' } });
+        }
+        return new Response("", { status: 204 });
+      },
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.method).toBe("GET");
+  });
+
   test("round-trips the returned ETag into a later delete without rewriting it", async () => {
     const requests: Request[] = [];
     const result = await updateEvent({

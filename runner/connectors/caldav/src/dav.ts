@@ -380,6 +380,26 @@ function normalizeCalendarAddress(value: string): string {
 
 type ICalProperty = { name: string; prefix: string; start: number; end: number };
 
+function unfoldICalPropertyLines(lines: string[], start: number, end: number): string {
+  return lines.slice(start, end).map((line, index) => index === 0 ? line : line.replace(/^[ \t]/, "")).join("");
+}
+
+function findICalValueDelimiter(line: string): number {
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (character === ":" && !quoted) return index;
+  }
+  if (quoted) {
+    throw new Error("CalDAV event resource cannot be safely updated: malformed quoted parameter.");
+  }
+  return -1;
+}
+
 /**
  * Apply an update to the matching master VEVENT while retaining the original
  * calendar envelope, other VEVENTs, alarms, organizers, and unknown fields.
@@ -491,8 +511,8 @@ function directProperties(lines: string[], range: { start: number; end: number }
 function directPropertyValue(lines: string[], range: { start: number; end: number }, name: string): string | undefined {
   const property = directProperty(lines, range, name);
   if (!property) return undefined;
-  const unfolded = lines.slice(property.start, property.end).map((line, index) => index === 0 ? line : line.trimStart()).join("");
-  const colon = unfolded.indexOf(":");
+  const unfolded = unfoldICalPropertyLines(lines, property.start, property.end);
+  const colon = findICalValueDelimiter(unfolded);
   return colon < 0 ? undefined : unfoldICalLine(unfolded.slice(colon + 1));
 }
 
@@ -515,12 +535,13 @@ function directPropertiesInBlock(lines: string[], name: string): ICalProperty[] 
       continue;
     }
     if (componentDepth !== 0 || line.startsWith(" ") || line.startsWith("\t")) continue;
-    const colon = line.indexOf(":");
-    if (colon < 0) continue;
-    const prefix = line.slice(0, colon);
-    if (prefix.split(";", 1)[0]?.toUpperCase() !== name) continue;
     let end = index + 1;
     while (end < lines.length && /^[ \t]/.test(lines[end] ?? "")) end += 1;
+    const unfolded = unfoldICalPropertyLines(lines, index, end);
+    const colon = findICalValueDelimiter(unfolded);
+    if (colon < 0) continue;
+    const prefix = unfolded.slice(0, colon);
+    if (prefix.split(";", 1)[0]?.toUpperCase() !== name) continue;
     properties.push({ name, prefix, start: index, end });
     index = end - 1;
   }
@@ -551,11 +572,11 @@ function insertBeforeEnd(lines: string[], line: string): void {
 
 /** Parse key fields from a VEVENT string */
 export function parseVEvent(icsData: string): ParsedVEvent {
-  const getField = (field: string): string | undefined => {
-    const re = new RegExp(`^${field}(?:;[^:]*)?:(.+)$`, "m");
-    const m = icsData.match(re);
-    return m ? unfoldICalLine(m[1].trim()) : undefined;
-  };
+  const lines = icsData.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const start = lines.findIndex((line) => line.toUpperCase() === "BEGIN:VEVENT");
+  const end = start < 0 ? -1 : lines.findIndex((line, index) => index > start && line.toUpperCase() === "END:VEVENT");
+  const range = start >= 0 && end >= 0 ? { start, end } : undefined;
+  const getField = (field: string): string | undefined => range ? directPropertyValue(lines, range, field) : undefined;
 
   return {
     uid: getField("UID"),

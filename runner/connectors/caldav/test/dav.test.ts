@@ -288,6 +288,25 @@ describe("parseVEvent", () => {
     expect(parsed.uid).toBeUndefined();
     expect(parsed.summary).toBeUndefined();
   });
+
+  test("parses quoted URI parameters and unfolds continuation whitespace exactly once", () => {
+    const parsed = parseVEvent([
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT",
+      "UID:quoted-parse-001",
+      'SUMMARY;ALTREP="cid:part@example.org":Quoted summary',
+      'DESCRIPTION;ALTREP="cid:description@example.org',
+      ' ":First line',
+      "  Second line",
+      'LOCATION;ALTREP="cid:location@example.org":Quoted location',
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n"));
+
+    expect(parsed.summary).toBe("Quoted summary");
+    expect(parsed.description).toBe("First line Second line");
+    expect(parsed.location).toBe("Quoted location");
+  });
 });
 
 // ─── buildVEvent ──────────────────────────────────────────────────────────────
@@ -400,6 +419,115 @@ describe("buildVEvent", () => {
 });
 
 describe("mergeVEvent", () => {
+  test("preserves quoted URI parameters while replacing direct properties", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:quoted-parameter-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;ALTREP="cid:part@example.org":Old summary',
+      'DESCRIPTION;ALTREP="cid:description@example.org":Old description',
+      'LOCATION;ALTREP="cid:location@example.org":Old location',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+
+    const updated = mergeVEvent(resource, {
+      uid: "quoted-parameter-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+      description: "New description",
+      location: "New location",
+    });
+
+    expect(updated).toContain('SUMMARY;ALTREP="cid:part@example.org":New summary');
+    expect(updated).toContain('DESCRIPTION;ALTREP="cid:description@example.org":New description');
+    expect(updated).toContain('LOCATION;ALTREP="cid:location@example.org":New location');
+  });
+
+  test("treats backslashes as quoted parameter data when finding the delimiter", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:backslash-parameter-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;X-PATH="C:\\":Old summary',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+
+    const updated = mergeVEvent(resource, {
+      uid: "backslash-parameter-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    });
+
+    expect(updated).toContain('SUMMARY;X-PATH="C:\\":New summary');
+  });
+
+  test("preserves complete prefixes when quoted parameters are folded", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:folded-parameter-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;ALTREP="cid:part@example.org',
+      ' ":Old summary',
+      'DESCRIPTION;ALTREP="cid:description@example.org',
+      ' ":Old description',
+      'LOCATION;ALTREP="cid:location@example.org',
+      ' ":Old location',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+
+    const updated = mergeVEvent(resource, {
+      uid: "folded-parameter-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+      description: "New description",
+      location: "New location",
+    });
+
+    expect(updated).toContain('SUMMARY;ALTREP="cid:part@example.org":New summary');
+    expect(updated).toContain('DESCRIPTION;ALTREP="cid:description@example.org":New description');
+    expect(updated).toContain('LOCATION;ALTREP="cid:location@example.org":New location');
+  });
+
+  test("rejects malformed quoted parameters before changing the resource", () => {
+    const resource = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:malformed-quote-001",
+      "DTSTART:20240615T100000Z",
+      "DTEND:20240615T110000Z",
+      'SUMMARY;ALTREP="cid:part@example.org:Old summary',
+      "END:VEVENT",
+      "END:VCALENDAR",
+      "",
+    ].join("\r\n");
+
+    expect(() => mergeVEvent(resource, {
+      uid: "malformed-quote-001",
+      summary: "New summary",
+      start: "2024-06-15T10:00:00Z",
+      end: "2024-06-15T11:00:00Z",
+    })).toThrow(/quoted parameter|malformed|safely updated/i);
+  });
+
   test("updates the master while preserving unrelated properties, exceptions, and alarms", () => {
     const resource = [
       "BEGIN:VCALENDAR",
