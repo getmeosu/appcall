@@ -334,9 +334,15 @@ fn assert_confirmation(html: &str, heading: &str, body: &str, route: &str) -> St
     assert!(html.contains(&format!(
         "form=\"{id}-form\" formaction=\"{route}\" formmethod=\"post\""
     )));
-    assert!(html.contains(&format!(
-        "<form id=\"{id}-form\" method=\"post\" action=\"{route}\"></form>"
-    )));
+    if html.contains("data-trace-replay-form") {
+        assert!(html.contains(&format!(
+            "<form id=\"{id}-form\" method=\"post\" action=\"{route}\" data-trace-replay-form>"
+        )));
+    } else {
+        assert!(html.contains(&format!(
+            "<form id=\"{id}-form\" method=\"post\" action=\"{route}\"></form>"
+        )));
+    }
     let dialog = html
         .split("<dialog ")
         .nth(1)
