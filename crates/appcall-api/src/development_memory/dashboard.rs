@@ -257,10 +257,18 @@ impl MemoryDashboard {
                     .ok_or_else(|| Error::Invalid.into())
             }
             Op::ReplayTrace => {
+                let caller_credential = field("callerToken");
                 let request = Request {
                     method: "POST".into(),
                     uri: format!("/v1/requests/{resource}/replay"),
-                    headers: vec![],
+                    headers: if caller_credential.is_empty() {
+                        vec![]
+                    } else {
+                        vec![(
+                            "X-Connector-Token".into(),
+                            format!("Bearer {caller_credential}"),
+                        )]
+                    },
                     body: vec![],
                 };
                 let mut execute = self
@@ -271,7 +279,7 @@ impl MemoryDashboard {
                 execute.admin_scope = account_id.is_empty();
                 let value = self.core.execute(execute).await.map_err(web_error)?;
                 Ok(
-                    json!({"requestId":value.request_id,"replayLogId":value.replay_log_id,"output":value.output}),
+                    json!({"requestId":value.request_id,"originalRequestId":resource,"replayLogId":value.replay_log_id,"output":value.output}),
                 )
             }
             Op::ReplayEvent => {

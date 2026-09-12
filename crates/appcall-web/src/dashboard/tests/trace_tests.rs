@@ -113,8 +113,12 @@ async fn trace_replay_requires_explicit_boolean_true() {
             );
             if enabled {
                 assert!(response.body.contains("method=\"post\""));
+                assert!(response.body.contains("data-trace-replay-form"));
                 assert!(response.body.contains("ui-button"));
                 assert!(response.body.contains("may repeat changes at the provider"));
+                assert!(response.body.contains("name=\"callerToken\""));
+                assert!(response.body.contains("type=\"password\""));
+                assert!(response.body.contains("autocomplete=\"off\""));
             }
         }
     }

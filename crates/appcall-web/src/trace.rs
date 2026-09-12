@@ -34,15 +34,36 @@ pub(crate) fn content(value: &Value, request_id: &str) -> Result<String, Error> 
     );
     if data.get("replayAvailable").and_then(Value::as_bool) == Some(true) {
         let action = format!("/app/logs/{request_id}/replay");
+        let confirm_id = ui::document_id()?;
+        let form_id = format!("{confirm_id}-form");
+        html.push_str(&format!(
+            "<form id=\"{}\" method=\"post\" action=\"{}\" data-trace-replay-form>",
+            escape(&form_id),
+            escape(&action)
+        ));
+        html.push_str(
+            &ui::Field {
+                autocomplete: Some("off"),
+                help: "Used only for this replay and never saved.",
+                ..ui::Field::new(
+                    "trace-caller-token",
+                    "callerToken",
+                    "Caller credential (if required)",
+                    ui::Control::Input(ui::InputType::Password),
+                )
+            }
+            .render(),
+        );
         html.push_str(&ui::ConfirmButton {
-            id: &ui::document_id()?,
+            id: &confirm_id,
             trigger: "Run this again",
             heading: "Run this tool again?",
             body: &format!("Run the tool for recorded request {request_id} again using saved input? This creates another tool execution and may repeat changes at the provider."),
             confirm: "Run this again",
             action: ui::LocalPath::new(&action).ok_or(Error::Invalid)?,
-            form: None,
+            form: Some(&form_id),
         }.render());
+        html.push_str("</form>");
     } else {
         html.push_str("<p class=\"trace-replay-note\">Replay is not available for this trace.</p>");
     }

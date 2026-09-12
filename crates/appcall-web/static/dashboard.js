@@ -52,6 +52,24 @@
   }, true);
 })();
 
+// Trace replay forms keep their confirmation dialog inside the form so the
+// native confirm button can target it. Block implicit or unrelated submits;
+// only the open dialog's own confirmation control may reach the POST.
+(() => {
+  document.addEventListener('submit', event => {
+    const form = event.target;
+    if (!form?.matches?.('form[data-trace-replay-form]')) return;
+    const dialog = form.querySelector?.('dialog.ui-confirm-dialog');
+    const submitter = event.submitter;
+    const confirmed = dialog?.open
+      && submitter?.matches?.('[data-confirm-submit]')
+      && dialog.contains?.(submitter);
+    if (confirmed) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+})();
+
 // Keep the OAuth consent preview local; only image URLs with an HTTPS origin
 // are ever assigned. User strings are rendered through textContent.
 const brandingName = document.getElementById('wl-name');

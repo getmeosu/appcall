@@ -323,7 +323,7 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
         setup,
         Default::default(),
     ));
-    admin.batch_execute("INSERT INTO projects(id,name) VALUES('proj_copy-test','fixture'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('copy-connection','proj_copy-test','test','api_key','active','brand','brand')").unwrap();
+    admin.batch_execute("INSERT INTO projects(id,name) VALUES('proj_copy-test','fixture'); INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner) VALUES('copy-connection','proj_copy-test','test','api_key','active','brand','brand'),('copy-external-connection','proj_copy-test','copy-external-toolkit','external_bearer','active','brand','brand')").unwrap();
     store()
         .store_secret(
             "proj_copy-test",
@@ -332,7 +332,7 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
             br#"{"apiKey":"synthetic-copy-key"}"#,
         )
         .unwrap();
-    admin.batch_execute("INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,secret_ref_id) VALUES('copy-check','proj_copy-test','copy-check-toolkit','api_key','active','brand','brand','copy-secret'); INSERT INTO action_replay_logs(id,project_id,connection_id,connector,action,request_id,sanitized_input,external_account_id) VALUES('copy-replay','proj_copy-test','copy-connection','test','write','original-copy-request','[]','brand')").unwrap();
+    admin.batch_execute("INSERT INTO connections(id,project_id,connector,auth_type,status,external_account_id,credential_owner,secret_ref_id) VALUES('copy-check','proj_copy-test','copy-check-toolkit','api_key','active','brand','brand','copy-secret'),('copy-success','proj_copy-test','copy-check-toolkit','api_key','active','brand','brand','copy-secret'); INSERT INTO action_replay_logs(id,project_id,connection_id,connector,action,request_id,sanitized_input,external_account_id) VALUES('copy-replay','proj_copy-test','copy-connection','test','write','original-copy-request','[]','brand'),('copy-external-replay','proj_copy-test','copy-external-connection','copy-external-toolkit','write','original-external-copy-request','{\"count\":1}','brand'),('copy-success-replay','proj_copy-test','copy-success','copy-check-toolkit','write','original-success-copy-request','{\"count\":1}','brand')").unwrap();
     for (id, at) in [
         ("filter-old", "2026-09-07T09:59:59Z"),
         ("filter-start", "2026-09-07T10:00:00Z"),
@@ -349,6 +349,7 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
         .batch_execute("ALTER TABLE qa_connector_status RENAME TO qa_connector_status_unreadable")
         .unwrap();
     let runner_calls = transport.calls.clone();
+    let respond_ok = transport.response_switch();
     runtime.block_on(async move {
         tokio::task::spawn_blocking(move || {
             // Poll outside Tokio's async executor, as BrowserHost does, while
@@ -387,12 +388,31 @@ fn copy_dashboard_failures_have_backend_parity_production_and_verified_project()
                 copy_failure_cases::assert_failures(copy_data.as_ref(), principal.clone()).await;
                 copy_failure_cases::assert_service_failures(
                     copy_data.as_ref(),
-                    principal,
+                    principal.clone(),
                     appcall_web::Error::Invalid,
                     false,
                     &runner_calls,
                 )
                 .await;
+                respond_ok.store(true, std::sync::atomic::Ordering::SeqCst);
+                let replay = appcall_web::DashboardData::execute_detailed(
+                    copy_data.as_ref(),
+                    appcall_web::DashboardRequest {
+                        principal,
+                        operation: appcall_web::DashboardOperation::ReplayTrace,
+                        resource: Some("original-success-copy-request".into()),
+                        account_id: Some("brand".into()),
+                        fields: Default::default(),
+                        form_values: Default::default(),
+                    },
+                )
+                .await
+                .unwrap();
+                let request_id = replay["requestId"].as_str().unwrap();
+                assert_ne!(request_id, "original-success-copy-request");
+                assert!(request_id.starts_with("req_"));
+                assert_eq!(replay["originalRequestId"], "original-success-copy-request");
+                assert_eq!(replay["output"]["sent"], true);
             });
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
             loop {

@@ -1676,6 +1676,52 @@ fn explicit_failure_reports_retry_safely_fence_stale_attempts_and_release_capaci
     assert_eq!(e.status("unknown").unwrap(), RunState::OutcomeUnknown);
 }
 
+#[test]
+fn reconciliation_rejects_ephemeral_observation_without_mutation_then_accepts_durable() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let unknown = attempt(&mut e, "r");
+    e.fail(&unknown, ActivityFailure::OutcomeUnknown).unwrap();
+
+    let status = e.status("r").unwrap();
+    let failure_reason = e.failure_reason("r").unwrap();
+    let history = serde_json::to_value(e.history("r").unwrap()).unwrap();
+    let audit = e.reconciliation_audit("r").unwrap();
+    let next_wakeup = e.next_wakeup().unwrap();
+    let runnable = e.runnable(0, 10).unwrap();
+
+    assert!(matches!(
+        e.reconcile(
+            "r",
+            &unknown.effect_id,
+            Some(PayloadRef::ephemeral("temporary").unwrap()),
+        ),
+        Err(Error::Invalid(_))
+    ));
+    assert_eq!(e.status("r").unwrap(), status);
+    assert_eq!(e.failure_reason("r").unwrap(), failure_reason);
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        history
+    );
+    assert_eq!(e.reconciliation_audit("r").unwrap(), audit);
+    assert_eq!(e.next_wakeup().unwrap(), next_wakeup);
+    assert_eq!(e.runnable(0, 10).unwrap(), runnable);
+
+    e.reconcile(
+        "r",
+        &unknown.effect_id,
+        Some(PayloadRef::durable("observed").unwrap()),
+    )
+    .unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::Running);
+    assert_eq!(e.reconciliation_audit("r").unwrap().len(), 1);
+}
+
 fn mixed_detached_activities(c: &mut Context) -> WorkflowResult {
     c.spawn_activity("unknown", "v1", c.input().clone(), EffectPolicy::Unknown)?;
     c.spawn_activity("lookup", "v1", c.input().clone(), EffectPolicy::Read)?;

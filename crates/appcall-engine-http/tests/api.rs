@@ -505,6 +505,24 @@ fn scoped_reconciliation_is_authenticated_audited_and_restart_safe() {
         .status,
         409
     );
+    let audit_before_ephemeral = body(api.handle("GET", "/runs/run/reconciliation", &auth, b""));
+    assert_eq!(
+        api.handle(
+            "POST",
+            "/runs/run/reconcile",
+            &auth,
+            &reconcile_body(&second, Some(PayloadRef::ephemeral("temporary").unwrap())),
+        )
+        .status,
+        400
+    );
+    let state_after_ephemeral = body(api.handle("GET", "/runs/run", &auth, b""));
+    let audit_after_ephemeral = body(api.handle("GET", "/runs/run/reconciliation", &auth, b""));
+    assert_eq!(state_after_ephemeral["data"]["state"], "OutcomeUnknown");
+    assert_eq!(
+        audit_after_ephemeral["data"]["events"],
+        audit_before_ephemeral["data"]["events"]
+    );
     assert_eq!(
         api.handle(
             "POST",

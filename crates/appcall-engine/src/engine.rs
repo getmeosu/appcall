@@ -940,6 +940,12 @@ impl<S: Store> Engine<S> {
     ) -> Result<ReconciliationAudit> {
         validate(effect_id)?;
         validate(evidence_ref)?;
+        if observed
+            .as_ref()
+            .is_some_and(|payload| payload.is_ephemeral())
+        {
+            return Err(Error::Invalid("reconciliation observation must be durable"));
+        }
         let mut r = self.store.load(id)?;
         if r.state != RunState::OutcomeUnknown {
             return Err(Error::Conflict);
