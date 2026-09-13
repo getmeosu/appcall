@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "tables-list-missing-ok",
+  "operation": "tables.list",
+  "input": {},
+  "credentials": {
+    "username": "default",
+    "password": "fixturepass"
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    },
+    "documentationUrls": [
+      "https://clickhouse.com/docs/interfaces/http"
+    ],
+    "basis": "HOLD shape only. Optional database omitted. Host is not admitted."
+  },
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "url": "https://your-cluster.clickhouse.cloud:8443/?default_format=JSON&param_include_views=1",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic ZGVmYXVsdDpmaXh0dXJlcGFzcw==",
+          "content-type": "text/plain; charset=utf-8"
+        },
+        "body": "SELECT database, name, engine, is_temporary, total_rows, total_bytes, primary_key, sorting_key, partition_key FROM system.tables WHERE ({database:String} = '' OR database = {database:String}) AND ({pattern:String} = '' OR name LIKE {pattern:String}) AND is_temporary = 0 AND ({include_views:UInt8} = 1 OR engine NOT IN ('View', 'MaterializedView', 'LiveView', 'WindowView')) ORDER BY database, name"
+      },
+      "response": {
+        "status": 200,
+        "bodyFile": "../responses/tables-list-success-0.json",
+        "headers": {
+          "content-type": "application/json"
+        }
+      }
+    }
+  ],
+  "expected": {
+    "kind": "success",
+    "resultFile": "../expected/tables-list-all.json"
+  }
+}

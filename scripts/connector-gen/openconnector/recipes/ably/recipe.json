@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "providerId": "ably",
+  "appcallId": "ably",
+  "source": {
+    "url": "https://github.com/oomol-lab/open-connector.git",
+    "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+    "files": {
+      "src/providers/ably/definition.ts": "7b842f01a92252607f3f46a792ed1aacb6c69bdacf7e7ca0a24d3f8cd48321bb",
+      "src/providers/ably/actions.ts": "ecdfb724a1d2e93f957c86bde8eafecf5b474387307c9af96ae7a1ec52401cdd",
+      "src/providers/ably/executors.ts": "f5e35ed4d7e844a3c1ad7b65cc5c5bc97aaf14c1ea73e48682a481373d2c8791"
+    },
+    "spans": {
+      "action-get-stats": {
+        "path": "src/providers/ably/actions.ts",
+        "startLine": 452,
+        "endLine": 456
+      },
+      "handler-get-stats": {
+        "path": "src/providers/ably/executors.ts",
+        "startLine": 177,
+        "endLine": 190
+      },
+      "request-auth": {
+        "path": "src/providers/ably/executors.ts",
+        "startLine": 307,
+        "endLine": 321
+      }
+    }
+  },
+  "selection": {
+    "providerId": "ably",
+    "appcallId": "ably",
+    "disposition": "APPROVED",
+    "edition": "UK Ably Realtime Ltd / international Ably",
+    "operations": [
+      "healthcheck",
+      "stats.get"
+    ],
+    "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+    "marketFocus": "international",
+    "research": {
+      "reviewedAt": "2026-09-13",
+      "reviewer": "research review",
+      "searchCoverage": "Official Ably API, privacy, contact, DPA and security incident search reviewed; dated limited coverage, not a breach-free claim.",
+      "sources": [
+        "https://ably.com/docs/api/rest-api",
+        "https://ably.com/privacy",
+        "https://ably.com/data-processing-addendum"
+      ]
+    },
+    "breach": {
+      "status": "none-found",
+      "researchedAt": "2026-09-13"
+    },
+    "quality": {
+      "usefulness": 4,
+      "api": 4,
+      "auth": 4,
+      "maintainability": 4,
+      "testability": 4
+    },
+    "gates": {
+      "license": true,
+      "credentials": true,
+      "officialApi": true,
+      "boundedNetwork": true,
+      "operationQuality": true
+    }
+  },
+  "research": {
+    "decision": "APPROVED",
+    "providerId": "ably",
+    "appcallId": "ably",
+    "edition": "UK Ably Realtime Ltd / international Ably",
+    "reviewedAt": "2026-09-13",
+    "reviewer": "research review",
+    "evidence": [
+      "https://ably.com/privacy",
+      "https://ably.com/contact",
+      "https://ably.com/docs/api/rest-api",
+      "https://ably.com/data-processing-addendum"
+    ],
+    "searchCoverage": "Official Ably API, privacy, contact and data-processing materials reviewed. A bounded web query for Ably security breach incidents found no qualifying current report; this is dated limited coverage and not a breach-free claim.",
+    "incidents": [],
+    "remainingGates": [
+      "live authentication unverified"
+    ],
+    "qualityRationale": "Read-only statistics API with documented Basic auth and bounded fixture coverage."
+  },
+  "operationSources": {
+    "healthcheck": {
+      "upstreamActionId": "get_stats",
+      "sourceRefs": [
+        "action-get-stats",
+        "handler-get-stats",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://ably.com/docs/api/rest-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Healthcheck uses the same read-only /stats action with a fixed limit=1 query and accepts empty operation input."
+      ]
+    },
+    "stats.get": {
+      "upstreamActionId": "get_stats",
+      "sourceRefs": [
+        "action-get-stats",
+        "handler-get-stats",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://ably.com/docs/api/rest-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Uses split keyName/keySecret setup fields to render HTTP Basic credentials; preserves raw provider JSON under data."
+      ]
+    }
+  },
+  "manifest": {
+    "key": "ably",
+    "name": "Ably",
+    "version": "0.1.0",
+    "runtime": "bun",
+    "visibility": "public",
+    "categories": [
+      "dev-tools"
+    ],
+    "auth": {
+      "type": "api_key",
+      "scopes": [],
+      "setup": {
+        "mode": "api_key",
+        "fields": [
+          {
+            "key": "keyName",
+            "label": "Ably API key name",
+            "required": true,
+            "secret": false
+          },
+          {
+            "key": "keySecret",
+            "label": "Ably API key secret",
+            "required": true,
+            "secret": true
+          }
+        ]
+      }
+    },
+    "network": {
+      "allowedHosts": [
+        "main.realtime.ably.net"
+      ]
+    },
+    "models": [
+      "stats"
+    ],
+    "http": {
+      "baseUrl": "https://main.realtime.ably.net",
+      "auth": {
+        "in": "header",
+        "name": "Authorization",
+        "basic": {
+          "username": "{{keyName}}",
+          "password": "{{keySecret}}"
+        }
+      },
+      "errors": {
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after",
+        "defaultRetryAfterSeconds": 30,
+        "messagePaths": [
+          "message",
+          "error",
+          "detail"
+        ]
+      }
+    },
+    "operations": {
+      "healthcheck": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Healthcheck",
+        "description": "Verify Ably credentials by requesting application statistics.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/stats",
+          "query": {
+            "limit": "1"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "stats.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get Statistics",
+        "description": "Retrieve Ably application usage statistics.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "integer"
+            },
+            "end": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "backwards",
+                "forwards"
+              ]
+            },
+            "unit": {
+              "type": "string",
+              "enum": [
+                "minute",
+                "hour",
+                "day",
+                "month"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/stats",
+          "query": {
+            "start": "{{start}}",
+            "end": "{{end}}",
+            "limit": "{{limit}}",
+            "direction": "{{direction}}",
+            "unit": "{{unit}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      }
+    },
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
+      }
+    },
+    "provenance": {
+      "source": {
+        "url": "https://github.com/oomol-lab/open-connector",
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+      }
+    }
+  }
+}
