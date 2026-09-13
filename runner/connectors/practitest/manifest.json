@@ -1,0 +1,340 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "PractiTest API token",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "PTToken",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.practitest.com/api/v2",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors.0.detail",
+        "errors.0.title",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "practitest",
+  "models": [
+    "project",
+    "test"
+  ],
+  "name": "PractiTest",
+  "network": {
+    "allowedHosts": [
+      "api.practitest.com"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "description": "Validate the PractiTest API token with GET /projects.json?page[size]=1.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects.json",
+        "query": {
+          "page[number]": 1,
+          "page[size]": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "project.get": {
+      "description": "Retrieve a PractiTest project by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "projectId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}.json",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get project",
+      "validationMode": "strict-generated"
+    },
+    "projects.list": {
+      "description": "List projects available to the connected PractiTest token.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects.json",
+        "query": {
+          "page[number]": "{{page}}",
+          "page[size]": "{{pageSize}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List projects",
+      "validationMode": "strict-generated"
+    },
+    "test.get": {
+      "description": "Retrieve a PractiTest test by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "projectId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "relationships": {
+            "type": "boolean"
+          },
+          "testId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId",
+          "testId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/tests/{{testId}}.json",
+        "query": {
+          "relationships": "{{relationships}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get test",
+      "validationMode": "strict-generated"
+    },
+    "tests.list": {
+      "description": "List and filter tests in a PractiTest project.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "filterId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "nameExact": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "nameLike": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "projectId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "relationships": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "projectId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{projectId}}/tests.json",
+        "query": {
+          "filter-id": "{{filterId}}",
+          "name_exact": "{{nameExact}}",
+          "name_like": "{{nameLike}}",
+          "page[number]": "{{page}}",
+          "page[size]": "{{pageSize}}",
+          "relationships": "{{relationships}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List tests",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

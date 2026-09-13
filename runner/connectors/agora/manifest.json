@@ -1,0 +1,282 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Agora Customer Secret",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "customerId",
+          "label": "Agora Customer ID",
+          "required": true,
+          "secret": false
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "messaging"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "basic": {
+        "password": "{{apiKey}}",
+        "username": "{{customerId}}"
+      },
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization"
+    },
+    "baseUrl": "https://api.agora.io",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "agora",
+  "models": [
+    "project",
+    "usage"
+  ],
+  "name": "Agora",
+  "network": {
+    "allowedHosts": [
+      "api.agora.io"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "description": "Validate Agora Customer ID and Customer Secret by listing Console projects.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dev/v1/projects",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "projects.get": {
+      "description": "Retrieve one Agora Console project by project ID and name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "projectId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId",
+          "name"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dev/v1/project",
+        "query": {
+          "id": "{{projectId}}",
+          "name": "{{name}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get project",
+      "validationMode": "strict-generated"
+    },
+    "projects.list": {
+      "description": "List Agora Console projects for the connected account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dev/v1/projects",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List projects",
+      "validationMode": "strict-generated"
+    },
+    "usage.get": {
+      "description": "Retrieve Agora Console usage for one project and business type.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "business": {
+            "enum": [
+              "default",
+              "transcodeDuration",
+              "recording",
+              "cloudRecording",
+              "miniapp"
+            ],
+            "type": "string"
+          },
+          "fromDate": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "projectId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "toDate": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId",
+          "fromDate",
+          "toDate",
+          "business"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dev/v3/usage",
+        "query": {
+          "business": "{{business}}",
+          "from_date": "{{fromDate}}",
+          "project_id": "{{projectId}}",
+          "to_date": "{{toDate}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get project usage",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

@@ -1,0 +1,277 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Tomba API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "apiSecret",
+          "label": "Tomba API secret",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "crm"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Tomba-Key",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.tomba.io/v1",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors.message",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "X-Tomba-Secret": "{{apiSecret}}"
+    }
+  },
+  "key": "tomba",
+  "models": [
+    "account",
+    "email-count",
+    "domain-search",
+    "email-finder"
+  ],
+  "name": "Tomba",
+  "network": {
+    "allowedHosts": [
+      "api.tomba.io"
+    ]
+  },
+  "operations": {
+    "domain.search": {
+      "description": "Search email addresses for a company domain.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "domain"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/domain-search",
+        "query": {
+          "domain": "{{domain}}",
+          "page": "{{page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search domain emails",
+      "validationMode": "strict-generated"
+    },
+    "email.finder": {
+      "description": "Find the most likely professional email for a person at a domain.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "firstName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "lastName": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain",
+          "firstName",
+          "lastName"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/email-finder",
+        "query": {
+          "domain": "{{domain}}",
+          "first_name": "{{firstName}}",
+          "last_name": "{{lastName}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Find email",
+      "validationMode": "strict-generated"
+    },
+    "emails.count": {
+      "description": "Count known email addresses for a domain.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/email-count",
+        "query": {
+          "domain": "{{domain}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Count emails",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate Tomba credentials with GET /me.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

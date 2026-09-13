@@ -1,0 +1,317 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Chargebee API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "site",
+          "label": "Chargebee site name",
+          "required": true,
+          "secret": false
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "payments"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "basic": {
+        "password": "",
+        "username": "{{apiKey}}"
+      },
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization"
+    },
+    "baseUrl": "https://{{site}}.chargebee.com/api/v2",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error_msg",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "chargebee",
+  "models": [
+    "customer",
+    "subscription",
+    "invoice"
+  ],
+  "name": "Chargebee",
+  "network": {
+    "allowedHosts": [
+      "*.chargebee.com"
+    ]
+  },
+  "operations": {
+    "customers.get": {
+      "description": "Retrieve one Chargebee customer by ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customerId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "customerId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/customers/{{customerId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get customer",
+      "validationMode": "strict-generated"
+    },
+    "customers.list": {
+      "description": "List Chargebee customers with optional limit and offset pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/customers",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List customers",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate Chargebee credentials with GET /customers?limit=1.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/customers",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "invoices.list": {
+      "description": "List Chargebee invoices with optional limit and offset pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/invoices",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List invoices",
+      "validationMode": "strict-generated"
+    },
+    "subscriptions.list": {
+      "description": "List Chargebee subscriptions with optional limit and offset pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscriptions",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List subscriptions",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

@@ -1,0 +1,367 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Nasdaq Data Link API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "banking-data"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "api_key",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://data.nasdaq.com/api/v3",
+    "errors": {
+      "bodyErrorPaths": [
+        "quandl_error"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "quandl_error.message",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "X-Api-Token": "{{apiKey}}"
+    }
+  },
+  "key": "nasdaq",
+  "models": [
+    "datatable",
+    "quote",
+    "dividend"
+  ],
+  "name": "Nasdaq Data Link",
+  "network": {
+    "allowedHosts": [
+      "data.nasdaq.com"
+    ]
+  },
+  "operations": {
+    "datatables.metadata": {
+      "description": "Retrieve schema and refresh metadata for a Nasdaq Data Link datatable.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "tableCode": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "vendorCode": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendorCode",
+          "tableCode"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/{{vendorCode}}/{{tableCode}}/metadata.json",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get datatable metadata",
+      "validationMode": "strict-generated"
+    },
+    "datatables.query": {
+      "description": "Return one page of Nasdaq Data Link datatable rows.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "cursorId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "perPage": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "tableCode": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "ticker": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "vendorCode": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendorCode",
+          "tableCode"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/{{vendorCode}}/{{tableCode}}.json",
+        "query": {
+          "qopts.columns": "{{columns}}",
+          "qopts.cursor_id": "{{cursorId}}",
+          "qopts.per_page": "{{perPage}}",
+          "ticker": "{{ticker}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Query datatable",
+      "validationMode": "strict-generated"
+    },
+    "dividends.history": {
+      "description": "Retrieve quarterly SHARADAR/SF1 dividend fundamentals for a ticker.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cursorId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "date": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "perPage": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "ticker": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/SHARADAR/SF1.json",
+        "query": {
+          "datekey": "{{date}}",
+          "dimension": "ARQ",
+          "qopts.columns": "ticker,dimension,calendardate,datekey,dps,divyield,payoutratio,ncfdiv",
+          "qopts.cursor_id": "{{cursorId}}",
+          "qopts.per_page": "{{perPage}}",
+          "ticker": "{{ticker}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get dividend history",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Nasdaq Data Link API key with SHARADAR/TICKERS metadata.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/SHARADAR/TICKERS/metadata.json",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "quotes.eod": {
+      "description": "Retrieve QuoteMedia end-of-day prices for a ticker.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cursorId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "dateGte": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "dateLte": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "perPage": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "ticker": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datatables/QUOTEMEDIA/PRICES.json",
+        "query": {
+          "date.gte": "{{dateGte}}",
+          "date.lte": "{{dateLte}}",
+          "qopts.columns": "ticker,date,open,high,low,close,volume,dividend,split",
+          "qopts.cursor_id": "{{cursorId}}",
+          "qopts.per_page": "{{perPage}}",
+          "ticker": "{{ticker}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get end-of-day quotes",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

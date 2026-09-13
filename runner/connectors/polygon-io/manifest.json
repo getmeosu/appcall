@@ -1,0 +1,337 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Massive (Polygon.io) API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "banking-data"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "apiKey",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.massive.com",
+    "errors": {
+      "bodyErrorPaths": [
+        "error"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "polygon-io",
+  "models": [
+    "ticker-type",
+    "market-status",
+    "exchange",
+    "ticker"
+  ],
+  "name": "Massive (Polygon.io)",
+  "network": {
+    "allowedHosts": [
+      "api.massive.com"
+    ]
+  },
+  "operations": {
+    "exchanges.list": {
+      "description": "List known exchanges available through Massive.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "assetClass": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "locale": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/reference/exchanges",
+        "query": {
+          "asset_class": "{{assetClass}}",
+          "locale": "{{locale}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List exchanges",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Massive API key with GET /v3/reference/tickers/types.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/reference/tickers/types",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "market-status.get": {
+      "description": "Get the current Massive market status for stocks, currencies, and indices.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/marketstatus/now",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get market status",
+      "validationMode": "strict-generated"
+    },
+    "ticker.get": {
+      "description": "Get comprehensive details for a single Massive ticker.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "ticker": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "ticker"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/reference/tickers/{{ticker}}",
+        "query": {
+          "date": "{{date}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get ticker details",
+      "validationMode": "strict-generated"
+    },
+    "tickers.list": {
+      "description": "List ticker symbols supported by Massive with optional filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "exchange": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "market": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "order": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          },
+          "sort": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "ticker": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/reference/tickers",
+        "query": {
+          "active": "{{active}}",
+          "cursor": "{{cursor}}",
+          "exchange": "{{exchange}}",
+          "limit": "{{limit}}",
+          "market": "{{market}}",
+          "order": "{{order}}",
+          "sort": "{{sort}}",
+          "ticker": "{{ticker}}",
+          "type": "{{type}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List tickers",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

@@ -1,0 +1,307 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Appstle API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "ecommerce"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://subscription-admin.appstle.com",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "detail",
+        "title"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "appstle-subscriptions",
+  "models": [
+    "customer",
+    "subscription-contract"
+  ],
+  "name": "Appstle Subscriptions",
+  "network": {
+    "allowedHosts": [
+      "subscription-admin.appstle.com"
+    ]
+  },
+  "operations": {
+    "contract-ids.get": {
+      "description": "Return valid Appstle subscription contract IDs for a Shopify customer.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customerId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customerId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-customers/valid/{{customerId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get valid subscription contract IDs",
+      "validationMode": "strict-generated"
+    },
+    "customers.get": {
+      "description": "Retrieve one Appstle customer including subscription contract information.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "customerId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customerId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-customers/{{customerId}}",
+        "query": {
+          "cursor": "{{cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get customer with subscriptions",
+      "validationMode": "strict-generated"
+    },
+    "customers.list": {
+      "description": "List Appstle customers who have subscription contracts.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "activeMoreThanOneSubscription": {
+            "type": "boolean"
+          },
+          "email": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "page": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "size": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-contract-details/customers",
+        "query": {
+          "activeMoreThanOneSubscription": "{{activeMoreThanOneSubscription}}",
+          "email": "{{email}}",
+          "name": "{{name}}",
+          "page": "{{page}}",
+          "size": "{{size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List customers with subscriptions",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Appstle API key by listing one customer page.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-contract-details/customers",
+        "query": {
+          "page": "0",
+          "size": "1"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "subscription-details.list": {
+      "description": "List detailed Appstle subscription contract records for a Shopify customer.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "customerId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "customerId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/external/v2/subscription-customers-detail/valid/{{customerId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List customer subscription details",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

@@ -1,0 +1,305 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "HCP Terraform API token",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "baseUrl": "https://app.terraform.io/api/v2",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors.0.detail",
+        "errors.0.title",
+        "message"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/vnd.api+json",
+      "Content-Type": "application/vnd.api+json"
+    }
+  },
+  "key": "terraform",
+  "models": [
+    "account",
+    "organization",
+    "workspace"
+  ],
+  "name": "HCP Terraform",
+  "network": {
+    "allowedHosts": [
+      "app.terraform.io"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "description": "Validate the HCP Terraform API token with GET /account/details.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account/details",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "organizations.get": {
+      "description": "Retrieve one HCP Terraform organization by name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "organizationName": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "organizationName"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationName}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Get organization",
+      "validationMode": "strict-generated"
+    },
+    "organizations.list": {
+      "description": "List HCP Terraform organizations visible to the authenticated token.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "pageNumber": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "pageSize": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "query": {
+          "page[number]": "{{pageNumber}}",
+          "page[size]": "{{pageSize}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List organizations",
+      "validationMode": "strict-generated"
+    },
+    "workspaces.get": {
+      "description": "Retrieve one HCP Terraform workspace by workspace ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "workspaceId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "title": "Get workspace",
+      "validationMode": "strict-generated"
+    },
+    "workspaces.list": {
+      "description": "List HCP Terraform workspaces in an organization with optional pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "organizationName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageNumber": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "pageSize": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "organizationName"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationName}}/workspaces",
+        "query": {
+          "page[number]": "{{pageNumber}}",
+          "page[size]": "{{pageSize}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List workspaces",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

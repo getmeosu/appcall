@@ -1,0 +1,300 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Alchemy API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "baseUrl": "https://eth-mainnet.g.alchemy.com",
+    "errors": {
+      "bodyErrorPaths": [
+        "error"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "alchemy",
+  "models": [
+    "token",
+    "nft"
+  ],
+  "name": "Alchemy",
+  "network": {
+    "allowedHosts": [
+      "eth-mainnet.g.alchemy.com"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "description": "Validate the Alchemy API key with JSON-RPC eth_gasPrice.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "id": 1,
+          "jsonrpc": "2.0",
+          "method": "eth_gasPrice",
+          "params": []
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v2",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "nft.metadata.get": {
+      "description": "Retrieve metadata for one NFT on Ethereum mainnet.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "tokenId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "tokenType": {
+            "enum": [
+              "ERC721",
+              "ERC1155"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "contractAddress",
+          "tokenId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getNFTMetadata",
+        "query": {
+          "contractAddress": "{{contractAddress}}",
+          "tokenId": "{{tokenId}}",
+          "tokenType": "{{tokenType}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get NFT metadata",
+      "validationMode": "strict-generated"
+    },
+    "nfts.owner.list": {
+      "description": "List NFTs currently owned by an address on Ethereum mainnet.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "owner": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pageSize": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "withMetadata": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "owner"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/nft/v3/getNFTsForOwner",
+        "query": {
+          "owner": "{{owner}}",
+          "pageKey": "{{pageKey}}",
+          "pageSize": "{{pageSize}}",
+          "withMetadata": "{{withMetadata}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List NFTs for owner",
+      "validationMode": "strict-generated"
+    },
+    "token.metadata.get": {
+      "description": "Retrieve ERC-20 token metadata for one contract on Ethereum mainnet.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "contractAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "contractAddress"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "id": 1,
+          "jsonrpc": "2.0",
+          "method": "alchemy_getTokenMetadata",
+          "params": [
+            "{{contractAddress}}"
+          ]
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/v2",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get token metadata",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

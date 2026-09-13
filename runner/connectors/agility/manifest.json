@@ -1,0 +1,419 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Agility CMS API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "productivity"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "APIKey",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.aglty.io",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "detail",
+        "title"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "agility",
+  "models": [
+    "content-model",
+    "content",
+    "page",
+    "sitemap"
+  ],
+  "name": "Agility CMS",
+  "network": {
+    "allowedHosts": [
+      "api.aglty.io"
+    ]
+  },
+  "operations": {
+    "content.get": {
+      "description": "Retrieve one Agility CMS content item by content ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "apiType": {
+            "enum": [
+              "fetch",
+              "preview"
+            ],
+            "type": "string"
+          },
+          "contentLinkDepth": {
+            "maximum": 5,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "expandAllContentLinks": {
+            "type": "boolean"
+          },
+          "guid": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "locale": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "guid",
+          "apiType",
+          "locale",
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{guid}}/{{apiType}}/{{locale}}/item/{{id}}",
+        "query": {
+          "contentLinkDepth": "{{contentLinkDepth}}",
+          "expandAllContentLinks": "{{expandAllContentLinks}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get content item",
+      "validationMode": "strict-generated"
+    },
+    "content.list": {
+      "description": "Retrieve an Agility CMS content list by reference name.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "apiType": {
+            "enum": [
+              "fetch",
+              "preview"
+            ],
+            "type": "string"
+          },
+          "fields": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "guid": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "locale": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "referenceName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "skip": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "take": {
+            "maximum": 250,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "guid",
+          "apiType",
+          "locale",
+          "referenceName"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{guid}}/{{apiType}}/{{locale}}/list/{{referenceName}}",
+        "query": {
+          "Fields": "{{fields}}",
+          "Skip": "{{skip}}",
+          "Take": "{{take}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List content",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate an Agility CMS API key by listing content models.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "apiType": {
+            "enum": [
+              "fetch",
+              "preview"
+            ],
+            "type": "string"
+          },
+          "guid": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "guid",
+          "apiType"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{guid}}/{{apiType}}/contentmodels",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "pages.get": {
+      "description": "Retrieve an Agility CMS page by page ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "apiType": {
+            "enum": [
+              "fetch",
+              "preview"
+            ],
+            "type": "string"
+          },
+          "contentLinkDepth": {
+            "maximum": 5,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "expandAllContentLinks": {
+            "type": "boolean"
+          },
+          "guid": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "locale": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "guid",
+          "apiType",
+          "locale",
+          "id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{guid}}/{{apiType}}/{{locale}}/page/{{id}}",
+        "query": {
+          "contentLinkDepth": "{{contentLinkDepth}}",
+          "expandAllContentLinks": "{{expandAllContentLinks}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get page",
+      "validationMode": "strict-generated"
+    },
+    "sitemap.flat": {
+      "description": "Retrieve an Agility CMS flat sitemap for a channel.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "apiType": {
+            "enum": [
+              "fetch",
+              "preview"
+            ],
+            "type": "string"
+          },
+          "channelName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "guid": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "locale": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "guid",
+          "apiType",
+          "locale",
+          "channelName"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{guid}}/{{apiType}}/{{locale}}/sitemap/flat/{{channelName}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get flat sitemap",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

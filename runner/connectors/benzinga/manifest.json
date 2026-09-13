@@ -1,0 +1,337 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Benzinga API token",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "banking-data"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "token",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.benzinga.com",
+    "errors": {
+      "bodyErrorPaths": [
+        "errors"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors",
+        "message",
+        "error",
+        "text"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "benzinga",
+  "models": [
+    "channel",
+    "earning",
+    "rating",
+    "consensus-rating"
+  ],
+  "name": "Benzinga",
+  "network": {
+    "allowedHosts": [
+      "api.benzinga.com"
+    ]
+  },
+  "operations": {
+    "consensus.ratings.get": {
+      "description": "Get Benzinga consensus analyst ratings for one ticker.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "symbol": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/consensus-ratings",
+        "query": {
+          "parameters[tickers]": "{{symbol}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get consensus ratings",
+      "validationMode": "strict-generated"
+    },
+    "earnings.list": {
+      "description": "List Benzinga earnings calendar events with optional ticker and date filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dateFrom": {
+            "description": "Inclusive start date YYYY-MM-DD.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "dateTo": {
+            "description": "Inclusive end date YYYY-MM-DD.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "description": "pagesize, max 1000.",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "symbol": {
+            "description": "Ticker filter, sent as parameters[tickers].",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/earnings",
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "parameters[tickers]": "{{symbol}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List earnings calendar",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Benzinga token by listing news channels.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/news/channels",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "news.channels.list": {
+      "description": "List Benzinga news channels used to filter news feeds.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/news/channels",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List news channels",
+      "validationMode": "strict-generated"
+    },
+    "ratings.list": {
+      "description": "List Benzinga analyst rating calendar events with optional ticker and date filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dateFrom": {
+            "description": "Inclusive start date YYYY-MM-DD.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "dateTo": {
+            "description": "Inclusive end date YYYY-MM-DD.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "description": "pagesize, max 1000.",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "page": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "symbol": {
+            "description": "Ticker filter, sent as parameters[tickers].",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/ratings",
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "parameters[tickers]": "{{symbol}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List analyst ratings",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

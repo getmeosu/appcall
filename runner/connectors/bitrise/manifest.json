@@ -1,0 +1,344 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Bitrise API token",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.bitrise.io/v0.1",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error_msg",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "bitrise",
+  "models": [
+    "app",
+    "build"
+  ],
+  "name": "Bitrise",
+  "network": {
+    "allowedHosts": [
+      "api.bitrise.io"
+    ]
+  },
+  "operations": {
+    "apps.list": {
+      "description": "List Bitrise apps available to the authenticated token.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "next": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "projectType": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sortBy": {
+            "enum": [
+              "last_build_at",
+              "created_at"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/apps",
+        "query": {
+          "limit": "{{limit}}",
+          "next": "{{next}}",
+          "project_type": "{{projectType}}",
+          "sort_by": "{{sortBy}}",
+          "title": "{{title}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List apps",
+      "validationMode": "strict-generated"
+    },
+    "builds.get": {
+      "description": "Retrieve one Bitrise build by app slug and build slug.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "appSlug": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "buildSlug": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "appSlug",
+          "buildSlug"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/apps/{{appSlug}}/builds/{{buildSlug}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get build",
+      "validationMode": "strict-generated"
+    },
+    "builds.list": {
+      "description": "List builds for a Bitrise app with optional filters and pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "type": "integer"
+          },
+          "appSlug": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "before": {
+            "type": "integer"
+          },
+          "branch": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "buildNumber": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "commitMessage": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "isPipelineBuild": {
+            "type": "boolean"
+          },
+          "limit": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "next": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "pullRequestId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sortBy": {
+            "enum": [
+              "running_first",
+              "created_at"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "maximum": 4,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "triggerEventType": {
+            "enum": [
+              "push",
+              "pull-request",
+              "tag"
+            ],
+            "type": "string"
+          },
+          "workflow": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "appSlug"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/apps/{{appSlug}}/builds",
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "branch": "{{branch}}",
+          "build_number": "{{buildNumber}}",
+          "commit_message": "{{commitMessage}}",
+          "is_pipeline_build": "{{isPipelineBuild}}",
+          "limit": "{{limit}}",
+          "next": "{{next}}",
+          "pull_request_id": "{{pullRequestId}}",
+          "sort_by": "{{sortBy}}",
+          "status": "{{status}}",
+          "trigger_event_type": "{{triggerEventType}}",
+          "workflow": "{{workflow}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List builds",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Bitrise API token by retrieving the authenticated profile.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

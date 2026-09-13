@@ -1,0 +1,298 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Bloomerang private API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "crm"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-KEY",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.bloomerang.co/v2",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "Message",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "bloomerang",
+  "models": [
+    "constituent"
+  ],
+  "name": "Bloomerang",
+  "network": {
+    "allowedHosts": [
+      "api.bloomerang.co"
+    ]
+  },
+  "operations": {
+    "constituents.get": {
+      "description": "Get one Bloomerang constituent by API ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "constituentId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "constituentId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/constituent/{{constituentId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get constituent",
+      "validationMode": "strict-generated"
+    },
+    "constituents.list": {
+      "description": "List Bloomerang constituents with optional skip/take pagination and type or sort filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "orderBy": {
+            "enum": [
+              "Id",
+              "CreatedDate",
+              "LastModifiedDate"
+            ],
+            "type": "string"
+          },
+          "orderDirection": {
+            "enum": [
+              "Asc",
+              "Desc"
+            ],
+            "type": "string"
+          },
+          "skip": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "take": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "Individual",
+              "Organization"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/constituents",
+        "query": {
+          "orderBy": "{{orderBy}}",
+          "orderDirection": "{{orderDirection}}",
+          "skip": "{{skip}}",
+          "take": "{{take}}",
+          "type": "{{type}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List constituents",
+      "validationMode": "strict-generated"
+    },
+    "constituents.search": {
+      "description": "Search Bloomerang constituents and households by text with optional skip/take pagination.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "search": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "skip": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "take": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "Individual",
+              "Organization",
+              "Household"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "search"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/constituents/search",
+        "query": {
+          "search": "{{search}}",
+          "skip": "{{skip}}",
+          "take": "{{take}}",
+          "type": "{{type}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search constituents",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Bloomerang API key with a one-record constituent list probe.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/constituents",
+        "query": {
+          "take": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

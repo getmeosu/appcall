@@ -1,0 +1,272 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "ASIN Data API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "ecommerce"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "api_key",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.asindataapi.com",
+    "errors": {
+      "bodyErrorPaths": [
+        "request_info.message"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "request_info.message",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "asin-data-api",
+  "models": [
+    "account",
+    "destination",
+    "collection"
+  ],
+  "name": "ASIN Data API",
+  "network": {
+    "allowedHosts": [
+      "api.asindataapi.com"
+    ]
+  },
+  "operations": {
+    "collection-requests.list": {
+      "description": "List requests in an ASIN Data API collection by page.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "collection_id",
+          "page"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collections/{{collection_id}}/requests/{{page}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List collection requests",
+      "validationMode": "strict-generated"
+    },
+    "collections.get": {
+      "description": "Get one ASIN Data API collection by id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "collection_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collections/{{collection_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get collection",
+      "validationMode": "strict-generated"
+    },
+    "destinations.list": {
+      "description": "List ASIN Data API destinations with optional filtering and sorting.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "search_term": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sort_by": {
+            "enum": [
+              "type",
+              "name"
+            ],
+            "type": "string"
+          },
+          "sort_direction": {
+            "enum": [
+              "ascending",
+              "descending"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/destinations",
+        "query": {
+          "page": "{{page}}",
+          "search_term": "{{search_term}}",
+          "sort_by": "{{sort_by}}",
+          "sort_direction": "{{sort_direction}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List destinations",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the ASIN Data API key with GET /account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

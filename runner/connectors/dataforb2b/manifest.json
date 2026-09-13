@@ -1,0 +1,299 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "DataForB2B API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "crm"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "api_key",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.dataforb2b.ai",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "detail.error",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "dataforb2b",
+  "models": [
+    "account",
+    "search-count",
+    "typeahead"
+  ],
+  "name": "DataForB2B",
+  "network": {
+    "allowedHosts": [
+      "api.dataforb2b.ai"
+    ]
+  },
+  "operations": {
+    "account.get": {
+      "description": "Get the connected DataForB2B account status and remaining credit balance.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get account",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the DataForB2B API key by reading account status and remaining credits.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "results.count": {
+      "description": "Count matching people or companies without retrieving result records.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "people",
+              "company"
+            ],
+            "type": "string"
+          },
+          "filters": {
+            "additionalProperties": false,
+            "properties": {
+              "conditions": {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "op": {
+                "enum": [
+                  "and",
+                  "or"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "op",
+              "conditions"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "category",
+          "filters"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "category": "{{category}}",
+          "filters": "{{filters}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/search/count",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Count results",
+      "validationMode": "strict-generated"
+    },
+    "typeahead": {
+      "description": "Autocomplete values for DataForB2B people and company search filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "maximum": 20,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "q": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "company",
+              "people_industry",
+              "company_industry",
+              "category",
+              "location",
+              "city",
+              "region",
+              "school",
+              "title",
+              "skill",
+              "investor"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "q"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/typeahead",
+        "query": {
+          "limit": "{{limit}}",
+          "q": "{{q}}",
+          "type": "{{type}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Typeahead",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

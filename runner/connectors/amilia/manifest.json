@@ -1,0 +1,361 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Amilia JWT token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "organization",
+          "label": "Amilia organization identifier",
+          "required": true,
+          "secret": false
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "scheduling"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "baseUrl": "https://app.amilia.com/api/v3/en/org/{{organization}}",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "Message",
+        "message",
+        "Error",
+        "error",
+        "detail",
+        "title"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "amilia",
+  "models": [
+    "program",
+    "activity"
+  ],
+  "name": "Amilia",
+  "network": {
+    "allowedHosts": [
+      "app.amilia.com"
+    ]
+  },
+  "operations": {
+    "activities.get": {
+      "description": "Retrieve one Amilia activity by id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "activityId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "showTaxes": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "activityId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/activities/{{activityId}}",
+        "query": {
+          "showTaxes": "{{showTaxes}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get activity",
+      "validationMode": "strict-generated"
+    },
+    "activities.list": {
+      "description": "List activities in one Amilia program.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "perPage": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "programId": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "showCancelled": {
+            "type": "boolean"
+          },
+          "showHidden": {
+            "type": "boolean"
+          },
+          "showOccurrences": {
+            "type": "boolean"
+          },
+          "showTaxes": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "programId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/programs/{{programId}}/activities",
+        "query": {
+          "page": "{{page}}",
+          "perPage": "{{perPage}}",
+          "showCancelled": "{{showCancelled}}",
+          "showHidden": "{{showHidden}}",
+          "showOccurrences": "{{showOccurrences}}",
+          "showTaxes": "{{showTaxes}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List program activities",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Amilia JWT by listing one page of programs.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/programs",
+        "query": {
+          "page": 1,
+          "perPage": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "programs.get": {
+      "description": "Retrieve one Amilia program by id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "programId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "programId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/programs/{{programId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get program",
+      "validationMode": "strict-generated"
+    },
+    "programs.list": {
+      "description": "List programs for the connected Amilia organization.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "perPage": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "showArchived": {
+            "type": "boolean"
+          },
+          "showHidden": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/programs",
+        "query": {
+          "page": "{{page}}",
+          "perPage": "{{perPage}}",
+          "showArchived": "{{showArchived}}",
+          "showHidden": "{{showHidden}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List programs",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}
