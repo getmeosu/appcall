@@ -1,9 +1,0 @@
-# Cloudflare Browser Rendering
-
-Read-only international Cloudflare Browser Rendering REST API recipe for Cloudflare, Inc. (San Francisco). Create a custom API token with Browser Rendering Edit from [API Tokens](https://dash.cloudflare.com/profile/api-tokens) and copy the account ID. The runner sends `Authorization: Bearer <apiKey>` and `Accept: application/json` to `https://api.cloudflare.com/client/v4`. `accountId` is a required stored setup field on the fixed host (Algolia-style stored id, not a caller-supplied host).
-
-Covered operations: credential-only `healthcheck` (`GET /accounts/{accountId}/tokens/verify` using the stored account id), `accounts.list` (`GET /accounts` with optional `page` and `per_page`), `markdown.get` (`POST /accounts/{accountId}/browser-rendering/markdown` with required `url`), and `content.get` (`POST /accounts/{accountId}/browser-rendering/content` with required `url`). html/oneOf, screenshot, PDF, JSON, scrape, and links endpoints are omitted. Healthcheck is the cheap token verify, not a billed render.
-
-Native category is `dev-tools` (source Developer Tools/Data). HTTP 200 envelopes with a populated `errors` array are demoted via `bodyErrorPaths`. `success` is not used as a body-error path because `true` would false-fail. The upstream user-agent is not sent. OAuth2 is omitted. Responses keep raw Cloudflare JSON under `data`.
-
-Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://developers.cloudflare.com/browser-rendering/rest-api/ and https://developers.cloudflare.com/fundamentals/api/troubleshooting/. Fixtures are independently derived from official docs plus pinned source and do not represent live provider access. Live smoke is unverified: configure the API token and account ID, call `healthcheck` with `{}`, then `accounts.list`.

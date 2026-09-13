@@ -1,3 +1,0 @@
-# MailerLite
-
-Read-only international MailerLite API recipe. Configure a MailerLite API token generated in the account integrations area. Coverage includes credential healthcheck, subscriber lookup/listing, group listing, and field listing; cursor/page values are caller controlled and provider next links are returned as metadata only. `subscribers.list.include_groups` accepts the documented optional enum value `groups`; omission omits the query parameter. The pinned upstream helper incorrectly resolves `/groups` against a base ending in `/api`; the recipe explicitly uses the documented `/api/groups` path. Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Live authentication is unverified.
