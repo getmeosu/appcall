@@ -140,7 +140,8 @@ impl<S: Store> Engine<S> {
             RunState::Running
             | RunState::CancelRequested
             | RunState::NeedsInput
-            | RunState::NeedsImplementation => Ok(RunResult::Pending),
+            | RunState::NeedsImplementation
+            | RunState::ContinuedAsNew => Ok(RunResult::Pending),
         }
     }
     pub fn has_native_activity(&self, name: &str, version: &str) -> bool {
@@ -195,6 +196,9 @@ impl<S: Store> Engine<S> {
     }
     pub fn history(&self, id: &str) -> Result<Vec<HistoryEvent>> {
         Ok(self.store.load(id)?.history)
+    }
+    pub fn continued_as(&self, id: &str) -> Result<Option<String>> {
+        Ok(self.store.load(id)?.continued_as)
     }
     pub fn reconciliation_audit(&self, id: &str) -> Result<Vec<ReconciliationAudit>> {
         Ok(self.store.load(id)?.reconciliation_audit)
@@ -254,6 +258,14 @@ impl<S: Store> Engine<S> {
     /// finish an interrupted walk; completions are fenced as soon as requested.
     pub fn cancel(&mut self, id: &str) -> Result<()> {
         let mut r = self.store.load(id)?;
+        if r.state == RunState::ContinuedAsNew {
+            if let Some(successor) = r.continued_as.clone() {
+                self.cancel(&successor)?;
+            }
+            r.state = RunState::Cancelled;
+            r.wakeup = None;
+            return self.save(&mut r, &[]);
+        }
         if matches!(
             r.state,
             RunState::Completed
@@ -269,6 +281,9 @@ impl<S: Store> Engine<S> {
         self.save(&mut r, &[])?;
         for child in &r.children {
             self.cancel(child)?;
+        }
+        if let Some(successor) = r.continued_as.clone() {
+            self.cancel(&successor)?;
         }
         r.state = RunState::Cancelled;
         self.save(&mut r, &[])
@@ -290,6 +305,11 @@ impl<S: Store> Engine<S> {
         }
         if r.state == RunState::Completed {
             return Ok(DriveOutcome::Completed(r.output.ok_or(Error::Conflict)?));
+        }
+        if r.state == RunState::ContinuedAsNew {
+            return Ok(DriveOutcome::ContinuedAsNew {
+                successor: r.continued_as.ok_or(Error::Conflict)?,
+            });
         }
         if matches!(
             r.state,
@@ -361,7 +381,7 @@ impl<S: Store> Engine<S> {
                         return Err(Error::Invalid("join all activities before returning"));
                     }
                     for child in &r.children {
-                        if self.store.load(child)?.state != RunState::Completed {
+                        if self.latest_run(child)?.state != RunState::Completed {
                             return self.suspend(&mut r, RunState::Nondeterminism);
                         }
                     }
@@ -410,6 +430,12 @@ impl<S: Store> Engine<S> {
             if r.state == RunState::Cancelled {
                 self.cancel(id)?;
                 return Ok(DriveOutcome::Suspended(RunState::Cancelled));
+            }
+            if r.state == RunState::ContinuedAsNew {
+                self.save(&mut r, &children)?;
+                return Ok(DriveOutcome::ContinuedAsNew {
+                    successor: r.continued_as.ok_or(Error::Conflict)?,
+                });
             }
             if r.state != RunState::Running {
                 self.save(&mut r, &children)?;
@@ -614,17 +640,7 @@ impl<S: Store> Engine<S> {
                 version,
                 input,
             } => {
-                let full_id = format!("{}:c:{}", r.id, index);
-                let id = if full_id.len() <= 128 {
-                    full_id
-                } else {
-                    use sha2::{Digest, Sha256};
-                    {
-                        let digest = Sha256::digest(full_id.as_bytes());
-                        let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
-                        format!("child:{hex}")
-                    }
-                };
+                let id = derived_id(&r.id, 'c', index);
                 // Root run IDs remain backward-compatible. A deterministic
                 // child ID already owned by another run is a local command
                 // failure, never permission to adopt that run as a child.
@@ -674,7 +690,7 @@ impl<S: Store> Engine<S> {
                             if !r.children.contains(id) {
                                 return Err(Error::Invalid("unattached child"));
                             }
-                            let child = self.store.load(id)?;
+                            let child = self.latest_run(id)?;
                             if matches!(child.state, RunState::Failed | RunState::Nondeterminism) {
                                 // A terminal child cannot provide a successful join value.
                                 // Preserve recorded commands and propagate its durable failure.
@@ -707,7 +723,58 @@ impl<S: Store> Engine<S> {
                 }
                 Ok(None)
             }
+            Command::ContinueAsNew { input } => {
+                if r.tasks
+                    .iter()
+                    .any(|task| !matches!(task.state, TaskState::Done(_)))
+                {
+                    return Err(Error::Invalid("join all activities before continue-as-new"));
+                }
+                for child in &r.children {
+                    if self.latest_run(child)?.state != RunState::Completed {
+                        r.state = RunState::Nondeterminism;
+                        r.wakeup = None;
+                        return Ok(None);
+                    }
+                }
+                if let Some(existing) = &r.continued_as {
+                    match self.store.load(existing) {
+                        Ok(_) => {
+                            r.state = RunState::ContinuedAsNew;
+                            r.wakeup = None;
+                            return Ok(None);
+                        }
+                        Err(Error::NotFound) => {}
+                        Err(error) => return Err(error),
+                    }
+                }
+                let id = derived_id(&r.id, 'n', index);
+                match self.store.load(&id) {
+                    Ok(_) => return Err(Error::Invalid("child id collision")),
+                    Err(Error::NotFound) => {}
+                    Err(error) => return Err(error),
+                }
+                let mut successor = new_run(&id, &r.workflow, &r.version, input.clone())?;
+                successor.parent = r.parent.clone();
+                r.continued_as = Some(id);
+                r.state = RunState::ContinuedAsNew;
+                r.wakeup = None;
+                children.push(successor);
+                Ok(None)
+            }
         }
+    }
+    fn latest_run(&self, id: &str) -> Result<RunRecord> {
+        let mut run = self.store.load(id)?;
+        let mut hops = 0usize;
+        while let Some(next) = run.continued_as.clone() {
+            hops = hops.checked_add(1).ok_or(Error::Limit)?;
+            if hops > 1024 {
+                return Err(Error::Limit);
+            }
+            run = self.store.load(&next)?;
+        }
+        Ok(run)
     }
     /// Fence completion by run, stable effect identity, attempt and owner epoch.
     pub fn complete(&mut self, attempt: &ActivityAttempt, output: PayloadRef) -> Result<()> {
@@ -1003,6 +1070,7 @@ impl<S: Store> Engine<S> {
                 | RunState::CancelRequested
                 | RunState::Completed
                 | RunState::Nondeterminism
+                | RunState::ContinuedAsNew
         ) || (r.state == RunState::Failed && !retry_exhausted)
         {
             return Ok(());
@@ -1059,6 +1127,7 @@ fn new_run(id: &str, name: &str, version: &str, input: PayloadRef) -> Result<Run
         output: None,
         wakeup: Some(0),
         reconciliation_audit: vec![],
+        continued_as: None,
     })
 }
 fn ensure_active(r: &RunRecord) -> Result<()> {
@@ -1069,6 +1138,7 @@ fn ensure_active(r: &RunRecord) -> Result<()> {
             | RunState::Completed
             | RunState::Nondeterminism
             | RunState::Failed
+            | RunState::ContinuedAsNew
     ) {
         Err(Error::Conflict)
     } else {
@@ -1205,6 +1275,7 @@ fn owned_attempt<'a>(
             | RunState::Completed
             | RunState::Nondeterminism
             | RunState::Failed
+            | RunState::ContinuedAsNew
     );
     let retry_exhausted =
         r.state == RunState::Failed && r.failure_reason == Some(RunFailure::RetryExhausted);
@@ -1213,6 +1284,20 @@ fn owned_attempt<'a>(
         return Err(Error::Conflict);
     }
     Ok(task)
+}
+
+fn derived_id(parent: &str, kind: char, index: usize) -> String {
+    let full_id = format!("{parent}:{kind}:{index}");
+    if full_id.len() <= 128 {
+        return full_id;
+    }
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(full_id.as_bytes());
+    let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+    match kind {
+        'c' => format!("child:{hex}"),
+        _ => format!("next:{hex}"),
+    }
 }
 
 fn dispatch_key(a: &ActivityAttempt) -> (String, u64, u64) {
