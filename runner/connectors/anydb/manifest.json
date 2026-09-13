@@ -1,0 +1,248 @@
+{
+  "key": "anydb",
+  "name": "AnyDB",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "AnyDB API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "userEmail",
+          "label": "AnyDB account email",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.anydb.com"
+    ]
+  },
+  "models": [
+    "team",
+    "database"
+  ],
+  "http": {
+    "baseUrl": "https://app.anydb.com/api",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-anydb-api-key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "x-anydb-email": "{{userEmail}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate AnyDB credentials by listing teams.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "success"
+                ]
+              },
+              "data": {
+                "type": "array"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations/ext/listteams",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List teams",
+      "description": "List accessible AnyDB teams.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "success"
+                ]
+              },
+              "data": {
+                "type": "array"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations/ext/listteams",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "databases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List databases",
+      "description": "List databases in a team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamid": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "teamid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "status",
+              "data"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "success"
+                ]
+              },
+              "data": {
+                "type": "array"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations/ext/listdbsforteam",
+        "query": {
+          "teamid": "{{teamid}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  }
+}

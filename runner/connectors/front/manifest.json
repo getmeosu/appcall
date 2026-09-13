@@ -1,0 +1,270 @@
+{
+  "key": "front",
+  "name": "Front",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Front API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api2.frontapp.com"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://api2.frontapp.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "_error",
+        "error.message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the Front API token by listing teammates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teammates",
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "status": "ok"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "contacts.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Contacts",
+      "description": "List Front contacts with bounded cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "created_at",
+              "updated_at"
+            ]
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "contacts",
+          "pagination"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts",
+        "query": {
+          "limit": "{{limit}}",
+          "page_token": "{{pageToken}}",
+          "sort_by": "{{sortBy}}",
+          "sort_order": "{{sortOrder}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "contacts": "{{response._results}}",
+          "pagination": {
+            "next": "{{response._pagination.next}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "contacts.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 262144,
+      "sideEffect": "read",
+      "title": "Get Contact",
+      "description": "Fetch a Front contact by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "contactId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "contact": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "contact"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts/{{contactId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "contact": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "teammates.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Teammates",
+      "description": "List Front teammates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "teammates": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "teammates"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teammates",
+        "success": [
+          200
+        ],
+        "result": {
+          "teammates": "{{response._results}}"
+        }
+      },
+      "enforceOutputSchema": true
+    }
+  },
+  "models": [
+    "contact",
+    "teammate",
+    "inbox",
+    "conversation"
+  ],
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

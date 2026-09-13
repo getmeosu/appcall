@@ -20,6 +20,8 @@ must be curated before it is committed. Provider-specific operation details are
 in each connector's `manifest.json`, implementation, and fixtures; this
 checkout does not have a separate provider README layer.
 
+Curated OpenConnector reuse is documented in [`scripts/connector-gen/openconnector/README.md`](scripts/connector-gen/openconnector/README.md). Its offline importer is pinned and tested; generated records and manifests do not provide live-provider qualification.
+
 The Rust control plane is split across [`crates/appcall-api`](crates/appcall-api),
 the [`appcall-actions`](crates/appcall-actions) and [`appcall-sync`](crates/appcall-sync)
 services, and the [`appcall-engine`](crates/appcall-engine) workflow engine. The

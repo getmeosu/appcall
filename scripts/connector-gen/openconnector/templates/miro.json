@@ -1,0 +1,36 @@
+{
+  "key": "miro",
+  "name": "Miro",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "provenance": { "source": { "url": "https://github.com/oomol-lab/open-connector", "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a" } },
+  "evidence": { "fixture": { "status": "supplied" }, "live": { "status": "unverified" } },
+  "categories": ["productivity"],
+  "auth": {
+    "type": "oauth2",
+    "scopes": ["boards:read"],
+    "setup": { "mode": "oauth2", "fields": [] },
+    "oauth": {
+      "authorizeUrl": "https://miro.com/oauth/authorize",
+      "tokenUrl": "https://api.miro.com/v1/oauth/token",
+      "pkce": true,
+      "supportsRefresh": true
+    }
+  },
+  "network": { "allowedHosts": ["api.miro.com", "miro.com"] },
+  "http": {
+    "baseUrl": "https://api.miro.com/v2",
+    "auth": { "field": "accessToken", "in": "header", "name": "Authorization", "value": "Bearer {{accessToken}}" },
+    "headers": { "Accept": "application/json" },
+    "errors": { "rateLimitStatuses": [429], "retryAfterHeader": "Retry-After", "retryAfterKind": "seconds", "defaultRetryAfterSeconds": 60, "messagePaths": ["message", "error"] }
+  },
+  "operations": {
+    "healthcheck": { "kind": "action", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "sideEffect": "read", "enforceOutputSchema": true, "title": "Healthcheck", "description": "Verify Miro OAuth credentials by listing accessible boards.", "inputSchema": { "type": "object", "properties": {} }, "outputSchema": { "type": "object", "properties": { "status": { "type": "string" }, "boards": { "type": "array", "items": { "type": "object" } } }, "required": ["status", "boards"] }, "request": { "method": "GET", "path": "/boards", "query": { "limit": "1" }, "success": [200], "echo": { "status": "ok" }, "result": { "status": "ok", "boards": "{{response.data}}" } } },
+    "boards.list": { "kind": "action", "timeoutMs": 15000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "sideEffect": "read", "enforceOutputSchema": true, "title": "List Boards", "description": "List boards accessible to the authenticated Miro user.", "inputSchema": { "type": "object", "properties": { "teamId": { "type": "string", "minLength": 1 }, "projectId": { "type": "string", "minLength": 1 }, "query": { "type": "string", "minLength": 1 }, "owner": { "type": "string", "minLength": 1 }, "limit": { "type": "integer", "minimum": 1, "maximum": 50 }, "offset": { "type": "integer", "minimum": 0 }, "sort": { "type": "string", "enum": ["default", "last_modified", "last_opened", "last_created", "alphabetically"] } } }, "outputSchema": { "type": "object", "properties": { "boards": { "type": "array", "items": { "type": "object" } }, "pagination": { "type": "object" } }, "required": ["boards", "pagination"] }, "request": { "method": "GET", "path": "/boards", "query": { "team_id": "{{teamId}}", "project_id": "{{projectId}}", "query": "{{query}}", "owner": "{{owner}}", "limit": "{{limit}}", "offset": "{{offset}}", "sort": "{{sort}}" }, "success": [200], "result": { "boards": "{{response.data}}", "pagination": { "limit": "{{response.limit}}", "offset": "{{response.offset}}", "size": "{{response.size}}" } } } },
+    "boards.get": { "kind": "action", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "sideEffect": "read", "enforceOutputSchema": true, "title": "Get Board", "description": "Get one Miro board by ID.", "inputSchema": { "type": "object", "properties": { "boardId": { "type": "string", "minLength": 1 } }, "required": ["boardId"] }, "outputSchema": { "type": "object", "properties": { "board": { "type": "object" } }, "required": ["board"] }, "request": { "method": "GET", "path": "/boards/{{boardId}}", "success": [200], "result": { "board": "{{response}}" } } },
+    "items.list": { "kind": "action", "timeoutMs": 15000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "sideEffect": "read", "enforceOutputSchema": true, "title": "List Board Items", "description": "List items on a Miro board with cursor pagination.", "inputSchema": { "type": "object", "properties": { "boardId": { "type": "string", "minLength": 1 }, "limit": { "type": "integer", "minimum": 10, "maximum": 50 }, "cursor": { "type": "string", "minLength": 1 }, "type": { "type": "string", "minLength": 1 } }, "required": ["boardId"] }, "outputSchema": { "type": "object", "properties": { "items": { "type": "array", "items": { "type": "object" } }, "pagination": { "type": "object" } }, "required": ["items", "pagination"] }, "request": { "method": "GET", "path": "/boards/{{boardId}}/items", "query": { "limit": "{{limit}}", "cursor": "{{cursor}}", "type": "{{type}}" }, "success": [200], "result": { "items": "{{response.data}}", "pagination": { "cursor": "{{response.cursor}}" } } } },
+    "items.get": { "kind": "action", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "sideEffect": "read", "enforceOutputSchema": true, "title": "Get Board Item", "description": "Get one item from a Miro board.", "inputSchema": { "type": "object", "properties": { "boardId": { "type": "string", "minLength": 1 }, "itemId": { "type": "string", "minLength": 1 } }, "required": ["boardId", "itemId"] }, "outputSchema": { "type": "object", "properties": { "item": { "type": "object" } }, "required": ["item"] }, "request": { "method": "GET", "path": "/boards/{{boardId}}/items/{{itemId}}", "success": [200], "result": { "item": "{{response}}" } } }
+  },
+  "models": ["board", "item"]
+}

@@ -1,0 +1,41 @@
+// Curated, manually audited AppCall templates. These are copied into generated
+// manifests; upstream code is never evaluated or imported.
+import coda from "./templates/coda.json" with { type: "json" };
+import helpscout from "./templates/helpscout.json" with { type: "json" };
+import kit from "./templates/kit.json" with { type: "json" };
+import beehiiv from "./templates/beehiiv.json" with { type: "json" };
+import clockify from "./templates/clockify.json" with { type: "json" };
+import wrike from "./templates/wrike.json" with { type: "json" };
+import smartsheet from "./templates/smartsheet.json" with { type: "json" };
+import buttondown from "./templates/buttondown.json" with { type: "json" };
+import loops from "./templates/loops.json" with { type: "json" };
+import attio from "./templates/attio.json" with { type: "json" };
+import folk from "./templates/folk.json" with { type: "json" };
+import teamup from "./templates/teamup.json" with { type: "json" };
+import circleci from "./templates/circleci.json" with { type: "json" };
+import datadog from "./templates/datadog.json" with { type: "json" };
+import rollbar from "./templates/rollbar.json" with { type: "json" };
+import capsuleCrm from "./templates/capsule-crm.json" with { type: "json" };
+import salesflare from "./templates/salesflare.json" with { type: "json" };
+import pexels from "./templates/pexels.json" with { type: "json" };
+import webflow from "./templates/webflow.json" with { type: "json" };
+
+import freshdesk from "./templates/freshdesk.json" with { type: "json" };
+import miro from "./templates/miro.json" with { type: "json" };
+import productboard from "./templates/productboard.json" with { type: "json" };
+import capsulecrm from "./templates/capsule-crm.json" with { type: "json" };
+import freshsales from "./templates/freshsales.json" with { type: "json" };
+import close from "./templates/close.json" with { type: "json" };
+import simpleanalytics from "./templates/simple-analytics.json" with { type: "json" };
+import front from "./templates/front.json" with { type: "json" };
+import axiom from "./templates/axiom.json" with { type: "json" };
+import featurebase from "./templates/featurebase.json" with { type: "json" };
+import float from "./templates/float.json" with { type: "json" };
+import canny from "./templates/canny.json" with { type: "json" };
+import buildkite from "./templates/buildkite.json" with { type: "json" };
+import shortcut from "./templates/shortcut.json" with { type: "json" };
+import betterstack from "./templates/better-stack.json" with { type: "json" };
+import harvest from "./templates/harvest.json" with { type: "json" };
+import mixpanel from "./templates/mixpanel.json" with { type: "json" };
+import toggl from "./templates/toggl.json" with { type: "json" };
+export const curatedTemplates = { freshdesk: freshdesk, clockify: clockify, miro: miro, wrike: wrike, teamup: teamup, productboard: productboard, buttondown: buttondown, rollbar: rollbar, helpscout: helpscout, "capsule-crm": capsulecrm, freshsales: freshsales, smartsheet: smartsheet, close: close, "simple-analytics": simpleanalytics, front: front, axiom: axiom, beehiiv: beehiiv, loops: loops, featurebase: featurebase, circleci: circleci, float: float, canny: canny, buildkite: buildkite, attio: attio, coda: coda, webflow: webflow, shortcut: shortcut, datadog: datadog, "better-stack": betterstack, harvest: harvest, pexels: pexels, mixpanel: mixpanel, folk: folk, toggl: toggl, kit: kit, salesflare: salesflare } as const;

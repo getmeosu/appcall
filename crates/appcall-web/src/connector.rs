@@ -134,6 +134,34 @@ fn requested_account<'a>(v: &Value, accounts: &[&'a Value]) -> Result<Option<&'a
 fn supported_setup(v: &Value) -> bool {
     matches!(text(v, "mode"), "api_key" | "oauth2" | "external_bearer")
 }
+fn evidence_panel(v: &Value) -> String {
+    let Some(source) = v.get("provenance").and_then(|p| p.get("source")) else {
+        return String::new();
+    };
+    let Some(url) = source
+        .get("url")
+        .and_then(Value::as_str)
+        .filter(|v| !v.trim().is_empty())
+    else {
+        return String::new();
+    };
+    let Some(revision) = source
+        .get("revision")
+        .and_then(Value::as_str)
+        .filter(|v| !v.trim().is_empty())
+    else {
+        return String::new();
+    };
+    let fixture = v
+        .get("evidence")
+        .and_then(|e| e.get("fixture"))
+        .and_then(|f| f.get("status"))
+        .and_then(Value::as_str)
+        .filter(|s| *s == "supplied")
+        .map(|_| "Fixture tests supplied")
+        .unwrap_or("Fixture evidence unavailable");
+    format!("<section id=\"tk-evidence\"><h2>Evidence</h2><p>Source: {} @ {}</p><p>Fixture: {}</p><p>Live: Unverified</p></section>", escape(url), escape(revision), fixture)
+}
 
 pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
     if !valid_id(key) {
@@ -219,6 +247,7 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
     for ((id, label), content) in TABS.into_iter().zip(panels) {
         html.push_str(&format!("<section id=\"tk-panel-{id}\" class=\"tk-panel\" aria-label=\"{label}\"{}>{content}</section>",if id==tab{""}else{" hidden"}));
     }
+    html.push_str(&evidence_panel(v));
     html.push_str(
         "<p id=\"tk-status\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"></p></div>",
     );

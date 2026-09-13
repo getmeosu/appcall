@@ -25,6 +25,39 @@ fn catalog_header(title: &str, subtitle: &str) -> String {
 fn catalog_card(body: &str) -> String {
     format!("<section class=\"catalog-request-panel\">{body}</section>")
 }
+fn evidence_label(item: &Value) -> String {
+    let Some(source) = item.get("provenance").and_then(|p| p.get("source")) else {
+        return String::new();
+    };
+    let Some(url) = source
+        .get("url")
+        .and_then(Value::as_str)
+        .filter(|v| !v.trim().is_empty())
+    else {
+        return String::new();
+    };
+    let Some(revision) = source
+        .get("revision")
+        .and_then(Value::as_str)
+        .filter(|v| !v.trim().is_empty())
+    else {
+        return String::new();
+    };
+    let fixture = item
+        .get("evidence")
+        .and_then(|e| e.get("fixture"))
+        .and_then(|f| f.get("status"))
+        .and_then(Value::as_str)
+        .filter(|s| *s == "supplied")
+        .map(|_| "Fixture tests supplied")
+        .unwrap_or("Fixture evidence unavailable");
+    format!(
+        "<p class=\"text-xs\">Curated import · {} @ {} · {} · Live unverified</p>",
+        escape(url),
+        escape(revision),
+        fixture
+    )
+}
 fn empty(title: &str, body: &str, action: &str, href: &str) -> String {
     crate::ui::EmptyState {
         title,
@@ -639,7 +672,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
    let result_label=if items.len()==1{"1 connector shown.".to_owned()}else{format!("{} connectors shown.",items.len())};
    let clear_search_url=catalog_query_url(category, "");
    body.push_str(&format!("<div id=\"toolkit-catalog-results\" aria-live=\"polite\" aria-atomic=\"true\" aria-labelledby=\"toolkit-catalog-results-heading\"><h3 id=\"toolkit-catalog-results-heading\" class=\"sr-only\">Connector results</h3><p id=\"toolkit-catalog-status\" role=\"status\" aria-live=\"polite\">{result_label}</p><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3\">"));
-   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/connectors/{key}\" aria-label=\"Open {} connector\" class=\"toolkit-catalog-card flex min-w-0 flex-col gap-3 p-5 transition\"><div class=\"flex min-w-0 items-center gap-3\"><span class=\"text-sm font-semibold\">{}</span></div><p class=\"text-xs\">{count} tools</p></a>",escape(name),escape(name)));}
+   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/connectors/{key}\" aria-label=\"Open {} connector\" class=\"toolkit-catalog-card flex min-w-0 flex-col gap-3 p-5 transition\"><div class=\"flex min-w-0 items-center gap-3\"><span class=\"text-sm font-semibold\">{}</span></div><p class=\"text-xs\">{count} tools</p>{}</a>",escape(name),escape(name),evidence_label(item)));}
    body.push_str("</div>");
    if items.is_empty(){body.push_str(&if !search.trim().is_empty(){empty("No connectors match this search.","Try a different connector, category, or tool title.","Clear search",&clear_search_url)}else if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/connectors")}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/connectors#toolkit-request-form")});}
    body.push_str("</div>");
@@ -1599,6 +1632,29 @@ mod rendering_contract_tests {
             );
         }
         assert!(!html.contains("99 tools"));
+    }
+
+    #[test]
+    fn catalog_evidence_is_additive_and_does_not_count_metadata() {
+        let html = render(Op::Catalog, &json!({"connectors":[
+            {"key":"coda","name":"Coda","provenance":{"source":{"url":"https://example.invalid/source","revision":"pin-123"}},"evidence":{"fixture": {"status":"supplied"}, "verified": true},"operations":[{"name":"docs.list","kind":"action"}]},
+            {"key":"held","name":"Held","provenance":{"source":"held"},"operations":[]}
+        ]}), None).unwrap();
+        assert!(html.contains("Curated import"));
+        assert!(html.contains("Fixture tests supplied"));
+        assert!(html.contains("Live unverified"));
+        assert_eq!(html.matches("1 tools").count(), 1);
+        assert!(!html.contains("verified true"));
+    }
+
+    #[test]
+    fn catalog_evidence_escapes_untrusted_provenance() {
+        let html = render(Op::Catalog, &json!({"connectors":[
+            {"key":"coda","name":"<Coda>","provenance":{"source":{"url":"<url>","revision":"<pin>"}},"evidence":{"fixture":{"status":"supplied"}},"operations":[]}
+        ]}), None).unwrap();
+        assert!(html.contains("Fixture tests supplied"));
+        assert!(!html.contains("<fixture>"));
+        assert!(!html.contains("<Coda>"));
     }
 
     #[test]

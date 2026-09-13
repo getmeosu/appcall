@@ -16,6 +16,7 @@ import { createConnectorHttpClient, ConnectorHttpError } from "../http";
 import { maxOperationResponseBytes } from "../budget";
 import { assertSafePathSegment, assertSafePathSegments, isRecord, renderPath, renderTemplate, resolvePath } from "./template";
 import { assertOutputSchema, validateAgainstSchema } from "./validate";
+import { assertStrictSchema, validateStrictInput } from "./strict-schema";
 import type {
   CompiledConnector,
   CompiledHandler,
@@ -45,6 +46,7 @@ export function isDeclarativeManifest(manifest: unknown): boolean {
 
 export function compileDeclarativeConnector(manifest: DeclarativeManifest): CompiledConnector {
   assertTemplatedHostsAreDeclared(manifest);
+  assertBasicAuthConfiguration(manifest.http?.auth);
   const actions: Record<string, CompiledHandler> = {};
   const syncs: Record<string, CompiledHandler> = {};
   const operations = manifest.operations ?? {};
@@ -66,6 +68,17 @@ export function compileDeclarativeConnector(manifest: DeclarativeManifest): Comp
   }
 
   return { key: manifest.key, actions, syncs };
+}
+
+function assertBasicAuthConfiguration(auth: DeclarativeHttp["auth"]): void {
+  if (!auth?.basic) return;
+  if ((auth.in ?? "header") !== "header" || auth.name !== "Authorization") {
+    throw new Error("basic auth must use the Authorization header");
+  }
+  if (auth.value !== undefined) throw new Error("basic auth cannot be combined with auth.value");
+  if (typeof auth.basic.username !== "string" || typeof auth.basic.password !== "string") {
+    throw new Error("basic auth credentials must be templates");
+  }
 }
 
 // assertTemplatedHostsAreDeclared refuses a manifest whose base URL or allowed
@@ -133,7 +146,9 @@ function compileOperation(
   const http: DeclarativeHttp = manifest.http ?? { baseUrl: "" };
   const request: DeclarativeRequest = operation.request ?? {};
   assertSafePathSegments(request.path ?? "");
+  assertBodyEncodingManifest(manifest, request);
   const schema = operation.inputSchema ?? { type: "object" };
+  if (operation.validationMode === "strict-generated") assertStrictSchema(schema);
   const credentialField = http.auth?.field;
   if(operation.enforceOutputSchema && operation.outputSchema?.type !== "object") throw new Error("Output enforcement requires object schema");
   const setup=manifest.auth?.setup;
@@ -143,7 +158,9 @@ function compileOperation(
       const props=isRecord(schema.properties)?schema.properties:{};
       for(const key of Object.keys(value)) if(!Object.hasOwn(props,key) && !credentialKeys.has(key)) throw new Error("Unsupported input field");
     }
-    return validateAgainstSchema(value,schema);
+    return operation.validationMode === "strict-generated"
+      ? validateStrictInput(value, schema, credentialKeys)
+      : validateAgainstSchema(value,schema);
   };
 
   return function execute(input: unknown): unknown {
@@ -195,6 +212,12 @@ async function callProvider(
   try {
     url = buildURL(http, request, input);
     headers = buildHeaders(http, request, input);
+    if (request.bodyEncoding === "form") {
+      const contentType = new Headers(headers).get("content-type");
+      if (contentType !== "application/x-www-form-urlencoded") {
+        throw new Error("form body requires effective Content-Type application/x-www-form-urlencoded");
+      }
+    }
     body = buildBody(request, input);
   } catch (error) {
     // A path or header template that cannot be resolved is an input problem,
@@ -234,11 +257,16 @@ async function callProvider(
     };
   }
 
-  const parsed = parseBody(response.body);
   const successStatuses = request.success ?? defaultSuccessStatuses;
   if (!successStatuses.includes(response.status)) {
-    throw upstreamFailure(manifest, http, operationKey, response, parsed, input);
+    throw upstreamFailure(manifest, http, operationKey, response, parseBody(response.body), input);
   }
+  let parsed: unknown;
+  if (operation.responseFormat === "json") {
+    if (response.body.trim() === "") throw { ok: false, code: "CONNECTOR_RESPONSE_INVALID", message: "Connector returned an empty response." };
+    try { parsed = JSON.parse(response.body); }
+    catch { throw { ok: false, code: "CONNECTOR_RESPONSE_INVALID", message: "Connector returned invalid JSON." }; }
+  } else parsed = parseBody(response.body);
   // A success status is not proof of success. GraphQL providers answer 200 with
   // a populated `errors` array, so a manifest may nominate body paths that
   // demote such a response to a failure. Checked only after the status check so
@@ -358,6 +386,13 @@ function buildHeaders(http: DeclarativeHttp, request: DeclarativeRequest, input:
   }
 
   const auth = http.auth;
+  if (auth?.basic) {
+    const username = renderBasicCredential(auth.basic.username, input, "username");
+    const password = renderBasicCredential(auth.basic.password, input, "password", true);
+    if (username.includes(":")) throw new Error("basic auth username must not contain a colon");
+    headers.Authorization = `Basic ${Buffer.from(`${username}:${password}`, "utf8").toString("base64")}`;
+    return headers;
+  }
   if (auth && (auth.in ?? "header") === "header" && auth.name) {
     const value = renderTemplate(auth.value ?? `{{${auth.field}}}`, input);
     if (value !== undefined) {
@@ -366,6 +401,12 @@ function buildHeaders(http: DeclarativeHttp, request: DeclarativeRequest, input:
   }
 
   return headers;
+}
+
+function renderBasicCredential(template: string, input: Record<string, unknown>, label: string, allowLiteralEmpty = false): string {
+  const value = renderTemplate(template, input);
+  if (typeof value !== "string" || (value.length === 0 && !(allowLiteralEmpty && template === ""))) throw new Error(`basic auth ${label} is required`);
+  return value;
 }
 
 const parameterPlaceholderPattern = /\{\{\s*([A-Za-z0-9_.$-]+)\s*\}\}/g;
@@ -588,7 +629,46 @@ function buildBody(request: DeclarativeRequest, input: Record<string, unknown>):
     return undefined;
   }
   const rendered = renderTemplate(request.body, input);
+  if (request.bodyEncoding === "form") {
+    if (!isRecord(rendered) || Array.isArray(rendered) || rendered === null) throw new Error("form body must render to a plain object");
+    if (isRecord(request.body)) {
+      for (const [key, template] of Object.entries(request.body)) {
+        if (typeof template === "string" && /^\{\{\s*[A-Za-z0-9_.$-]+\s*\}\}$/.test(template)) {
+          const value = resolvePath(template.replace(/^\{\{\s*|\s*\}\}$/g, ""), input);
+          if (value !== undefined) assertFormScalar(key, value);
+        } else if (typeof template === "string" && template.includes("{{")) {
+          throw new Error(`form body field ${key} must be a string, boolean, or finite number`);
+        } else if (isRecord(template) || Array.isArray(template) || template === null) {
+          throw new Error(`form body field ${key} must be a string, boolean, or finite number`);
+        } else {
+          assertFormScalar(key, template);
+        }
+      }
+    }
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(rendered)) {
+      if (value === undefined) continue;
+      assertFormScalar(key, value);
+      params.set(key, String(value));
+    }
+    return params.toString();
+  }
   return rendered === undefined ? undefined : JSON.stringify(rendered);
+}
+
+function assertFormScalar(key: string, value: unknown): asserts value is string | boolean | number {
+  if (value === null || typeof value === "object" || (typeof value === "number" && !Number.isFinite(value)) || (typeof value !== "string" && typeof value !== "boolean" && typeof value !== "number")) throw new Error(`form body field ${key} must be a string, boolean, or finite number`);
+}
+
+function assertBodyEncodingManifest(manifest: DeclarativeManifest, request: DeclarativeRequest): void {
+  if (request.bodyEncoding !== "form") return;
+  const effective = new Map<string, unknown>();
+  for (const block of [manifest.http?.headers, request.headers]) {
+    if (!isRecord(block)) continue;
+    for (const [key, value] of Object.entries(block)) effective.set(key.toLowerCase(), value);
+  }
+  const contentType = effective.get("content-type");
+  if (typeof contentType !== "string" || contentType.toLowerCase() !== "application/x-www-form-urlencoded") throw new Error(`${manifest.key}: form body requires Content-Type application/x-www-form-urlencoded`);
 }
 
 function upstreamFailure(
@@ -646,6 +726,16 @@ function redactCredentialDetail(detail: string, manifest: DeclarativeManifest, h
     // throws on lone surrogates, so retain raw and form variants in that case.
     variants.add(new URLSearchParams({ v: value }).toString().slice(2));
     try { variants.add(encodeURIComponent(value)); } catch { /* Raw value remains protected. */ }
+  }
+  const basic = http.auth?.basic;
+  if (basic) {
+    const username = renderTemplate(basic.username, input);
+    const password = renderTemplate(basic.password, input);
+    if (typeof username === "string" && typeof password === "string") {
+      const encoded = Buffer.from(`${username}:${password}`, "utf8").toString("base64");
+      variants.add(encoded);
+      variants.add(`Basic ${encoded}`);
+    }
   }
   const encodedVariants = [...variants].flatMap(value => [value, value.replace(/%[0-9A-F]{2}/g, part => part.toLowerCase())]);
   return [...new Set(encodedVariants)].sort((a, b) => b.length - a.length)

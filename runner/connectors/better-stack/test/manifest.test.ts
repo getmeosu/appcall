@@ -1,0 +1,3 @@
+import { describe, expect, it } from "bun:test";
+import manifest from "../manifest.json";
+describe("better stack manifest",()=>it("has bounded public bearer read contract and exact provenance",()=>{expect(manifest.key).toBe("better-stack");expect(manifest.visibility).toBe("public");expect(manifest.http.auth.field).toBe("apiKey");expect(manifest.network.allowedHosts).toEqual(["uptime.betterstack.com"]);expect(manifest.provenance).toEqual({source:{url:"https://github.com/oomol-lab/open-connector",revision:"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"},evidence:{fixture:{status:"supplied"},live:{status:"unverified"}}});for(const op of Object.values(manifest.operations)){expect(op.enforceOutputSchema).toBe(true);expect(op.sideEffect).toBe("read");}}));

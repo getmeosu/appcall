@@ -1,0 +1,276 @@
+{
+  "key": "clockify",
+  "name": "Clockify",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Clockify API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.clockify.me"
+    ]
+  },
+  "models": [
+    "user",
+    "workspace",
+    "project",
+    "task",
+    "time_entry"
+  ],
+  "http": {
+    "baseUrl": "https://api.clockify.me/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Api-Key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Get the authenticated Clockify user.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "workspaces.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Workspaces",
+      "description": "List accessible Clockify workspaces.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces",
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Projects",
+      "description": "List projects in a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "workspaceId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array"
+          },
+          "page": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "pageSize": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/projects",
+        "query": {
+          "page": "{{page}}",
+          "page-size": "{{pageSize}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response}}",
+          "page": "{{page}}",
+          "pageSize": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Tasks",
+      "description": "List tasks in a Clockify project.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "workspaceId",
+          "projectId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/projects/{{projectId}}/tasks",
+        "query": {
+          "page": "{{page}}",
+          "page-size": "{{pageSize}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

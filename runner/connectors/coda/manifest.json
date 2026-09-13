@@ -1,0 +1,586 @@
+{
+  "key": "coda",
+  "name": "Coda",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Coda API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "coda.io"
+    ]
+  },
+  "models": [
+    "user",
+    "doc",
+    "page",
+    "table",
+    "column",
+    "row"
+  ],
+  "http": {
+    "baseUrl": "https://coda.io/apis/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "statusCode"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Coda API token with GET /whoami.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "properties": {
+          "user": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/whoami",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "docs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Docs",
+      "description": "List accessible Coda docs. pageToken is passed manually; nextPageLink is returned as metadata and never followed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "isOwner": {
+            "type": "boolean"
+          },
+          "isPublished": {
+            "type": "boolean"
+          },
+          "query": {
+            "type": "string"
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextPageToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageLink": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/docs",
+        "query": {
+          "isOwner": "{{isOwner}}",
+          "isPublished": "{{isPublished}}",
+          "query": "{{query}}",
+          "workspaceId": "{{workspaceId}}",
+          "limit": "{{limit}}",
+          "pageToken": "{{pageToken}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response.items}}",
+          "nextPageToken": "{{response.nextPageToken}}",
+          "nextPageLink": "{{response.nextPageLink}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "docs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Doc",
+      "description": "Get a Coda doc by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "docId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "docId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "doc"
+        ],
+        "properties": {
+          "doc": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/docs/{{docId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "doc": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "pages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pages",
+      "description": "List pages in a Coda doc.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "docId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "docId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextPageToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageLink": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/docs/{{docId}}/pages",
+        "query": {
+          "limit": "{{limit}}",
+          "pageToken": "{{pageToken}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response.items}}",
+          "nextPageToken": "{{response.nextPageToken}}",
+          "nextPageLink": "{{response.nextPageLink}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "tables.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Tables",
+      "description": "List tables in a Coda doc.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "docId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sortBy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "docId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextPageToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageLink": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/docs/{{docId}}/tables",
+        "query": {
+          "limit": "{{limit}}",
+          "pageToken": "{{pageToken}}",
+          "sortBy": "{{sortBy}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response.items}}",
+          "nextPageToken": "{{response.nextPageToken}}",
+          "nextPageLink": "{{response.nextPageLink}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "columns.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Columns",
+      "description": "List columns in a Coda table.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "docId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tableIdOrName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "visibleOnly": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "docId",
+          "tableIdOrName"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextPageToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageLink": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/docs/{{docId}}/tables/{{tableIdOrName}}/columns",
+        "query": {
+          "limit": "{{limit}}",
+          "pageToken": "{{pageToken}}",
+          "visibleOnly": "{{visibleOnly}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response.items}}",
+          "nextPageToken": "{{response.nextPageToken}}",
+          "nextPageLink": "{{response.nextPageLink}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "rows.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Rows",
+      "description": "List rows in a Coda table with optional filtering and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "docId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tableIdOrName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "query": {
+            "type": "string"
+          },
+          "sortBy": {
+            "type": "string"
+          },
+          "useColumnNames": {
+            "type": "boolean"
+          },
+          "valueFormat": {
+            "type": "string",
+            "enum": [
+              "simple",
+              "simpleWithArrays",
+              "rich"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "syncToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "docId",
+          "tableIdOrName"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextPageToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextPageLink": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextSyncToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/docs/{{docId}}/tables/{{tableIdOrName}}/rows",
+        "query": {
+          "query": "{{query}}",
+          "sortBy": "{{sortBy}}",
+          "useColumnNames": "{{useColumnNames}}",
+          "valueFormat": "{{valueFormat}}",
+          "limit": "{{limit}}",
+          "pageToken": "{{pageToken}}",
+          "syncToken": "{{syncToken}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "items": "{{response.items}}",
+          "nextPageToken": "{{response.nextPageToken}}",
+          "nextPageLink": "{{response.nextPageLink}}",
+          "nextSyncToken": "{{response.nextSyncToken}}"
+        }
+      },
+      "enforceOutputSchema": true
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

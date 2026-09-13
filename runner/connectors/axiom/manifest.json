@@ -1,0 +1,176 @@
+{
+  "key": "axiom",
+  "name": "Axiom",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Axiom API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.axiom.co"
+    ]
+  },
+  "http": {
+    "baseUrl": "https://api.axiom.co",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error.message",
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Verify the Axiom API token by listing datasets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/datasets",
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "status": "ok",
+          "datasets": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "datasets.list": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Datasets",
+      "description": "List Axiom datasets visible to the current token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "datasets": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/datasets",
+        "success": [
+          200
+        ],
+        "result": {
+          "datasets": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "datasets.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Dataset",
+      "description": "Get an Axiom dataset by ID or unique name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "datasetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/datasets/{{datasetId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "dataset": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    }
+  },
+  "models": [
+    "dataset"
+  ],
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  }
+}

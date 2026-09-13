@@ -81,7 +81,7 @@ impl MemoryDashboard {
         match r.operation {
             Op::ActionClaims | Op::ReconcileActionClaim => Err(Error::Forbidden.into()),
             Op::Catalog => Ok(
-                json!({"connectors":self.core.registry().public_list().map(|c|crate::browser_host::catalog_item(c.manifest())).collect::<Vec<_>>()}),
+                json!({"connectors":self.core.registry().public_list().map(crate::browser_host::catalog_item_connector).collect::<Vec<_>>()}),
             ),
             Op::Connector | Op::TestForm => {
                 let c = self
@@ -89,7 +89,7 @@ impl MemoryDashboard {
                     .registry()
                     .public_connector(resource)
                     .map_err(|_| Error::Invalid)?;
-                let mut item = crate::browser_host::catalog_item(c.manifest());
+                let mut item = crate::browser_host::catalog_item_connector(c);
                 item["setup"] = serde_json::to_value(&c.manifest().auth.setup)
                     .map_err(|_| Error::Unavailable)?;
                 item["connections"] = self
