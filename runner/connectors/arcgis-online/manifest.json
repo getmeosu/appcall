@@ -1,0 +1,388 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "ArcGIS API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "utility"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "token",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer",
+    "errors": {
+      "bodyErrorPaths": [
+        "error"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "query": {
+      "f": "json"
+    }
+  },
+  "key": "arcgis-online",
+  "models": [
+    "suggestion",
+    "address-candidate",
+    "reverse-geocode"
+  ],
+  "name": "ArcGIS Online",
+  "network": {
+    "allowedHosts": [
+      "geocode-api.arcgis.com"
+    ]
+  },
+  "operations": {
+    "geocode.find-address-candidates": {
+      "description": "Convert an address or place query into ArcGIS geocoding candidates.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "forStorage": {
+            "type": "boolean"
+          },
+          "locationType": {
+            "enum": [
+              "rooftop",
+              "street"
+            ],
+            "type": "string"
+          },
+          "magicKey": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxLocations": {
+            "maximum": 50,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "outFields": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "outSr": {
+            "type": "integer"
+          },
+          "preferredLabelValues": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "searchExtent": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "singleLine": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sourceCountry": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "singleLine"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/findAddressCandidates",
+        "query": {
+          "SingleLine": "{{singleLine}}",
+          "category": "{{category}}",
+          "forStorage": "{{forStorage}}",
+          "locationType": "{{locationType}}",
+          "magicKey": "{{magicKey}}",
+          "maxLocations": "{{maxLocations}}",
+          "outFields": "{{outFields}}",
+          "outSR": "{{outSr}}",
+          "preferredLabelValues": "{{preferredLabelValues}}",
+          "searchExtent": "{{searchExtent}}",
+          "sourceCountry": "{{sourceCountry}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Find address candidates",
+      "validationMode": "strict-generated"
+    },
+    "geocode.reverse": {
+      "description": "Convert longitude and latitude into an ArcGIS address result.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "featureTypes": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "forStorage": {
+            "type": "boolean"
+          },
+          "langCode": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "latitude": {
+            "maximum": 90,
+            "minimum": -90,
+            "type": "number"
+          },
+          "locationType": {
+            "enum": [
+              "rooftop",
+              "street"
+            ],
+            "type": "string"
+          },
+          "longitude": {
+            "maximum": 180,
+            "minimum": -180,
+            "type": "number"
+          },
+          "outFields": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "outSr": {
+            "type": "integer"
+          },
+          "preferredLabelValues": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "returnInputLocation": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "longitude",
+          "latitude"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/reverseGeocode",
+        "query": {
+          "featureTypes": "{{featureTypes}}",
+          "forStorage": "{{forStorage}}",
+          "langCode": "{{langCode}}",
+          "location": "{{longitude}},{{latitude}}",
+          "locationType": "{{locationType}}",
+          "outFields": "{{outFields}}",
+          "outSR": "{{outSr}}",
+          "preferredLabelValues": "{{preferredLabelValues}}",
+          "returnInputLocation": "{{returnInputLocation}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Reverse geocode",
+      "validationMode": "strict-generated"
+    },
+    "geocode.suggest": {
+      "description": "Return ArcGIS address and place autocomplete suggestions.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "countryCode": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxSuggestions": {
+            "maximum": 15,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "preferredLabelValues": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "returnCollections": {
+            "type": "boolean"
+          },
+          "searchExtent": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sourceCountry": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "text": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/suggest",
+        "query": {
+          "category": "{{category}}",
+          "countryCode": "{{countryCode}}",
+          "maxSuggestions": "{{maxSuggestions}}",
+          "preferredLabelValues": "{{preferredLabelValues}}",
+          "returnCollections": "{{returnCollections}}",
+          "searchExtent": "{{searchExtent}}",
+          "sourceCountry": "{{sourceCountry}}",
+          "text": "{{text}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Suggest addresses",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the ArcGIS API key with a zero-credit suggest request.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/suggest",
+        "query": {
+          "maxSuggestions": "1",
+          "text": "Berlin"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

@@ -1,0 +1,275 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Instabot API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "masterApiKey",
+          "label": "Instabot master API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "messaging"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Instabot-Api-Key",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.instabot.io/v1",
+    "errors": {
+      "bodyErrorPaths": [
+        "apiStatusMessage"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "apiStatusMessage",
+        "message"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Authorization": "X-Instabot-Master-Api-Key {{masterApiKey}}"
+    }
+  },
+  "key": "instabot",
+  "models": [
+    "application",
+    "user"
+  ],
+  "name": "Instabot",
+  "network": {
+    "allowedHosts": [
+      "api.instabot.io"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "description": "Validate Instabot API keys with GET /.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "users.get": {
+      "description": "Get one Instabot user by object ID.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "userId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{userId}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get user",
+      "validationMode": "strict-generated"
+    },
+    "users.list": {
+      "description": "List Instabot users with optional paging and sorting.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "getTotalCount": {
+            "type": "boolean"
+          },
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "orderBy": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "skip": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "query": {
+          "getTotalCount": "{{getTotalCount}}",
+          "limit": "{{limit}}",
+          "orderBy": "{{orderBy}}",
+          "skip": "{{skip}}",
+          "type": "all"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List users",
+      "validationMode": "strict-generated"
+    },
+    "users.updated.list": {
+      "description": "List Instabot users changed since an ISO-8601 timestamp.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "since": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "since"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/lastUpdated",
+        "query": {
+          "limit": "{{limit}}",
+          "since": "{{since}}",
+          "type": "all"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List updated users",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

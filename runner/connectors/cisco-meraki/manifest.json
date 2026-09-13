@@ -1,0 +1,277 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Cisco Meraki Dashboard API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Cisco-Meraki-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.meraki.com/api/v1",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors.0",
+        "message",
+        "error",
+        "detail"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "cisco-meraki",
+  "models": [
+    "organization",
+    "network",
+    "device"
+  ],
+  "name": "Cisco Meraki",
+  "network": {
+    "allowedHosts": [
+      "api.meraki.com"
+    ]
+  },
+  "operations": {
+    "devices.get": {
+      "description": "Retrieve one Meraki device by serial number.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "serial": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "serial"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/devices/{{serial}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get device",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Meraki Dashboard API key by listing organizations.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "query": {
+          "perPage": "3"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "networks.list": {
+      "description": "List networks in a Meraki organization.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "configTemplateId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "endingBefore": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "isBoundToConfigTemplate": {
+            "type": "boolean"
+          },
+          "organizationId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "perPage": {
+            "maximum": 100000,
+            "minimum": 3,
+            "type": "integer"
+          },
+          "startingAfter": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "organizationId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationId}}/networks",
+        "query": {
+          "configTemplateId": "{{configTemplateId}}",
+          "endingBefore": "{{endingBefore}}",
+          "isBoundToConfigTemplate": "{{isBoundToConfigTemplate}}",
+          "perPage": "{{perPage}}",
+          "startingAfter": "{{startingAfter}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List organization networks",
+      "validationMode": "strict-generated"
+    },
+    "organizations.list": {
+      "description": "List Meraki organizations available to the API key.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "endingBefore": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "perPage": {
+            "maximum": 9000,
+            "minimum": 3,
+            "type": "integer"
+          },
+          "startingAfter": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {}
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "query": {
+          "endingBefore": "{{endingBefore}}",
+          "perPage": "{{perPage}}",
+          "startingAfter": "{{startingAfter}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List organizations",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

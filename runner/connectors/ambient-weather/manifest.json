@@ -1,0 +1,271 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Ambient Weather API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "applicationKey",
+          "label": "Ambient Weather application key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "utility"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "apiKey",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://rt.ambientweather.net",
+    "errors": {
+      "defaultRetryAfterSeconds": 1,
+      "messagePaths": [
+        "message",
+        "error",
+        "description"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "query": {
+      "applicationKey": "{{applicationKey}}"
+    }
+  },
+  "key": "ambient-weather",
+  "models": [
+    "device",
+    "observation"
+  ],
+  "name": "Ambient Weather",
+  "network": {
+    "allowedHosts": [
+      "rt.ambientweather.net"
+    ]
+  },
+  "operations": {
+    "devices.history": {
+      "description": "Fetch historical observation records for one Ambient Weather device.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "endDate": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "maximum": 288,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "macAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "macAddress"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "query": {
+          "endDate": "{{endDate}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Device history",
+      "validationMode": "strict-generated"
+    },
+    "devices.latest": {
+      "description": "Fetch the latest observation records for one Ambient Weather device.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "macAddress": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "macAddress"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Latest device data",
+      "validationMode": "strict-generated"
+    },
+    "devices.list": {
+      "description": "List Ambient Weather devices linked to the API key.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List devices",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate Ambient Weather keys by listing the caller's devices.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

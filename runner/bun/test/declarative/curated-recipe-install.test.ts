@@ -196,6 +196,162 @@ import raisely from "../../../../runner/connectors/raisely/manifest.json";
 import sling from "../../../../runner/connectors/sling/manifest.json";
 import stannp from "../../../../runner/connectors/stannp/manifest.json";
 import stormboard from "../../../../runner/connectors/stormboard/manifest.json";
+import n17track from "../../../../runner/connectors/17track/manifest.json";
+import n7Shifts from "../../../../runner/connectors/7-shifts/manifest.json";
+import ablefy from "../../../../runner/connectors/ablefy/manifest.json";
+import accredibleCertificates from "../../../../runner/connectors/accredible-certificates/manifest.json";
+import acuityScheduling from "../../../../runner/connectors/acuity-scheduling/manifest.json";
+import adafruitIo from "../../../../runner/connectors/adafruit-io/manifest.json";
+import addressfinder from "../../../../runner/connectors/addressfinder/manifest.json";
+import addresszen from "../../../../runner/connectors/addresszen/manifest.json";
+import adyen from "../../../../runner/connectors/adyen/manifest.json";
+import affinda from "../../../../runner/connectors/affinda/manifest.json";
+import agentql from "../../../../runner/connectors/agentql/manifest.json";
+import agiled from "../../../../runner/connectors/agiled/manifest.json";
+import agility from "../../../../runner/connectors/agility/manifest.json";
+import agora from "../../../../runner/connectors/agora/manifest.json";
+import ahrefs from "../../../../runner/connectors/ahrefs/manifest.json";
+import aimfox from "../../../../runner/connectors/aimfox/manifest.json";
+import airfocus from "../../../../runner/connectors/airfocus/manifest.json";
+import aivoov from "../../../../runner/connectors/aivoov/manifest.json";
+import alchemy from "../../../../runner/connectors/alchemy/manifest.json";
+import algoDocs from "../../../../runner/connectors/algo-docs/manifest.json";
+import alpaca from "../../../../runner/connectors/alpaca/manifest.json";
+import altTextAi from "../../../../runner/connectors/alt-text-ai/manifest.json";
+import altoviz from "../../../../runner/connectors/altoviz/manifest.json";
+import amara from "../../../../runner/connectors/amara/manifest.json";
+import ambientWeather from "../../../../runner/connectors/ambient-weather/manifest.json";
+import ambivo from "../../../../runner/connectors/ambivo/manifest.json";
+import amilia from "../../../../runner/connectors/amilia/manifest.json";
+import anchorBrowser from "../../../../runner/connectors/anchor-browser/manifest.json";
+import anrok from "../../../../runner/connectors/anrok/manifest.json";
+import anthropic from "../../../../runner/connectors/anthropic/manifest.json";
+import anthropicAdmin from "../../../../runner/connectors/anthropic-admin/manifest.json";
+import anymailFinder from "../../../../runner/connectors/anymail-finder/manifest.json";
+import apiVoid from "../../../../runner/connectors/api-void/manifest.json";
+import apiflash from "../../../../runner/connectors/apiflash/manifest.json";
+import apipieAi from "../../../../runner/connectors/apipie-ai/manifest.json";
+import appcues from "../../../../runner/connectors/appcues/manifest.json";
+import appstleSubscriptions from "../../../../runner/connectors/appstle-subscriptions/manifest.json";
+import appveyor from "../../../../runner/connectors/appveyor/manifest.json";
+import arcgisOnline from "../../../../runner/connectors/arcgis-online/manifest.json";
+import asinDataApi from "../../../../runner/connectors/asin-data-api/manifest.json";
+import assemblyai from "../../../../runner/connectors/assemblyai/manifest.json";
+import atlasSo from "../../../../runner/connectors/atlas-so/manifest.json";
+import attention from "../../../../runner/connectors/attention/manifest.json";
+import autobound from "../../../../runner/connectors/autobound/manifest.json";
+import autom from "../../../../runner/connectors/autom/manifest.json";
+import avochato from "../../../../runner/connectors/avochato/manifest.json";
+import bamboohr from "../../../../runner/connectors/bamboohr/manifest.json";
+import bannerbear from "../../../../runner/connectors/bannerbear/manifest.json";
+import baselinker from "../../../../runner/connectors/baselinker/manifest.json";
+import basin from "../../../../runner/connectors/basin/manifest.json";
+import beaconchain from "../../../../runner/connectors/beaconchain/manifest.json";
+import beamer from "../../../../runner/connectors/beamer/manifest.json";
+import benzinga from "../../../../runner/connectors/benzinga/manifest.json";
+import bettercontact from "../../../../runner/connectors/bettercontact/manifest.json";
+import bidsketch from "../../../../runner/connectors/bidsketch/manifest.json";
+import bigCommerce from "../../../../runner/connectors/big-commerce/manifest.json";
+import bigml from "../../../../runner/connectors/bigml/manifest.json";
+import bird from "../../../../runner/connectors/bird/manifest.json";
+import bitly from "../../../../runner/connectors/bitly/manifest.json";
+import bitrise from "../../../../runner/connectors/bitrise/manifest.json";
+import blandAi from "../../../../runner/connectors/bland-ai/manifest.json";
+import blazeMeterFunctional from "../../../../runner/connectors/blaze-meter-functional/manifest.json";
+import blazeMeterPerformance from "../../../../runner/connectors/blaze-meter-performance/manifest.json";
+import blazeMeterServiceVirtualization from "../../../../runner/connectors/blaze-meter-service-virtualization/manifest.json";
+import bloomerang from "../../../../runner/connectors/bloomerang/manifest.json";
+import boldsign from "../../../../runner/connectors/boldsign/manifest.json";
+import bolna from "../../../../runner/connectors/bolna/manifest.json";
+import boloforms from "../../../../runner/connectors/boloforms/manifest.json";
+import bookingmood from "../../../../runner/connectors/bookingmood/manifest.json";
+import botStar from "../../../../runner/connectors/bot-star/manifest.json";
+import botpress from "../../../../runner/connectors/botpress/manifest.json";
+import botsonic from "../../../../runner/connectors/botsonic/manifest.json";
+import bouncer from "../../../../runner/connectors/bouncer/manifest.json";
+import boxhero from "../../../../runner/connectors/boxhero/manifest.json";
+import brandfetch from "../../../../runner/connectors/brandfetch/manifest.json";
+import breeze from "../../../../runner/connectors/breeze/manifest.json";
+import brightData from "../../../../runner/connectors/bright-data/manifest.json";
+import browseAi from "../../../../runner/connectors/browse-ai/manifest.json";
+import browserUse from "../../../../runner/connectors/browser-use/manifest.json";
+import browserbase from "../../../../runner/connectors/browserbase/manifest.json";
+import browserstack from "../../../../runner/connectors/browserstack/manifest.json";
+import bugbug from "../../../../runner/connectors/bugbug/manifest.json";
+import builderIo from "../../../../runner/connectors/builder-io/manifest.json";
+import buildium from "../../../../runner/connectors/buildium/manifest.json";
+import businessmap from "../../../../runner/connectors/businessmap/manifest.json";
+import callpage from "../../../../runner/connectors/callpage/manifest.json";
+import campaignCleaner from "../../../../runner/connectors/campaign-cleaner/manifest.json";
+import cardly from "../../../../runner/connectors/cardly/manifest.json";
+import certifier from "../../../../runner/connectors/certifier/manifest.json";
+import chargebee from "../../../../runner/connectors/chargebee/manifest.json";
+import chaserhq from "../../../../runner/connectors/chaserhq/manifest.json";
+import checkConnector from "../../../../runner/connectors/check/manifest.json";
+import chorus from "../../../../runner/connectors/chorus/manifest.json";
+import cin7Core from "../../../../runner/connectors/cin7-core/manifest.json";
+import cincopa from "../../../../runner/connectors/cincopa/manifest.json";
+import ciscoMeraki from "../../../../runner/connectors/cisco-meraki/manifest.json";
+import cockroachLabs from "../../../../runner/connectors/cockroach-labs/manifest.json";
+import conductor from "../../../../runner/connectors/conductor/manifest.json";
+import dailyConnector from "../../../../runner/connectors/daily/manifest.json";
+import databox from "../../../../runner/connectors/databox/manifest.json";
+import dataforb2b from "../../../../runner/connectors/dataforb2b/manifest.json";
+import digistore24 from "../../../../runner/connectors/digistore24/manifest.json";
+import discolike from "../../../../runner/connectors/discolike/manifest.json";
+import dixa from "../../../../runner/connectors/dixa/manifest.json";
+import dovetail from "../../../../runner/connectors/dovetail/manifest.json";
+import espocrm from "../../../../runner/connectors/espocrm/manifest.json";
+import fellow from "../../../../runner/connectors/fellow/manifest.json";
+import fern from "../../../../runner/connectors/fern/manifest.json";
+import firehydrant from "../../../../runner/connectors/firehydrant/manifest.json";
+import formbricks from "../../../../runner/connectors/formbricks/manifest.json";
+import goody from "../../../../runner/connectors/goody/manifest.json";
+import haveibeenpwned from "../../../../runner/connectors/haveibeenpwned/manifest.json";
+import heartbeat from "../../../../runner/connectors/heartbeat/manifest.json";
+import honeycomb from "../../../../runner/connectors/honeycomb/manifest.json";
+import hotspotsystem from "../../../../runner/connectors/hotspotsystem/manifest.json";
+import imagekit from "../../../../runner/connectors/imagekit/manifest.json";
+import instabot from "../../../../runner/connectors/instabot/manifest.json";
+import interzoid from "../../../../runner/connectors/interzoid/manifest.json";
+import lifx from "../../../../runner/connectors/lifx/manifest.json";
+import lodgify from "../../../../runner/connectors/lodgify/manifest.json";
+import loyjoy from "../../../../runner/connectors/loyjoy/manifest.json";
+import monicaCrm from "../../../../runner/connectors/monica-crm/manifest.json";
+import moorcheh from "../../../../runner/connectors/moorcheh/manifest.json";
+import nasdaq from "../../../../runner/connectors/nasdaq/manifest.json";
+import needle from "../../../../runner/connectors/needle/manifest.json";
+import nextDns from "../../../../runner/connectors/next-dns/manifest.json";
+import ongage from "../../../../runner/connectors/ongage/manifest.json";
+import polygonIo from "../../../../runner/connectors/polygon-io/manifest.json";
+import practitest from "../../../../runner/connectors/practitest/manifest.json";
+import supadata from "../../../../runner/connectors/supadata/manifest.json";
+import supportbee from "../../../../runner/connectors/supportbee/manifest.json";
+import surveyMonkey from "../../../../runner/connectors/survey-monkey/manifest.json";
+import talenox from "../../../../runner/connectors/talenox/manifest.json";
+import talentlms from "../../../../runner/connectors/talentlms/manifest.json";
+import tapfiliate from "../../../../runner/connectors/tapfiliate/manifest.json";
+import taxjar from "../../../../runner/connectors/taxjar/manifest.json";
+import terraform from "../../../../runner/connectors/terraform/manifest.json";
+import theDogApi from "../../../../runner/connectors/the-dog-api/manifest.json";
+import theOfficialBoard from "../../../../runner/connectors/the-official-board/manifest.json";
+import timelink from "../../../../runner/connectors/timelink/manifest.json";
+import tomba from "../../../../runner/connectors/tomba/manifest.json";
+import torii from "../../../../runner/connectors/torii/manifest.json";
+import tremendous from "../../../../runner/connectors/tremendous/manifest.json";
+import truvera from "../../../../runner/connectors/truvera/manifest.json";
+import turso from "../../../../runner/connectors/turso/manifest.json";
+import twelveData from "../../../../runner/connectors/twelve-data/manifest.json";
+import vbout from "../../../../runner/connectors/vbout/manifest.json";
+import waiverforever from "../../../../runner/connectors/waiverforever/manifest.json";
+import webscraperIo from "../../../../runner/connectors/webscraper-io/manifest.json";
+import whop from "../../../../runner/connectors/whop/manifest.json";
+import workast from "../../../../runner/connectors/workast/manifest.json";
+import workos from "../../../../runner/connectors/workos/manifest.json";
+import workpath from "../../../../runner/connectors/workpath/manifest.json";
+import wpMaps from "../../../../runner/connectors/wp-maps/manifest.json";
+import zixflow from "../../../../runner/connectors/zixflow/manifest.json";
+import zylvie from "../../../../runner/connectors/zylvie/manifest.json";
 
 const installed = [
   ["ably", ably],
@@ -393,6 +549,162 @@ const installed = [
   ["sling", sling],
   ["stannp", stannp],
   ["stormboard", stormboard],
+  ["17track", n17track],
+  ["7-shifts", n7Shifts],
+  ["ablefy", ablefy],
+  ["accredible-certificates", accredibleCertificates],
+  ["acuity-scheduling", acuityScheduling],
+  ["adafruit-io", adafruitIo],
+  ["addressfinder", addressfinder],
+  ["addresszen", addresszen],
+  ["adyen", adyen],
+  ["affinda", affinda],
+  ["agentql", agentql],
+  ["agiled", agiled],
+  ["agility", agility],
+  ["agora", agora],
+  ["ahrefs", ahrefs],
+  ["aimfox", aimfox],
+  ["airfocus", airfocus],
+  ["aivoov", aivoov],
+  ["alchemy", alchemy],
+  ["algo-docs", algoDocs],
+  ["alpaca", alpaca],
+  ["alt-text-ai", altTextAi],
+  ["altoviz", altoviz],
+  ["amara", amara],
+  ["ambient-weather", ambientWeather],
+  ["ambivo", ambivo],
+  ["amilia", amilia],
+  ["anchor-browser", anchorBrowser],
+  ["anrok", anrok],
+  ["anthropic", anthropic],
+  ["anthropic-admin", anthropicAdmin],
+  ["anymail-finder", anymailFinder],
+  ["api-void", apiVoid],
+  ["apiflash", apiflash],
+  ["apipie-ai", apipieAi],
+  ["appcues", appcues],
+  ["appstle-subscriptions", appstleSubscriptions],
+  ["appveyor", appveyor],
+  ["arcgis-online", arcgisOnline],
+  ["asin-data-api", asinDataApi],
+  ["assemblyai", assemblyai],
+  ["atlas-so", atlasSo],
+  ["attention", attention],
+  ["autobound", autobound],
+  ["autom", autom],
+  ["avochato", avochato],
+  ["bamboohr", bamboohr],
+  ["bannerbear", bannerbear],
+  ["baselinker", baselinker],
+  ["basin", basin],
+  ["beaconchain", beaconchain],
+  ["beamer", beamer],
+  ["benzinga", benzinga],
+  ["bettercontact", bettercontact],
+  ["bidsketch", bidsketch],
+  ["big-commerce", bigCommerce],
+  ["bigml", bigml],
+  ["bird", bird],
+  ["bitly", bitly],
+  ["bitrise", bitrise],
+  ["bland-ai", blandAi],
+  ["blaze-meter-functional", blazeMeterFunctional],
+  ["blaze-meter-performance", blazeMeterPerformance],
+  ["blaze-meter-service-virtualization", blazeMeterServiceVirtualization],
+  ["bloomerang", bloomerang],
+  ["boldsign", boldsign],
+  ["bolna", bolna],
+  ["boloforms", boloforms],
+  ["bookingmood", bookingmood],
+  ["bot-star", botStar],
+  ["botpress", botpress],
+  ["botsonic", botsonic],
+  ["bouncer", bouncer],
+  ["boxhero", boxhero],
+  ["brandfetch", brandfetch],
+  ["breeze", breeze],
+  ["bright-data", brightData],
+  ["browse-ai", browseAi],
+  ["browser-use", browserUse],
+  ["browserbase", browserbase],
+  ["browserstack", browserstack],
+  ["bugbug", bugbug],
+  ["builder-io", builderIo],
+  ["buildium", buildium],
+  ["businessmap", businessmap],
+  ["callpage", callpage],
+  ["campaign-cleaner", campaignCleaner],
+  ["cardly", cardly],
+  ["certifier", certifier],
+  ["chargebee", chargebee],
+  ["chaserhq", chaserhq],
+  ["check", checkConnector],
+  ["chorus", chorus],
+  ["cin7-core", cin7Core],
+  ["cincopa", cincopa],
+  ["cisco-meraki", ciscoMeraki],
+  ["cockroach-labs", cockroachLabs],
+  ["conductor", conductor],
+  ["daily", dailyConnector],
+  ["databox", databox],
+  ["dataforb2b", dataforb2b],
+  ["digistore24", digistore24],
+  ["discolike", discolike],
+  ["dixa", dixa],
+  ["dovetail", dovetail],
+  ["espocrm", espocrm],
+  ["fellow", fellow],
+  ["fern", fern],
+  ["firehydrant", firehydrant],
+  ["formbricks", formbricks],
+  ["goody", goody],
+  ["haveibeenpwned", haveibeenpwned],
+  ["heartbeat", heartbeat],
+  ["honeycomb", honeycomb],
+  ["hotspotsystem", hotspotsystem],
+  ["imagekit", imagekit],
+  ["instabot", instabot],
+  ["interzoid", interzoid],
+  ["lifx", lifx],
+  ["lodgify", lodgify],
+  ["loyjoy", loyjoy],
+  ["monica-crm", monicaCrm],
+  ["moorcheh", moorcheh],
+  ["nasdaq", nasdaq],
+  ["needle", needle],
+  ["next-dns", nextDns],
+  ["ongage", ongage],
+  ["polygon-io", polygonIo],
+  ["practitest", practitest],
+  ["supadata", supadata],
+  ["supportbee", supportbee],
+  ["survey-monkey", surveyMonkey],
+  ["talenox", talenox],
+  ["talentlms", talentlms],
+  ["tapfiliate", tapfiliate],
+  ["taxjar", taxjar],
+  ["terraform", terraform],
+  ["the-dog-api", theDogApi],
+  ["the-official-board", theOfficialBoard],
+  ["timelink", timelink],
+  ["tomba", tomba],
+  ["torii", torii],
+  ["tremendous", tremendous],
+  ["truvera", truvera],
+  ["turso", turso],
+  ["twelve-data", twelveData],
+  ["vbout", vbout],
+  ["waiverforever", waiverforever],
+  ["webscraper-io", webscraperIo],
+  ["whop", whop],
+  ["workast", workast],
+  ["workos", workos],
+  ["workpath", workpath],
+  ["wp-maps", wpMaps],
+  ["zixflow", zixflow],
+  ["zylvie", zylvie],
 ] as const;
 
 describe("curated recipe install", () => {

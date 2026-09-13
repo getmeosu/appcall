@@ -1,0 +1,268 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "17TRACK API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "ecommerce"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "17token",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.17track.net/track/v2.4",
+    "errors": {
+      "bodyErrorPaths": [
+        "data.errors"
+      ],
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "data.errors.0.message",
+        "message",
+        "error"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    }
+  },
+  "key": "17track",
+  "models": [
+    "quota",
+    "tracking"
+  ],
+  "name": "17TRACK",
+  "network": {
+    "allowedHosts": [
+      "api.17track.net"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "description": "Validate the 17TRACK API key by reading account quota counters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": [],
+        "method": "POST",
+        "path": "/getquota",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "quota.get": {
+      "description": "Get 17TRACK tracking and email quota counters for the authenticated account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": [],
+        "method": "POST",
+        "path": "/getquota",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get quota",
+      "validationMode": "strict-generated"
+    },
+    "trackings.get": {
+      "description": "Get current tracking details for registered 17TRACK tracking numbers.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "trackings": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "carrier": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "number": {
+                  "minLength": 5,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "number"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "trackings"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": "{{trackings}}",
+        "method": "POST",
+        "path": "/gettrackinfo",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get tracking details",
+      "validationMode": "strict-generated"
+    },
+    "trackings.list": {
+      "description": "List registered 17TRACK shipments with optional number, carrier, and page filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "carrier": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "number": {
+            "minLength": 5,
+            "type": "string"
+          },
+          "page_no": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "carrier": "{{carrier}}",
+          "number": "{{number}}",
+          "page_no": "{{page_no}}"
+        },
+        "method": "POST",
+        "path": "/gettracklist",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List trackings",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

@@ -1,0 +1,354 @@
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Ahrefs API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "utility"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "baseUrl": "https://api.ahrefs.com/v3",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message",
+        "detail",
+        "title",
+        "errors.0.message"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "query": {
+      "output": "json"
+    }
+  },
+  "key": "ahrefs",
+  "models": [
+    "subscription",
+    "metrics",
+    "keyword"
+  ],
+  "name": "Ahrefs",
+  "network": {
+    "allowedHosts": [
+      "api.ahrefs.com"
+    ]
+  },
+  "operations": {
+    "healthcheck": {
+      "description": "Validate an Ahrefs API key by reading subscription limits and usage.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscription-info/limits-and-usage",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "keywords-explorer.overview": {
+      "description": "Retrieve Ahrefs Keywords Explorer overview rows.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "keywords": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "select": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "country",
+          "select"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/keywords-explorer/overview",
+        "query": {
+          "country": "{{country}}",
+          "keywords": "{{keywords}}",
+          "limit": "{{limit}}",
+          "select": "{{select}}",
+          "target": "{{target}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Keywords Explorer overview",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.metrics": {
+      "description": "Retrieve Ahrefs Site Explorer metrics for a domain or URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "date": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ],
+            "type": "string"
+          },
+          "protocol": {
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ],
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "volumeMode": {
+            "enum": [
+              "monthly",
+              "average"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "date"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/metrics",
+        "query": {
+          "country": "{{country}}",
+          "date": "{{date}}",
+          "mode": "{{mode}}",
+          "protocol": "{{protocol}}",
+          "target": "{{target}}",
+          "volume_mode": "{{volumeMode}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Site Explorer metrics",
+      "validationMode": "strict-generated"
+    },
+    "site-explorer.metrics-by-country": {
+      "description": "Retrieve Ahrefs Site Explorer metrics grouped by country.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "exact",
+              "prefix",
+              "domain",
+              "subdomains"
+            ],
+            "type": "string"
+          },
+          "protocol": {
+            "enum": [
+              "both",
+              "http",
+              "https"
+            ],
+            "type": "string"
+          },
+          "select": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "target": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "volumeMode": {
+            "enum": [
+              "monthly",
+              "average"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "date"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/site-explorer/metrics-by-country",
+        "query": {
+          "date": "{{date}}",
+          "mode": "{{mode}}",
+          "protocol": "{{protocol}}",
+          "select": "{{select}}",
+          "target": "{{target}}",
+          "volume_mode": "{{volumeMode}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Site Explorer metrics by country",
+      "validationMode": "strict-generated"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.1.0",
+  "visibility": "public"
+}

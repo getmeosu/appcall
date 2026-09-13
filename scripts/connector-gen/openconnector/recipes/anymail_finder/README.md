@@ -1,0 +1,9 @@
+# Anymail Finder
+
+Read-only Anymail Finder v5.1 REST recipe for the international email-finder API at `api.anymailfinder.com` (Anymail Finder, London, United Kingdom). Copy an API key from https://app.anymailfinder.com/settings/api and store it as `apiKey`. Requests send the raw key in `Authorization` plus `Accept: application/json` to `https://api.anymailfinder.com`. Official authentication docs and endpoint cURL examples use the raw key; marketing copy that says Bearer is not used.
+
+Selected operations are `healthcheck` and `account.get` (`GET /v5.1/account`, documented free), `emails.verify` (`POST /v5.1/verify-email`, 0.2 credit), `person.email.find` (`POST /v5.1/find-email/person` with required `fullName` and `domain`), and `company.emails.find` (`POST /v5.1/find-email/company` with required `domain`). Healthcheck uses the free account probe. Verify and find consume credits and are not used as healthcheck. Decision-maker search, LinkedIn-only person search, bulk jobs, and webhook delivery are omitted.
+
+Adaptations versus the pinned OpenConnector source: native category is `crm`; person find requires the documented `full_name` + `domain` pair rather than the source anyOf; company find requires `domain` and omits `company_name` / `email_type`; responses keep raw Anymail Finder JSON under `data` instead of the source wrapper; the upstream user-agent is not sent.
+
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://anymailfinder.com/email-finder-api/docs/authentication and https://anymailfinder.com/email-finder-api/docs/account. Fixtures are independently derived from official docs and the pinned source and do not represent live provider access. Live smoke remains unverified: configure an API key, call `healthcheck` with `{}`.
