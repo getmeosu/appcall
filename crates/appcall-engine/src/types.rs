@@ -52,6 +52,15 @@ impl PayloadRef {
     pub fn ephemeral(key: &str) -> Result<Self> {
         Self::new(key, true)
     }
+    /// Content-addressed durable reference. Raw bytes never become the stored key.
+    pub fn digest(bytes: &[u8]) -> Result<Self> {
+        use sha2::{Digest, Sha256};
+        let hex: String = Sha256::digest(bytes)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        Self::new(&format!("sha256:{hex}"), false)
+    }
     fn new(key: &str, ephemeral: bool) -> Result<Self> {
         validate(key)?;
         Ok(Self {
@@ -88,6 +97,7 @@ pub enum RunState {
     OutcomeUnknown,
     Nondeterminism,
     Failed,
+    ContinuedAsNew,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RunFailure {
@@ -204,6 +214,9 @@ pub enum Command {
         input: PayloadRef,
     },
     Select(Vec<WaitSource>),
+    ContinueAsNew {
+        input: PayloadRef,
+    },
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CommandValue {
@@ -243,6 +256,7 @@ pub enum DriveOutcome {
     Progressed,
     Completed(PayloadRef),
     Suspended(RunState),
+    ContinuedAsNew { successor: String },
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum TaskState {
@@ -334,6 +348,8 @@ pub struct RunRecord {
     pub wakeup: Option<i64>,
     #[serde(default)]
     pub reconciliation_audit: Vec<ReconciliationAudit>,
+    #[serde(default)]
+    pub continued_as: Option<String>,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RunResult {

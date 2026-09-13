@@ -125,4 +125,13 @@ impl Context {
             .value
             .ok_or(WorkflowError::Nondeterminism)
     }
+    pub fn continue_as_new(&mut self, input: PayloadRef) -> WorkflowResult {
+        match self.command(Command::ContinueAsNew { input })? {
+            CommandValue::Payload(_)
+            | CommandValue::Unit
+            | CommandValue::Activity(_)
+            | CommandValue::Child(_)
+            | CommandValue::Selected(_) => Err(WorkflowError::Nondeterminism),
+        }
+    }
 }
