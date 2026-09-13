@@ -113,7 +113,6 @@ fn duplicate_connector_keys_fail_and_missing_root_never_falls_back() {
 fn complete_inventory_matches_connector_contract_oracle() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../runner/connectors");
     let registry = Registry::load(root).unwrap();
-    let expected: Value = serde_json::from_str(include_str!("connector_contract.json")).unwrap();
     let actual:Vec<Value>=registry.list().map(|c| json!({
         "key":c.manifest().key,"digest":c.manifest_digest(),"public":c.manifest().is_public(),
         "egress":c.manifest().network.makes_outbound_calls(),
@@ -123,7 +122,14 @@ fn complete_inventory_matches_connector_contract_oracle() {
             "inputSchema":op.input_schema,"outputSchema":op.output_schema
         })).collect::<Vec<_>>()
     })).collect();
-    assert_eq!(Value::Array(actual), expected);
+    if std::env::var_os("UPDATE_CONNECTOR_ORACLE").is_some() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/connector_contract.json");
+        std::fs::write(&path, serde_json::to_string_pretty(&actual).unwrap() + "\n").unwrap();
+    } else {
+        let expected: Value =
+            serde_json::from_str(include_str!("connector_contract.json")).unwrap();
+        assert_eq!(Value::Array(actual), expected);
+    }
     assert_eq!(
         registry.connector("absent").unwrap_err().code(),
         ErrorCode::UnknownConnector

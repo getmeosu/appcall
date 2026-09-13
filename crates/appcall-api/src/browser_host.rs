@@ -887,8 +887,8 @@ impl ApiDashboard {
                     serde_json::to_value(result).map_err(|_| Error::Unavailable)
                 })?)
             }
-            Op::Catalog=>Ok(json!({"connectors":self.registry.public_list().map(|c|catalog_item(c.manifest())).collect::<Vec<_>>()})),
-            Op::Connector|Op::TestForm=>{let c=self.registry.public_connector(resource).map_err(|_|Error::Invalid)?;let mut item=catalog_item(c.manifest());item["setup"]=serde_json::to_value(&c.manifest().auth.setup).map_err(|_|Error::Unavailable)?;
+            Op::Catalog=>Ok(json!({"connectors":self.registry.public_list().map(catalog_item_connector).collect::<Vec<_>>()})),
+            Op::Connector|Op::TestForm=>{let c=self.registry.public_connector(resource).map_err(|_|Error::Invalid)?;let mut item=catalog_item_connector(c);item["setup"]=serde_json::to_value(&c.manifest().auth.setup).map_err(|_|Error::Unavailable)?;
                 let selected=selected_action(c.manifest(),field("action"))?;
                 let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;
                 item["connections"]=self.connection_values(&identity,&connections)?.into_iter().filter(|c|c.get("connector").and_then(Value::as_str)==Some(resource)).collect();
@@ -1214,6 +1214,16 @@ pub(crate) fn connection_value(c: &appcall_store::Connection) -> Value {
 }
 pub(crate) fn catalog_item(m: &appcall_connectors::Manifest) -> Value {
     json!({"key":m.key,"name":m.name,"categories":m.categories,"operations":m.operations.iter().map(|(name,op)|json!({"name":name,"key":name,"title":op.title,"kind":op.kind,"description":op.description,"inputSchema":op.input_schema,"outputSchema":op.output_schema,"readOnly":op.is_read_only(),"destructive":op.is_destructive()})).collect::<Vec<_>>()})
+}
+pub(crate) fn catalog_item_connector(c: &appcall_connectors::Connector) -> Value {
+    let mut item = catalog_item(c.manifest());
+    if let Some(value) = c.raw_manifest().get("provenance") {
+        item["provenance"] = value.clone();
+    }
+    if let Some(value) = c.raw_manifest().get("evidence") {
+        item["evidence"] = value.clone();
+    }
+    item
 }
 /// Keep the alphabetical default for an omitted action, but never substitute
 /// another operation for an explicitly requested invalid or non-action key.

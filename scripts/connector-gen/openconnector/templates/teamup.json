@@ -1,0 +1,215 @@
+{
+  "key": "teamup",
+  "name": "Teamup",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "scheduling",
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "teamupToken",
+          "label": "Teamup token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "calendarKey",
+          "label": "Teamup calendar key",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.teamup.com"
+    ]
+  },
+  "models": [
+    "event",
+    "subcalendar"
+  ],
+  "http": {
+    "baseUrl": "https://api.teamup.com",
+    "auth": {
+      "field": "teamupToken",
+      "in": "header",
+      "name": "Teamup-Token",
+      "value": "{{teamupToken}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "List Teamup subcalendars for a calendar.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "subcalendars"
+        ],
+        "properties": {
+          "subcalendars": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{calendarKey}}/subcalendars",
+        "success": [
+          200
+        ],
+        "result": {
+          "subcalendars": "{{response.subcalendars}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Events",
+      "description": "List events in a Teamup calendar date range.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "calendarKey"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "calendarKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "start": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{calendarKey}}/events",
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "events": "{{response.events}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "events.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Event",
+      "description": "Get one Teamup event.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "calendarKey",
+          "eventId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "calendarKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "eventId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "event"
+        ],
+        "properties": {
+          "event": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{calendarKey}}/events/{{eventId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "event": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

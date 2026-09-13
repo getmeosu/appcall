@@ -23,6 +23,10 @@ export type DeclarativeAuth = {
   in?: DeclarativeAuthPlacement;
   name?: string;
   value?: string;
+  basic?: {
+    username: string;
+    password: string;
+  };
 };
 
 export type DeclarativeErrors = {
@@ -102,6 +106,7 @@ export type DeclarativeRequest = {
   // continue using the string-template fallback above.
   parameters?: DeclarativeParameter[];
   body?: unknown;
+  bodyEncoding?: "form";
   success?: number[];
   // result maps the provider response onto the operation output. Placeholders
   // resolve against { response, status, headers, input }. Omitted, the parsed
@@ -114,6 +119,8 @@ export type DeclarativeRequest = {
 };
 
 export type DeclarativeOperation = {
+  validationMode?: "legacy" | "strict-generated";
+  responseFormat?: "json";
   kind?: string;
   timeoutMs?: number;
   maxInputBytes?: number;

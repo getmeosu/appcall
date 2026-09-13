@@ -1,0 +1,7 @@
+# Help Scout read-only pilot
+
+This connector exposes Help Scout Mailbox API v2 read operations: inboxes, users, tags, conversations, one conversation, and conversation threads. It uses the managed OAuth2 connection flow and the transient `accessToken` supplied by the runner. Help Scout documents the authorization and token endpoints, refresh grant, and rotated tokens; this manifest declares refresh support and no synthetic scopes. The Rust control plane owns stored credentials and OAuth refresh; Bun receives a transient credential lease/token for bounded request execution.
+
+Collection pagination is explicit and page based. The connector sends `pageSize=50` for inboxes, users, tags, and threads, and `pageSize=25` for conversations. Response `_embedded` collections and `page` metadata are returned as data. Provider `_links` are metadata only and are never followed.
+
+Source mapping was reviewed from upstream snapshot `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (`src/providers/helpscout/{definition,actions,executors,runtime}.ts`), licensed Apache-2.0. Endpoint and pagination contracts were checked against the official Help Scout [authentication](https://developer.helpscout.com/mailbox-api/overview/authentication/) and [pagination](https://developer.helpscout.com/mailbox-api/overview/pagination/) documentation. Fixtures and tests prove request and mapping behavior only; they are not live-provider qualification.

@@ -12,6 +12,85 @@ SCRIPT = Path(__file__).with_name('public-release.py')
 
 
 class ReleaseGateTests(unittest.TestCase):
+    def test_curated_openconnector_records_and_license_are_allowlisted(self):
+        self.legal()
+        self.put('scripts/connector-gen/openconnector/selection.json', '{"entries": []}\n')
+        self.put('scripts/connector-gen/openconnector/research.json', '{"records": {}}\n')
+        self.put('scripts/connector-gen/openconnector/provenance.json', '{"records": []}\n')
+        self.put('scripts/connector-gen/openconnector/README.md', 'records\n')
+        self.put('third_party/licenses/openconnector/LICENSE', 'Apache License\n')
+        self.put('third_party/licenses/openconnector/NOTICE', 'Notice\n')
+        self.put('scripts/connector-gen/openconnector/templates/coda.json', '{}\n')
+        self.put('scripts/connector-gen/openconnector/templates/helpscout.json', '{}\n')
+        result = self.run_gate('check')
+        self.assertNotIn('path-not-allowed', result.stdout)
+
+    def test_recipe_allowlist_rejects_hidden_nested_export_and_index_paths(self):
+        self.legal()
+        positive = (
+            'scripts/connector-gen/openconnector/recipes/coda/recipe.json',
+            'scripts/connector-gen/openconnector/recipes/coda/README.md',
+            'scripts/connector-gen/openconnector/recipes/coda/fixtures/cases/healthcheck.json',
+            'scripts/connector-gen/openconnector/recipes/coda/fixtures/responses/ok.json',
+            'scripts/connector-gen/openconnector/recipes/coda/fixtures/expected/healthcheck.json',
+            '.github/public-release-policy.json',
+        )
+        for path in positive:
+            self.put(path, '{"version": 1, "reviewed_fixture_exceptions": []}\n' if path.endswith('public-release-policy.json') else '{}\n')
+        hidden = (
+            'scripts/connector-gen/openconnector/recipes/.staging/recipe.json',
+            'scripts/connector-gen/openconnector/recipes/coda/fixtures/.credentials.json',
+            'scripts/connector-gen/openconnector/recipes/coda/fixtures/scratch/customer-export.json',
+            'scripts/connector-gen/openconnector/templates/.credentials.json',
+            'scripts/connector-gen/openconnector/templates/scratch/data.json',
+            'scripts/connector-gen/openconnector/recipes/coda/nested/recipe.json',
+        )
+        for path in hidden:
+            self.put(path, '{}\n')
+        check = self.run_gate('check')
+        denied = {(entry['path'], entry['rule']) for entry in json.loads(check.stdout)['errors']}
+        for path in hidden:
+            self.assertIn((path, 'path-not-allowed'), denied)
+        self.assertNotIn((positive[0], 'path-not-allowed'), denied)
+        self.assertNotIn(('.github/public-release-policy.json', 'path-not-allowed'), denied)
+        destination = Path(self.temp.name).resolve() / 'export'
+        exported = self.run_gate('export', '--destination', str(destination))
+        self.assertEqual(exported.returncode, 0, exported.stdout)
+        for path in positive:
+            self.assertTrue((destination / path).exists(), path)
+        for path in hidden:
+            self.assertFalse((destination / path).exists())
+        subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
+        subprocess.run(['git', '-C', str(self.root), 'add', '-f', '.'], check=True)
+        indexed = self.run_gate('check', '--index')
+        self.assertEqual(indexed.returncode, 1)
+        indexed_errors = {(entry['path'], entry['rule']) for entry in json.loads(indexed.stdout)['errors']}
+        for path in hidden:
+            self.assertIn((path, 'path-not-allowed'), indexed_errors)
+
+    def test_recipe_catalog_paths_are_allowlisted_without_widening_sources(self):
+        self.legal()
+        for path in (
+            'scripts/connector-gen/openconnector/recipes/coda/recipe.json',
+            'scripts/connector-gen/openconnector/recipes/coda/README.md',
+            'scripts/connector-gen/openconnector/recipes/coda/fixtures/cases/ok.json',
+            'scripts/connector-gen/openconnector/recipes/coda/fixtures/responses/ok.json',
+            'scripts/connector-gen/openconnector/templates/coda.json',
+            'scripts/connector-gen/openconnector/reviewed-action-ids.json',
+        ):
+            self.put(path, '{}\n')
+        for path in ('scripts/connector-gen/openconnector/recipes/coda/notes.txt',
+                     'scripts/connector-gen/openconnector/unknown.json',
+                     'scripts/connector-gen/openconnector/recipes/coda/.env',
+                     'scripts/connector-gen/openconnector/recipes/coda/fixtures/private.key',
+                     'third_party/openconnector-source/snapshot.json'):
+            self.put(path, 'private\n')
+        denied = {(entry['path'], entry['rule']) for entry in json.loads(self.run_gate('check').stdout)['errors']}
+        self.assertNotIn(('scripts/connector-gen/openconnector/recipes/coda/recipe.json', 'path-not-allowed'), denied)
+        self.assertNotIn(('scripts/connector-gen/openconnector/recipes/coda/fixtures/cases/ok.json', 'path-not-allowed'), denied)
+        self.assertIn(('scripts/connector-gen/openconnector/recipes/coda/notes.txt', 'path-not-allowed'), denied)
+        self.assertIn(('scripts/connector-gen/openconnector/unknown.json', 'path-not-allowed'), denied)
+        self.assertIn(('third_party/openconnector-source/snapshot.json', 'path-not-allowed'), denied)
     def test_smoke_safety_fixture_is_allowlisted_without_widening_scripts(self):
         self.legal()
         fixture = 'scripts/test-smoke-prod.sh'
@@ -114,7 +193,9 @@ class ReleaseGateTests(unittest.TestCase):
             self.assertEqual(entry['condition'], 'AND')
             self.assertEqual(len(entry['paths']), 1)
             self.assertTrue(entry['targetRules'])
-            self.assertTrue(all(r.startswith('^') and r.endswith('$') for r in entry['regexes']))
+            regexes = entry.get('regexes')
+            if regexes:
+                self.assertTrue(all(r.startswith('^') and r.endswith('$') for r in regexes))
 
     def test_gitleaks_known_fixture_and_new_same_file_secret(self):
         binary = os.environ.get('GITLEAKS_BIN') or shutil.which('gitleaks')

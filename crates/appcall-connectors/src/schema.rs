@@ -1,5 +1,6 @@
 use crate::{Error, ErrorCode, Operation, Result};
 use serde_json::Value;
+use std::cmp::Ordering;
 impl Operation {
     pub fn validate_input(&self, input: &Value) -> Result<()> {
         validate_optional(&self.input_schema, input, ErrorCode::InvalidInput)
@@ -38,6 +39,8 @@ fn check_schema(schema: &Value, depth: usize) -> Result<()> {
                 | "enum"
                 | "minLength"
                 | "minItems"
+                | "minimum"
+                | "maximum"
                 | "description"
                 | "title"
                 | "default"
@@ -104,6 +107,13 @@ fn check_schema(schema: &Value, depth: usize) -> Result<()> {
             }
         }
     }
+    for key in ["minimum", "maximum"] {
+        if let Some(bound) = map.get(key) {
+            if !bound.is_number() {
+                return Err(Error::new(ErrorCode::UnsupportedSchema));
+            }
+        }
+    }
     Ok(())
 }
 fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Result<()> {
@@ -144,6 +154,18 @@ fn validate(schema: &Value, value: &Value, code: ErrorCode, depth: usize) -> Res
             .any(|allowed| equal_json(allowed, value))
         {
             return Err(Error::new(code));
+        }
+    }
+    if value.is_number() {
+        if let Some(minimum) = map.get("minimum") {
+            if compare_numbers(value, minimum)? == Ordering::Less {
+                return Err(Error::new(code));
+            }
+        }
+        if let Some(maximum) = map.get("maximum") {
+            if compare_numbers(value, maximum)? == Ordering::Greater {
+                return Err(Error::new(code));
+            }
         }
     }
     if let Some(obj) = value.as_object() {
@@ -247,6 +269,51 @@ fn decimal_key(number: &serde_json::Number) -> (bool, String, i32) {
         significant.into(),
         exponent - fraction as i32 + (digits.len() - significant.len()) as i32,
     )
+}
+
+fn compare_numbers(a: &Value, b: &Value) -> Result<Ordering> {
+    let a = a
+        .as_number()
+        .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?;
+    let b = b
+        .as_number()
+        .ok_or_else(|| Error::new(ErrorCode::UnsupportedSchema))?;
+    let (a_negative, a_digits, a_exponent) = decimal_key(a);
+    let (b_negative, b_digits, b_exponent) = decimal_key(b);
+    if a_negative != b_negative {
+        return Ok(if a_negative {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        });
+    }
+    let a_zero = a_digits == "0";
+    let b_zero = b_digits == "0";
+    if a_zero || b_zero {
+        return Ok(match (a_zero, b_zero, a_negative) {
+            (true, true, _) => Ordering::Equal,
+            (true, false, false) => Ordering::Less,
+            (false, true, false) => Ordering::Greater,
+            (true, false, true) => Ordering::Greater,
+            (false, true, true) => Ordering::Less,
+            _ => unreachable!(),
+        });
+    }
+    let a_magnitude = a_digits.len() as i32 + a_exponent;
+    let b_magnitude = b_digits.len() as i32 + b_exponent;
+    let absolute = a_magnitude.cmp(&b_magnitude).then_with(|| {
+        let width = a_digits.len().max(b_digits.len());
+        a_digits
+            .bytes()
+            .chain(std::iter::repeat(b'0'))
+            .take(width)
+            .cmp(b_digits.bytes().chain(std::iter::repeat(b'0')).take(width))
+    });
+    Ok(if a_negative {
+        absolute.reverse()
+    } else {
+        absolute
+    })
 }
 fn matches_type(kind: &str, value: &Value) -> Result<bool> {
     Ok(match kind {

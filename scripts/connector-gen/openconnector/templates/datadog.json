@@ -1,0 +1,23 @@
+{
+  "key": "datadog",
+  "name": "Datadog",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["dev-tools"],
+  "auth": {"type": "api_key", "scopes": [], "setup": {"mode": "api_key", "fields": [
+    {"key": "apiKey", "label": "Datadog API key", "required": true, "secret": true},
+    {"key": "applicationKey", "label": "Datadog application key", "required": true, "secret": true}
+  ]}},
+  "network": {"allowedHosts": ["api.datadoghq.com"]},
+  "models": ["monitor", "metric"],
+  "http": {"baseUrl": "https://api.datadoghq.com", "headers": {"DD-APPLICATION-KEY": "{{applicationKey}}"}, "auth": {"field": "apiKey", "in": "header", "name": "DD-API-KEY", "value": "{{apiKey}}"}, "errors": {"rateLimitStatuses": [429], "retryAfterHeader": "Retry-After", "retryAfterKind": "seconds", "defaultRetryAfterSeconds": 30, "messagePaths": ["errors", "error", "message"]}},
+  "operations": {
+    "healthcheck": {"kind": "action", "sideEffect": "read", "timeoutMs": 5000, "maxInputBytes": 4096, "maxResponseBytes": 65536, "title": "Healthcheck", "description": "Validate the configured Datadog API key against the US1 API.", "inputSchema": {"type": "object", "additionalProperties": false}, "outputSchema": {"type": "object", "required": ["valid"], "properties": {"valid": {"type": "boolean"}, "raw": {"type": "object"}}}, "request": {"method": "GET", "path": "/api/v1/validate", "success": [200], "result": {"valid": "{{response.valid}}", "raw": "{{response}}"}}, "enforceOutputSchema": true},
+    "monitors.list": {"kind": "action", "sideEffect": "read", "timeoutMs": 15000, "maxInputBytes": 8192, "maxResponseBytes": 5242880, "title": "List Monitors", "description": "List Datadog monitors with bounded optional filters.", "inputSchema": {"type": "object", "additionalProperties": false, "properties": {"name": {"type": "string", "minLength": 1}, "groupStates": {"type": "string", "minLength": 1}, "withDowntimes": {"type": "boolean"}}}, "outputSchema": {"type": "object", "required": ["monitors"], "properties": {"monitors": {"type": "array", "items": {"type": "object"}}}}, "request": {"method": "GET", "path": "/api/v1/monitor", "query": {"name": "{{name}}", "group_states": "{{groupStates}}", "with_downtimes": "{{withDowntimes}}"}, "success": [200], "result": {"monitors": "{{response}}"}}, "enforceOutputSchema": true},
+    "monitors.get": {"kind": "action", "sideEffect": "read", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "title": "Get Monitor", "description": "Retrieve one Datadog monitor by numeric ID.", "inputSchema": {"type": "object", "required": ["monitorId"], "additionalProperties": false, "properties": {"monitorId": {"type": "integer", "minimum": 1}, "withDowntimes": {"type": "boolean"}}}, "outputSchema": {"type": "object"}, "request": {"method": "GET", "path": "/api/v1/monitor/{{monitorId}}", "query": {"with_downtimes": "{{withDowntimes}}"}, "success": [200], "result": "{{response}}"}, "enforceOutputSchema": true},
+    "metrics.list": {"kind": "action", "sideEffect": "read", "timeoutMs": 15000, "maxInputBytes": 8192, "maxResponseBytes": 5242880, "title": "List Metrics", "description": "List Datadog metrics active since a Unix timestamp.", "inputSchema": {"type": "object", "required": ["from"], "additionalProperties": false, "properties": {"from": {"type": "integer", "minimum": 0}, "host": {"type": "string", "minLength": 1}, "tagFilter": {"type": "string", "minLength": 1}}}, "outputSchema": {"type": "object", "required": ["metrics"], "properties": {"metrics": {"type": "array", "items": {"type": "string"}}}}, "request": {"method": "GET", "path": "/api/v1/metrics", "query": {"from": "{{from}}", "host": "{{host}}", "tag_filter": "{{tagFilter}}"}, "success": [200], "result": "{{response}}"}, "enforceOutputSchema": true}
+  },
+  "provenance": {"source": {"url": "https://github.com/oomol-lab/open-connector", "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"}},
+  "evidence": {"fixture": {"status": "supplied"}, "live": {"status": "unverified"}}
+}

@@ -1,0 +1,9 @@
+# Circle
+
+Read-only Circle.so Admin API v2 recipe for CircleCo Inc. (New York). This is the branded community platform at circle.so, not CircleCI and not Circle Internet Financial. Community admins create an Admin V2 token under Developers → Tokens. The runner sends `Authorization: Bearer <token>`, `Accept: application/json`, and `Content-Type: application/json` to the documented host `https://app.circle.so/api/admin/v2`. Custom community domains are not accepted.
+
+Selected operations are `healthcheck` and `community.get` (`GET /community`), `members.list` (`GET /community_members` with optional `page`, `per_page`, and `status`), `members.get` (`GET /community_members/{id}`), `posts.list` (`GET /posts` with optional `page`, `per_page`, `space_id`, and `status`), and `posts.get` (`GET /posts/{id}`). Healthcheck uses the community probe rather than a search. Space groups, space members, writes, and Headless/member APIs are omitted.
+
+Adaptations versus the pinned OpenConnector source: host is pinned to documented `app.circle.so` (Circle staff also reject `api.circle.so` for Admin v2); `member_tag_ids` is omitted because source comma-joins an integer array; post `search_text`/`sort`/`space_group_id` are omitted; list responses keep the raw JSON under `data` instead of source `{community}`/`{pagination,members}` wrappers; native category is `social` (source Communication is not in native CATEGORIES); the upstream user-agent is not sent.
+
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://api.circle.so/apis/admin-api/quick-start. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified: configure an Admin V2 token, call `healthcheck` with `{}`, then `members.list` with `page=1`.

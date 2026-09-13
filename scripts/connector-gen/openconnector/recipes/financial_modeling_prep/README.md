@@ -1,0 +1,9 @@
+# Financial Modeling Prep
+
+Read-only Financial Modeling Prep stable REST recipe for Utradea Inc. (Toronto), operator of Financial Modeling Prep after acquiring Financial Modeling Prep SAS. Configure an API key from the FMP developer dashboard. The runner sends it as the documented `apikey` query parameter to `https://financialmodelingprep.com/stable` plus `Accept: application/json`. Legacy `/api/v3/{resource}/{symbol}` paths are a different edition and will not work here.
+
+Selected operations are `healthcheck` and `exchanges.list` (`GET /available-exchanges`), `quote.get` (`GET /quote?symbol=`), `profile.get` (`GET /profile?symbol=`), and `income.statement.get` (`GET /income-statement?symbol=` with optional `period` and `limit`). Healthcheck uses the exchange directory rather than the pinned AAPL quote validator because quote is a billable symbol read. Screener, search, technical indicators, news, calendars, and writes are omitted. HTTP 200 bodies with `Error Message`, `error`, or `message` are treated as upstream errors.
+
+Adaptations versus the pinned OpenConnector source: healthcheck is `GET /available-exchanges` instead of `GET /quote?symbol=AAPL`; `list_directory` is pinned to the exchanges path rather than a computed type map; stable query `symbol` is used instead of legacy path symbols; list responses keep the raw JSON array under `data` instead of source `{items}`/`{quote}`/`{profile}`/`{statements}` wrappers; native category is `banking-data` (source Finance/Data are not in native CATEGORIES); the upstream user-agent is not sent.
+
+Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache License 2.0). Official docs: https://site.financialmodelingprep.com/developer/docs/stable/quote. Fixtures are independently derived and do not represent live provider access. Live smoke remains unverified: configure an API key, call `healthcheck` with `{}`, then `quote.get` with `symbol=AAPL`.

@@ -455,6 +455,40 @@ fn signal_unknown_setup_mode_does_not_offer_an_unsupported_flow() {
 }
 
 #[test]
+fn evidence_panel_keeps_fixture_and_live_claims_separate() {
+    let html = render(
+        Op::Connector,
+        &json!({
+            "name":"Coda", "operations":[],
+        "provenance":{"source":{"url":"https://example.invalid/source","revision":"pin-123"}},
+        "evidence":{"fixture":{"status":"supplied"}, "verified":true, "live":"healthy"}
+        }),
+        Some("coda"),
+    )
+    .unwrap();
+    assert!(html.contains("Source: https://example.invalid/source @ pin-123"));
+    assert!(html.contains("Fixture: Fixture tests supplied"));
+    assert!(html.contains("Live: Unverified"));
+    assert!(!html.contains("Live: healthy"));
+}
+
+#[test]
+fn malformed_or_missing_evidence_stays_unverified_and_escaped() {
+    let html = render(
+        Op::Connector,
+        &json!({
+            "name":"Coda", "operations":[],
+        "provenance":{"source":{"url":"<url>","revision":"<pin>"}}, "evidence":{"fixture":null,"live":"healthy"}
+        }),
+        Some("coda"),
+    )
+    .unwrap();
+    assert!(html.contains("Source: &lt;url&gt; @ &lt;pin&gt;"));
+    assert!(html.contains("Fixture: Fixture evidence unavailable"));
+    assert!(html.contains("Live: Unverified"));
+}
+
+#[test]
 fn signal_tabs_preserve_only_actual_selection_and_have_one_visible_panel() {
     let mut v = fixture();
     v["tab"] = json!("code");

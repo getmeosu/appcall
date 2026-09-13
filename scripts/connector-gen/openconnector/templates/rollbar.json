@@ -1,0 +1,20 @@
+{
+  "key": "rollbar",
+  "name": "Rollbar",
+  "version": "0.1.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": ["dev-tools"],
+  "auth": {"type": "api_key", "scopes": ["rollbar.project.read"], "setup": {"mode": "api_key", "fields": [{"key": "apiKey", "label": "Rollbar project access token", "required": true, "secret": true}]}},
+  "network": {"allowedHosts": ["api.rollbar.com"]},
+  "models": ["project", "item", "occurrence", "environment", "deploy"],
+  "http": {"baseUrl": "https://api.rollbar.com/api/1", "auth": {"field": "apiKey", "in": "header", "name": "X-Rollbar-Access-Token", "value": "{{apiKey}}"}, "headers": {"Accept": "application/json"}, "errors": {"rateLimitStatuses": [429], "retryAfterHeader": "Retry-After", "retryAfterKind": "seconds", "defaultRetryAfterSeconds": 30, "messagePaths": ["message", "error"]}},
+  "operations": {
+    "healthcheck": {"kind": "action", "sideEffect": "read", "timeoutMs": 5000, "maxInputBytes": 4096, "maxResponseBytes": 65536, "title": "Healthcheck", "description": "Validate a Rollbar project access token by listing one environment.", "inputSchema": {"type": "object", "additionalProperties": false}, "outputSchema": {"type": "object", "required": ["result"], "properties": {"result": {"type": "object"}}}, "request": {"method": "GET", "path": "/environments", "query": {"page": 1, "limit": 1}, "success": [200], "result": {"result": "{{response}}"}}, "enforceOutputSchema": true},
+    "projects.get": {"kind": "action", "sideEffect": "read", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "title": "Get Project", "description": "Get a Rollbar project by numeric ID.", "inputSchema": {"type": "object", "required": ["projectId"], "additionalProperties": false, "properties": {"projectId": {"type": "integer", "minimum": 1}}}, "outputSchema": {"type": "object"}, "request": {"method": "GET", "path": "/project/{{projectId}}", "success": [200], "result": "{{response.result}}"}, "enforceOutputSchema": true},
+    "items.list": {"kind": "action", "sideEffect": "read", "timeoutMs": 15000, "maxInputBytes": 16384, "maxResponseBytes": 5242880, "title": "List Items", "description": "List Rollbar items with bounded page and limit filters.", "inputSchema": {"type": "object", "additionalProperties": false, "properties": {"page": {"type": "integer", "minimum": 1}, "status": {"type": "string", "minLength": 1}, "environment": {"type": "string", "minLength": 1}, "limit": {"type": "integer", "minimum": 1, "maximum": 5000}}}, "outputSchema": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"type": "object"}}}}, "request": {"method": "GET", "path": "/items", "query": {"page": "{{page}}", "status": "{{status}}", "environment": "{{environment}}", "limit": "{{limit}}"}, "success": [200], "result": "{{response.result}}"}, "enforceOutputSchema": true},
+    "items.get": {"kind": "action", "sideEffect": "read", "timeoutMs": 10000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "title": "Get Item", "description": "Get a Rollbar item by numeric ID.", "inputSchema": {"type": "object", "required": ["itemId"], "additionalProperties": false, "properties": {"itemId": {"type": "integer", "minimum": 1}}}, "outputSchema": {"type": "object"}, "request": {"method": "GET", "path": "/item/{{itemId}}", "success": [200], "result": "{{response.result}}"}, "enforceOutputSchema": true}
+  },
+  "provenance": {"source": {"url": "https://github.com/oomol-lab/open-connector", "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"}},
+  "evidence": {"fixture": {"status": "supplied"}, "live": {"status": "unverified"}}
+}

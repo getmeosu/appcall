@@ -33,6 +33,9 @@ EXACT_FILES = {
     '.github/workflows/ci.yml', '.github/workflows/public-release.yml',
     '.github/public-release-policy.json', 'deploy/sandbox/Caddyfile',
     'crates/appcall-web/CONTRACT.md',
+    'runner/connectors/coda/README.md', 'runner/connectors/helpscout/README.md',
+    'scripts/connector-gen/openconnector/templates/coda.json',
+    'scripts/connector-gen/openconnector/templates/helpscout.json',
 }
 REQUIRED_THIRD_PARTY = {
     'third_party/NOTICE',
@@ -84,12 +87,25 @@ def allowed(path):
         return False
     if path in ROOT_FILES or path in EXACT_FILES:
         return True
+    if path in {'scripts/connector-gen/openconnector/selection.json', 'scripts/connector-gen/openconnector/provenance.json', 'scripts/connector-gen/openconnector/research.json', 'scripts/connector-gen/openconnector/README.md'}:
+        return True
+    if path.startswith('scripts/connector-gen/openconnector/recipes/'):
+        rel = path.removeprefix('scripts/connector-gen/openconnector/recipes/')
+        if any(part.startswith('.') for part in PurePosixPath(rel).parts):
+            return False
+        return bool(re.fullmatch(r'[a-z0-9_]+/(?:recipe\.json|README\.md|fixtures/(?:cases|responses|expected)/[A-Za-z0-9][A-Za-z0-9_.-]*\.json)', rel))
+    if path in {'scripts/connector-gen/openconnector/native-identities.json', 'scripts/connector-gen/openconnector/reviewed-action-ids.json'}:
+        return True
+    if path.startswith('scripts/connector-gen/openconnector/templates/') and p.suffix == '.json':
+        return bool(re.fullmatch(r'scripts/connector-gen/openconnector/templates/[a-z0-9_-]+\.json', path))
     if p.suffix.lower() in {'.md', '.markdown', '.mdown'}:
         return path == 'README.md'
     if any(x.startswith('.') for x in p.parts):
         return False
     if path.startswith('scripts/connector-gen/'):
-        return p.suffix == '.ts'
+        if p.suffix == '.ts':
+            return True
+        return False
     if path.startswith('third_party/licenses/'):
         return p.name in {'LICENSE', 'NOTICE', 'COPYING'} or p.suffix == '.txt'
     return len(p.parts) > 1 and p.suffix in SOURCE_SUFFIXES.get(p.parts[0], set())
