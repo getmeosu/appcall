@@ -258,14 +258,6 @@ impl<S: Store> Engine<S> {
     /// finish an interrupted walk; completions are fenced as soon as requested.
     pub fn cancel(&mut self, id: &str) -> Result<()> {
         let mut r = self.store.load(id)?;
-        if r.state == RunState::ContinuedAsNew {
-            if let Some(successor) = r.continued_as.clone() {
-                self.cancel(&successor)?;
-            }
-            r.state = RunState::Cancelled;
-            r.wakeup = None;
-            return self.save(&mut r, &[]);
-        }
         if matches!(
             r.state,
             RunState::Completed

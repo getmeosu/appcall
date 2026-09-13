@@ -150,6 +150,22 @@ fn continue_as_new_child_keeps_parent_join_and_cancels_with_predecessor() {
         e.drive("parent:c:0:n:1", 0).unwrap(),
         DriveOutcome::Completed(_)
     ));
+    assert!(e.runnable(0, 10).unwrap().contains(&"parent".to_string()));
+    drop(e);
+    let store = SqliteStore::open(&db).unwrap();
+    assert_eq!(
+        store.load("parent:c:0:n:1").unwrap().parent.as_deref(),
+        Some("parent")
+    );
+    drop(store);
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("parent", "v1", |c| {
+        let child = c.child("child", "v1", c.input().clone())?;
+        c.join_child(child)
+    })
+    .unwrap();
+    e.register_workflow("child", "v1", continuing_child)
+        .unwrap();
     assert!(matches!(
         e.drive("parent", 0).unwrap(),
         DriveOutcome::Completed(output) if output == PayloadRef::durable("next").unwrap()
@@ -183,6 +199,52 @@ fn continue_as_new_child_keeps_parent_join_and_cancels_with_predecessor() {
         cancelled.status("parent:c:0:n:1").unwrap(),
         RunState::Cancelled
     );
+}
+
+#[test]
+fn interrupted_cancel_of_continued_predecessor_completes_on_drive() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("engine.db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("flow", "v1", after_timer).unwrap();
+    e.start("r", "flow", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    let successor = match e.drive("r", 100).unwrap() {
+        DriveOutcome::ContinuedAsNew { successor } => successor,
+        other => panic!("{other:?}"),
+    };
+    assert_eq!(e.status("r").unwrap(), RunState::ContinuedAsNew);
+    assert_eq!(
+        e.continued_as("r").unwrap().as_deref(),
+        Some(successor.as_str())
+    );
+    drop(e);
+
+    let mut store = SqliteStore::open(&db).unwrap();
+    let mut predecessor = store.load("r").unwrap();
+    assert_eq!(predecessor.state, RunState::ContinuedAsNew);
+    assert_eq!(
+        predecessor.continued_as.as_deref(),
+        Some(successor.as_str())
+    );
+    let old = predecessor.revision;
+    predecessor.revision += 1;
+    predecessor.state = RunState::CancelRequested;
+    predecessor.wakeup = None;
+    store.commit(old, &predecessor, &[]).unwrap();
+    drop(store);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("flow", "v1", after_timer).unwrap();
+    assert!(e.runnable(0, 10).unwrap().contains(&"r".to_string()));
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::Cancelled)
+    ));
+    assert_eq!(e.status("r").unwrap(), RunState::Cancelled);
+    assert_eq!(e.status(&successor).unwrap(), RunState::Cancelled);
+    assert_eq!(e.result("r").unwrap(), RunResult::Cancelled);
 }
 
 #[test]
