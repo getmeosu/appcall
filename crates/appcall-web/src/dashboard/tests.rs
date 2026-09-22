@@ -81,18 +81,18 @@ async fn copy_direct_failures_render_specific_recovery() {
             "This connection is disconnected.",
             "/app/connections",
         ),
-        (Cause::Timeout, "This request timed out.", "/app/logs"),
+        (Cause::Timeout, "This request timed out.", "/app/calls"),
         (
             Cause::RateLimited,
             "The connector reported a rate limit.",
-            "/app/logs",
+            "/app/calls",
         ),
         (
             Cause::UsageLimited,
             "Appcall reported a usage limit",
             "/app/usage",
         ),
-        (Cause::ResponseTooLarge, "Narrow", "/app/logs"),
+        (Cause::ResponseTooLarge, "Narrow", "/app/calls"),
         (Cause::InputTooLarge, "Reduce", "/app/connectors/mail"),
         (
             Cause::VerificationFailed,
@@ -143,7 +143,7 @@ async fn copy_direct_failures_render_specific_recovery() {
                     "{cause:?}: missing recovery"
                 );
                 assert_eq!(
-                    response.body.contains("/app/logs/current-request"),
+                    response.body.contains("/app/calls/current-request"),
                     request_id == "current-request"
                 );
                 for secret in [
@@ -185,7 +185,7 @@ async fn copy_direct_failures_render_specific_recovery() {
         ),
         (
             DashboardOperation::ReplayTrace,
-            "/app/logs/original-request/replay",
+            "/app/calls/original-request/replay",
             true,
         ),
     ] {
@@ -224,7 +224,7 @@ async fn copy_direct_failures_render_specific_recovery() {
         assert_eq!(data.detailed_calls.load(Ordering::SeqCst), 1);
         assert_eq!(data.legacy_calls.load(Ordering::SeqCst), 0);
         if original {
-            assert!(response.body.contains("/app/logs/original-request"));
+            assert!(response.body.contains("/app/calls/original-request"));
             assert!(response.body.contains("original request"));
             assert!(!response.body.contains("replayed=1"));
         }
@@ -244,15 +244,15 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
         (Cause::UsageLimited, "/app/usage"),
         (Cause::CredentialsUnavailable, "/app/connections"),
         (Cause::ConnectionDisconnected, "/app/connections"),
-        (Cause::InvalidActionInput, "/app/logs/original"),
-        (Cause::InputTooLarge, "/app/logs/original"),
-        (Cause::Unknown, "/app/logs/original"),
+        (Cause::InvalidActionInput, "/app/calls/original"),
+        (Cause::InputTooLarge, "/app/calls/original"),
+        (Cause::Unknown, "/app/calls/original"),
     ] {
         let data =
             fixture(DashboardFailure::new(Error::Unavailable, cause).with_request_id("current"));
         let response = render(
             &data,
-            &request("/app/logs/original/replay"),
+            &request("/app/calls/original/replay"),
             Some(DashboardOperation::ReplayTrace),
         )
         .await
@@ -261,16 +261,19 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
             "class=\"ui-button ui-button-secondary ui-button-sm\" href=\"{primary}\""
         )));
         assert_eq!(
-            response.body.matches("href=\"/app/logs/original\"").count(),
+            response
+                .body
+                .matches("href=\"/app/calls/original\"")
+                .count(),
             1
         );
         assert_eq!(response.body.matches("ui-button-secondary").count(), 1);
         assert!(response.body.contains(
-            "class=\"ui-button ui-button-quiet ui-button-sm\" href=\"/app/logs/current\""
+            "class=\"ui-button ui-button-quiet ui-button-sm\" href=\"/app/calls/current\""
         ));
-        if primary != "/app/logs/original" {
+        if primary != "/app/calls/original" {
             assert!(response.body.contains(
-                "class=\"ui-button ui-button-quiet ui-button-sm\" href=\"/app/logs/original\""
+                "class=\"ui-button ui-button-quiet ui-button-sm\" href=\"/app/calls/original\""
             ));
         }
     }
@@ -281,7 +284,10 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
                 DashboardOperation::TestConnection,
                 "/app/connections/connection/test",
             ),
-            (DashboardOperation::ReplayTrace, "/app/logs/original/replay"),
+            (
+                DashboardOperation::ReplayTrace,
+                "/app/calls/original/replay",
+            ),
         ] {
             let data = fixture(DashboardFailure::new(classification, Cause::Timeout));
             assert!(
@@ -329,11 +335,11 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
         assert!(response.body.contains("data-fields-valid=\"false\""));
         assert!(!response.body.contains("name=\"f."));
         assert!(!response.body.contains("tool may have run"));
-        assert!(!response.body.contains("/app/logs/current"));
+        assert!(!response.body.contains("/app/calls/current"));
         assert!(response.body.contains("could not load the fields"));
         let response = render(
             &data,
-            &request("/app/logs/original/replay"),
+            &request("/app/calls/original/replay"),
             Some(DashboardOperation::ReplayTrace),
         )
         .await
@@ -349,13 +355,13 @@ async fn copy_direct_failures_keep_access_fields_and_replay_context() {
             .any(|(key, value)| key == "Referrer-Policy" && value == "no-referrer"));
         assert!(response.body.contains("timed out"));
         assert!(!response.body.contains("did not receive a response"));
-        assert!(response.body.contains("/app/logs/current"));
-        assert!(response.body.contains("/app/logs/original"));
+        assert!(response.body.contains("/app/calls/current"));
+        assert!(response.body.contains("/app/calls/original"));
         assert!(response.body.contains(
-            "class=\"ui-button ui-button-secondary ui-button-sm\" href=\"/app/logs/original\""
+            "class=\"ui-button ui-button-secondary ui-button-sm\" href=\"/app/calls/original\""
         ));
         assert!(response.body.contains(
-            "class=\"ui-button ui-button-quiet ui-button-sm\" href=\"/app/logs/current\""
+            "class=\"ui-button ui-button-quiet ui-button-sm\" href=\"/app/calls/current\""
         ));
         assert_eq!(response.body.matches("ui-button-secondary").count(), 1);
         assert!(!response.body.contains(
@@ -1146,7 +1152,7 @@ async fn toolkit_operation_failures_replace_their_live_region_without_fake_resul
                 );
             }
             assert!(!response.body.contains("Succeeded"));
-            assert!(!response.body.contains("/app/logs/"));
+            assert!(!response.body.contains("/app/calls/"));
             if operation == DashboardOperation::TestForm {
                 assert!(response.body.contains("data-fields-valid=\"false\""));
                 assert!(!response.body.contains("name=\"f."));
@@ -1160,7 +1166,7 @@ async fn toolkit_operation_failures_replace_their_live_region_without_fake_resul
     assert!(matches!(
         render(
             &Failing(Error::Forbidden),
-            &request("/app/logs"),
+            &request("/app/calls"),
             Some(DashboardOperation::Logs)
         )
         .await,
@@ -1187,7 +1193,7 @@ async fn runs_account_alias_preserves_effective_filter_and_pagination() {
             } else {
                 value
             });
-            let mut request = request("/app/runs");
+            let mut request = request("/app/syncs");
             request
                 .fields
                 .insert("externalAccountId".into(), vec![alias.into()]);
@@ -1223,7 +1229,7 @@ async fn runs_account_alias_preserves_effective_filter_and_pagination() {
             assert!(!response.body.contains("No durable runs to show."));
             assert!(
                 response.body.contains(&format!(
-                    "href=\"/app/runs?accountId={expected}&amp;cursor=next%2Bcursor%3D\""
+                    "href=\"/app/syncs?accountId={expected}&amp;cursor=next%2Bcursor%3D\""
                 )),
                 "next page must retain the effective account filter"
             );
@@ -1259,7 +1265,7 @@ async fn run_controls_report_confirmed_success_after_redirect() {
         "records24h": 0,
         "workerHeartbeatUnavailable": true
     }));
-    let mut request = request("/app/runs");
+    let mut request = request("/app/syncs");
     request
         .fields
         .insert("success".into(), vec!["run-now".into()]);
@@ -1472,9 +1478,9 @@ async fn action_redirects_distinguish_verified_and_unverified_connections() {
         ),
         (
             ReplayTrace,
-            "/app/logs/r/replay",
+            "/app/calls/r/replay",
             json!({}),
-            "/app/logs/r?replayed=1",
+            "/app/calls/r?replayed=1",
         ),
         (
             SaveBranding,
@@ -1537,7 +1543,7 @@ async fn setup_redirect_rejects_credentials_and_untrusted_local_urls() {
 #[tokio::test]
 async fn pagination_retains_supported_filters_and_encodes_cursor() {
     for (op, path, key) in [
-        (DashboardOperation::Logs, "/app/logs", "logs"),
+        (DashboardOperation::Logs, "/app/calls", "logs"),
         (DashboardOperation::Events, "/app/events", "events"),
     ] {
         let data = fixture(json!({"data":{key:[],"pagination":{"nextCursor":"a+b&c"}}}));

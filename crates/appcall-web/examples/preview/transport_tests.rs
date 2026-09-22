@@ -220,7 +220,7 @@ async fn dispatcher_uses_real_routes_counts_and_authorization() {
             302,
             "disconnect",
         ),
-        ("/app/logs/preview_original/replay", 302, "replay-trace"),
+        ("/app/calls/preview_original/replay", 302, "replay-trace"),
         ("/app/events/preview_event/replay", 302, "replay-event"),
         ("/app/connectors/request", 200, "request"),
     ] {

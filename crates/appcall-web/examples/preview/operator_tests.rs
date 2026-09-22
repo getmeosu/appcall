@@ -5,7 +5,7 @@ fn run_id(index: usize) -> String {
 }
 
 fn control_target(id: &str, action: &str) -> String {
-    format!("formaction=\"/app/runs/{id}/{action}\" formmethod=\"post\"")
+    format!("formaction=\"/app/syncs/{id}/{action}\" formmethod=\"post\"")
 }
 
 #[tokio::test]
@@ -41,7 +41,7 @@ async fn runs_operator_preview_renders_controls_only_for_startup_scenario() {
         }
     }
 
-    let page = crate::transport::dispatch_preview("GET", "/app/runs", b"", &operator)
+    let page = crate::transport::dispatch_preview("GET", "/app/syncs", b"", &operator)
         .await
         .unwrap();
     assert_eq!(page.status, 200);
@@ -63,7 +63,7 @@ async fn runs_operator_preview_renders_controls_only_for_startup_scenario() {
     for action in ["run-now", "reset", "cancel"] {
         let response = crate::transport::dispatch_preview(
             "POST",
-            &format!("/app/runs/{}/{}", run_id(0), action),
+            &format!("/app/syncs/{}/{}", run_id(0), action),
             b"",
             &operator,
         )
@@ -90,15 +90,19 @@ async fn runs_operator_preview_renders_controls_only_for_startup_scenario() {
         .all(|row| row["runNowAllowed"] == false
             && row["resetAllowed"] == false
             && row["cancelAllowed"] == false));
-    let normal_page =
-        crate::transport::dispatch_preview("GET", "/app/runs?scenario=runs-operator", b"", &normal)
-            .await
-            .unwrap();
+    let normal_page = crate::transport::dispatch_preview(
+        "GET",
+        "/app/syncs?scenario=runs-operator",
+        b"",
+        &normal,
+    )
+    .await
+    .unwrap();
     assert_eq!(normal_page.status, 200);
     assert!(normal_page
         .body
         .contains("id=\"runs-operator-controls-unavailable\""));
-    assert!(!normal_page.body.contains("formaction=\"/app/runs/"));
+    assert!(!normal_page.body.contains("formaction=\"/app/syncs/"));
 }
 
 #[tokio::test]
@@ -131,7 +135,7 @@ async fn run_history_operator_preview_renders_granted_controls_for_pending_retry
 
     let page = crate::transport::dispatch_preview(
         "GET",
-        "/app/runs?accountId=synthetic-account",
+        "/app/syncs?accountId=synthetic-account",
         b"",
         &operator,
     )
@@ -182,7 +186,7 @@ async fn run_history_operator_preview_renders_granted_controls_for_pending_retry
 
     let detail_page = crate::transport::dispatch_preview(
         "GET",
-        "/app/runs/synthetic-history-run?accountId=synthetic-account",
+        "/app/syncs/synthetic-history-run?accountId=synthetic-account",
         b"",
         &operator,
     )
@@ -197,7 +201,7 @@ async fn run_history_operator_preview_renders_granted_controls_for_pending_retry
     for action in ["run-now", "reset", "cancel"] {
         let response = crate::transport::dispatch_preview(
             "POST",
-            &format!("/app/runs/synthetic-history-run/{action}"),
+            &format!("/app/syncs/synthetic-history-run/{action}"),
             b"",
             &operator,
         )

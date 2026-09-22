@@ -45,7 +45,7 @@ pub(crate) fn standalone(value: &Value, run_id: &str) -> Result<String, Error> {
     let account_id = bounded_text(run.get("accountId"), MAX_ID_BYTES).unwrap_or("");
     let mut html = ui::back_link(
         "Back to Runs",
-        ui::LocalPath::new("/app/runs").ok_or(Error::Invalid)?,
+        ui::LocalPath::new("/app/syncs").ok_or(Error::Invalid)?,
     );
     html.push_str(&render_run_header(run, account_id));
     html.push_str(&crate::pages::runs_feedback()?);
@@ -412,7 +412,7 @@ fn render_pagination(data: &Value, run_id: &str) -> Result<String, Error> {
     let Some(account_scope) = history_account_scope(data) else {
         return Ok(String::new());
     };
-    let mut url = reqwest::Url::parse(&format!("https://local.invalid/app/runs/{run_id}"))
+    let mut url = reqwest::Url::parse(&format!("https://local.invalid/app/syncs/{run_id}"))
         .map_err(|_| Error::Invalid)?;
     if !account_scope.is_empty() {
         url.query_pairs_mut()

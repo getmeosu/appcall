@@ -46,10 +46,10 @@ fn transaction_expiration_and_redirects_fail_closed() {
     ] {
         assert_eq!(safe_next(path), "/app");
     }
-    assert_eq!(safe_next("/app/logs?page=2"), "/app/logs?page=2");
+    assert_eq!(safe_next("/app/calls?page=2"), "/app/calls?page=2");
     assert_eq!(
-        safe_next("/app/logs?cursor=a%2Bb"),
-        "/app/logs?cursor=a%2Bb"
+        safe_next("/app/calls?cursor=a%2Bb"),
+        "/app/calls?cursor=a%2Bb"
     );
 }
 #[test]
@@ -491,7 +491,7 @@ async fn callback_requires_echoed_binding_before_issuing_cookie() {
     };
     let f: serde_json::Value =
         serde_json::from_str(include_str!("../../appcall-auth/tests/auth_golden.json")).unwrap();
-    let tx = OAuthTransaction::new(1800000000, "/app/logs").unwrap();
+    let tx = OAuthTransaction::new(1800000000, "/app/calls").unwrap();
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let token = f["jwt"].as_str().unwrap().to_owned();
@@ -550,7 +550,7 @@ async fn callback_requires_echoed_binding_before_issuing_cookie() {
     assert!(result
         .headers
         .iter()
-        .any(|(k, v)| k == "Location" && v == "/app/logs"));
+        .any(|(k, v)| k == "Location" && v == "/app/calls"));
     assert!(result
         .headers
         .iter()

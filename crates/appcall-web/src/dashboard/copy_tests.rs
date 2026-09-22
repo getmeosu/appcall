@@ -64,8 +64,8 @@ impl DashboardData for OverviewRunsNavigationFixture {
                 "failedCalls": 0,
                 "activity": [{"label":"10:00","calls":1,"succeeded":1,"failed":0}],
                 "failureActivity": [{"label":"10:00","failures":0}],
-                "attention": [{"kind":"failure","title":"Sync run failed","body":"Open the dead run.","href":"/app/runs?status=dead"}],
-                "deadRuns": [{"runId":"run_dead","kind":"dead_run","state":"dead","title":"Sync run failed","body":"Review the terminal run.","href":"/app/runs?status=dead"}]
+                "attention": [{"kind":"failure","title":"Sync run failed","body":"Open the dead run.","href":"/app/syncs?status=dead"}],
+                "deadRuns": [{"runId":"run_dead","kind":"dead_run","state":"dead","title":"Sync run failed","body":"Review the terminal run.","href":"/app/syncs?status=dead"}]
             })
         } else {
             json!({
@@ -128,12 +128,12 @@ async fn overview_dead_run_link_reaches_the_runs_route() {
         .await
         .expect("Overview route must be registered");
     assert_eq!(overview.status, 200);
-    assert!(overview.body.contains("href=\"/app/runs?status=dead\""));
+    assert!(overview.body.contains("href=\"/app/syncs?status=dead\""));
 
     let runs = dashboard
         .handle(&Request {
             method: "GET",
-            path: "/app/runs",
+            path: "/app/syncs",
             cookies: "",
             origin: None,
             referer: None,
@@ -174,7 +174,7 @@ async fn copy_empty_filter_state_comes_from_request() {
             ("limit", "50", false),
             ("unknown", "secret-query", false),
         ] {
-            let (result, calls) = response(value.clone(), "/app/logs", &[(key, val)]).await;
+            let (result, calls) = response(value.clone(), "/app/calls", &[(key, val)]).await;
             let expected = if filtered {
                 "No tool runs match these filters."
             } else {
@@ -263,8 +263,8 @@ async fn copy_request_receipt_and_navigation_are_truthful() {
     assert!(result.body.contains("data-request-state=\"success\""));
     assert_eq!(calls.len(), 1);
     assert_eq!(calls[0].operation, DashboardOperation::RequestConnector);
-    for path in ["/app/logs", "/app/events"] {
-        let value = if path.ends_with("logs") {
+    for path in ["/app/calls", "/app/events"] {
+        let value = if path.ends_with("calls") {
             json!({"logs":[],"pagination":{"nextCursor":"a/b &?"}})
         } else {
             json!({"events":[],"pagination":{"nextCursor":"a/b &?"}})
@@ -272,7 +272,7 @@ async fn copy_request_receipt_and_navigation_are_truthful() {
         let (result, _) =
             response(value, path, &[("status", "failed"), ("connector", "a&b")]).await;
         assert!(result.body.contains("Next page</span>"));
-        let expected = if path.ends_with("logs") {
+        let expected = if path.ends_with("calls") {
             "status=failed&amp;connector=a%26b&amp;cursor=a%2Fb+%26%3F"
         } else {
             "connector=a%26b&amp;cursor=a%2Fb+%26%3F"

@@ -6,8 +6,8 @@ pub(crate) fn title(op: Op) -> &'static str {
         Op::Catalog | Op::Connector | Op::Setup => "Connectors",
         Op::Connections => "Connections",
         Op::Events => "Events",
-        Op::Logs | Op::Trace => "Logs",
-        Op::Runs | Op::RunDetail | Op::RunNow | Op::ResetRun | Op::CancelRun => "Runs",
+        Op::Logs | Op::Trace => "Calls",
+        Op::Runs | Op::RunDetail | Op::RunNow | Op::ResetRun | Op::CancelRun => "Syncs",
         Op::ActionClaims | Op::ReconcileActionClaim => "Action claim recovery",
         Op::Certification => "Certification",
         Op::Usage => "Usage",
@@ -15,12 +15,13 @@ pub(crate) fn title(op: Op) -> &'static str {
         _ => "Result",
     }
 }
-fn catalog_header(title: &str, subtitle: &str) -> String {
-    format!(
-        "<header class=\"catalog-header\"><h2>{}</h2><p>{}</p></header>",
-        escape(title),
-        escape(subtitle)
-    )
+fn catalog_header(title: &str, subtitle: &str, action: Option<String>) -> String {
+    crate::ui::PageHeader {
+        title,
+        purpose: subtitle,
+        action,
+    }
+    .render()
 }
 fn catalog_card(body: &str) -> String {
     format!("<section class=\"catalog-request-panel\">{body}</section>")
@@ -295,7 +296,7 @@ pub(crate) fn run_control(
     if !value_bool(value, allowed_key) {
         return Ok(String::new());
     }
-    let destination = format!("/app/runs/{id}/{action}");
+    let destination = format!("/app/syncs/{id}/{action}");
     if account_scope.len() > 512 || account_scope.chars().any(char::is_control) {
         return Err(Error::Invalid);
     }
@@ -337,7 +338,7 @@ pub(crate) fn runs_feedback() -> Result<String, Error> {
     let reload = runs_link_button(
         "Reload Runs status",
         crate::ui::ButtonVariant::Quiet,
-        "/app/runs",
+        "/app/syncs",
     )?
     .replacen("<a ", "<a id=\"runs-reload\" ", 1);
     Ok(format!(
@@ -345,7 +346,13 @@ pub(crate) fn runs_feedback() -> Result<String, Error> {
     ))
 }
 fn runs_header() -> String {
-    "<header class=\"runs-header\"><h2 id=\"runs-heading\">Runs</h2><p>Monitor durable message sync work and recover queue state.</p></header>".to_owned()
+    crate::ui::PageHeader {
+        title: "Syncs",
+        purpose: "Queue health for background syncs. Job ID, cursor, lease and policy live on the detail page.",
+        action: None,
+    }
+    .render()
+        .replacen("<header ", "<header id=\"runs-heading\" ", 1)
 }
 fn runs_card(body: &str) -> String {
     format!("<div class=\"runs-card\">{body}</div>")
@@ -434,7 +441,7 @@ fn runs_link_button(
     Ok(button.render())
 }
 fn run_detail_link(id: &str) -> Result<String, Error> {
-    let href = format!("/app/runs/{id}");
+    let href = format!("/app/syncs/{id}");
     crate::ui::LocalPath::new(&href).ok_or(Error::Invalid)?;
     Ok(format!(
         "<a class=\"runs-detail-link\" href=\"{}\" aria-label=\"Open run {}\"><code class=\"runs-code\">{}</code></a>",
@@ -494,7 +501,7 @@ fn runs(v: &Value) -> Result<String, Error> {
         ));
     }
     body.push_str(
-        "<form id=\"runs-filters\" class=\"runs-card runs-filters\" method=\"get\" action=\"/app/runs\" role=\"search\" aria-label=\"Filter runs\"><div class=\"runs-filter-grid\">",
+        "<form id=\"runs-filters\" class=\"runs-card runs-filters\" method=\"get\" action=\"/app/syncs\" role=\"search\" aria-label=\"Filter runs\"><div class=\"runs-filter-grid\">",
     );
     let status = value_text(v, "selectedStatus");
     body.push_str(&runs_status_field(&status));
@@ -519,7 +526,7 @@ fn runs(v: &Value) -> Result<String, Error> {
     let clear_filters = runs_link_button(
         "Clear filters",
         crate::ui::ButtonVariant::Quiet,
-        "/app/runs",
+        "/app/syncs",
     )?;
     body.push_str(&format!(
         "</div><div class=\"runs-filter-actions\">{}{clear_filters}</div></form>",
@@ -537,13 +544,12 @@ fn runs(v: &Value) -> Result<String, Error> {
             "<div class=\"runs-card runs-stat\"><p class=\"runs-stat-label\">Records / 24h</p><p class=\"runs-stat-value runs-stat-unavailable\">Unavailable in the configured storage.</p></div>",
         );
     }
-    stats.push_str(&runs_stat(
-        "Worker heartbeat",
-        "Unavailable in the configured storage.",
-    ));
+    stats.push_str(
+        "<div class=\"runs-card runs-stat\"><p class=\"runs-stat-label\">Worker</p><p class=\"runs-stat-value runs-stat-unavailable\" aria-label=\"Worker last seen not recorded\">—</p><p class=\"runs-stat-note\">last seen not recorded</p></div>",
+    );
     if !stats.is_empty() {
         body.push_str(&format!(
-            "<div class=\"runs-stats\" aria-describedby=\"runs-summary-scope\">{stats}</div><p id=\"runs-summary-scope\" class=\"runs-summary-note\">Status filter narrows rows and health counts; Records / 24h remains a scoped storage total.</p>"
+            "<div class=\"runs-stats runs-stats-strip\" aria-describedby=\"runs-summary-scope\">{stats}</div><p id=\"runs-summary-scope\" class=\"runs-summary-note\">Status filter narrows rows and health counts; Records / 24h remains a scoped storage total.</p>"
         ));
     }
     if items.is_empty() {
@@ -553,7 +559,7 @@ fn runs(v: &Value) -> Result<String, Error> {
                 "No durable runs match these filters.",
                 "Clear the filters to view project runs.",
                 "Clear filters",
-                "/app/runs",
+                "/app/syncs",
             )
         } else {
             empty(
@@ -660,7 +666,8 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
    let items=rows(v,&["connectors","items","cards"])?;
    let search=string(v,&["search"]);
    let category=string(v,&["category"]);
-   let mut body=catalog_header("Connectors","Connect your apps and explore their tools.");
+   let request_link=crate::ui::Button{variant:crate::ui::ButtonVariant::Quiet,target:crate::ui::ButtonTarget::Link(crate::ui::LocalPath::new("/app/connectors#toolkit-request-form").expect("static catalog path")),..crate::ui::Button::new("Request a connector")}.render();
+   let mut body=catalog_header("Connectors","Every app you can connect. Open one to authorize an account and run its tools.",Some(request_link));
    body.push_str(&format!("<form id=\"toolkit-catalog-search\" method=\"get\" action=\"/app/connectors\" role=\"search\" aria-label=\"Search connector catalog\" class=\"mb-5 flex flex-wrap items-end gap-2\">{}{}{} </form>",
        crate::ui::Field{value:search,placeholder:"Search connectors, categories, and tools…",..crate::ui::Field::new("toolkit-search","search","Search connectors",crate::ui::Control::Input(crate::ui::InputType::Search))}.render(),
        if category.is_empty(){String::new()}else{format!("<input type=\"hidden\" name=\"category\" value=\"{}\">",escape(category))},
@@ -672,7 +679,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
    let result_label=if items.len()==1{"1 connector shown.".to_owned()}else{format!("{} connectors shown.",items.len())};
    let clear_search_url=catalog_query_url(category, "");
    body.push_str(&format!("<div id=\"toolkit-catalog-results\" aria-live=\"polite\" aria-atomic=\"true\" aria-labelledby=\"toolkit-catalog-results-heading\"><h3 id=\"toolkit-catalog-results-heading\" class=\"sr-only\">Connector results</h3><p id=\"toolkit-catalog-status\" role=\"status\" aria-live=\"polite\">{result_label}</p><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3\">"));
-   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);body.push_str(&format!("<a href=\"/app/connectors/{key}\" aria-label=\"Open {} connector\" class=\"toolkit-catalog-card flex min-w-0 flex-col gap-3 p-5 transition\"><div class=\"flex min-w-0 items-center gap-3\"><span class=\"text-sm font-semibold\">{}</span></div><p class=\"text-xs\">{count} tools</p>{}</a>",escape(name),escape(name),evidence_label(item)));}
+   for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);let mark=crate::ui::provider_identity(name,item.get("iconUrl").and_then(Value::as_str));body.push_str(&format!("<a href=\"/app/connectors/{key}\" aria-label=\"Open {} connector\" class=\"toolkit-catalog-card flex min-w-0 flex-col gap-3 p-5 transition\"><div class=\"flex min-w-0 items-center gap-3\">{mark}<span class=\"text-sm font-semibold\">{}</span></div><p class=\"text-xs\">{count} tools</p>{}</a>",escape(name),escape(name),evidence_label(item)));}
    body.push_str("</div>");
    if items.is_empty(){body.push_str(&if !search.trim().is_empty(){empty("No connectors match this search.","Try a different connector, category, or tool title.","Clear search",&clear_search_url)}else if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/connectors")}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/connectors#toolkit-request-form")});}
    body.push_str("</div>");
@@ -749,11 +756,22 @@ pub(crate) fn static_page(path: &str) -> String {
     if path == "/app/support" {
         return crate::remaining_pages::heading("Help","Contact the team for help with connectors, the API, or your account.")+&crate::remaining_pages::panel("<p class=\"text-sm font-medium text-ink-100\">Email support</p><a href=\"mailto:info@manavritti.com\" class=\"remaining-contact-link\">info@manavritti.com</a>");
     }
+    if path == "/app/start" {
+        return start_here();
+    }
+    if path == "/app/workflows" || path == "/app/workflows/runs" {
+        return workflows_unavailable(path);
+    }
     let mut content = crate::remaining_pages::heading(
         "Documentation",
         "Guides and API reference for building on appcall.",
     );
     for (title, body, href) in [
+        (
+            "Start here",
+            "Choose Apps or Workflows for the task you have now.",
+            "/app/start",
+        ),
         (
             "Quickstart",
             "Connect your first connector and run a tool from its detail page.",
@@ -770,14 +788,68 @@ pub(crate) fn static_page(path: &str) -> String {
             "/app/events",
         ),
         (
-            "Logs",
+            "Calls",
             "Inspect action calls and trace individual requests.",
-            "/app/logs",
+            "/app/calls",
         ),
     ] {
         content.push_str(&format!("<a href=\"{href}\" class=\"flex items-center justify-between rounded-panel border border-line bg-panel p-4 transition hover:border-iris-400\"><span><span class=\"block text-sm font-medium text-ink-100\">{title}</span><span class=\"mt-0.5 block text-sm text-ink-300\">{body}</span></span><span class=\"text-ink-300\">→</span></a>"));
     }
     content
+}
+fn start_here() -> String {
+    let connect = crate::ui::Button {
+        target: crate::ui::ButtonTarget::Link(
+            crate::ui::LocalPath::new("/app/connectors").expect("static start-here path"),
+        ),
+        ..crate::ui::Button::new("Connect an app")
+    }
+    .render();
+    let register = crate::ui::Button {
+        variant: crate::ui::ButtonVariant::Secondary,
+        target: crate::ui::ButtonTarget::Link(
+            crate::ui::LocalPath::new("/app/docs").expect("static start-here path"),
+        ),
+        ..crate::ui::Button::new("How to register a workflow")
+    }
+    .render();
+    format!(
+        "{}<div class=\"start-here-grid\"><section class=\"remaining-panel start-here-card\"><h2 class=\"section-title\">Apps</h2><p class=\"caption\">Connectors · Connections · Calls · Syncs · Events</p><p>Talk to providers through one API and one auth flow. A call is one request to one app, recorded and replayable.</p><div class=\"start-here-card-foot\"><span class=\"caption\">First step: connect one account.</span>{connect}</div></section><section class=\"remaining-panel start-here-card\"><h2 class=\"section-title\">Workflows</h2><p class=\"caption\">Workflows · Runs</p><p>Run multi-step work that must finish even if a step fails, a provider is slow, or a process restarts. Workflows are registered from code; this console is not a builder.</p><div class=\"start-here-card-foot\"><span class=\"caption\">First step: register a workflow from your code.</span>{register}</div></section></div><section class=\"remaining-panel\"><p><strong>Rule of thumb.</strong> One call, one app, done in seconds: <a href=\"/app/connectors\">Apps</a>. Several steps, or anything that must survive a failure: <a href=\"/app/workflows\">Workflows</a>, whose steps call Apps.</p></section>",
+        crate::ui::PageHeader {
+            title: "Start here",
+            purpose: "appcall is two things that work as one. Pick the one your task needs; you can mix them later.",
+            action: None,
+        }
+        .render()
+    )
+}
+fn workflows_unavailable(path: &str) -> String {
+    let title = if path == "/app/workflows/runs" {
+        "Runs"
+    } else {
+        "Workflows"
+    };
+    let purpose = if path == "/app/workflows/runs" {
+        "Durable engine runs for this project."
+    } else {
+        "Workflows are registered from code. This page shows what is registered and what is running."
+    };
+    format!(
+        "{}{}",
+        crate::ui::PageHeader {
+            title,
+            purpose,
+            action: None,
+        }
+        .render(),
+        crate::ui::EmptyState {
+            title: "Workflow engine is not connected to this console.",
+            body: "The engine has its own transport. Until a project-scoped read path exists, this page does not invent runs, history, or registered workflows.",
+            action_label: "Read the docs",
+            action_href: crate::ui::LocalPath::new("/app/docs").expect("static workflows path"),
+        }
+        .render()
+    )
 }
 #[cfg(test)]
 #[path = "pages/operator_tests.rs"]
@@ -822,8 +894,8 @@ mod rendering_contract_tests {
         .unwrap();
         for expected in [
             "id=\"runs-page\"",
-            "Runs",
-            "Monitor durable message sync work",
+            "Syncs",
+            "Queue health for background syncs",
             "name=\"status\"",
             "name=\"connector\"",
             "name=\"tool\"",
@@ -840,7 +912,7 @@ mod rendering_contract_tests {
         ] {
             assert!(html.contains(expected), "missing {expected}: {html}");
         }
-        assert!(!html.contains("/app/runs/run_1/cancel"));
+        assert!(!html.contains("/app/syncs/run_1/cancel"));
         assert!(!html.contains("data-confirm-open="));
         assert!(!html.contains("workerHeartbeat"));
         assert!(!html.contains("attemptTimeline"));
@@ -881,14 +953,14 @@ mod rendering_contract_tests {
         .unwrap();
 
         assert!(
-            html.contains("href=\"/app/runs/run_1\""),
+            html.contains("href=\"/app/syncs/run_1\""),
             "run row did not link to detail route: {html}"
         );
         assert!(
             html.contains("aria-label=\"Open run run_1\""),
             "run detail link lacks an accessible label: {html}"
         );
-        assert!(!html.contains("/app/runs/run_1/cancel"));
+        assert!(!html.contains("/app/syncs/run_1/cancel"));
     }
 
     #[test]
@@ -930,7 +1002,7 @@ mod rendering_contract_tests {
             1,
             "run detail should not duplicate the health label: {html}"
         );
-        assert_eq!(title(Op::RunDetail), "Runs");
+        assert_eq!(title(Op::RunDetail), "Syncs");
     }
 
     #[test]
@@ -953,7 +1025,7 @@ mod rendering_contract_tests {
                     "state": "dead",
                     "title": "Sync run stopped",
                     "body": "Review the terminal run.",
-                    "href": "/app/runs?status=dead"
+                    "href": "/app/syncs?status=dead"
                 }]
             }),
             None,
@@ -961,11 +1033,11 @@ mod rendering_contract_tests {
         .unwrap();
 
         assert!(
-            html.contains("href=\"/app/runs/run_1\""),
+            html.contains("href=\"/app/syncs/run_1\""),
             "overview dead run did not link to detail route: {html}"
         );
         assert!(
-            !html.contains("href=\"/app/runs?status=dead\""),
+            !html.contains("href=\"/app/syncs?status=dead\""),
             "overview retained the list-only dead-run link: {html}"
         );
     }
@@ -1009,7 +1081,7 @@ mod rendering_contract_tests {
         .unwrap();
         assert!(html.contains("Operator controls unavailable"));
         assert!(html.contains("Reload Runs status"));
-        assert!(html.contains("href=\"/app/runs\""));
+        assert!(html.contains("href=\"/app/syncs\""));
         for action in ["/run-now", "/reset", "/cancel"] {
             assert!(!html.contains(action), "ordinary runs rendered {action}");
         }
@@ -1153,7 +1225,7 @@ mod rendering_contract_tests {
         assert!(!html.contains("<select id=\"runs-status-filter\""));
         assert!(!html.contains("workerHeartbeat"));
         assert!(!html.contains("attemptTimeline"));
-        assert!(!html.contains("/app/runs/run_1/cancel"));
+        assert!(!html.contains("/app/syncs/run_1/cancel"));
     }
 
     #[test]
@@ -1182,17 +1254,20 @@ mod rendering_contract_tests {
             "Backing off",
             "Dead",
             "Records / 24h",
-            "Worker heartbeat",
+            "Worker",
             "2",
             "1",
             "12",
-            "Unavailable",
+            "last seen not recorded",
             "Status filter narrows rows and health counts",
         ] {
             assert!(html.contains(expected), "missing {expected}: {html}");
         }
         assert!(html.contains("No durable runs to show."));
         assert!(!html.contains("worker heartbeat active"));
+        assert!(!html.contains(
+            "Unavailable in the configured storage.</p></div></div><p id=\"runs-summary"
+        ));
     }
 
     #[test]
@@ -1684,6 +1759,30 @@ mod rendering_contract_tests {
     }
 
     #[test]
+    fn catalog_cards_reference_https_icons_and_reject_executable_urls() {
+        let html = render(
+            Op::Catalog,
+            &json!({"connectors":[
+                {"key":"mail","name":"Mail","iconUrl":"https://mail.example/favicon.ico","operations":[{"name":"send","kind":"action"}]},
+                {"key":"evil","name":"Evil","iconUrl":"javascript:alert(1)"}
+            ]}),
+            None,
+        )
+        .unwrap();
+        assert!(html.contains("src=\"https://mail.example/favicon.ico\""));
+        assert!(!html.contains("javascript:"));
+        let evil = html
+            .split("href=\"/app/connectors/evil\"")
+            .nth(1)
+            .unwrap()
+            .split("</a>")
+            .next()
+            .unwrap();
+        assert!(!evil.contains("<img"));
+        assert!(evil.contains("EV"));
+    }
+
+    #[test]
     fn catalog_search_has_a_named_get_control_and_live_results() {
         let html = render(
             Op::Catalog,
@@ -1710,7 +1809,7 @@ mod rendering_contract_tests {
         assert!(html.contains("id=\"toolkit-catalog-results\""));
         assert!(html.contains("aria-live=\"polite\" aria-atomic=\"true\""));
         assert!(html.contains("aria-label=\"Open Mail connector\""));
-        assert!(html.contains("class=\"catalog-header\""));
+        assert!(html.contains("class=\"ui-page-head\""));
         assert!(html.contains("class=\"catalog-request-panel\""));
         assert!(!html.contains("dusk-blue"));
         assert!(!html.contains("space-indigo"));
@@ -1736,7 +1835,7 @@ mod rendering_contract_tests {
             "name=\"route\" type=\"hidden\" value=\"oauth\"",
             "name=\"region\"",
             "value=\"conn_1\" selected",
-            ">conn_1</option>",
+            ">Auth · ends in nn_1</option>",
             "value=\"send\" selected",
             "/app/connectors/provider/setup",
             "/app/connectors/provider/test",
@@ -1814,7 +1913,7 @@ mod rendering_contract_tests {
             (
                 Op::Logs,
                 json!({"logs":[{"requestId":"req_1","connector":"<evil>","errorCode":42}]}),
-                "/app/logs/req_1\"",
+                "/app/calls/req_1\"",
             ),
             (
                 Op::Events,
@@ -1894,7 +1993,7 @@ mod rendering_contract_tests {
         }
         assert_eq!(render(Op::Stream, &json!({}), None), Err(Error::Invalid));
         let docs = static_page("/app/docs");
-        for target in ["/app/connectors", "/app/events", "/app/logs"] {
+        for target in ["/app/connectors", "/app/events", "/app/calls"] {
             assert!(docs.contains(&format!("href=\"{target}\"")));
         }
         assert!(static_page("/app/support").contains("mailto:info@manavritti.com"));

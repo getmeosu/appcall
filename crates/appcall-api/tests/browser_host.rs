@@ -6,8 +6,8 @@ mod copy_failure_cases;
 fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     assert!(public_path("GET", "/app/login"));
     assert!(public_path("POST", "/app/settings/team/u/remove"));
-    assert!(public_path("GET", "/app/runs"));
-    assert!(public_path("POST", "/app/runs/run_1/cancel"));
+    assert!(public_path("GET", "/app/syncs"));
+    assert!(public_path("POST", "/app/syncs/run_1/cancel"));
     assert!(public_path("GET", "/app/action-claims"));
     assert!(public_path("POST", "/app/action-claims/reconcile"));
     assert!(public_path("POST", "/app/users/u/remove"));
@@ -24,7 +24,7 @@ fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
         "/app/toolkits/x%2Fy",
         "/static/../../secret",
         "/app/oauth/unknown",
-        "/app/runs/run_1/force",
+        "/app/syncs/run_1/force",
         "/app/action-claims/reconcile/extra",
     ] {
         assert!(!public_path("GET", path), "{path}")

@@ -233,7 +233,7 @@ fn run_detail_styles_cover_panels_timeline_and_narrow_overflow() {
         ".run-detail-event-list > li::before",
         "#run-detail .runs-code { overflow-wrap: anywhere;",
         "#run-detail .run-detail-event-detail { overflow-wrap: anywhere;",
-        "#main-content > .ui-back-link[href=\"/app/runs\"] { min-height: 44px;",
+        "#main-content > .ui-back-link[href=\"/app/syncs\"] { min-height: 44px;",
         "#run-detail .run-detail-pagination .ui-button { min-height: 44px;",
         "@media (max-width: 767px)",
         "#run-detail { grid-template-columns: minmax(0, 1fr); gap: 12px;",

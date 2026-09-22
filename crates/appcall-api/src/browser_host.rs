@@ -516,7 +516,10 @@ pub fn public_path(method: &str, path: &str) -> bool {
                 | "/app/connections"
                 | "/app/events"
                 | "/app/events/stream"
-                | "/app/logs"
+                | "/app/calls"
+                | "/app/start"
+                | "/app/workflows"
+                | "/app/workflows/runs"
                 | "/app/action-claims"
                 | "/app/certification"
                 | "/app/docs"
@@ -596,16 +599,16 @@ pub fn public_path(method: &str, path: &str) -> bool {
         ("GET", ["", "app", "oauth", provider]) => {
             matches!(*provider, "google" | "github" | "microsoft")
         }
-        ("GET", ["", "app", "connectors" | "logs", key]) => id(key),
-        ("GET", ["", "app", "runs", key]) => id(key),
-        ("GET", ["", "app", "runs"]) => true,
+        ("GET", ["", "app", "connectors" | "calls", key]) => id(key),
+        ("GET", ["", "app", "syncs", key]) => id(key),
+        ("GET", ["", "app", "syncs"]) => true,
         ("GET", ["", "app", "connectors", key, "test-form" | "options" | "runinput-fields"]) => {
             id(key)
         }
         ("POST", ["", "app", "connectors", key, "setup" | "test"])
         | ("POST", ["", "app", "connections", key, "test" | "disconnect"])
-        | ("POST", ["", "app", "events" | "logs", key, "replay"])
-        | ("POST", ["", "app", "runs", key, "run-now" | "reset" | "cancel"])
+        | ("POST", ["", "app", "events" | "calls", key, "replay"])
+        | ("POST", ["", "app", "syncs", key, "run-now" | "reset" | "cancel"])
         | ("POST", ["", "app", "settings", "team", key, "remove" | "role"])
         | ("POST", ["", "app", "settings", "account", "sessions", key, "revoke"]) => id(key),
         _ => false,
@@ -1040,6 +1043,11 @@ impl ApiDashboard {
             .iter()
             .map(|connection| {
                 let mut value = connection_value(connection);
+                if let Ok(connector) = self.registry.public_connector(&connection.connector) {
+                    if let Some(url) = connector.manifest().resolved_icon_url() {
+                        value["iconUrl"] = json!(url);
+                    }
+                }
                 if let Some((created_age, authorization_age)) = ages.get(&connection.id) {
                     value["createdAgeSeconds"] = json!(created_age);
                     if let Some(age) = authorization_age {
@@ -1213,7 +1221,11 @@ pub(crate) fn connection_value(c: &appcall_store::Connection) -> Value {
     json!({"id":c.id,"connector":c.connector,"authType":c.auth_type,"status":c.status,"lastTest":c.last_test_status,"identityStatus":"not_recorded","statusCause":"unrecorded"})
 }
 pub(crate) fn catalog_item(m: &appcall_connectors::Manifest) -> Value {
-    json!({"key":m.key,"name":m.name,"categories":m.categories,"operations":m.operations.iter().map(|(name,op)|json!({"name":name,"key":name,"title":op.title,"kind":op.kind,"description":op.description,"inputSchema":op.input_schema,"outputSchema":op.output_schema,"readOnly":op.is_read_only(),"destructive":op.is_destructive()})).collect::<Vec<_>>()})
+    let mut item = json!({"key":m.key,"name":m.name,"categories":m.categories,"operations":m.operations.iter().map(|(name,op)|json!({"name":name,"key":name,"title":op.title,"kind":op.kind,"description":op.description,"inputSchema":op.input_schema,"outputSchema":op.output_schema,"readOnly":op.is_read_only(),"destructive":op.is_destructive()})).collect::<Vec<_>>()});
+    if let Some(url) = m.resolved_icon_url() {
+        item["iconUrl"] = json!(url);
+    }
+    item
 }
 pub(crate) fn catalog_item_connector(c: &appcall_connectors::Connector) -> Value {
     let mut item = catalog_item(c.manifest());

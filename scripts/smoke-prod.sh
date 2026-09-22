@@ -302,9 +302,23 @@ grep -q 'rust_api_startup_failed' "$GUARD_LOG" || fail "missing structured start
 ok "boot refused without DATABASE_URL / RUNNER_TOKEN with safe diagnostics"
 
 step "API surface with the platform key (manifests in-image)"
-catalog=$(curl_smoke -fsS -H "X-API-Key: $API_KEY" "$API/v1/connectors")
-echo "$catalog" | grep -q '"connectors"' || fail "/v1/connectors did not return the catalog"
-echo "$catalog" | grep -q '"telegram"' || fail "catalog missing telegram (manifests not loaded?)"
+cursor=""
+found=0
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+  page_url="$API/v1/connectors?limit=100"
+  if [ -n "$cursor" ]; then
+    page_url="$page_url&cursor=$cursor"
+  fi
+  catalog=$(curl_smoke -fsS -H "X-API-Key: $API_KEY" "$page_url")
+  echo "$catalog" | grep -q '"connectors"' || fail "/v1/connectors did not return the catalog"
+  if echo "$catalog" | grep -q '"telegram"'; then
+    found=1
+    break
+  fi
+  cursor=$(printf '%s' "$catalog" | sed -n 's/.*"nextCursor":"\([^"]*\)".*/\1/p')
+  [ -n "$cursor" ] || break
+done
+[ "$found" = 1 ] || fail "catalog missing telegram (manifests not loaded?)"
 ok "/v1/connectors serves the catalog"
 
 step "graceful shutdown on SIGTERM"

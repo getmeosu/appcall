@@ -216,7 +216,7 @@ fn sync_runs_projection_is_scoped_and_uses_persisted_queue_evidence() {
     assert!(dead_runs.iter().all(|row| {
         row["kind"] == "dead_run"
             && row["state"] == "dead"
-            && row["href"] == "/app/runs?status=dead"
+            && row["href"] == "/app/syncs?status=dead"
             && row.get("runId").is_some()
     }));
     assert!(dead_runs

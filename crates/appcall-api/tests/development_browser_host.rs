@@ -131,7 +131,7 @@ fn postgres_developer_dashboard_without_anusa_and_fail_closed_configuration() {
         "/app/connectors",
         "/app/connections",
         "/app/events",
-        "/app/logs",
+        "/app/calls",
         "/app/settings",
         "/app/usage",
         "/app/settings/white-labeling",

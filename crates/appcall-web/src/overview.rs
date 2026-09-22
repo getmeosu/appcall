@@ -46,12 +46,7 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
     // A project with no configured connection or recorded call is still in its
     // activation phase. Do not turn that state into an empty KPI dashboard.
     if connection_count == 0 && action_calls == 0 && dead_runs.is_none_or(|rows| rows.is_empty()) {
-        return Ok(activation()
-            + if run_health_unavailable {
-                "<p role=\"status\">Run health unavailable.</p>"
-            } else {
-                ""
-            });
+        return Ok(activation());
     }
     if (action_calls > 0 && activity.is_empty())
         || (action_calls == 0 && (!activity.is_empty() || !failure_activity.is_empty()))
@@ -62,15 +57,16 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
         "<div id=\"overview\" class=\"overview-page\" aria-labelledby=\"overview-title\">",
     );
     html.push_str(
-        "<header class=\"overview-header\"><div><p class=\"overview-label\">PROJECT HEALTH</p><h1 id=\"overview-title\">Overview</h1><p class=\"overview-subtitle\">A current read on this project’s connections and tool activity.</p></div><p class=\"overview-period\">LAST 24H</p></header>",
+        &ui::PageHeader {
+            title: "Overview",
+            purpose: "Where the project stands right now, on both sides of appcall.",
+            action: None,
+        }
+        .render()
+        .replacen("<h1>", "<h1 id=\"overview-title\">", 1),
     );
-    html.push_str("<section aria-labelledby=\"overview-kpis-title\"><h2 id=\"overview-kpis-title\" class=\"overview-section-label\">At a glance</h2><div class=\"overview-kpis\">");
-    html.push_str(&kpi(
-        "toolkits",
-        "Available connectors",
-        &count_text(toolkit_count),
-        "",
-    ));
+    html.push_str("<div class=\"overview-halves\">");
+    html.push_str(&format!("<section class=\"overview-half\" aria-labelledby=\"overview-apps-title\"><div class=\"overview-half-head\"><h2 id=\"overview-apps-title\" class=\"overview-section-label\">Apps</h2><p class=\"caption\">{} connectors in catalog</p><a class=\"caption\" href=\"/app/connectors\">All apps →</a></div><div class=\"overview-kpis\">", escape(&count_text(toolkit_count))));
     html.push_str(&kpi(
         "connections",
         "Connected accounts",
@@ -88,33 +84,58 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
             ""
         },
     ));
-    html.push_str("</div></section>");
-
-    html.push_str("<section class=\"overview-charts\" aria-labelledby=\"overview-charts-title\"><h2 id=\"overview-charts-title\" class=\"overview-section-label\">Activity</h2><div class=\"overview-chart-grid\">");
-    html.push_str(&activity_chart(&activity)?);
-    html.push_str(&failure_chart(&failure_activity)?);
-    html.push_str("</div></section>");
-
+    html.push_str("</div>");
     html.push_str(&attention_section(
         attention,
         dead_runs.unwrap_or(&[]),
         run_health_unavailable,
     )?);
-    html.push_str("</div>");
+    html.push_str("</section>");
+    html.push_str("<section class=\"overview-half\" aria-labelledby=\"overview-workflows-title\"><div class=\"overview-half-head\"><h2 id=\"overview-workflows-title\" class=\"overview-section-label\">Workflows</h2><p class=\"caption\">Durable runs and their history</p><a class=\"caption\" href=\"/app/workflows\">All workflows →</a></div>");
+    html.push_str(
+        &ui::EmptyState {
+            title: "Workflow engine is not connected to this console.",
+            body: "Active runs, completed counts, and Needs you states are not recorded here until a project-scoped engine read path exists.",
+            action_label: "How to register a workflow",
+            action_href: ui::LocalPath::new("/app/docs").expect("static overview path"),
+        }
+        .render(),
+    );
+    html.push_str("</section></div></div>");
     Ok(html)
 }
 
 fn activation() -> String {
     let cta = ui::Button {
+        size: ui::ButtonSize::Sm,
         target: ui::ButtonTarget::Link(
             ui::LocalPath::new("/app/connectors").expect("static activation path"),
         ),
-        ..ui::Button::new("Browse connectors")
+        ..ui::Button::new("Choose a connector")
+    }
+    .render();
+    let start = ui::Button {
+        variant: ui::ButtonVariant::Quiet,
+        size: ui::ButtonSize::Sm,
+        target: ui::ButtonTarget::Link(
+            ui::LocalPath::new("/app/start").expect("static start-here path"),
+        ),
+        ..ui::Button::new("Start here")
     }
     .render();
     format!(
-        "<section id=\"overview-activation\" class=\"overview-activation\" aria-labelledby=\"overview-activation-title\"><p class=\"overview-label\">PROJECT ACTIVATION</p><h1 id=\"overview-activation-title\">Activate this project</h1><p>Connect an account to start recording tool activity and provider health.</p><ol class=\"overview-activation-steps\"><li><span class=\"overview-step-number\" aria-hidden=\"true\">01</span><div><a href=\"/app/connectors\">Connect your first account</a><p>Authorize one connector for this project.</p></div></li><li><span class=\"overview-step-number\" aria-hidden=\"true\">02</span><div><a href=\"/app/connectors\">Run a tool call</a><p>Choose a tool and inspect its recorded result.</p></div></li><li><span class=\"overview-step-number\" aria-hidden=\"true\">03</span><div><a href=\"/app/events\">Receive an event</a><p>Watch provider events arrive in the project log.</p></div></li></ol>{cta}</section>",
-        cta = cta
+        "<section id=\"overview-activation\" class=\"overview-activation\" aria-labelledby=\"overview-activation-title\">{}<ol class=\"overview-activation-steps\"><li><span class=\"overview-step-number\" aria-hidden=\"true\">1</span><div><p class=\"overview-step-title\">Connect an account</p><p>Pick a connector and authorize one account. OAuth connectors open the provider; API-key connectors take the key here.</p></div>{cta}</li><li><span class=\"overview-step-number\" aria-hidden=\"true\">2</span><div><p class=\"overview-step-title\">Run a tool</p><p>Run any tool from the connector page and inspect the recorded result.</p></div></li><li><span class=\"overview-step-number\" aria-hidden=\"true\">3</span><div><p class=\"overview-step-title\">Watch events and syncs</p><p>Webhooks and sync runs appear in Events and Syncs once the first account is connected.</p></div></li></ol><p class=\"caption\">{start}</p></section>",
+        ui::PageHeader {
+            title: "Set up this project",
+            purpose: "Three steps to your first tool call.",
+            action: None,
+        }
+        .render()
+        .replacen(
+            "<h1>",
+            "<h1 id=\"overview-activation-title\">",
+            1,
+        )
     )
 }
 
@@ -140,69 +161,6 @@ fn kpi(key: &str, label: &str, value: &str, note: &str) -> String {
         } else {
             format!("<p class=\"overview-kpi-note\">{}</p>", escape(note))
         }
-    )
-}
-
-fn activity_chart(rows: &[Value]) -> Result<String, Error> {
-    let points = rows
-        .iter()
-        .map(chart_point)
-        .collect::<Result<Vec<_>, _>>()?;
-    let max = points
-        .iter()
-        .map(|(_, value, _, _)| *value)
-        .max()
-        .unwrap_or(0);
-    let mut html = String::from(
-        "<figure class=\"overview-chart\" aria-labelledby=\"overview-activity-title\"><figcaption><h3 id=\"overview-activity-title\">Calls per hour</h3><p>Recorded calls each hour</p></figcaption>",
-    );
-    if points.is_empty() {
-        html.push_str("<p class=\"overview-chart-empty\" role=\"status\">No calls recorded in this period.</p>");
-    } else {
-        html.push_str("<ol class=\"overview-bars\" aria-label=\"Recorded calls per hour\">");
-        for (label, value, _, _) in points {
-            html.push_str(&bar_row(&label, value, max, "calls"));
-        }
-        html.push_str("</ol>");
-    }
-    html.push_str("</figure>");
-    Ok(html)
-}
-
-fn failure_chart(rows: &[Value]) -> Result<String, Error> {
-    let points = rows
-        .iter()
-        .map(failure_point)
-        .collect::<Result<Vec<_>, _>>()?;
-    let max = points.iter().map(|(_, value)| *value).max().unwrap_or(0);
-    let mut html = String::from(
-        "<figure class=\"overview-chart\" aria-labelledby=\"overview-failures-title\"><figcaption><h3 id=\"overview-failures-title\">Failures per hour</h3><p>Recorded failures each hour</p></figcaption>",
-    );
-    if points.is_empty() {
-        html.push_str("<p class=\"overview-chart-empty\" role=\"status\">No failures recorded in this period.</p>");
-    } else {
-        html.push_str("<ol class=\"overview-bars overview-failures\" aria-label=\"Recorded failures per hour\">");
-        for (label, value) in points {
-            html.push_str(&bar_row(&label, value, max, "failures"));
-        }
-        html.push_str("</ol>");
-    }
-    html.push_str("</figure>");
-    Ok(html)
-}
-
-fn bar_row(label: &str, value: u64, max: u64, unit: &str) -> String {
-    let percent = if max == 0 {
-        0
-    } else {
-        value.saturating_mul(100).checked_div(max).unwrap_or(0)
-    };
-    format!(
-        "<li><span class=\"overview-bar-label\">{}</span><span class=\"overview-bar-track\"><span class=\"overview-bar-fill\" style=\"--overview-bar-size:{}%\" aria-hidden=\"true\"></span></span><span class=\"overview-bar-value\">{} {}</span></li>",
-        escape(label),
-        percent,
-        value,
-        escape(unit)
     )
 }
 
@@ -273,7 +231,7 @@ fn run_detail_href(run_id: &str) -> Option<String> {
     {
         return None;
     }
-    let mut url = reqwest::Url::parse("https://local.invalid/app/runs").ok()?;
+    let mut url = reqwest::Url::parse("https://local.invalid/app/syncs").ok()?;
     url.path_segments_mut().ok()?.push(run_id);
     Some(url.path().to_owned())
 }
@@ -493,7 +451,7 @@ mod tests {
         let html = super::render(&memory).unwrap();
         assert!(html.contains("Run health unavailable"));
         assert!(!html.contains("Nothing needs attention"));
-        assert_eq!(html.matches("data-overview-kpi=").count(), 4);
+        assert_eq!(html.matches("data-overview-kpi=").count(), 3);
         let mut empty = base.clone();
         empty["deadRuns"] = serde_json::json!([]);
         assert!(super::render(&empty)
@@ -530,17 +488,19 @@ mod tests {
         .unwrap();
 
         assert!(html.contains("id=\"overview-activation\""));
-        assert!(html.contains("Activate this project"));
-        assert!(html.contains("Connect your first account"));
+        assert!(html.contains("Set up this project"));
+        assert!(html.contains("Connect an account"));
+        assert!(html.contains("Choose a connector"));
         assert!(html.contains("href=\"/app/connectors\""));
-        assert!(html.contains("href=\"/app/events\""));
+        assert!(html.contains("href=\"/app/start\""));
         assert!(!html.contains("Getting Started"));
         assert!(!html.contains("Setup checklist"));
         assert!(!html.contains("overview-kpis"));
+        assert!(!html.contains("Run health unavailable"));
     }
 
     #[test]
-    fn populated_project_shows_four_kpis_two_charts_and_attention_links() {
+    fn populated_project_shows_apps_kpis_and_honest_workflows_half() {
         let html = render(&json!({
             "toolkitCount": 24,
             "connectionCount": 3,
@@ -558,34 +518,30 @@ mod tests {
                 {"label":"15:00","failures":1}
             ],
             "attention": [
-                {"kind":"failure","title":"Slack failed","body":"Open the failed log.","href":"/app/logs?status=failed&connector=slack"},
+                {"kind":"failure","title":"Slack failed","body":"Open the failed log.","href":"/app/calls?status=failed&connector=slack"},
                 {"kind":"connection","title":"Notion disconnected","body":"Reconnect this account.","href":"/app/connections/conn_notion"}
             ],
             "deadRuns": [
-                {"runId":"run_sync_stopped","kind":"dead_run","state":"dead","title":"Sync run stopped","body":"Review the terminal run.","href":"/app/runs?status=dead"}
+                {"runId":"run_sync_stopped","kind":"dead_run","state":"dead","title":"Sync run stopped","body":"Review the terminal run.","href":"/app/syncs?status=dead"}
             ]
         }))
         .unwrap();
 
         assert!(html.contains("id=\"overview\""));
-        assert_eq!(html.matches("data-overview-kpi=").count(), 4);
-        for label in [
-            "Available connectors",
-            "Connected accounts",
-            "Tool calls",
-            "Success rate",
-        ] {
+        assert_eq!(html.matches("data-overview-kpi=").count(), 3);
+        for label in ["Connected accounts", "Tool calls", "Success rate"] {
             assert!(html.contains(label), "missing KPI label: {label}");
         }
-        assert_eq!(html.matches("class=\"overview-chart\"").count(), 2);
-        assert!(html.contains("Calls per hour"));
-        assert!(html.contains("Failures per hour"));
-        assert!(html.contains("LAST 24H"));
+        assert!(html.contains("overview-apps-title"));
+        assert!(html.contains("overview-workflows-title"));
+        assert!(html.contains("Workflow engine is not connected to this console."));
+        assert!(!html.contains("class=\"overview-chart\""));
+        assert!(!html.contains("LAST 24H"));
         assert!(html.contains("Needs attention"));
-        assert!(html.contains("/app/logs?status=failed&amp;connector=slack"));
+        assert!(html.contains("/app/calls?status=failed&amp;connector=slack"));
         assert!(html.contains("/app/connections/conn_notion"));
-        assert!(html.contains("/app/runs/run_sync_stopped"));
-        assert!(!html.contains("/app/runs?status=dead"));
+        assert!(html.contains("/app/syncs/run_sync_stopped"));
+        assert!(!html.contains("/app/syncs?status=dead"));
         assert!(!html.to_ascii_lowercase().contains("latency"));
         assert!(!html.to_ascii_lowercase().contains("p95"));
     }
@@ -622,7 +578,7 @@ mod tests {
         };
 
         let html = render(&payload()).expect("safe run ID should render");
-        assert!(html.contains("href=\"/app/runs/run_1\""));
+        assert!(html.contains("href=\"/app/syncs/run_1\""));
         assert!(!html.contains("untrusted.example"));
 
         for run_id in ["run/1", "run?cursor=1", "<script>", ""] {
@@ -631,7 +587,7 @@ mod tests {
             let html = render(&value)
                 .expect("an unsupported run ID should not take down the Overview page");
             assert!(!html.contains("untrusted.example"));
-            assert!(!html.contains("href=\"/app/runs/"));
+            assert!(!html.contains("href=\"/app/syncs/"));
             if !run_id.is_empty() {
                 assert!(!html.contains(run_id));
             }
@@ -755,8 +711,8 @@ mod tests {
             "failureActivity": [{"label":"15:00","failures":0}],
             "attention": [],
             "deadRuns": [
-                {"title":"Raw worker row","body":"Do not render this row.","href":"/app/runs"},
-                {"runId":"run_adapted","kind":"dead_run","state":"dead","title":"Adapted dead run","body":"Review the run.","href":"/app/runs?status=dead"}
+                {"title":"Raw worker row","body":"Do not render this row.","href":"/app/syncs"},
+                {"runId":"run_adapted","kind":"dead_run","state":"dead","title":"Adapted dead run","body":"Review the run.","href":"/app/syncs?status=dead"}
             ]
         }));
         assert_eq!(result, Err(Error::Unavailable));

@@ -90,7 +90,7 @@ fn assert_denied(wire: &str, label: &str) {
     assert!(
         !wire
             .to_ascii_lowercase()
-            .contains("location: /app/runs?success="),
+            .contains("location: /app/syncs?success="),
         "{label} returned a success redirect: {wire}"
     );
 }
@@ -197,7 +197,7 @@ fn operator_grant_authenticates_runs_controls_and_preserves_cursors() {
     let (process, broker, address) = launch(&schemas, &database, Some(OPERATOR_GRANTS));
     let session = login(address);
 
-    let page = request(address, "GET", "/app/runs", &session, "");
+    let page = request(address, "GET", "/app/syncs", &session, "");
     assert_eq!(status(&page), 200, "{page}");
     assert!(!page.contains("id=\"runs-operator-controls-unavailable\""));
     for (id, action) in [
@@ -207,15 +207,15 @@ fn operator_grant_authenticates_runs_controls_and_preserves_cursors() {
     ] {
         assert!(
             page.contains(&format!(
-                "formaction=\"/app/runs/{id}/{action}\" formmethod=\"post\""
+                "formaction=\"/app/syncs/{id}/{action}\" formmethod=\"post\""
             )),
             "granted Runs page omitted {action}: {page}"
         );
-        let detail = request(address, "GET", &format!("/app/runs/{id}"), &session, "");
+        let detail = request(address, "GET", &format!("/app/syncs/{id}"), &session, "");
         assert_eq!(status(&detail), 200, "{detail}");
         assert!(
             detail.contains(&format!(
-                "formaction=\"/app/runs/{id}/{action}\" formmethod=\"post\""
+                "formaction=\"/app/syncs/{id}/{action}\" formmethod=\"post\""
             )),
             "detail omitted trusted {action}"
         );
@@ -237,14 +237,14 @@ fn operator_grant_authenticates_runs_controls_and_preserves_cursors() {
     let run_now = request(
         address,
         "POST",
-        "/app/runs/operator-run-now/run-now",
+        "/app/syncs/operator-run-now/run-now",
         &session,
         "",
     );
     assert_eq!(status(&run_now), 302, "{run_now}");
     assert!(run_now
         .to_ascii_lowercase()
-        .contains("location: /app/runs?success=run-now"));
+        .contains("location: /app/syncs?success=run-now"));
     assert!(run_is_due(&mut schemas, "operator-run-now"));
     let run_now_after = job_state(&mut schemas, "operator-run-now");
     assert_job_state(
@@ -272,14 +272,14 @@ fn operator_grant_authenticates_runs_controls_and_preserves_cursors() {
     let reset = request(
         address,
         "POST",
-        "/app/runs/operator-reset/reset",
+        "/app/syncs/operator-reset/reset",
         &session,
         "",
     );
     assert_eq!(status(&reset), 302, "{reset}");
     assert!(reset
         .to_ascii_lowercase()
-        .contains("location: /app/runs?success=reset"));
+        .contains("location: /app/syncs?success=reset"));
     assert!(run_is_due(&mut schemas, "operator-reset"));
     let reset_after = job_state(&mut schemas, "operator-reset");
     assert_job_state(&reset_after, "pending", 0, "", "", "cursor-reset");
@@ -299,14 +299,14 @@ fn operator_grant_authenticates_runs_controls_and_preserves_cursors() {
     let cancel = request(
         address,
         "POST",
-        "/app/runs/operator-cancel/cancel",
+        "/app/syncs/operator-cancel/cancel",
         &session,
         "",
     );
     assert_eq!(status(&cancel), 302, "{cancel}");
     assert!(cancel
         .to_ascii_lowercase()
-        .contains("location: /app/runs?success=cancelled"));
+        .contains("location: /app/syncs?success=cancelled"));
     let cancel_after = job_state(&mut schemas, "operator-cancel");
     assert_job_state(
         &cancel_after,
@@ -335,12 +335,12 @@ fn detail_operator_form_uses_rendered_scope_and_rejects_mismatch() {
     let detail = request(
         address,
         "GET",
-        "/app/runs/operator-reset?accountId=brand-a",
+        "/app/syncs/operator-reset?accountId=brand-a",
         &session,
         "",
     );
     assert_eq!(status(&detail), 200, "{detail}");
-    assert!(detail.contains("formaction=\"/app/runs/operator-reset/reset\" formmethod=\"post\""));
+    assert!(detail.contains("formaction=\"/app/syncs/operator-reset/reset\" formmethod=\"post\""));
     let rendered_scope = rendered_hidden_value(&detail, "externalAccountId");
     assert_eq!(rendered_scope, "brand-a");
 
@@ -359,14 +359,14 @@ fn detail_operator_form_uses_rendered_scope_and_rejects_mismatch() {
     let reset = request(
         address,
         "POST",
-        "/app/runs/operator-reset/reset",
+        "/app/syncs/operator-reset/reset",
         &session,
         &encoded_body,
     );
     assert_eq!(status(&reset), 302, "{reset}");
     assert!(reset
         .to_ascii_lowercase()
-        .contains("location: /app/runs?success=reset"));
+        .contains("location: /app/syncs?success=reset"));
     let after = job_state(&mut schemas, "operator-reset");
     assert_job_state(&after, "pending", 0, "", "", "cursor-reset");
     assert!(after.leased_until.is_none());
@@ -379,7 +379,7 @@ fn detail_operator_form_uses_rendered_scope_and_rejects_mismatch() {
     let mismatch = request(
         address,
         "POST",
-        "/app/runs/operator-reset/reset",
+        "/app/syncs/operator-reset/reset",
         &session,
         &mismatched_body,
     );
@@ -419,7 +419,7 @@ fn absent_wrong_project_user_grants_and_forged_fields_cannot_control_runs() {
         seed_runs(&mut schemas);
         let (process, broker, address) = launch(&schemas, &database, grants);
         let session = login(address);
-        let page = request(address, "GET", "/app/runs", &session, "");
+        let page = request(address, "GET", "/app/syncs", &session, "");
         assert_eq!(status(&page), 200, "{label}: {page}");
         assert!(
             page.contains("Operator controls unavailable"),
@@ -432,7 +432,7 @@ fn absent_wrong_project_user_grants_and_forged_fields_cannot_control_runs() {
         ] {
             assert!(
                 !page.contains(&format!(
-                    "formaction=\"/app/runs/{id}/{action}\" formmethod=\"post\""
+                    "formaction=\"/app/syncs/{id}/{action}\" formmethod=\"post\""
                 )),
                 "{label} exposed {action}: {page}"
             );
@@ -446,7 +446,7 @@ fn absent_wrong_project_user_grants_and_forged_fields_cannot_control_runs() {
             let wire = request(
                 address,
                 "POST",
-                &format!("/app/runs/{id}/{action}"),
+                &format!("/app/syncs/{id}/{action}"),
                 &session,
                 body,
             );
@@ -476,14 +476,14 @@ fn operator_scope_rejects_cross_project_account_api_key_csrf_and_revoked_members
     let same_account = request(
         address,
         "POST",
-        "/app/runs/same-account-run/cancel",
+        "/app/syncs/same-account-run/cancel",
         &session,
         "externalAccountId=brand-a",
     );
     assert_eq!(status(&same_account), 302, "{same_account}");
     assert!(same_account
         .to_ascii_lowercase()
-        .contains("location: /app/runs?success=cancelled"));
+        .contains("location: /app/syncs?success=cancelled"));
     let same_account_after = job_state(&mut schemas, "same-account-run");
     assert_job_state(
         &same_account_after,
@@ -500,7 +500,7 @@ fn operator_scope_rejects_cross_project_account_api_key_csrf_and_revoked_members
     let cross_project = request(
         address,
         "POST",
-        "/app/runs/cross-project-run/cancel",
+        "/app/syncs/cross-project-run/cancel",
         &session,
         "",
     );
@@ -514,7 +514,7 @@ fn operator_scope_rejects_cross_project_account_api_key_csrf_and_revoked_members
     let cross_account = request(
         address,
         "POST",
-        "/app/runs/cross-account-run/cancel",
+        "/app/syncs/cross-account-run/cancel",
         &session,
         "externalAccountId=brand-b",
     );
@@ -557,7 +557,7 @@ fn operator_scope_rejects_cross_project_account_api_key_csrf_and_revoked_members
     let csrf = request_with_origin(
         address,
         "POST",
-        "/app/runs/operator-run-now/run-now",
+        "/app/syncs/operator-run-now/run-now",
         &session,
         "",
         "http://evil.example",
@@ -572,7 +572,7 @@ fn operator_scope_rejects_cross_project_account_api_key_csrf_and_revoked_members
     let revoked = request(
         address,
         "POST",
-        "/app/runs/operator-cancel/cancel",
+        "/app/syncs/operator-cancel/cancel",
         &session,
         "",
     );
@@ -625,7 +625,7 @@ fn revoked_access_token_with_active_membership_cannot_control_runs() {
     let wire = request(
         address,
         "POST",
-        "/app/runs/operator-cancel/cancel",
+        "/app/syncs/operator-cancel/cancel",
         &session,
         "",
     );

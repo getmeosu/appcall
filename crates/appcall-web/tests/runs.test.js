@@ -33,13 +33,13 @@ function fixture() {
     },
   });
   const status = node('runs-live-status');
-  const reload = node('runs-reload', { href: '/app/runs' });
+  const reload = node('runs-reload', { href: '/app/syncs' });
   const recovery = node('runs-recovery', {
     hidden: true,
     querySelector: selector => selector === '#runs-reload' ? reload : null,
   });
   const form = node('run-form', {
-    action: 'https://appcall.test/app/runs/run_1/cancel',
+    action: 'https://appcall.test/app/syncs/run_1/cancel',
     closest: selector => selector === 'form' ? form : null,
   });
   const document = {
@@ -90,7 +90,7 @@ test('uncertain Runs navigation keeps native reload recovery and only fences mut
   assert.equal(f.unrelatedButton.disabled, false);
   assert.equal(f.recovery.hidden, false);
   assert.match(f.status.textContent, /Applying run control/);
-  assert.equal(f.reload.href, '/app/runs');
+  assert.equal(f.reload.href, '/app/syncs');
   assert.equal(new URL(f.reload.href, 'https://appcall.test').origin, 'https://appcall.test');
 
   // navStop/cancelledsubmit is not guaranteed to fire. Recovery is already
@@ -103,7 +103,7 @@ test('uncertain Runs navigation keeps native reload recovery and only fences mut
   f.emitWindow('pageshow', { persisted: true });
   assert.match(f.status.textContent, /Reload Runs status/);
   assert.equal(f.runButton.disabled, true);
-  assert.equal(f.reload.href, '/app/runs');
+  assert.equal(f.reload.href, '/app/syncs');
   f.flush();
   assert.equal(f.runButton.disabled, true);
 });

@@ -472,6 +472,165 @@ impl ConfirmButton<'_> {
         html
     }
 }
+
+pub struct SegmentedItem<'a> {
+    pub href: LocalPath<'a>,
+    pub label: &'a str,
+    pub count: Option<&'a str>,
+    pub current: bool,
+}
+pub fn segmented(aria_label: &str, items: &[SegmentedItem<'_>]) -> String {
+    let mut html = format!(
+        "<nav class=\"ui-seg\" aria-label=\"{}\">",
+        escape(aria_label)
+    );
+    for item in items {
+        let current = if item.current {
+            " aria-current=\"page\""
+        } else {
+            ""
+        };
+        let count = item
+            .count
+            .map(|count| format!(" · {}", escape(count)))
+            .unwrap_or_default();
+        html.push_str(&format!(
+            "<a href=\"{}\"{current}>{}{count}</a>",
+            escape(item.href.0),
+            escape(item.label)
+        ));
+    }
+    html.push_str("</nav>");
+    html
+}
+
+pub struct TableHeader<'a> {
+    pub label: &'a str,
+    pub numeric: bool,
+}
+pub struct TableRow<'a> {
+    pub cells: &'a [String],
+    pub selected: bool,
+}
+pub struct Table<'a> {
+    pub caption: &'a str,
+    pub headers: &'a [TableHeader<'a>],
+    pub rows: &'a [TableRow<'a>],
+}
+impl Table<'_> {
+    /// Headers and caption are escaped. Cell strings are trusted markup from
+    /// other primitives and must already be escaped.
+    pub fn render(&self) -> String {
+        let mut html = format!(
+            "<div class=\"ui-table-wrap\"><table class=\"ui-table\"><caption class=\"sr-only\">{}</caption><thead><tr>",
+            escape(self.caption)
+        );
+        for header in self.headers {
+            let class = if header.numeric { " class=\"num\"" } else { "" };
+            html.push_str(&format!(
+                "<th scope=\"col\"{class}>{}</th>",
+                escape(header.label)
+            ));
+        }
+        html.push_str("</tr></thead><tbody>");
+        for row in self.rows {
+            let selected = if row.selected { " class=\"sel\"" } else { "" };
+            html.push_str(&format!("<tr{selected}>"));
+            for (index, cell) in row.cells.iter().enumerate() {
+                let class = if index == 0 { " class=\"first\"" } else { "" };
+                html.push_str(&format!("<td{class}>{cell}</td>"));
+            }
+            html.push_str("</tr>");
+        }
+        html.push_str("</tbody></table></div>");
+        html
+    }
+}
+
+pub fn provider_initials(name: &str) -> String {
+    let letters: Vec<char> = name.chars().filter(|c| c.is_ascii_alphabetic()).collect();
+    match letters.as_slice() {
+        [first, second, ..] => format!(
+            "{}{}",
+            first.to_ascii_uppercase(),
+            second.to_ascii_uppercase()
+        ),
+        [first] => first.to_ascii_uppercase().to_string(),
+        [] => "?".into(),
+    }
+}
+pub fn provider_mark(initials: &str) -> String {
+    format!(
+        "<span class=\"ui-provider-mark\" aria-hidden=\"true\">{}</span>",
+        escape(initials)
+    )
+}
+
+/// HTTPS image addresses only. Provider icons are referenced, never downloaded.
+pub fn https_asset_url(value: &str) -> Option<String> {
+    let url = reqwest::Url::parse(value.trim()).ok()?;
+    (url.scheme() == "https"
+        && url.username().is_empty()
+        && url.password().is_none()
+        && url.host_str().is_some())
+    .then(|| url.to_string())
+}
+
+pub fn provider_identity(name: &str, icon_url: Option<&str>) -> String {
+    let initials = provider_initials(name);
+    match icon_url.and_then(https_asset_url) {
+        Some(url) => format!(
+            "<span class=\"ui-provider-mark\" aria-hidden=\"true\"><img src=\"{}\" alt=\"\" width=\"28\" height=\"28\"><span class=\"ui-provider-mark-fallback\">{}</span></span>",
+            escape(&url),
+            escape(&initials)
+        ),
+        None => provider_mark(&initials),
+    }
+}
+
+pub enum BannerTone {
+    Warn,
+    Rose,
+}
+pub struct Banner<'a> {
+    pub tone: BannerTone,
+    pub title: &'a str,
+    pub body: &'a str,
+}
+impl Banner<'_> {
+    pub fn render(&self) -> String {
+        let (tone, role) = match self.tone {
+            BannerTone::Warn => ("warn", "status"),
+            BannerTone::Rose => ("rose", "alert"),
+        };
+        format!(
+            "<div class=\"ui-banner ui-banner-{tone}\" role=\"{role}\" aria-live=\"polite\"><p><strong>{}</strong></p><p class=\"caption\">{}</p></div>",
+            escape(self.title),
+            escape(self.body)
+        )
+    }
+}
+
+pub struct PageHeader<'a> {
+    pub title: &'a str,
+    pub purpose: &'a str,
+    pub action: Option<String>,
+}
+impl PageHeader<'_> {
+    pub fn render(&self) -> String {
+        let action = self
+            .action
+            .as_deref()
+            .map(|html| format!("<div class=\"ui-page-head-actions\">{html}</div>"))
+            .unwrap_or_default();
+        format!(
+            "<header class=\"ui-page-head\"><div><h1>{}</h1><p>{}</p></div>{action}</header>",
+            escape(self.title),
+            escape(self.purpose)
+        )
+    }
+}
+
 fn attr(html: &mut String, name: &'static str, value: &str) {
     html.push_str(&format!(" {name}=\"{}\"", escape(value)));
 }

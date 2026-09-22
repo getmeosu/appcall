@@ -72,7 +72,7 @@ async fn connections_preview_states_use_real_dto_fields_and_separate_intent_age(
         "Not recorded",
         "Authorization elapsed",
         "less than a minute",
-        "Provider identity not recorded",
+        "OAuth · identity not recorded",
     ] {
         assert!(response.body.contains(text), "missing {text}");
     }

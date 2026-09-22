@@ -33,7 +33,8 @@
     function filter(query) {
       const search = query.trim().toLowerCase();
       items.forEach(item => {
-        const matches = (item.getAttribute('data-cmd') || '').toLowerCase().includes(search);
+        const haystack = [item.getAttribute('data-cmd'), item.getAttribute('data-search'), item.getAttribute('href')].join(' ').toLowerCase();
+        const matches = haystack.includes(search);
         if (matches) item.removeAttribute('hidden');
         else item.setAttribute('hidden', '');
       });

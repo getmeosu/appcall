@@ -102,6 +102,8 @@ async fn signal_legacy_get_redirects_preserve_raw_query_without_fetching_data() 
         ("/app/qa", "/app/certification"),
         ("/app/users", "/app/settings/team"),
         ("/app/sessions", "/app/settings/account"),
+        ("/app/logs", "/app/calls"),
+        ("/app/runs", "/app/syncs"),
     ] {
         let query = "q=a%20b&q=a+b&source=x%2Fy";
         let response = host

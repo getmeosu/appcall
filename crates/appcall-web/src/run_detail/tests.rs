@@ -52,7 +52,7 @@ fn run_detail_controls_require_trusted_authority_and_preserve_recovery() {
     value["operatorControlsUnavailable"] = json!(false);
     let html = render(&value);
     for action in ["run-now", "reset", "cancel"] {
-        assert!(html.contains(&format!("action=\"/app/runs/run-42/{action}\"")));
+        assert!(html.contains(&format!("action=\"/app/syncs/run-42/{action}\"")));
     }
     assert!(html.contains("data-runs-page"));
     assert!(html.contains("id=\"runs-live-status\""));
@@ -345,7 +345,7 @@ fn run_detail_escapes_cursor_and_offers_next_page() {
         html.contains("cursor=next%3C%26%22"),
         "next cursor is not contained in a local encoded link: {html}"
     );
-    assert!(html.contains("/app/runs/run-42"));
+    assert!(html.contains("/app/syncs/run-42"));
 
     let mut missing_scope = value.clone();
     missing_scope

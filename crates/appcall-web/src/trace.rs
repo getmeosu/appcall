@@ -21,7 +21,7 @@ pub(crate) fn drawer_request(
 pub(crate) fn standalone(value: &Value, request_id: &str) -> Result<String, Error> {
     Ok(ui::back_link(
         "Back to logs",
-        ui::LocalPath::new("/app/logs").ok_or(Error::Invalid)?,
+        ui::LocalPath::new("/app/calls").ok_or(Error::Invalid)?,
     ) + &content(value, request_id)?)
 }
 
@@ -33,7 +33,7 @@ pub(crate) fn content(value: &Value, request_id: &str) -> Result<String, Error> 
         escape(request_id), escape(request_id), escape(&pretty)
     );
     if data.get("replayAvailable").and_then(Value::as_bool) == Some(true) {
-        let action = format!("/app/logs/{request_id}/replay");
+        let action = format!("/app/calls/{request_id}/replay");
         let confirm_id = ui::document_id()?;
         let form_id = format!("{confirm_id}-form");
         html.push_str(&format!(

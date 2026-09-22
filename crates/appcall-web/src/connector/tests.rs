@@ -309,7 +309,7 @@ fn signal_tabs_and_stable_targets_are_unique_and_accessible() {
 #[test]
 fn signal_tools_select_only_active_accounts_and_use_get_selection() {
     let html = page(&fixture());
-    assert!(html.contains("<option value=\"active_1\" selected>active_1</option>"));
+    assert!(html.contains("<option value=\"active_1\" selected>API key · ends in ve_1</option>"));
     assert!(!html.contains("<option value=\"inactive_2\""));
     assert!(!html.contains("foreign_3"));
     assert!(!html.contains("INVENTED IDENTITY"));
@@ -401,7 +401,7 @@ fn signal_result_shows_output_and_valid_trace_without_fabricated_metrics() {
     )
     .unwrap();
     assert!(html.contains("Succeeded"));
-    assert!(html.contains("/app/logs/req-123.a_b"));
+    assert!(html.contains("/app/calls/req-123.a_b"));
     assert!(html.contains("id=\"tk-copy-json\""));
     assert!(html.contains("id=\"tk-output-json\" aria-live=\"off\""));
     let output = html.split("id=\"tk-output-json\"").nth(1).unwrap();
@@ -409,7 +409,7 @@ fn signal_result_shows_output_and_valid_trace_without_fabricated_metrics() {
     assert!(output.contains("&lt;ok&gt;"));
     for invalid in ["", "bad/id", "<script>", &"a".repeat(257)] {
         let html = render(Op::Test, &json!({"requestId":invalid,"output":null}), None).unwrap();
-        assert!(!html.contains("/app/logs/"));
+        assert!(!html.contains("/app/calls/"));
     }
     let idle = page(&fixture());
     assert!(idle.contains("Ready to run"));

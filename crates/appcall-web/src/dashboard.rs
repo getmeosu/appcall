@@ -231,10 +231,12 @@ impl DashboardRenderer<'_> {
             return Ok(Response::new(
                 200,
                 crate::shell::layout(
-                    if r.path == "/app/docs" {
-                        "Documentation"
-                    } else {
-                        "Support"
+                    match r.path {
+                        "/app/docs" => "Documentation",
+                        "/app/start" => "Start here",
+                        "/app/workflows" => "Workflows",
+                        "/app/workflows/runs" => "Runs",
+                        _ => "Support",
                     },
                     session,
                     &crate::pages::static_page(r.path),
@@ -390,7 +392,7 @@ impl DashboardRenderer<'_> {
                 return Ok(Response::new(
                     400,
                     crate::shell::layout(
-                        "Logs",
+                        "Calls",
                         session,
                         &crate::logs::invalid(&log_filters),
                         r.path,
@@ -460,7 +462,7 @@ impl DashboardRenderer<'_> {
                         crate::pages::title(operation),
                         session,
                         &content,
-                        "/app/runs",
+                        "/app/syncs",
                     ),
                 ));
             }
@@ -587,12 +589,12 @@ impl DashboardRenderer<'_> {
             }
             ReplayEvent => Some("/app/events?replayed=1".to_owned()),
             ReplayTrace => Some(format!(
-                "/app/logs/{}?replayed=1",
+                "/app/calls/{}?replayed=1",
                 resource.as_deref().unwrap_or("")
             )),
-            RunNow => Some("/app/runs?success=run-now".to_owned()),
-            ResetRun => Some("/app/runs?success=reset".to_owned()),
-            CancelRun => Some("/app/runs?success=cancelled".to_owned()),
+            RunNow => Some("/app/syncs?success=run-now".to_owned()),
+            ResetRun => Some("/app/syncs?success=reset".to_owned()),
+            CancelRun => Some("/app/syncs?success=cancelled".to_owned()),
             SaveBranding => Some("/app/settings/white-labeling?saved=1".to_owned()),
             _ => None,
         };
@@ -838,15 +840,18 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
         ("GET", "/app/connections") => Connections,
         ("GET", "/app/events") => Events,
         ("GET", "/app/events/stream") => Stream,
-        ("GET", "/app/logs") => Logs,
+        ("GET", "/app/calls") => Logs,
         ("GET", "/app/certification") => Certification,
         ("GET", "/app/usage") => Usage,
-        ("GET", "/app/runs") => Runs,
+        ("GET", "/app/syncs") => Runs,
         ("GET", "/app/action-claims") => ActionClaims,
         ("POST", "/app/action-claims/reconcile") => ReconcileActionClaim,
         ("GET", "/app/settings/white-labeling") => Branding,
         ("POST", "/app/settings/white-labeling") => SaveBranding,
-        ("GET", "/app/docs" | "/app/support") => return Some(None),
+        ("GET", "/app/docs" | "/app/support" | "/app/start" | "/app/workflows") => {
+            return Some(None)
+        }
+        ("GET", "/app/workflows/runs") => return Some(None),
         _ => {
             let parts: Vec<_> = path.trim_start_matches('/').split('/').collect();
             if parts.first() != Some(&"app") {
@@ -859,7 +864,7 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
                 parts.get(3).copied(),
             ) {
                 ("GET", Some("connectors"), 3, _) => Connector,
-                ("GET", Some("runs"), 3, _) => RunDetail,
+                ("GET", Some("syncs"), 3, _) => RunDetail,
                 ("GET", Some("connectors"), 4, Some("test-form")) => TestForm,
                 ("GET", Some("connectors"), 4, Some("options")) => Options,
                 ("GET", Some("connectors"), 4, Some("runinput-fields")) => RunInputFields,
@@ -868,11 +873,11 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
                 ("POST", Some("connections"), 4, Some("test")) => TestConnection,
                 ("POST", Some("connections"), 4, Some("disconnect")) => DisconnectConnection,
                 ("POST", Some("events"), 4, Some("replay")) => ReplayEvent,
-                ("POST", Some("runs"), 4, Some("run-now")) => RunNow,
-                ("POST", Some("runs"), 4, Some("reset")) => ResetRun,
-                ("POST", Some("runs"), 4, Some("cancel")) => CancelRun,
-                ("GET", Some("logs"), 3, _) => Trace,
-                ("POST", Some("logs"), 4, Some("replay")) => ReplayTrace,
+                ("POST", Some("syncs"), 4, Some("run-now")) => RunNow,
+                ("POST", Some("syncs"), 4, Some("reset")) => ResetRun,
+                ("POST", Some("syncs"), 4, Some("cancel")) => CancelRun,
+                ("GET", Some("calls"), 3, _) => Trace,
+                ("POST", Some("calls"), 4, Some("replay")) => ReplayTrace,
                 _ => return None,
             }
         }
@@ -889,13 +894,13 @@ mod run_detail_route_tests {
     #[test]
     fn get_run_detail_resolves_only_the_bounded_run_resource_route() {
         assert_eq!(
-            resolve("GET", "/app/runs/run-42"),
+            resolve("GET", "/app/syncs/run-42"),
             Some(Some(DashboardOperation::RunDetail))
         );
-        assert_eq!(resolve("POST", "/app/runs/run-42"), None);
-        assert_eq!(resolve("GET", "/app/runs/run-42/extra"), None);
+        assert_eq!(resolve("POST", "/app/syncs/run-42"), None);
+        assert_eq!(resolve("GET", "/app/syncs/run-42/extra"), None);
         assert_eq!(
-            resolve("GET", "/app/runs"),
+            resolve("GET", "/app/syncs"),
             Some(Some(DashboardOperation::Runs))
         );
     }
@@ -944,7 +949,7 @@ mod run_detail_route_tests {
         fields.insert("cursor".into(), vec!["Mw".into()]);
         let request = Request {
             method: "GET",
-            path: "/app/runs/run-42",
+            path: "/app/syncs/run-42",
             cookies: "",
             origin: None,
             referer: None,

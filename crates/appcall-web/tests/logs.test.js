@@ -50,13 +50,13 @@ function fixture({narrow=false, capable=true}={}) {
   const dialog=node('logs-inspector','DIALOG');
   const result=node('logs-inspector-result','DIV',{'aria-busy':'false'});
   const close=node('logs-inspector-close','FORM',{method:'dialog'});close.append(node('close-button','BUTTON'));
-  const full=node('full-link','A',{href:'/app/logs'}),fullWrapper=node('logs-inspector-full','SPAN'),login=node('logs-inspector-login','SPAN');
+  const full=node('full-link','A',{href:'/app/calls'}),fullWrapper=node('logs-inspector-full','SPAN'),login=node('logs-inspector-login','SPAN');
   fullWrapper.append(full);login.append(node('login-link','A',{href:'/app/login'}));
   dialog.append(close,fullWrapper,login,result);page.append(heading,dialog);
-  const rows=['A','B'].map(id=>{const row=node('row-'+id,'TR',{'data-log-row':''}); const a=node('inspect-'+id,'A',{href:'/app/logs/'+id});row.append(a);page.append(row);return {row,a};});
+  const rows=['A','B'].map(id=>{const row=node('row-'+id,'TR',{'data-log-row':''}); const a=node('inspect-'+id,'A',{href:'/app/calls/'+id});row.append(a);page.append(row);return {row,a};});
   if(!capable)dialog.show=dialog.showModal=undefined;
   const media={matches:narrow,addEventListener(type,fn){this.change=fn;}};
-  const window={location:new URL('https://app.test/app/logs?status=failed'),matchMedia:()=>media,getSelection:()=>({toString:()=>window.selection||''})};
+  const window={location:new URL('https://app.test/app/calls?status=failed'),matchMedia:()=>media,getSelection:()=>({toString:()=>window.selection||''})};
   class DOMParser {
     parseFromString(text){
       const body=node('parsed-body','BODY');
@@ -71,23 +71,23 @@ function fixture({narrow=false, capable=true}={}) {
   return {nodes,document,dialog,result,close,full,login,rows,calls,media,window,emit,tasks,node,
     flush(){while(tasks.length)tasks.shift()();},click(i=0,extra={}){return emit('click',rows[i].a,extra);}};
 }
-function response(id='A',extra={}) {return {status:200,ok:true,redirected:false,url:'https://app.test/app/logs/'+id+'?view=drawer',headers:{get:()=> 'text/html; charset=utf-8'},text:async()=>`<section id="trace-content" data-request-id="${id}"><h2 id="trace-title">Request Trace</h2></section>`,...extra};}
+function response(id='A',extra={}) {return {status:200,ok:true,redirected:false,url:'https://app.test/app/calls/'+id+'?view=drawer',headers:{get:()=> 'text/html; charset=utf-8'},text:async()=>`<section id="trace-content" data-request-id="${id}"><h2 id="trace-title">Request Trace</h2></section>`,...extra};}
 function started(f,i=0){const e=f.click(i);assert.equal(e.defaultPrevented,true,'supported Inspect is enhanced');assert.equal(f.dialog.open,true);assert.equal(f.calls.length,i+1);return f.calls[i];}
 
 test('Inspect opens modeless desktop, clears old content, makes exactly one bounded same-origin GET',async()=>{
   const f=fixture();f.result.textContent='old trace';const call=started(f);
   assert.equal(f.dialog.modal,false);assert.equal(f.result.textContent.includes('old trace'),false);
   assert.equal(f.result.getAttribute('aria-busy'),'true');assert.equal(f.document.activeElement,f.close.children[0]);
-  assert.equal(call.url,'https://app.test/app/logs/A?view=drawer');assert.equal(call.options.method,'GET');
+  assert.equal(call.url,'https://app.test/app/calls/A?view=drawer');assert.equal(call.options.method,'GET');
   assert.equal(call.options.credentials,'same-origin');assert.equal(call.options.redirect,'error');
   f.click();assert.equal(f.calls.length,1);call.resolve(response());await tick();
   assert.equal(f.result.querySelector('#trace-content').dataset.requestId,'A');
   assert.equal(f.result.getAttribute('aria-busy'),'false');assert.equal(f.document.activeElement.id,'trace-title');
-  assert.equal(f.full.getAttribute('href'),'/app/logs/A');assert.equal(f.window.location.search,'?status=failed');
+  assert.equal(f.full.getAttribute('href'),'/app/calls/A');assert.equal(f.window.location.search,'?status=failed');
 });
 test('modifier, middle, target/download, selected text, invalid links and unavailable dialog retain navigation',()=>{
   for(const extra of [{ctrlKey:true},{metaKey:true},{shiftKey:true},{altKey:true},{button:1}]){const f=fixture();assert.equal(f.click(0,extra).defaultPrevented,false);assert.equal(f.calls.length,0);}
-  for(const attrs of [{target:'_blank'},{download:''},{href:'https://evil.test/app/logs/A'},{href:'/app/logs/A/replay'},{href:'/app/logs/%2f'},{href:'/app/logs/..'},{href:'/app/logs/'+ 'x'.repeat(257)}]){
+  for(const attrs of [{target:'_blank'},{download:''},{href:'https://evil.test/app/calls/A'},{href:'/app/calls/A/replay'},{href:'/app/calls/%2f'},{href:'/app/calls/..'},{href:'/app/calls/'+ 'x'.repeat(257)}]){
     const f=fixture();Object.assign(f.rows[0].a.attrs,attrs);assert.equal(f.click().defaultPrevented,false);assert.equal(f.calls.length,0);
   }
   const f=fixture({capable:false});assert.equal(f.click().defaultPrevented,false);
@@ -100,7 +100,7 @@ test('another control inside a row retains its own native action',()=>{
 });
 for(const [label,overrides,copy] of [
   ['session',{status:401,ok:false},/sign in|session/i],['denied',{status:403,ok:false},/access|permission/i],['outage',{status:503,ok:false},/unavailable|try again/i],
-  ['redirect',{redirected:true},/could not|unable|unavailable/i],['wrong URL',{url:'https://evil.test/app/logs/A?view=drawer'},/could not|unable|unavailable/i],
+  ['redirect',{redirected:true},/could not|unable|unavailable/i],['wrong URL',{url:'https://evil.test/app/calls/A?view=drawer'},/could not|unable|unavailable/i],
   ['content type',{headers:{get:()=> 'application/json'}},/could not|unable|unavailable/i],
   ['login document',{text:async()=>'<html><body>private raw failure</body></html>'},/could not|unable|unavailable/i],
   ['different request',{text:async()=>'<section id="trace-content" data-request-id="B"></section>'},/could not|unable|unavailable/i],

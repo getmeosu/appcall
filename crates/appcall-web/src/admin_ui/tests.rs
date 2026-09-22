@@ -35,7 +35,7 @@ fn copy_query_hints_do_not_confirm_mutations() {
             "/app/settings/team",
             "invited",
             "1",
-            "Check the members list before sending another invitation.",
+            "Review the members list. The invitation form is ready if you need another address.",
         ),
         (
             "/app/settings/team",
@@ -65,7 +65,7 @@ fn copy_query_hints_do_not_confirm_mutations() {
             "/app/settings/organization",
             "saved",
             "1",
-            "Check the current organisation name before making another change.",
+            "Check the current organization name before making another change.",
         ),
     ] {
         let html = hint(path, key, value);
@@ -110,7 +110,7 @@ fn copy_recovery_hints_do_not_invent_causes() {
         (
             "/app/settings/organization",
             "org",
-            "Check the current organisation name before making another change.",
+            "Check the current organization name before making another change.",
         ),
         (
             "/app/settings/account",
@@ -163,7 +163,7 @@ fn copy_admin_controls_name_the_result() {
         "/app/settings/organization",
         &[("name", "Organization name", "text", "Acme")],
     );
-    assert!(form.contains("Rename organisation"));
+    assert!(form.contains("Rename organization"));
     assert!(form.contains("method=\"post\""));
     assert!(form.contains("action=\"/app/settings/organization\""));
     assert!(form.contains("name=\"name\""));

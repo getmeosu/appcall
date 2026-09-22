@@ -471,7 +471,7 @@ pub(crate) fn plan_price(cents: i64, currency: &str, interval: &str) -> String {
 pub(crate) fn form(action: &str, fields: &[(&str, &str, &str, &str)]) -> String {
     let label = match action {
         "/app/settings/team/invite" => "Send invitation",
-        "/app/settings/organization" => "Rename organisation",
+        "/app/settings/organization" => "Rename organization",
         "/app/settings/account/change-password" => "Change password",
         "/app/settings/account/mfa/setup" => "Enable MFA",
         "/app/settings/account/mfa/verify" => "Verify and enable MFA",

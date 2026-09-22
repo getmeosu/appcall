@@ -139,3 +139,20 @@ fn complete_inventory_matches_connector_contract_oracle() {
         ErrorCode::UnknownOperation
     );
 }
+
+#[test]
+fn every_public_connector_has_an_https_icon_url() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../runner/connectors");
+    let registry = Registry::load(&root).unwrap();
+    let mut missing = Vec::new();
+    for connector in registry.public_list() {
+        match connector.manifest().resolved_icon_url() {
+            Some(url) if url.starts_with("https://") && !url.contains("javascript:") => {}
+            other => missing.push((connector.manifest().key.clone(), other)),
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "public connectors without an HTTPS icon: {missing:?}"
+    );
+}

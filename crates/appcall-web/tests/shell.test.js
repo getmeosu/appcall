@@ -34,7 +34,7 @@ function fixture(script) {
   const opener=node('opener');opener.focus();
   const dialog=node('cmdk',{hidden:''}); const input=node('cmdk-input');const list=node('cmdk-list');
   const close=node('cmdk-close');node('cmdk-status');
-  list.children=[node('overview',{'data-cmd':'Overview',href:'/app'}),node('logs',{'data-cmd':'Logs',href:'/app/logs'})];
+  list.children=[node('overview',{'data-cmd':'Overview',href:'/app'}),node('logs',{'data-cmd':'Logs',href:'/app/calls'})];
   const sidebar=node('dashboard-sidebar');const parent=node('shell');parent.append(sidebar);
   sidebar.children=[node('nav-link')];const toggle=node('nav-toggle');node('nav-close');node('nav-backdrop');node('nav-drawer');
   const media={ matches:true, addEventListener(type, fn) { this.change=fn; } };
@@ -56,10 +56,10 @@ test('palette filters all markers, announces no results and Enter only selects f
   assert.equal(f.list.children[0].hasAttribute('data-active'),false);
   assert.equal(f.list.children[0].hasAttribute('hidden'),true);
   f.key('Enter',f.close);assert.equal(f.window.location.href,'');
-  f.key('Enter');assert.equal(f.window.location.href,'/app/logs');
+  f.key('Enter');assert.equal(f.window.location.href,'/app/calls');
   f.input.value='missing';f.input.emit('input');
   assert.equal(f.nodes.get('cmdk-status').textContent,'No matching pages.');
-  f.key('Enter');assert.equal(f.window.location.href,'/app/logs');
+  f.key('Enter');assert.equal(f.window.location.href,'/app/calls');
 });
 test('palette exposes the active page as a keyboard listbox selection',()=>{
   const f=fixture('palette.js');f.opener.emit('click');

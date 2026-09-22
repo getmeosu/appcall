@@ -48,7 +48,7 @@ pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
                         crate::ui::LocalPath::new("/app/settings/organization")
                             .expect("fixed local path"),
                     ),
-                    ..crate::ui::Button::new("Review organisation settings")
+                    ..crate::ui::Button::new("Review organization settings")
                 }
                 .render(),
             );
@@ -68,7 +68,7 @@ pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
             "Review the sessions list before repeating a revocation."
         }
         ("/app/settings/organization", "org") => {
-            "Check the current organisation name before making another change."
+            "Check the current organization name before making another change."
         }
         ("/app/settings/account", "setup" | "verify" | "disable" | "password") => {
             "Review your account security settings before making another change."
@@ -84,7 +84,7 @@ pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
     }
     let success = match r.path {
         "/app/settings/team" if r.field("invited")? == "1" => {
-            "Check the members list before sending another invitation."
+            "Review the members list. The invitation form is ready if you need another address."
         }
         "/app/settings/team" if r.field("removed")? == "1" => {
             "Review the members list before repeating a removal."
@@ -99,7 +99,7 @@ pub(crate) fn flash(r: &Request<'_>) -> Result<String, Error> {
             "Review your account security settings before making another change."
         }
         "/app/settings/organization" if r.field("saved")? == "1" => {
-            "Check the current organisation name before making another change."
+            "Check the current organization name before making another change."
         }
         _ => "",
     };
@@ -391,7 +391,7 @@ pub(crate) fn display_date(value: &str, with_time: bool) -> String {
 }
 
 pub(crate) fn settings(project_id: &str, project_name: &str, organization: &str) -> String {
-    let mut body = format!("<p class=\"mb-6 text-sm text-ink-300\">Manage your project, organization, account, and billing.</p><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2\"><section class=\"rounded-panel border border-line bg-panel p-5\"><h3 class=\"text-sm font-semibold\">Project</h3><p class=\"mt-4 text-sm\">Name: {}</p><p class=\"mt-3 text-sm\">Project ID: <code>{}</code></p><p class=\"mt-4 text-xs text-ink-300\">API keys for this project are managed via the API.</p></section>",escape(project_name),escape(project_id));
+    let mut body = format!("{}<div class=\"settings-layout\"><nav class=\"settings-subnav\" aria-label=\"Settings\"><a href=\"/app/settings\" aria-current=\"page\">Project</a><a href=\"/app/settings/organization\">Organization</a><a href=\"/app/settings/account\">Account</a><a href=\"/app/settings/team\">Team</a><a href=\"/app/settings/billing\">Billing</a><a href=\"/app/usage\">Usage</a><a href=\"/app/settings/white-labeling\">White labeling</a><a href=\"/app/support\">Help</a></nav><div class=\"settings-main\"><section class=\"remaining-panel\"><h3>Project</h3><p>Name: {}</p><p>Project ID: <code>{}</code></p></section>",crate::ui::PageHeader{title:"Settings",purpose:"Manage your project, organization, account, and billing.",action:None}.render(),escape(project_name),escape(project_id));
     for (path, title, description) in [
         (
             "organization",
@@ -436,7 +436,7 @@ pub(crate) fn settings(project_id: &str, project_name: &str, organization: &str)
     ] {
         body.push_str(&format!("<a class=\"shell-settings-link\" href=\"{href}\"><h3>{label}</h3><p>{description}</p></a>"));
     }
-    body.push_str("</div>");
+    body.push_str("</div></div>");
     body
 }
 #[cfg(test)]

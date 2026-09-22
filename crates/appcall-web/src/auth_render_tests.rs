@@ -29,7 +29,7 @@ fn signal_auth_forms_use_native_shared_controls() {
     ] {
         let html = form(
             path,
-            "/app/logs?limit=2&cursor=x",
+            "/app/calls?limit=2&cursor=x",
             "token\"><script>",
             "invite\"><script>",
         );
@@ -39,7 +39,7 @@ fn signal_auth_forms_use_native_shared_controls() {
         assert_eq!(html.matches("ui-button-primary").count(), 1);
         assert!(html.contains("type=\"submit\""));
         assert!(html.contains("method=\"post\""));
-        assert!(html.contains("value=\"/app/logs?limit=2&amp;cursor=x\""));
+        assert!(html.contains("value=\"/app/calls?limit=2&amp;cursor=x\""));
         assert!(!html.contains("<script>"));
     }
 }
@@ -157,14 +157,14 @@ async fn signal_auth_provider_links_are_secondary_and_preserve_safe_next() {
         cookies: "",
         origin: None,
         referer: None,
-        fields: BTreeMap::from([("next".into(), vec!["/app/logs?limit=2&cursor=x".into()])]),
+        fields: BTreeMap::from([("next".into(), vec!["/app/calls?limit=2&cursor=x".into()])]),
         now: 0,
     };
     let ((), response) = tokio::join!(server, browser.handle(&request));
     let html = response.unwrap().body;
     signal(&html);
     assert!(html.contains("ui-button-secondary"));
-    assert!(html.contains("/app/oauth/google?next=%2Fapp%2Flogs%3Flimit%3D2%26cursor%3Dx"));
+    assert!(html.contains("/app/oauth/google?next=%2Fapp%2Fcalls%3Flimit%3D2%26cursor%3Dx"));
     assert!(!html.contains("/app/oauth/github"));
     assert_eq!(html.matches("ui-button-primary").count(), 1);
 }

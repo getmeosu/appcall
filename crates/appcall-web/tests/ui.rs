@@ -248,3 +248,126 @@ fn every_button_variant_size_and_state_matches_golden_markup() {
         }
     }
 }
+
+#[test]
+fn segmented_marks_one_current_item_and_escapes_labels() {
+    let items = [
+        SegmentedItem {
+            href: LocalPath::new("/app/calls").unwrap(),
+            label: "All",
+            count: Some("12"),
+            current: true,
+        },
+        SegmentedItem {
+            href: LocalPath::new("/app/calls?status=failed").unwrap(),
+            label: "Failed <now>",
+            count: Some("3"),
+            current: false,
+        },
+    ];
+    let html = segmented("Filter by status", &items);
+    assert!(html.contains("class=\"ui-seg\""));
+    assert!(html.contains("aria-label=\"Filter by status\""));
+    assert_eq!(html.matches("aria-current=\"page\"").count(), 1);
+    assert!(html.contains("href=\"/app/calls\" aria-current=\"page\">All · 12</a>"));
+    assert!(html.contains("Failed &lt;now&gt; · 3"));
+    assert!(!html.contains("Failed <now>"));
+}
+
+#[test]
+fn table_uses_column_scope_caption_and_trusted_cell_html() {
+    let html = Table {
+        caption: "Recent calls <unsafe>",
+        headers: &[
+            TableHeader {
+                label: "Tool",
+                numeric: false,
+            },
+            TableHeader {
+                label: "Took",
+                numeric: true,
+            },
+        ],
+        rows: &[TableRow {
+            cells: &[state(Tone::Ok, "Succeeded"), "1.2s".into()],
+            selected: true,
+        }],
+    }
+    .render();
+    assert!(html.contains("class=\"ui-table-wrap\""));
+    assert!(html.contains("<table class=\"ui-table\">"));
+    assert!(html.contains("<caption class=\"sr-only\">Recent calls &lt;unsafe&gt;</caption>"));
+    assert!(html.contains("<th scope=\"col\">Tool</th>"));
+    assert!(html.contains("<th scope=\"col\" class=\"num\">Took</th>"));
+    assert!(html.contains("<tr class=\"sel\">"));
+    assert!(html.contains("ui-state-ok"));
+}
+
+#[test]
+fn provider_mark_banner_and_page_header_escape_and_use_named_classes() {
+    assert_eq!(provider_initials("GitHub"), "GI");
+    assert_eq!(provider_initials("x"), "X");
+    assert_eq!(provider_initials("12"), "?");
+    let mark = provider_mark("<GH>");
+    assert!(mark.contains("class=\"ui-provider-mark\""));
+    assert!(mark.contains("&lt;GH&gt;"));
+    assert!(!mark.contains("<GH>"));
+    let with_icon = provider_identity("GitHub", Some("https://github.com/favicon.ico"));
+    assert!(with_icon.contains("src=\"https://github.com/favicon.ico\""));
+    assert!(with_icon.contains("GI"));
+    assert!(https_asset_url("javascript:alert(1)").is_none());
+    assert!(https_asset_url("http://github.com/favicon.ico").is_none());
+    let rejected = provider_identity("GitHub", Some("javascript:alert(1)"));
+    assert!(!rejected.contains("javascript:"));
+    assert!(!rejected.contains("<img"));
+    let banner = Banner {
+        tone: BannerTone::Warn,
+        title: "Token <expired>",
+        body: "Reconnect before the next call.",
+    }
+    .render();
+    assert!(banner.contains("ui-banner ui-banner-warn"));
+    assert!(banner.contains("role=\"status\""));
+    assert!(banner.contains("Token &lt;expired&gt;"));
+    let rose = Banner {
+        tone: BannerTone::Rose,
+        title: "Dead",
+        body: "Reset attempts after reconnecting.",
+    }
+    .render();
+    assert!(rose.contains("ui-banner-rose"));
+    assert!(rose.contains("role=\"alert\""));
+    let header = PageHeader {
+        title: "Calls",
+        purpose: "Recorded tool executions for this project.",
+        action: Some(
+            Button {
+                target: ButtonTarget::Link(LocalPath::new("/app/connectors").unwrap()),
+                ..Button::new("Browse connectors")
+            }
+            .render(),
+        ),
+    }
+    .render();
+    assert!(header.contains("class=\"ui-page-head\""));
+    assert!(header.contains("<h1>Calls</h1>"));
+    assert!(header.contains("Browse connectors"));
+}
+
+#[test]
+fn new_primitives_have_signal_geometry_in_shared_css() {
+    let css = include_str!("../styles/app.css");
+    for expected in [
+        ".ui-seg {",
+        ".ui-table {",
+        ".ui-table th {",
+        ".ui-provider-mark {",
+        ".ui-provider-mark img {",
+        ".ui-banner {",
+        ".ui-page-head {",
+        "details.ui-disclosure > summary",
+        ".catalog-request-result:empty { display: none",
+    ] {
+        assert!(css.contains(expected), "missing {expected}");
+    }
+}

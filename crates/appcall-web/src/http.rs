@@ -645,7 +645,7 @@ mod tests {
                     ("displayName", "name\"><script>"),
                     ("invitation", "invitation\"><script>"),
                     ("mfaToken", "challenge\"><script>"),
-                    ("next", "/app/logs?cursor=a&limit=2"),
+                    ("next", "/app/calls?cursor=a&limit=2"),
                     ("password", "synthetic-private-password"),
                     ("newPassword", "synthetic-private-new-password"),
                     ("code", "synthetic-private-code"),
@@ -662,7 +662,7 @@ mod tests {
             assert_eq!(html.matches("role=\"alert\"").count(), 1);
             assert!(html.contains(&format!("action=\"{path}\"")));
             assert!(html.contains(
-                "name=\"next\" type=\"hidden\" value=\"/app/logs?cursor=a&amp;limit=2\""
+                "name=\"next\" type=\"hidden\" value=\"/app/calls?cursor=a&amp;limit=2\""
             ));
             for key in retained {
                 let value = super::escape(request.field(key).unwrap());
@@ -781,7 +781,7 @@ mod tests {
                 now: 0,
                 fields: [
                     ("email", "synthetic\"><script>@example.invalid"),
-                    ("next", "/app/logs?cursor=a&limit=2"),
+                    ("next", "/app/calls?cursor=a&limit=2"),
                     ("password", "synthetic-private-password"),
                 ]
                 .into_iter()
@@ -826,7 +826,7 @@ mod tests {
                     assert!(rejected.body.contains(&format!("action=\"{path}\"")));
                     assert!(rejected.body.contains("name=\"email\" type=\"email\" value=\"synthetic&quot;&gt;&lt;script&gt;@example.invalid\""));
                     assert!(rejected.body.contains(
-                        "name=\"next\" type=\"hidden\" value=\"/app/logs?cursor=a&amp;limit=2\""
+                        "name=\"next\" type=\"hidden\" value=\"/app/calls?cursor=a&amp;limit=2\""
                     ));
                     assert_eq!(rejected.body.matches("role=\"alert\"").count(), 1);
                     assert!(!rejected.body.contains("<script>"));
@@ -865,12 +865,12 @@ mod tests {
             "Verify your identity",
             "mfaToken",
             "\"><script>",
-            "/app/logs",
+            "/app/calls",
         );
         assert!(html.starts_with("<!DOCTYPE html>"));
         assert!(html.contains("autocomplete=\"one-time-code\""));
         assert!(html.contains("&quot;&gt;&lt;script&gt;"));
         assert!(!html.contains("<script>"));
-        assert!(html.contains("value=\"/app/logs\""));
+        assert!(html.contains("value=\"/app/calls\""));
     }
 }

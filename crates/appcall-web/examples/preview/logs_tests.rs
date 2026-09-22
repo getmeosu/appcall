@@ -107,7 +107,7 @@ async fn logs_fixture_no_replay_and_native_pagination() {
     }
     let response = crate::transport::dispatch_preview(
         "GET",
-        "/app/logs/preview_logs_no_replay?view=drawer",
+        "/app/calls/preview_logs_no_replay?view=drawer",
         b"",
         &data,
     )
@@ -118,7 +118,7 @@ async fn logs_fixture_no_replay_and_native_pagination() {
     assert!(!response.body.contains("Run this again"));
     let response = crate::transport::dispatch_preview(
         "GET",
-        "/app/logs?connector=connector-0&limit=1",
+        "/app/calls?connector=connector-0&limit=1",
         b"",
         &data,
     )
@@ -140,7 +140,7 @@ async fn logs_fixture_delayed_a_does_not_block_b_or_execute_tools() {
     let data = logs_data("logs");
     let a = crate::transport::dispatch_preview(
         "GET",
-        "/app/logs/preview_original?view=drawer",
+        "/app/calls/preview_original?view=drawer",
         b"",
         &data,
     );
@@ -154,7 +154,7 @@ async fn logs_fixture_delayed_a_does_not_block_b_or_execute_tools() {
         std::time::Duration::from_millis(500),
         crate::transport::dispatch_preview(
             "GET",
-            "/app/logs/preview_logs_b?view=drawer",
+            "/app/calls/preview_logs_b?view=drawer",
             b"",
             &data,
         ),
@@ -195,7 +195,7 @@ async fn logs_fixture_failures_are_known_drawer_gets_only() {
         let data = logs_data(name);
         let response = crate::transport::dispatch_preview(
             "GET",
-            "/app/logs/preview_logs_b?view=drawer",
+            "/app/calls/preview_logs_b?view=drawer",
             b"",
             &data,
         )
@@ -206,7 +206,7 @@ async fn logs_fixture_failures_are_known_drawer_gets_only() {
             assert!(!response.body.contains("id=\"trace-content\""));
             assert!(!response.body.contains("<script"));
         }
-        for target in ["/app/logs", "/app/logs/preview_logs_b"] {
+        for target in ["/app/calls", "/app/calls/preview_logs_b"] {
             assert_eq!(
                 crate::transport::dispatch_preview("GET", target, b"", &data)
                     .await
@@ -216,15 +216,15 @@ async fn logs_fixture_failures_are_known_drawer_gets_only() {
             );
         }
         assert_ne!(
-            crate::transport::dispatch_preview("GET", "/app/logs/unknown?view=drawer", b"", &data)
+            crate::transport::dispatch_preview("GET", "/app/calls/unknown?view=drawer", b"", &data)
                 .await
                 .unwrap()
                 .status,
             200
         );
         for target in [
-            "/app/logs/preview_logs_b?view=wrong",
-            "/app/logs/preview_logs_b?view=drawer&view=drawer",
+            "/app/calls/preview_logs_b?view=wrong",
+            "/app/calls/preview_logs_b?view=drawer&view=drawer",
         ] {
             assert_eq!(
                 crate::transport::dispatch_preview("GET", target, b"", &data)
@@ -242,7 +242,7 @@ async fn logs_fixture_failures_are_known_drawer_gets_only() {
         assert_eq!(
             crate::transport::dispatch_preview(
                 "POST",
-                "/app/logs/preview_logs_b?view=drawer",
+                "/app/calls/preview_logs_b?view=drawer",
                 b"",
                 &data
             )
