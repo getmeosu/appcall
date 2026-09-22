@@ -339,9 +339,9 @@ pub(crate) fn layout(title: &str, s: &Session, content: &str, path: &str) -> Str
             )
         })
         .collect::<String>();
-    commands.push_str(&format!(
-        "<a id=\"cmdk-option-start\" href=\"/app/start\" role=\"option\" aria-selected=\"false\" tabindex=\"-1\" data-cmd=\"Start here\" data-search=\"start here first run apps workflows\">Start here</a>"
-    ));
+    commands.push_str(
+        "<a id=\"cmdk-option-start\" href=\"/app/start\" role=\"option\" aria-selected=\"false\" tabindex=\"-1\" data-cmd=\"Start here\" data-search=\"start here first run apps workflows\">Start here</a>",
+    );
     let mut field = Field::new(
         "cmdk-input",
         "search",
