@@ -15,6 +15,7 @@ pub struct Manifest {
     pub network: NetworkConfig,
     pub operations: BTreeMap<String, Operation>,
     pub models: Vec<String>,
+    pub icon_url: String,
 }
 impl Manifest {
     pub fn is_public(&self) -> bool {
@@ -28,6 +29,91 @@ impl Manifest {
                 .iter()
                 .any(|c| c.trim().to_lowercase() == wanted)
     }
+
+    /// Registrable provider host used for identity, never an API/CDN label.
+    pub fn brand_host(&self) -> Option<String> {
+        self.network
+            .allowed_hosts
+            .iter()
+            .filter_map(|host| brand_host(host))
+            .next()
+            .or_else(|| host_from_url(&self.auth.setup.docs_url))
+            .or_else(|| {
+                self.auth.oauth.as_ref().and_then(|oauth| {
+                    [&oauth.authorize_url, &oauth.token_url]
+                        .into_iter()
+                        .find_map(|url| host_from_url(url))
+                })
+            })
+            .or_else(|| {
+                PRODUCT_HOSTS
+                    .iter()
+                    .find(|(key, _)| *key == self.key)
+                    .map(|(_, host)| (*host).to_owned())
+            })
+    }
+
+    /// HTTPS icon address. Prefers an explicit manifest URL, otherwise the
+    /// provider's own `/favicon.ico`. Never a bundled or downloaded asset.
+    pub fn resolved_icon_url(&self) -> Option<String> {
+        let explicit = self.icon_url.trim();
+        if !explicit.is_empty() {
+            return Some(explicit.to_owned());
+        }
+        Some(match self.brand_host() {
+            Some(host) => format!("https://{host}/favicon.ico"),
+            None => FIRST_PARTY_ICON.to_owned(),
+        })
+    }
+}
+
+const FIRST_PARTY_ICON: &str = "https://github.com/getmeosu.png";
+
+const PRODUCT_HOSTS: &[(&str, &str)] = &[
+    ("confluence", "atlassian.com"),
+    ("gitlab", "gitlab.com"),
+    ("lemmy", "join-lemmy.org"),
+    ("mastodon", "joinmastodon.org"),
+    ("wordpress", "wordpress.org"),
+];
+
+fn host_from_url(value: &str) -> Option<String> {
+    url::Url::parse(value.trim())
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_owned))
+        .and_then(|host| brand_host(&host))
+}
+
+const SERVICE_LABELS: &[&str] = &[
+    "api", "apis", "api2", "app", "apps", "rest", "graph", "hooks", "hook", "webhook", "webhooks",
+    "events", "event", "ws", "wss", "www", "m", "mobile", "cdn", "static", "upload", "uploads",
+    "files", "file", "media",
+];
+
+fn brand_host(host: &str) -> Option<String> {
+    let host = host.trim().trim_end_matches('.').to_ascii_lowercase();
+    if host.is_empty() || host.contains('/') || host.contains(':') {
+        return None;
+    }
+    let host = host.strip_prefix("*.").unwrap_or(&host);
+    let mut labels: Vec<&str> = host
+        .split('.')
+        .filter(|label| !label.is_empty() && *label != "*" && !label.contains('{'))
+        .collect();
+    while labels.len() > 2 && SERVICE_LABELS.contains(&labels[0]) {
+        labels.remove(0);
+    }
+    let valid = labels.len() >= 2
+        && labels.iter().all(|label| {
+            let bytes = label.as_bytes();
+            !bytes.is_empty()
+                && bytes[0] != b'-'
+                && bytes[bytes.len() - 1] != b'-'
+                && bytes
+                    .iter()
+                    .all(|b| b.is_ascii_alphanumeric() || *b == b'-')
+        });
+    valid.then(|| labels.join("."))
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

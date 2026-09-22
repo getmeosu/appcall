@@ -14,16 +14,18 @@ mod tests {
         };
         let html = layout("<Title>", &s, "<p>Content</p>", "/app");
         for expected in [
-            ">BUILD<",
-            ">OBSERVE<",
+            ">APPS<",
+            ">WORKFLOWS<",
             ">Overview<",
             ">Connectors<",
             ">Connections<",
+            ">Calls<",
+            ">Syncs<",
             ">Events<",
             ">Runs<",
             "id=\"main-content\"",
             "href=\"#main-content\"",
-            "aria-label=\"Search pages\"",
+            "aria-label=\"Search pages, apps, and runs\"",
             "role=\"combobox\"",
             "aria-controls=\"cmdk-list\"",
             "role=\"listbox\"",
@@ -42,7 +44,7 @@ mod tests {
         }
     }
     #[test]
-    fn observe_navigation_uses_specified_order_and_canonical_destinations() {
+    fn apps_and_workflows_navigation_use_specified_order_and_canonical_destinations() {
         let session = Session {
             user_id: String::new(),
             tenant_id: String::new(),
@@ -52,19 +54,40 @@ mod tests {
             refresh_token: String::new(),
         };
         let html = layout("Title", &session, "", "/app");
-        let observe = html
-            .split("<p class=\"shell-group-label\">OBSERVE</p>")
+        let apps = html
+            .split("<p class=\"shell-group-label\">APPS</p>")
             .nth(1)
             .and_then(|group| group.split("</div>").next())
-            .expect("observe navigation group");
+            .expect("apps navigation group");
         let mut previous = 0;
-        for href in ["/app/logs", "/app/runs", "/app/events", "/app/usage"] {
-            let position = observe
+        for href in [
+            "/app/connectors",
+            "/app/connections",
+            "/app/calls",
+            "/app/syncs",
+            "/app/events",
+        ] {
+            let position = apps
                 .find(&format!("href=\"{href}\""))
-                .unwrap_or_else(|| panic!("missing canonical Observe destination: {href}"));
-            assert!(position >= previous, "Observe order changed at {href}");
+                .unwrap_or_else(|| panic!("missing canonical Apps destination: {href}"));
+            assert!(position >= previous, "Apps order changed at {href}");
             previous = position;
         }
+        let workflows = html
+            .split("<p class=\"shell-group-label\">WORKFLOWS</p>")
+            .nth(1)
+            .and_then(|group| group.split("</div>").next())
+            .expect("workflows navigation group");
+        previous = 0;
+        for href in ["/app/workflows", "/app/workflows/runs"] {
+            let position = workflows
+                .find(&format!("href=\"{href}\""))
+                .unwrap_or_else(|| panic!("missing canonical Workflows destination: {href}"));
+            assert!(position >= previous, "Workflows order changed at {href}");
+            previous = position;
+        }
+        assert!(html.contains("class=\"shell-nav-icon\""));
+        assert!(html.contains("Jump to page, app, or run"));
     }
     #[test]
     fn active_routes_have_one_owner_and_segment_boundaries() {
@@ -77,7 +100,9 @@ mod tests {
             ("/app/settings/team/member", Some("/app/settings")),
             ("/app/sessions", Some("/app/settings")),
             ("/app/support", Some("/app/settings")),
-            ("/app/runs", Some("/app/runs")),
+            ("/app/syncs", Some("/app/syncs")),
+            ("/app/calls", Some("/app/calls")),
+            ("/app/workflows/runs", Some("/app/workflows/runs")),
         ] {
             assert_eq!(active_destination(path), expected, "{path}");
             let s = Session {
@@ -124,70 +149,95 @@ mod tests {
 }
 #[derive(Clone, Copy, PartialEq)]
 enum Group {
-    Build,
-    Observe,
+    Overview,
+    Apps,
+    Workflows,
     Footer,
 }
 struct Destination {
     href: &'static str,
     label: &'static str,
-    glyph: &'static str,
+    icon: &'static str,
     group: Group,
+    search: &'static str,
 }
 const NAV: &[Destination] = &[
     Destination {
         href: "/app",
         label: "Overview",
-        glyph: "◫",
-        group: Group::Build,
+        icon: r#"<rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>"#,
+        group: Group::Overview,
+        search: "overview home",
     },
     Destination {
         href: "/app/connectors",
         label: "Connectors",
-        glyph: "◇",
-        group: Group::Build,
+        icon: r#"<path d="M8 2l6 3.5v5L8 14l-6-3.5v-5z"/><path d="M8 8l6-3.5M8 8L2 4.5M8 8v6"/>"#,
+        group: Group::Apps,
+        search: "connectors apps catalog",
     },
     Destination {
         href: "/app/connections",
         label: "Connections",
-        glyph: "⇄",
-        group: Group::Build,
+        icon: r#"<path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.5-1.5a2.5 2.5 0 013.5 3.5L10.5 8"/><path d="M9 11.5l-1.5 1.5a2.5 2.5 0 01-3.5-3.5L5.5 8"/>"#,
+        group: Group::Apps,
+        search: "connections accounts auth",
     },
     Destination {
-        href: "/app/logs",
-        label: "Logs",
-        glyph: "≡",
-        group: Group::Observe,
+        href: "/app/calls",
+        label: "Calls",
+        icon: r#"<path d="M2.5 8h3l1.5-4 2 8 1.5-4h3"/>"#,
+        group: Group::Apps,
+        search: "calls logs traces",
     },
     Destination {
-        href: "/app/runs",
-        label: "Runs",
-        glyph: "↻",
-        group: Group::Observe,
+        href: "/app/syncs",
+        label: "Syncs",
+        icon: r#"<path d="M13 8a5 5 0 01-8.5 3.6"/><path d="M3 8a5 5 0 018.5-3.6"/><path d="M11.5 1.5v3h-3M4.5 14.5v-3h3"/>"#,
+        group: Group::Apps,
+        search: "syncs queue jobs",
     },
     Destination {
         href: "/app/events",
         label: "Events",
-        glyph: "↯",
-        group: Group::Observe,
+        icon: r#"<path d="M9 1.5L3.5 9H8l-1 5.5L12.5 7H8z"/>"#,
+        group: Group::Apps,
+        search: "events webhooks",
+    },
+    Destination {
+        href: "/app/workflows",
+        label: "Workflows",
+        icon: r#"<circle cx="3.5" cy="8" r="1.75"/><circle cx="12.5" cy="3.5" r="1.75"/><circle cx="12.5" cy="12.5" r="1.75"/><path d="M5.25 8h2.5c1 0 1.5-.5 2-1.5l1-2M7.75 8c1 0 1.5.5 2 1.5l1 2"/>"#,
+        group: Group::Workflows,
+        search: "workflows engine durable",
+    },
+    Destination {
+        href: "/app/workflows/runs",
+        label: "Runs",
+        icon: r#"<circle cx="8" cy="8" r="6"/><path d="M6.5 5.5v5l4-2.5z"/>"#,
+        group: Group::Workflows,
+        search: "workflow runs history",
     },
     Destination {
         href: "/app/usage",
         label: "Usage",
-        glyph: "▥",
-        group: Group::Observe,
+        icon: r#"<path d="M3 13V8M8 13V3M13 13V6"/>"#,
+        group: Group::Footer,
+        search: "usage",
     },
     Destination {
         href: "/app/docs",
         label: "Docs",
-        glyph: "▤",
+        icon: r#"<path d="M3 2.5h6a2 2 0 012 2V14H5a2 2 0 00-2 2z"/><path d="M13 3.5v10"/>"#,
         group: Group::Footer,
+        search: "docs documentation start here",
     },
     Destination {
         href: "/app/settings",
         label: "Settings",
-        glyph: "⚙",
+        icon: r#"<path d="M3 4.5h10M3 8h10M3 11.5h10"/><circle cx="6" cy="4.5" r="1.5" fill="var(--color-canvas)"/><circle cx="10.5" cy="8" r="1.5" fill="var(--color-canvas)"/><circle cx="7" cy="11.5" r="1.5" fill="var(--color-canvas)"/>"#,
         group: Group::Footer,
+        search: "settings account organization",
     },
 ];
 fn active_destination(path: &str) -> Option<&'static str> {
@@ -218,6 +268,32 @@ fn asset_url(path: &str, contents: &[u8]) -> String {
         .collect::<String>();
     format!("{path}?v={hash}")
 }
+fn breadcrumb(title: &str, path: &str) -> String {
+    let path = path.split(['?', '#']).next().unwrap_or(path);
+    let parent = if path.starts_with("/app/connectors/") {
+        Some(("/app/connectors", "Connectors"))
+    } else if path.starts_with("/app/calls/") {
+        Some(("/app/calls", "Calls"))
+    } else if path.starts_with("/app/syncs/") {
+        Some(("/app/syncs", "Syncs"))
+    } else if path == "/app/workflows/runs" || path.starts_with("/app/workflows/runs/") {
+        Some(("/app/workflows", "Workflows"))
+    } else if path.starts_with("/app/settings/") {
+        Some(("/app/settings", "Settings"))
+    } else {
+        None
+    };
+    match parent {
+        Some((href, label)) => format!(
+            "<nav class=\"shell-breadcrumb\" aria-label=\"Breadcrumb\"><a href=\"{href}\">{label}</a><span class=\"shell-crumb-sep\" aria-hidden=\"true\">/</span><span class=\"shell-crumb-here\">{}</span></nav>",
+            escape(title)
+        ),
+        None => format!(
+            "<nav class=\"shell-breadcrumb\" aria-label=\"Breadcrumb\"><span class=\"shell-crumb-here\">{}</span></nav>",
+            escape(title)
+        ),
+    }
+}
 fn shell_button(label: &str, action: crate::ui::ShellAction) -> String {
     let mut button = crate::ui::Button::new(label);
     button.variant = crate::ui::ButtonVariant::Quiet;
@@ -229,12 +305,15 @@ pub(crate) fn layout(title: &str, s: &Session, content: &str, path: &str) -> Str
     let owner = active_destination(path);
     let mut nav = String::new();
     for (group, name) in [
-        (Group::Build, "BUILD"),
-        (Group::Observe, "OBSERVE"),
-        (Group::Footer, "RESOURCES"),
+        (Group::Overview, ""),
+        (Group::Apps, "APPS"),
+        (Group::Workflows, "WORKFLOWS"),
+        (Group::Footer, ""),
     ] {
         if group == Group::Footer {
             nav.push_str("<div class=\"shell-nav-footer\">");
+        } else if name.is_empty() {
+            nav.push_str("<div class=\"shell-nav-group\">");
         } else {
             nav.push_str(&format!(
                 "<div class=\"shell-nav-group\"><p class=\"shell-group-label\">{name}</p>"
@@ -246,29 +325,32 @@ pub(crate) fn layout(title: &str, s: &Session, content: &str, path: &str) -> Str
             } else {
                 ""
             };
-            nav.push_str(&format!("<a href=\"{}\" title=\"{}\" aria-label=\"{}\"{current}><span class=\"shell-nav-glyph\" aria-hidden=\"true\">{}</span><span class=\"shell-nav-label\">{}</span></a>", item.href, item.label, item.label, item.glyph, item.label));
+            nav.push_str(&format!("<a href=\"{}\" title=\"{}\" aria-label=\"{}\"{current}><svg class=\"shell-nav-icon\" viewBox=\"0 0 16 16\" aria-hidden=\"true\">{}</svg><span class=\"shell-nav-label\">{}</span></a>", item.href, item.label, item.label, item.icon, item.label));
         }
         nav.push_str("</div>");
     }
-    let commands = NAV
+    let mut commands = NAV
         .iter()
         .enumerate()
         .map(|(index, item)| {
             format!(
-                "<a id=\"cmdk-option-{index}\" href=\"{}\" role=\"option\" aria-selected=\"false\" tabindex=\"-1\" data-cmd=\"{}\">{}</a>",
-                item.href, item.label, item.label
+                "<a id=\"cmdk-option-{index}\" href=\"{}\" role=\"option\" aria-selected=\"false\" tabindex=\"-1\" data-cmd=\"{}\" data-search=\"{}\">{}</a>",
+                item.href, item.label, item.search, item.label
             )
         })
         .collect::<String>();
+    commands.push_str(&format!(
+        "<a id=\"cmdk-option-start\" href=\"/app/start\" role=\"option\" aria-selected=\"false\" tabindex=\"-1\" data-cmd=\"Start here\" data-search=\"start here first run apps workflows\">Start here</a>"
+    ));
     let mut field = Field::new(
         "cmdk-input",
         "search",
-        "Search pages",
+        "Search pages, apps, and runs",
         Control::Input(InputType::Search),
     );
-    field.placeholder = "Search pages…";
+    field.placeholder = "Jump to page, app, or run…";
     field.autocomplete = Some("off");
-    field.aria_label = Some("Search pages");
+    field.aria_label = Some("Search pages, apps, and runs");
     let search_field = field.render().replacen(
         "<input class=\"ui-control\"",
         "<input role=\"combobox\" aria-haspopup=\"listbox\" aria-autocomplete=\"list\" aria-expanded=\"false\" aria-controls=\"cmdk-list\" class=\"ui-control\"",
@@ -297,13 +379,17 @@ pub(crate) fn layout(title: &str, s: &Session, content: &str, path: &str) -> Str
     );
     let palette_js = asset_url("/static/palette.js", include_bytes!("../static/palette.js"));
     let logs_js = asset_url("/static/logs.js", include_bytes!("../static/logs.js"));
+    let crumbs = breadcrumb(title, path);
+    let project_mark = crate::ui::provider_mark(&crate::ui::provider_initials(&s.tenant_name));
     format!(
-        r##"<!DOCTYPE html><html lang="en" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{title} · appcall</title><link rel="icon" type="image/svg+xml" href="/static/favicon.svg"><link rel="preload" href="{archivo_font}" as="font" type="font/woff2" crossorigin><link rel="preload" href="{mono_font}" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="{app_css}"><link rel="stylesheet" href="{dashboard_css}"><script src="{dashboard_js}" defer></script><script src="{logs_js}" defer></script><script type="module" src="/static/datastar.js"></script><script src="{palette_js}" defer></script></head><body data-dashboard><a class="shell-skip" href="#main-content">Skip to content</a><div class="shell"><aside id="dashboard-sidebar" aria-label="Workspace navigation"><div class="shell-brand"><span class="shell-mark" aria-hidden="true">a</span><span class="shell-brand-name">appcall</span>{close_nav}</div><div class="shell-project"><span class="shell-group-label">Project</span><span title="{tenant}">{tenant}</span></div><nav aria-label="Main navigation">{nav}</nav><div class="shell-account"><span title="{email}">{email}</span><a href="/app/logout" aria-label="Sign out">Sign out</a></div></aside><div id="shell-workspace"><header class="shell-topbar">{menu}<span class="shell-breadcrumb">{title}</span>{search}</header><main id="main-content" tabindex="-1">{content}</main></div></div><dialog id="nav-drawer" aria-label="Workspace navigation"></dialog><dialog id="cmdk" aria-label="Search pages"><div class="shell-search-heading">{search_field}{close_search}</div><div id="cmdk-list" role="listbox" aria-label="Pages" aria-live="polite" aria-atomic="true">{commands}</div><p id="cmdk-status" role="status" aria-live="polite" aria-atomic="true"></p><p class="shell-search-help">↑ ↓ to choose · Enter to open · Esc to close</p></dialog></body></html>"##,
+        r##"<!DOCTYPE html><html lang="en" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{title} · appcall</title><link rel="icon" type="image/svg+xml" href="/static/favicon.svg"><link rel="preload" href="{archivo_font}" as="font" type="font/woff2" crossorigin><link rel="preload" href="{mono_font}" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="{app_css}"><link rel="stylesheet" href="{dashboard_css}"><script src="{dashboard_js}" defer></script><script src="{logs_js}" defer></script><script type="module" src="/static/datastar.js"></script><script src="{palette_js}" defer></script></head><body data-dashboard><a class="shell-skip" href="#main-content">Skip to content</a><div class="shell"><aside id="dashboard-sidebar" aria-label="Workspace navigation"><div class="shell-brand"><span class="shell-mark" aria-hidden="true">a</span><span class="shell-brand-name">appcall</span>{close_nav}</div><div class="shell-project">{project_mark}<span class="shell-project-name" title="{tenant}">{tenant}</span></div><nav aria-label="Main navigation">{nav}</nav><div class="shell-account"><span title="{email}">{email}</span><a href="/app/logout" aria-label="Sign out">Sign out</a></div></aside><div id="shell-workspace"><header class="shell-topbar">{menu}{crumbs}{search}</header><main id="main-content" tabindex="-1">{content}</main></div></div><dialog id="nav-drawer" aria-label="Workspace navigation"></dialog><dialog id="cmdk" aria-label="Search pages, apps, and runs"><div class="shell-search-heading">{search_field}{close_search}</div><div id="cmdk-list" role="listbox" aria-label="Pages, apps, and runs" aria-live="polite" aria-atomic="true">{commands}</div><p id="cmdk-status" role="status" aria-live="polite" aria-atomic="true"></p><p class="shell-search-help">↑ ↓ to choose · Enter to open · Esc to close</p></dialog></body></html>"##,
         title = escape(title),
         tenant = escape(&s.tenant_name),
         email = escape(&s.email),
         archivo_font = archivo_font,
-        mono_font = mono_font
+        mono_font = mono_font,
+        project_mark = project_mark,
+        crumbs = crumbs
     )
 }
 /// Serves the exact embedded asset allowlist; fonts use `Response::binary_body`.

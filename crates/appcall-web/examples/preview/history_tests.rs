@@ -147,17 +147,17 @@ async fn persisted_run_history_preview_matches_reader_contract_and_renders_detai
     assert_eq!(third["policyEventSeq"], 6);
 
     let runs =
-        transport::dispatch_preview("GET", "/app/runs?accountId=synthetic-account", b"", &data)
+        transport::dispatch_preview("GET", "/app/syncs?accountId=synthetic-account", b"", &data)
             .await
             .expect("history scenario should expose the linked persisted run");
     assert_eq!(runs.status, 200, "{}", runs.body);
     assert!(runs
         .body
-        .contains("href=\"/app/runs/synthetic-history-run\""));
+        .contains("href=\"/app/syncs/synthetic-history-run\""));
 
     let response = transport::dispatch_preview(
         "GET",
-        "/app/runs/synthetic-history-run?accountId=synthetic-account&limit=3",
+        "/app/syncs/synthetic-history-run?accountId=synthetic-account&limit=3",
         b"",
         &data,
     )
@@ -182,7 +182,7 @@ async fn persisted_run_history_preview_matches_reader_contract_and_renders_detai
 
     let rejected_post = transport::dispatch_preview(
         "POST",
-        "/app/runs/synthetic-history-run/run-now",
+        "/app/syncs/synthetic-history-run/run-now",
         b"",
         &data,
     )

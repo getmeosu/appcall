@@ -287,7 +287,7 @@ fn overview_fixture(scenario: Scenario) -> Value {
         ],
         "deadRuns": [],
         "attention": [
-            {"kind":"failure","title":"Slack / messages.send failed","body":"Error code: CONNECTOR_RATE_LIMITED.","href":"/app/logs?status=failed&connector=slack&requestId=preview_failed"},
+            {"kind":"failure","title":"Slack / messages.send failed","body":"Error code: CONNECTOR_RATE_LIMITED.","href":"/app/calls?status=failed&connector=slack&requestId=preview_failed"},
             {"kind":"connection","title":"Notion connection is degraded","body":"Provider status: degraded. Last test: failed.","href":"/app/connections"}
         ]
     })

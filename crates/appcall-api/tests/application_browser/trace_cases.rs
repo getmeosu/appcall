@@ -81,7 +81,7 @@ pub(super) fn assert_session_required(address: SocketAddr, cookie: &str) {
         let wire = request(
             address,
             "GET",
-            &format!("/app/logs/http-trace-owned{query}"),
+            &format!("/app/calls/http-trace-owned{query}"),
             cookie,
             "",
         );
@@ -105,11 +105,11 @@ pub(super) fn assert_session_required(address: SocketAddr, cookie: &str) {
 
 pub(super) fn assert_traces(address: SocketAddr, cookie: &str) {
     for (id, replay) in [("http-trace-owned", true), ("http-trace-no-replay", false)] {
-        let full = request(address, "GET", &format!("/app/logs/{id}"), cookie, "");
+        let full = request(address, "GET", &format!("/app/calls/{id}"), cookie, "");
         let drawer = request(
             address,
             "GET",
-            &format!("/app/logs/{id}?view=drawer&projectId=other"),
+            &format!("/app/calls/{id}?view=drawer&projectId=other"),
             cookie,
             "",
         );
@@ -122,7 +122,7 @@ pub(super) fn assert_traces(address: SocketAddr, cookie: &str) {
             assert!(body.contains("&quot;actionLog&quot;"));
             assert!(body.contains(&format!("&quot;replayAvailable&quot;: {replay}")));
             assert_eq!(
-                body.contains(&format!("action=\"/app/logs/{id}/replay\"")),
+                body.contains(&format!("action=\"/app/calls/{id}/replay\"")),
                 replay
             );
             assert_eq!(
@@ -161,7 +161,7 @@ pub(super) fn assert_traces(address: SocketAddr, cookie: &str) {
             let wire = request(
                 address,
                 "GET",
-                &format!("/app/logs/{id}{query}"),
+                &format!("/app/calls/{id}{query}"),
                 cookie,
                 "",
             );
@@ -187,7 +187,7 @@ pub(super) fn assert_traces(address: SocketAddr, cookie: &str) {
         let wire = request(
             address,
             "GET",
-            &format!("/app/logs/http-trace-owned?{query}"),
+            &format!("/app/calls/http-trace-owned?{query}"),
             cookie,
             "",
         );

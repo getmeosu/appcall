@@ -197,7 +197,7 @@ if (brandingName && brandingLogo && brandingColor) {
   });
   document.addEventListener('submit', event => {
     const form = event.target.closest?.('form');
-    if (!form || !form.action.includes('/app/runs/')) return;
+    if (!form || !form.action.includes('/app/syncs/')) return;
     if (pending) {
       event.preventDefault();
       return;
@@ -895,3 +895,10 @@ if (brandingName && brandingLogo && brandingColor) {
     }
   });
 })();
+
+document.addEventListener('error', (event) => {
+  const img = event.target;
+  if (img instanceof HTMLImageElement && img.closest('.ui-provider-mark')) {
+    img.hidden = true;
+  }
+}, true);

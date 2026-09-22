@@ -57,7 +57,7 @@ async fn runs_preview_fixed_scenarios_are_truthful_and_dto_shaped() {
         };
         let request = Request {
             method: "GET",
-            path: "/app/runs",
+            path: "/app/syncs",
             cookies: "",
             origin: None,
             referer: None,
@@ -74,7 +74,7 @@ async fn runs_preview_fixed_scenarios_are_truthful_and_dto_shaped() {
             "{name}"
         );
         assert!(
-            !response.body.contains("action=\"/app/runs/"),
+            !response.body.contains("action=\"/app/syncs/"),
             "no synthetic operator authority"
         );
         if name == "runs" {
@@ -306,7 +306,7 @@ fn posts_are_exact_native_routes_without_test_form_alias() {
         "/app/connectors/connector-3/test",
         "/app/connections/preview_connection/test",
         "/app/connections/preview_connection/disconnect",
-        "/app/logs/preview_original/replay",
+        "/app/calls/preview_original/replay",
         "/app/events/preview_event/replay",
         "/app/connectors/request",
         "/app/login",
@@ -371,7 +371,7 @@ async fn real_filters_produce_real_empty_copy() {
             "No connectors match this category.",
         ),
         (
-            "/app/logs?status=failed",
+            "/app/calls?status=failed",
             "No tool runs match these filters.",
         ),
     ] {

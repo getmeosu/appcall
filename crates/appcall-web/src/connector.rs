@@ -208,7 +208,7 @@ pub(crate) fn render(v: &Value, key: &str) -> Result<String, Error> {
             ]
         )
     );
-    let mut html=format!("<div id=\"tk-detail\" data-toolkit-key=\"{}\">{}<header class=\"tk-header\"><div><h1>{}</h1><p>{}</p></div>",escape(key),ui::back_link("Connectors",ui::LocalPath::new("/app/connectors").unwrap()),escape(text(v,"name")),escape(text(v,"description")));
+    let mut html=format!("<div id=\"tk-detail\" data-toolkit-key=\"{}\">{}<header class=\"tk-header\"><div><h1>{}</h1><p>{}</p></div>",escape(key),ui::provider_identity(text(v,"name"),v.get("iconUrl").and_then(Value::as_str)),escape(text(v,"name")),escape(text(v,"description")));
     if active.is_empty() && v.get("setup").is_some_and(supported_setup) {
         html.push_str(&styled_link(
             "Connect",
@@ -352,18 +352,40 @@ fn tools(
             .render(),
         );
     }
+    let run_as_labels: Vec<String> = active
+        .iter()
+        .map(|c| {
+            let id = text(c, "id");
+            let auth = match text(c, "authType") {
+                "oauth2" => "OAuth",
+                "api_key" => "API key",
+                "external_bearer" => "External bearer",
+                _ => "Auth",
+            };
+            let suffix = id
+                .chars()
+                .rev()
+                .take(4)
+                .collect::<String>()
+                .chars()
+                .rev()
+                .collect::<String>();
+            format!("{auth} · ends in {suffix}")
+        })
+        .collect();
     let options: Vec<_> = active
         .iter()
-        .map(|c| ui::SelectOption {
+        .zip(run_as_labels.iter())
+        .map(|(c, label)| ui::SelectOption {
             value: text(c, "id"),
-            label: text(c, "id"),
+            label,
             disabled: false,
         })
         .collect();
     let account = ui::Field {
         value: connection,
         disabled: active.is_empty(),
-        help: "Active connection ID used to execute this tool.",
+        help: "Account identity is not recorded yet. The connection ID stays in the option value.",
         ..ui::Field::new(
             "tk-connection",
             "connectionId",
@@ -432,7 +454,7 @@ pub(crate) fn result(v: Option<&Value>) -> String {
         html.push_str(&ui::state(ui::Tone::Ok, "Succeeded"));
         let request = text(v, "requestId");
         if valid_id(request) {
-            html.push_str(&link("View trace", &format!("/app/logs/{request}")));
+            html.push_str(&link("View trace", &format!("/app/calls/{request}")));
         }
         html.push_str(&format!("<div id=\"tk-copy-json\">{}</div><pre id=\"tk-output-json\" aria-live=\"off\">{}</pre>",ui::Button{variant:ui::ButtonVariant::Quiet,..ui::Button::new("Copy JSON")}.render(),pretty(v.get("output").unwrap_or(&Value::Null))));
     } else {

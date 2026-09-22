@@ -222,7 +222,7 @@ fn memory_api_dashboard_actions_and_restart_share_ephemeral_state() {
         "/app",
         "/app/connectors",
         "/app/connections",
-        "/app/logs",
+        "/app/calls",
         "/app/events",
         "/app/usage",
     ] {

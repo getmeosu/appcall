@@ -226,7 +226,7 @@ async fn catalog_filters_compose_without_exposing_credentials_and_setup_is_publi
     let filtered = api
         .handle(request(
             "GET",
-            "/v1/connectors?category=%20MESSAGING%20,,&category=nonexistent",
+            "/v1/connectors?limit=100&category=%20MESSAGING%20,,&category=nonexistent",
         ))
         .await;
     assert_eq!(filtered.status, 200);
@@ -237,7 +237,7 @@ async fn catalog_filters_compose_without_exposing_credentials_and_setup_is_publi
         .unwrap()
         .iter()
         .any(|v| v == "messaging")));
-    let mut narrow = request("GET", "/v1/connectors?category=messaging");
+    let mut narrow = request("GET", "/v1/connectors?limit=100&category=messaging");
     narrow
         .headers
         .push(("X-Capability-Profile".into(), "sena_mvt".into()));
@@ -250,10 +250,47 @@ async fn catalog_filters_compose_without_exposing_credentials_and_setup_is_publi
     let empty = api
         .handle(request("GET", "/v1/connectors?category=nonexistent"))
         .await;
-    assert_eq!(empty.body, json!({"connectors":[]}));
+    assert_eq!(
+        empty.body,
+        json!({"connectors":[],"nextCursor":null,"total":0})
+    );
+    let first = api.handle(request("GET", "/v1/connectors?limit=2")).await;
+    assert_eq!(first.status, 200);
+    let first_page = first.body["connectors"].as_array().unwrap();
+    assert_eq!(first_page.len(), 2);
+    assert!(first.body["total"].as_u64().unwrap() > 2);
+    let cursor = first.body["nextCursor"].as_str().unwrap();
+    assert_eq!(cursor, first_page[1]["key"].as_str().unwrap());
+    let second = api
+        .handle(request(
+            "GET",
+            &format!("/v1/connectors?limit=2&cursor={cursor}"),
+        ))
+        .await;
+    let second_page = second.body["connectors"].as_array().unwrap();
+    assert_eq!(second_page.len(), 2);
+    assert_ne!(second_page[0]["key"], first_page[0]["key"]);
+    assert!(second_page.iter().all(|c| {
+        c["iconUrl"]
+            .as_str()
+            .is_some_and(|url| url.starts_with("https://"))
+    }));
+    assert_eq!(
+        api.handle(request("GET", "/v1/connectors?limit=0"))
+            .await
+            .status,
+        400
+    );
+    assert_eq!(
+        api.handle(request("GET", "/v1/connectors?limit=101"))
+            .await
+            .status,
+        400
+    );
     let detail = api.handle(request("GET", "/v1/connectors/slack")).await;
     assert_eq!(detail.status, 200);
     assert_eq!(detail.body["authType"], "oauth2");
+    assert_eq!(detail.body["iconUrl"], "https://slack.com/favicon.ico");
     assert!(detail.body["operations"]
         .as_array()
         .unwrap()

@@ -33,7 +33,7 @@ fn authorized_runs_payload() -> Value {
 }
 
 fn confirmation_dialog<'a>(html: &'a str, action: &str) -> &'a str {
-    let target = format!("formaction=\"/app/runs/run_1/{action}\" formmethod=\"post\"");
+    let target = format!("formaction=\"/app/syncs/run_1/{action}\" formmethod=\"post\"");
     html.split("<dialog ")
         .find(|dialog| dialog.contains(&target))
         .unwrap_or_else(|| panic!("missing confirmation dialog for {action}: {html}"))
@@ -166,7 +166,7 @@ fn runs_renderer_requires_explicit_operator_authorization_and_available_controls
         );
         for action in ["run-now", "reset", "cancel"] {
             assert!(
-                !html.contains(&format!("/app/runs/run_1/{action}")),
+                !html.contains(&format!("/app/syncs/run_1/{action}")),
                 "{label} rendered /{action}"
             );
         }
@@ -201,13 +201,13 @@ fn runs_renderer_requires_explicit_row_allowance_for_each_action() {
                 "{field} {label} should hide exactly one operator control"
             );
             assert!(
-                !html.contains(&format!("/app/runs/run_1/{action}")),
+                !html.contains(&format!("/app/syncs/run_1/{action}")),
                 "{field} {label} rendered its unauthorized action"
             );
             for other_action in ["run-now", "reset", "cancel"] {
                 if other_action != action {
                     assert!(
-                        html.contains(&format!("/app/runs/run_1/{other_action}")),
+                        html.contains(&format!("/app/syncs/run_1/{other_action}")),
                         "{field} {label} unexpectedly hid /{other_action}"
                     );
                 }

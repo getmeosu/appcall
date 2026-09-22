@@ -77,10 +77,29 @@ fn select(filters: &Filters, key: &str, label: &str, allowed: &[&str]) -> String
 }
 
 fn form(filters: &Filters) -> String {
-    let mut body = String::from("<form method=\"get\" action=\"/app/logs\" class=\"logs-filters\" aria-label=\"Filter tool runs\">");
+    let mut body = String::from("<form method=\"get\" action=\"/app/calls\" class=\"logs-filters\" aria-label=\"Filter tool calls\">");
+    body.push_str(
+        &ui::Field {
+            value: filters.get("action"),
+            placeholder: "Search tools…",
+            ..ui::Field::new(
+                "logs-action",
+                "action",
+                "Search",
+                ui::Control::Input(ui::InputType::Search),
+            )
+        }
+        .render(),
+    );
+    body.push_str(&select(
+        filters,
+        "status",
+        "Status",
+        &["", "succeeded", "failed"],
+    ));
+    body.push_str("<details class=\"ui-disclosure\"><summary>More filters</summary>");
     for (key, label, help) in [
         ("connector", "Connector", ""),
-        ("action", "Tool", ""),
         ("connectionId", "Connection ID", ""),
         ("requestId", "Request ID", ""),
         ("createdFrom", "Created from (inclusive)", "RFC3339 timestamp in UTC (Z) or with an explicit offset; up to 9 fractional digits. Example: 2026-09-07T10:00:00Z. Includes this instant."),
@@ -91,12 +110,6 @@ fn form(filters: &Filters) -> String {
             ..ui::Field::new(&format!("logs-{key}"), key, label, ui::Control::Input(ui::InputType::Text))
         }.render());
     }
-    body.push_str(&select(
-        filters,
-        "status",
-        "Status",
-        &["", "succeeded", "failed"],
-    ));
     body.push_str(&select(
         filters,
         "errorCode",
@@ -119,6 +132,7 @@ fn form(filters: &Filters) -> String {
             "MISSING_SUBACCOUNT",
         ],
     ));
+    body.push_str("</details>");
     if !filters.get("limit").is_empty() {
         body.push_str(
             &ui::Field {
@@ -143,15 +157,49 @@ fn form(filters: &Filters) -> String {
         ..ui::Button::new("Apply filters")
     }
     .render();
-    let clear = link("Clear filters", "/app/logs").expect("static local Logs route");
+    let clear = link("Clear filters", "/app/calls").expect("static local Calls route");
+    let status = filters.get("status");
+    let segmented = ui::segmented(
+        "Filter by status",
+        &[
+            ui::SegmentedItem {
+                href: ui::LocalPath::new("/app/calls").unwrap(),
+                label: "All",
+                count: None,
+                current: status.is_empty(),
+            },
+            ui::SegmentedItem {
+                href: ui::LocalPath::new("/app/calls?status=succeeded").unwrap(),
+                label: "Succeeded",
+                count: None,
+                current: status == "succeeded",
+            },
+            ui::SegmentedItem {
+                href: ui::LocalPath::new("/app/calls?status=failed").unwrap(),
+                label: "Failed",
+                count: None,
+                current: status == "failed",
+            },
+        ],
+    );
     body.push_str(&format!(
-        "<div class=\"logs-filter-actions\">{apply}{clear}</div></form>"
+        "<div class=\"logs-filter-actions\">{segmented}{apply}{clear}</div></form>"
     ));
     body
 }
 
 fn heading(filters: &Filters) -> String {
-    format!("<section class=\"logs-page\" aria-labelledby=\"logs-heading\"><header class=\"logs-heading\"><h2 id=\"logs-heading\" tabindex=\"-1\">Logs</h2><p>Inspect recorded tool executions.</p></header>{}", form(filters))
+    format!(
+        "<section class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}",
+        ui::PageHeader {
+            title: "Calls",
+            purpose: "Inspect recorded tool executions.",
+            action: None,
+        }
+        .render()
+        .replacen("<h1>", "<h1 id=\"logs-heading\" tabindex=\"-1\">", 1),
+        form(filters)
+    )
 }
 
 pub(crate) fn invalid(filters: &Filters) -> String {
@@ -175,7 +223,7 @@ pub(crate) fn render(raw: &Value, filters: &Filters, filtered: bool) -> Result<S
                 title: "No tool runs match these filters.",
                 body: "Clear the filters to view recorded runs.",
                 action_label: "Clear filters",
-                action_href: ui::LocalPath::new("/app/logs").unwrap(),
+                action_href: ui::LocalPath::new("/app/calls").unwrap(),
             }
         } else {
             ui::EmptyState {
@@ -217,7 +265,7 @@ fn inspector() -> Result<String, Error> {
         ..ui::Button::new("Close")
     }
     .render();
-    let full = link("Open full trace", "/app/logs")?;
+    let full = link("Open full trace", "/app/calls")?;
     let login = link("Sign in again", "/app/login")?;
     Ok(format!("<dialog id=\"logs-inspector\" aria-labelledby=\"logs-inspector-title\"><header class=\"logs-inspector-heading\"><h2 id=\"logs-inspector-title\">Trace inspector</h2><form id=\"logs-inspector-close\" method=\"dialog\">{close}</form></header><div class=\"logs-inspector-actions\"><span id=\"logs-inspector-full\">{full}</span><span id=\"logs-inspector-login\" hidden>{login}</span></div><div id=\"logs-inspector-result\" aria-live=\"polite\" aria-busy=\"false\"></div></dialog>"))
 }
@@ -281,7 +329,7 @@ fn table(items: &[Value]) -> Result<String, Error> {
         }
         body.push_str(&format!(
             "<td>{}</td></tr>",
-            link("Inspect", &format!("/app/logs/{request_id}"))?
+            link("Inspect", &format!("/app/calls/{request_id}"))?
         ));
     }
     body.push_str("</tbody></table></div>");

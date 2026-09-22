@@ -186,6 +186,68 @@ pub fn component_sheet() -> String {
         }
         .render(),
     );
+    html.push_str("</section><section><h2>Page structure</h2>");
+    html.push_str(
+        &PageHeader {
+            title: "Calls",
+            purpose: "Recorded tool executions for this project.",
+            action: Some(
+                Button {
+                    target: ButtonTarget::Link(LocalPath::new("/app/connectors").unwrap()),
+                    ..Button::new("Browse connectors")
+                }
+                .render(),
+            ),
+        }
+        .render(),
+    );
+    html.push_str(&segmented(
+        "Filter by status",
+        &[
+            SegmentedItem {
+                href: LocalPath::new("/app/calls").unwrap(),
+                label: "All",
+                count: Some("12"),
+                current: true,
+            },
+            SegmentedItem {
+                href: LocalPath::new("/app/calls?status=failed").unwrap(),
+                label: "Failed",
+                count: Some("3"),
+                current: false,
+            },
+        ],
+    ));
+    html.push_str(&provider_mark(&provider_initials("GitHub")));
+    html.push_str(
+        &Banner {
+            tone: BannerTone::Warn,
+            title: "Reconnect this account",
+            body: "Token refresh failed. Calls on this account fail until it is reconnected.",
+        }
+        .render(),
+    );
+    html.push_str(
+        &Table {
+            caption: "Recent calls",
+            headers: &[
+                TableHeader {
+                    label: "Tool",
+                    numeric: false,
+                },
+                TableHeader {
+                    label: "Status",
+                    numeric: false,
+                },
+            ],
+            rows: &[TableRow {
+                cells: &["messages.send".into(), state(Tone::Ok, "Succeeded")],
+                selected: false,
+            }],
+        }
+        .render(),
+    );
+    html.push_str("<details class=\"ui-disclosure\"><summary>More filters</summary><p>Advanced filters stay collapsed until opened.</p></details>");
     html.push_str("</section></main>");
     html
 }

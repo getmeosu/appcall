@@ -23,8 +23,9 @@ state.
   ages, and identifiers.
 - Controls use `--radius-ctl: 4px`; panels use `--radius-panel: 10px`.
   Use the shared `ui-button`, `ui-control`, `ui-state`, `ui-tag`,
-  `ui-empty-state`, and `ui-confirm-dialog` primitives. If a primitive is
-  missing, add it to `ui.rs` in its own PR. Do not duplicate
+  `ui-empty-state`, `ui-confirm-dialog`, `ui-seg`, `ui-table`,
+  `ui-provider-mark`, `ui-banner`, `ui-page-head`, and `ui-disclosure`
+  primitives. If a primitive is missing, add it to `ui.rs` in its own PR. Do not duplicate
   page-local controls or represent status as a pill or tinted table tag;
   status is a rule plus a word.
 

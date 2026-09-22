@@ -92,6 +92,16 @@ impl Manifest {
                 )?;
             }
         }
+        if !self.icon_url.trim().is_empty() {
+            let url = Url::parse(self.icon_url.trim()).map_err(|_| Error::invalid("iconUrl"))?;
+            require(
+                url.scheme() == "https"
+                    && url.username().is_empty()
+                    && url.password().is_none()
+                    && url.host_str().is_some(),
+                "iconUrl",
+            )?;
+        }
         require(!self.operations.is_empty(), "operations")?;
         for (name, op) in &self.operations {
             require(key(name), "operations.key")?;

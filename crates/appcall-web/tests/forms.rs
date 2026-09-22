@@ -304,14 +304,14 @@ async fn copy_connection_and_replay_actions_keep_routes() {
     let initial = action_page("/app/events", json!({"events":[event.clone()]})).await;
     let streamed = render_event_patch(&event).unwrap();
     let trace = action_page(
-        "/app/logs/request_1",
+        "/app/calls/request_1",
         json!({"requestId":"request_1","replayAvailable":true}),
     )
     .await;
     for (html, route) in [
         (&initial, "/app/events/evt_1/replay"),
         (&streamed, "/app/events/evt_1/replay"),
-        (&trace, "/app/logs/request_1/replay"),
+        (&trace, "/app/calls/request_1/replay"),
     ] {
         assert!(html.contains(">Run this again</span>"));
         assert!(html.contains(&format!("method=\"post\" action=\"{route}\"")));
@@ -368,11 +368,11 @@ async fn copy_confirmations_name_targets_without_provider_promises() {
         "/app/connections/conn_1/disconnect",
     );
     let trace = action_page(
-        "/app/logs/request_1",
+        "/app/calls/request_1",
         json!({"requestId":"request_1","replayAvailable":true}),
     )
     .await;
-    assert_confirmation(&trace, "Run this tool again?", "Run the tool for recorded request request_1 again using saved input? This creates another tool execution and may repeat changes at the provider.", "/app/logs/request_1/replay");
+    assert_confirmation(&trace, "Run this tool again?", "Run the tool for recorded request request_1 again using saved input? This creates another tool execution and may repeat changes at the provider.", "/app/calls/request_1/replay");
     let event = json!({"id":"evt_1"});
     let initial = action_page("/app/events", json!({"events":[event.clone()]})).await;
     let first = render_event_patch(&event).unwrap();

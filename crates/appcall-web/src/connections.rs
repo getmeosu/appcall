@@ -222,16 +222,22 @@ fn connection_row(value: &Value) -> Result<String, Error> {
     } else {
         connector
     };
-    let identity = "Provider identity not recorded";
+    let identity = match text(value, "authType") {
+        "oauth2" => "OAuth · identity not recorded",
+        "api_key" => "API key · identity not recorded",
+        "external_bearer" => "External bearer · identity not recorded",
+        _ => "Auth hint not recorded",
+    };
     let authorization_elapsed = authorization_age(value)
         .map(|age| {
             format!("<p class=\"connection-elapsed\"><span>Authorization elapsed</span> {age}</p>")
         })
         .unwrap_or_default();
     Ok(format!(
-        "<tr class=\"connection-row\" data-connection-id=\"{}\" data-connection-status=\"{}\"><th scope=\"row\" data-label=\"Account\"><div class=\"connection-account\"><strong>{}</strong><code>{}</code><span class=\"connection-identity\">{}</span></div></th><td data-label=\"Auth\">{}</td><td data-label=\"Status\"><div class=\"connection-status\">{}</div><p class=\"connection-note\">{}</p>{}</td><td data-label=\"Last provider check\"><div class=\"connection-check\">{}</div><p class=\"connection-cause\"><span>Cause</span> Not recorded</p><p class=\"connection-age\"><span>Created</span> {}</p></td><td data-label=\"Actions\">{}</td></tr>",
+        "<tr class=\"connection-row\" data-connection-id=\"{}\" data-connection-status=\"{}\"><th scope=\"row\" data-label=\"Account\"><div class=\"connection-account\">{}<strong>{}</strong><code>{}</code><span class=\"connection-identity\">{}</span></div></th><td data-label=\"Auth\">{}</td><td data-label=\"Status\"><div class=\"connection-status\">{}</div><p class=\"connection-note\">{}</p>{}</td><td data-label=\"Last provider check\"><div class=\"connection-check\">{}</div><p class=\"connection-cause\"><span>Cause</span> Not recorded</p><p class=\"connection-age\"><span>Created</span> {}</p></td><td data-label=\"Actions\">{}</td></tr>",
         escape(id),
         escape(status),
+        ui::provider_identity(connector_name, value.get("iconUrl").and_then(Value::as_str)),
         escape(connector_name),
         escape(id),
         escape(identity),
@@ -260,7 +266,14 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
     }
     .render();
     let mut html = format!(
-        "<section id=\"connections-page\" aria-labelledby=\"connections-heading\"><header class=\"connections-header\"><div><h2 id=\"connections-heading\">Connections</h2><p>Connections authorize accounts for use with connectors.</p><p>Review status, verification, and recovery actions below.</p></div>{browse}</header><div id=\"connections-result\" class=\"connections-result\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\" data-result-state=\"idle\"></div>"
+        "<section id=\"connections-page\" aria-labelledby=\"connections-heading\">{}<div id=\"connections-result\" class=\"connections-result\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\" data-result-state=\"idle\"></div>",
+        ui::PageHeader {
+            title: "Connections",
+            purpose: "Connections authorize accounts for use with connectors.",
+            action: Some(browse),
+        }
+        .render()
+        .replacen("<h1>", "<h1 id=\"connections-heading\">", 1)
     );
     if items.is_empty() {
         html.push_str(
@@ -299,13 +312,15 @@ mod tests {
                 "status": "degraded",
                 "lastTest": "passed",
                 "identityStatus": "not_recorded",
-                "createdAgeSeconds": 3661
+                "createdAgeSeconds": 3661,
+                "iconUrl": "https://slack.com/favicon.ico"
             }]
         }))
         .unwrap();
+        assert!(html.contains("src=\"https://slack.com/favicon.ico\""));
         assert!(html.contains("ui-state-rule"));
         assert!(html.contains("Degraded"));
-        assert!(html.contains("Provider identity not recorded"));
+        assert!(html.contains("OAuth · identity not recorded"));
         assert!(html.contains("<span>Cause</span> Not recorded"));
         assert!(html.contains("1 hour"));
         assert!(

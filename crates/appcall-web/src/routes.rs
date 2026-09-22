@@ -20,6 +20,8 @@ pub fn canonical_browser_path(method: &str, path: &str) -> Option<String> {
         ("GET", "/app/users") => "/app/settings/team",
         ("POST", "/app/users/invite") => "/app/settings/team/invite",
         ("GET", "/app/sessions") => "/app/settings/account",
+        ("GET", "/app/logs") => "/app/calls",
+        ("GET", "/app/runs") => "/app/syncs",
         _ => "",
     };
     if !direct.is_empty() {
@@ -48,7 +50,57 @@ pub fn canonical_browser_path(method: &str, path: &str) -> Option<String> {
         ("POST", ["", "app", "sessions", key, "revoke"]) if id(key) => {
             Some(format!("/app/settings/account/sessions/{key}/revoke"))
         }
+        ("GET", ["", "app", "logs", key]) if id(key) => Some(format!("/app/calls/{key}")),
+        ("POST", ["", "app", "logs", key, "replay"]) if id(key) => {
+            Some(format!("/app/calls/{key}/replay"))
+        }
+        ("GET", ["", "app", "runs", key]) if id(key) => Some(format!("/app/syncs/{key}")),
+        ("POST", ["", "app", "runs", key, suffix @ ("run-now" | "reset" | "cancel")])
+            if id(key) =>
+        {
+            Some(format!("/app/syncs/{key}/{suffix}"))
+        }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn logs_and_runs_rename_to_calls_and_syncs() {
+        assert_eq!(
+            canonical_browser_path("GET", "/app/logs"),
+            Some("/app/calls".into())
+        );
+        assert_eq!(
+            canonical_browser_path("GET", "/app/logs/req_1"),
+            Some("/app/calls/req_1".into())
+        );
+        assert_eq!(
+            canonical_browser_path("POST", "/app/logs/req_1/replay"),
+            Some("/app/calls/req_1/replay".into())
+        );
+        assert_eq!(
+            canonical_browser_path("GET", "/app/runs"),
+            Some("/app/syncs".into())
+        );
+        assert_eq!(
+            canonical_browser_path("GET", "/app/runs/run_1"),
+            Some("/app/syncs/run_1".into())
+        );
+        assert_eq!(
+            canonical_browser_path("POST", "/app/runs/run_1/reset"),
+            Some("/app/syncs/run_1/reset".into())
+        );
+        assert_eq!(
+            legacy_browser_location("GET", "/app/logs?status=failed"),
+            Some("/app/calls?status=failed".into())
+        );
+        assert!(canonical_browser_path("GET", "/app/calls").is_none());
+        assert!(canonical_browser_path("GET", "/app/syncs").is_none());
+        assert!(canonical_browser_path("GET", "/app/workflows/runs").is_none());
     }
 }
 

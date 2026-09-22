@@ -187,3 +187,100 @@ fn numeric_enums_match_javascript_without_losing_large_integer_precision() {
         assert!(op.validate_input(&input).is_ok());
     }
 }
+
+#[test]
+fn connector_icons_are_https_urls_from_provider_hosts_not_bundled_assets() {
+    let mut v = manifest();
+    v["network"]["allowedHosts"] = json!(["api.github.com"]);
+    let github = parse(&v).unwrap();
+    assert_eq!(
+        github.manifest().brand_host().as_deref(),
+        Some("github.com")
+    );
+    assert_eq!(
+        github.manifest().resolved_icon_url().as_deref(),
+        Some("https://github.com/favicon.ico")
+    );
+
+    v["network"]["allowedHosts"] = json!(["slack.com"]);
+    assert_eq!(
+        parse(&v).unwrap().manifest().resolved_icon_url().as_deref(),
+        Some("https://slack.com/favicon.ico")
+    );
+
+    v["iconUrl"] = json!("https://cdn.example/slack.png");
+    assert_eq!(
+        parse(&v).unwrap().manifest().resolved_icon_url().as_deref(),
+        Some("https://cdn.example/slack.png")
+    );
+
+    v["iconUrl"] = json!("javascript:alert(1)");
+    assert_eq!(parse(&v).unwrap_err().field(), "iconUrl");
+    v["iconUrl"] = json!("http://slack.com/favicon.ico");
+    assert_eq!(parse(&v).unwrap_err().field(), "iconUrl");
+
+    let mut docs_only = manifest();
+    docs_only["network"] = json!({"egress":"none","allowedHosts":[]});
+    docs_only["auth"]["setup"]["docsUrl"] = json!("https://www.notion.so/help");
+    assert_eq!(
+        parse(&docs_only)
+            .unwrap()
+            .manifest()
+            .resolved_icon_url()
+            .as_deref(),
+        Some("https://notion.so/favicon.ico")
+    );
+
+    let mut templated = manifest();
+    templated["network"]["allowedHosts"] = json!(["{{ user }}", "*.example.com"]);
+    assert_eq!(
+        parse(&templated)
+            .unwrap()
+            .manifest()
+            .resolved_icon_url()
+            .as_deref(),
+        Some("https://example.com/favicon.ico")
+    );
+
+    let mut tenant = manifest();
+    tenant["network"]["allowedHosts"] = json!(["*.bamboohr.com"]);
+    assert_eq!(
+        parse(&tenant).unwrap().manifest().brand_host().as_deref(),
+        Some("bamboohr.com")
+    );
+
+    let mut algolia = manifest();
+    algolia["network"]["allowedHosts"] = json!(["*.algolia.net"]);
+    assert_eq!(
+        parse(&algolia)
+            .unwrap()
+            .manifest()
+            .resolved_icon_url()
+            .as_deref(),
+        Some("https://algolia.net/favicon.ico")
+    );
+
+    let mut self_hosted = manifest();
+    self_hosted["key"] = json!("gitlab");
+    self_hosted["network"]["allowedHosts"] = json!(["{{host}}"]);
+    assert_eq!(
+        parse(&self_hosted)
+            .unwrap()
+            .manifest()
+            .resolved_icon_url()
+            .as_deref(),
+        Some("https://gitlab.com/favicon.ico")
+    );
+
+    let mut utility = manifest();
+    utility["key"] = json!("csv");
+    utility["network"] = json!({"egress":"none","allowedHosts":[]});
+    assert_eq!(
+        parse(&utility)
+            .unwrap()
+            .manifest()
+            .resolved_icon_url()
+            .as_deref(),
+        Some("https://github.com/getmeosu.png")
+    );
+}

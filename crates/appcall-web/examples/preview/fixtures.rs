@@ -29,7 +29,7 @@ pub fn allowed(method: &str, path: &str) -> bool {
                     | "/app/connectors/connector-3/test"
                     | "/app/connections/preview_connection/test"
                     | "/app/connections/preview_connection/disconnect"
-                    | "/app/logs/preview_original/replay"
+                    | "/app/calls/preview_original/replay"
                     | "/app/events/preview_event/replay"
                     | "/app/connectors/request"
                     | "/app/login"

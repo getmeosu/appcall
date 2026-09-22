@@ -1,7 +1,7 @@
 use super::*;
 
 fn trace_request(drawer: bool) -> Request<'static> {
-    let mut r = request("/app/logs/request-1");
+    let mut r = request("/app/calls/request-1");
     if drawer {
         r.fields.insert("view".into(), vec!["drawer".into()]);
     }
@@ -102,7 +102,7 @@ async fn trace_replay_requires_explicit_boolean_true() {
             assert_eq!(
                 response
                     .body
-                    .contains("action=\"/app/logs/request-1/replay\""),
+                    .contains("action=\"/app/calls/request-1/replay\""),
                 enabled
             );
             assert_eq!(
@@ -149,7 +149,7 @@ async fn trace_rejects_malformed_presentation_before_data_dispatch() {
     }
     let data = fixture(json!({}));
     let mut r = trace_request(true);
-    r.path = "/app/logs/unsafe<id>";
+    r.path = "/app/calls/unsafe<id>";
     assert!(matches!(
         render(&data, &r, Some(DashboardOperation::Trace)).await,
         Err(Error::Invalid)
@@ -204,7 +204,10 @@ async fn trace_handle_preserves_authorization_and_drawer_session_errors() {
             },
             public_origin: "https://app.example",
         };
-        for (method, path) in [("GET", "/app/logs"), ("POST", "/app/logs/request-1/replay")] {
+        for (method, path) in [
+            ("GET", "/app/calls"),
+            ("POST", "/app/calls/request-1/replay"),
+        ] {
             let data = fixture(json!({}));
             let mut r = trace_request(true);
             r.method = method;

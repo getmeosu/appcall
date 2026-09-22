@@ -147,21 +147,44 @@ fn request(method: &str, uri: &str, body: Value) -> Request {
 #[tokio::test]
 async fn catalog_contract_is_scoped_and_internal_connectors_are_hidden() {
     let api = api();
-    let response = api
-        .handle(request("GET", "/v1/connectors", Value::Null))
-        .await;
-    assert_eq!(response.status, 200);
-    let connectors = response.body["connectors"].as_array().unwrap();
-    assert!(connectors
-        .iter()
-        .any(|c| c["key"] == "slack" && c["platformConnected"] == true));
-    for c in connectors {
+    let connectors = catalog_pages(&api).await;
+    assert!(connectors.iter().any(|c| {
+        c["key"] == "slack"
+            && c["platformConnected"] == true
+            && c["iconUrl"] == "https://slack.com/favicon.ico"
+    }));
+    assert!(connectors.iter().all(|c| c["iconUrl"]
+        .as_str()
+        .is_some_and(|url| url.starts_with("https://") && !url.contains("javascript:"))));
+    for c in &connectors {
         assert!(c.get("authType").is_some());
         assert!(c.get("operations").is_none());
     }
     let mut unauth = request("GET", "/v1/connectors", Value::Null);
     unauth.headers.clear();
     assert_eq!(api.handle(unauth).await.status, 401);
+}
+
+async fn catalog_pages(api: &Api<Fixture>) -> Vec<Value> {
+    let mut cursor = String::new();
+    let mut connectors = Vec::new();
+    loop {
+        let uri = if cursor.is_empty() {
+            "/v1/connectors?limit=100".to_owned()
+        } else {
+            format!("/v1/connectors?limit=100&cursor={cursor}")
+        };
+        let response = api.handle(request("GET", &uri, Value::Null)).await;
+        assert_eq!(response.status, 200);
+        let page = response.body["connectors"].as_array().unwrap();
+        assert!(page.len() <= 100);
+        connectors.extend(page.iter().cloned());
+        match response.body["nextCursor"].as_str() {
+            Some(next) if !next.is_empty() => cursor = next.to_owned(),
+            _ => break,
+        }
+    }
+    connectors
 }
 #[tokio::test]
 async fn actions_use_verified_scope_and_preserve_legacy_response_shape() {

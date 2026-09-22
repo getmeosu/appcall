@@ -317,7 +317,7 @@ pub fn dead_runs_projection(
                         "state": "dead",
                         "title": format!("{connector} / {operation} dead run"),
                         "body": detail,
-                        "href": "/app/runs?status=dead",
+                        "href": "/app/syncs?status=dead",
                     })
                 })
                 .collect()

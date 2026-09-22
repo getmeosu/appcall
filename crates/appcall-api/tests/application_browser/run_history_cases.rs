@@ -178,7 +178,7 @@ fn application_run_history_is_project_account_scoped_and_revocable() {
     let detail = request(
         address,
         "GET",
-        &format!("/app/runs/{RUN_ID}?accountId={HISTORY_ACCOUNT}&limit=2"),
+        &format!("/app/syncs/{RUN_ID}?accountId={HISTORY_ACCOUNT}&limit=2"),
         &session_cookie,
         "",
     );
@@ -201,7 +201,7 @@ fn application_run_history_is_project_account_scoped_and_revocable() {
         address,
         "GET",
         &format!(
-            "/app/runs/{RUN_ID}?accountId={HISTORY_ACCOUNT}&limit=2&cursor={}",
+            "/app/syncs/{RUN_ID}?accountId={HISTORY_ACCOUNT}&limit=2&cursor={}",
             URL_SAFE_NO_PAD.encode("2")
         ),
         &session_cookie,
@@ -236,7 +236,7 @@ fn application_run_history_is_project_account_scoped_and_revocable() {
         let wire = request(
             address,
             "GET",
-            &format!("/app/runs/{id}?accountId={HISTORY_ACCOUNT}"),
+            &format!("/app/syncs/{id}?accountId={HISTORY_ACCOUNT}"),
             &session_cookie,
             "",
         );
@@ -296,7 +296,7 @@ fn application_run_history_is_project_account_scoped_and_revocable() {
     let revoked = request(
         address,
         "GET",
-        &format!("/app/runs/{RUN_ID}?accountId={HISTORY_ACCOUNT}"),
+        &format!("/app/syncs/{RUN_ID}?accountId={HISTORY_ACCOUNT}"),
         &session_cookie,
         "",
     );

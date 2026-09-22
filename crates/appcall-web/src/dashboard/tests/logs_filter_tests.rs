@@ -9,7 +9,7 @@ async fn logs_states_have_at_most_one_primary_action() {
     let empty = fixture(json!({"logs":[]}));
     let invalid = Failing(Error::Invalid);
     for (name, data, r) in [
-        ("empty", &empty as &dyn DashboardData, request("/app/logs")),
+        ("empty", &empty as &dyn DashboardData, request("/app/calls")),
         (
             "filtered empty",
             &empty as &dyn DashboardData,
@@ -23,12 +23,12 @@ async fn logs_states_have_at_most_one_primary_action() {
         (
             "populated",
             &populated as &dyn DashboardData,
-            request("/app/logs"),
+            request("/app/calls"),
         ),
         (
             "paginated",
             &paginated as &dyn DashboardData,
-            request("/app/logs"),
+            request("/app/calls"),
         ),
     ] {
         let response = render(data, &r, Some(DashboardOperation::Logs))
@@ -54,7 +54,7 @@ async fn logs_states_have_at_most_one_primary_action() {
 }
 
 fn filtered_request() -> Request<'static> {
-    let mut r = request("/app/logs");
+    let mut r = request("/app/calls");
     for (key, value) in [
         ("connector", "mail\"<unsafe>&"),
         ("action", "messages.send"),
@@ -83,7 +83,7 @@ async fn logs_filter_form_uses_trusted_escaped_values_and_resets_cursor() {
     let form = response
         .body
         .split("<form")
-        .find(|part| part.contains("action=\"/app/logs\""))
+        .find(|part| part.contains("action=\"/app/calls\""))
         .expect("native Logs filter form")
         .split("</form>")
         .next()
@@ -151,7 +151,7 @@ async fn logs_request_error_and_time_filters_produce_filtered_empty_copy() {
         ("createdFrom", "2026-09-07T00:00:00Z"),
         ("createdBefore", "2026-09-08T00:00:00Z"),
     ] {
-        let mut r = request("/app/logs");
+        let mut r = request("/app/calls");
         r.fields.insert(key.into(), vec![value.into()]);
         let response = render(
             &fixture(json!({"logs":[],"hasFilters":false})),
@@ -177,7 +177,7 @@ async fn logs_invalid_filter_keeps_form_and_live_recovery_without_fake_results()
         .await
         .expect("recoverable filter error page");
     assert_eq!(response.status, 400);
-    assert!(response.body.contains("action=\"/app/logs\""));
+    assert!(response.body.contains("action=\"/app/calls\""));
     assert!(response.body.contains("invalid&quot;&lt;time&gt;"));
     assert!(response.body.contains("role=\"alert\""));
     assert!(response.body.contains("Clear filters"));
@@ -202,7 +202,7 @@ async fn logs_invalid_filter_keeps_form_and_live_recovery_without_fake_results()
 
 #[tokio::test]
 async fn logs_table_has_scoped_headers_caption_state_and_native_inspect() {
-    let response = render(&fixture(json!({"logs":[{"createdAt":"2026-09-07T10:00:00Z","connector":"mail","action":"send","status":"failed","errorCode":"ACTION_TIMEOUT","requestId":"request-1"}]})), &request("/app/logs"), Some(DashboardOperation::Logs)).await.unwrap();
+    let response = render(&fixture(json!({"logs":[{"createdAt":"2026-09-07T10:00:00Z","connector":"mail","action":"send","status":"failed","errorCode":"ACTION_TIMEOUT","requestId":"request-1"}]})), &request("/app/calls"), Some(DashboardOperation::Logs)).await.unwrap();
     assert!(response
         .body
         .contains("<caption class=\"sr-only\">Recorded tool executions</caption>"));
@@ -210,7 +210,7 @@ async fn logs_table_has_scoped_headers_caption_state_and_native_inspect() {
     assert!(response.body.contains(">Tool</th>"));
     assert!(!response.body.contains(">Action</th>"));
     assert!(response.body.contains("ui-state-dead"));
-    assert!(response.body.contains("href=\"/app/logs/request-1\""));
+    assert!(response.body.contains("href=\"/app/calls/request-1\""));
     assert!(response.body.contains("Inspect"));
     assert!(response.body.contains("logs-table-scroll"));
 }
@@ -219,7 +219,7 @@ async fn logs_table_has_scoped_headers_caption_state_and_native_inspect() {
 async fn logs_inspector_has_native_fallback_accessible_result_and_shared_controls() {
     let response = render(
         &fixture(json!({"logs":[{"requestId":"request-1","status":"succeeded"}]})),
-        &request("/app/logs"),
+        &request("/app/calls"),
         Some(DashboardOperation::Logs),
     )
     .await
@@ -264,5 +264,5 @@ async fn logs_inspector_has_native_fallback_accessible_result_and_shared_control
         .next()
         .expect("closed Logs page");
     assert!(!logs_page.contains("aria-selected="));
-    assert!(response.body.contains("href=\"/app/logs/request-1\""));
+    assert!(response.body.contains("href=\"/app/calls/request-1\""));
 }

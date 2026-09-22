@@ -333,10 +333,10 @@ pub(crate) fn recovery(
     let settings = toolkit.as_ref().map(|path| format!("{path}?tab=settings"));
     let original = resource
         .filter(|_| operation == Op::ReplayTrace)
-        .map(|id| format!("/app/logs/{id}"));
+        .map(|id| format!("/app/calls/{id}"));
     let (link, label) = match failure.cause() {
         _ if matches!(operation, Op::RunNow | Op::ResetRun | Op::CancelRun) => {
-            ("/app/runs", "Review Runs")
+            ("/app/syncs", "Review Runs")
         }
         _ if fields => (
             toolkit.as_deref().unwrap_or("/app/connectors"),
@@ -352,14 +352,14 @@ pub(crate) fn recovery(
             ("/app/connections", "Review connections")
         }
         _ if operation == Op::ReplayTrace => (
-            original.as_deref().unwrap_or("/app/logs"),
+            original.as_deref().unwrap_or("/app/calls"),
             "Review the original request",
         ),
         InvalidJson | InvalidActionInput | MissingSetupField | InputTooLarge => (
             toolkit.as_deref().unwrap_or("/app/connections"),
             "Review setup and input",
         ),
-        _ => ("/app/logs", "Review execution logs"),
+        _ => ("/app/calls", "Review execution logs"),
     };
     html.push_str(&recovery_link(link, label, false));
     if !fields {
@@ -369,7 +369,7 @@ pub(crate) fn recovery(
                 escape(id)
             ));
             html.push_str(&recovery_link(
-                &format!("/app/logs/{id}"),
+                &format!("/app/calls/{id}"),
                 "Review this request",
                 true,
             ));
@@ -426,7 +426,7 @@ mod tests {
                 assert!(!html.contains("This run"));
                 assert!(!html.contains("operator control"));
                 assert!(!html.contains("Runs page"));
-                assert!(!html.contains("href=\"/app/runs\""));
+                assert!(!html.contains("href=\"/app/syncs\""));
             }
         }
     }
@@ -447,7 +447,7 @@ mod tests {
             ] {
                 let html = recovery(operation, Some("run-one"), &error.into());
                 assert!(html.contains(expected), "{operation:?}: {html}");
-                assert!(html.contains("href=\"/app/runs\""));
+                assert!(html.contains("href=\"/app/syncs\""));
                 assert!(html.contains("Review Runs"));
             }
         }

@@ -284,12 +284,48 @@ impl<B: Backend> Api<B> {
                     })
                     .collect();
                 let profile = header(&request.headers, "X-Capability-Profile");
-                let connectors=self.registry.public_list().filter(|c|{
-                    let m=c.manifest();
-                    (categories.is_empty()||categories.iter().any(|category|m.has_category(category))) &&
-                    (profile!="sena_mvt"||["apollo","brevo","google-workspace","rb2b","unipile","apify","cal-com","calendly","googlemeet"].contains(&m.key.as_str()))
-                }).map(|c|{let m=c.manifest();serde_json::json!({"key":m.key,"name":m.name,"authType":m.auth.type_,"setupMode":m.auth.setup.mode,"runtime":m.runtime,"platformConnected":platform.contains(&m.key),"categories":nullable_list(&m.categories),"models":nullable_list(&m.models),"toolCount":m.operations.values().filter(|o|o.has_tool_schema()).count()})}).collect::<Vec<_>>();
-                Ok(ok(serde_json::json!({"connectors":connectors})))
+                let limit = catalog_limit(&url)?;
+                let cursor = catalog_cursor(&url)?;
+                let mut connectors: Vec<Value> = self
+                    .registry
+                    .public_list()
+                    .filter(|c| {
+                        let m = c.manifest();
+                        (categories.is_empty()
+                            || categories.iter().any(|category| m.has_category(category)))
+                            && (profile != "sena_mvt"
+                                || [
+                                    "apollo",
+                                    "brevo",
+                                    "google-workspace",
+                                    "rb2b",
+                                    "unipile",
+                                    "apify",
+                                    "cal-com",
+                                    "calendly",
+                                    "googlemeet",
+                                ]
+                                .contains(&m.key.as_str()))
+                    })
+                    .map(|c| catalog_connector(c.manifest(), platform.contains(&c.manifest().key)))
+                    .collect();
+                let total = connectors.len();
+                if !cursor.is_empty() {
+                    connectors.retain(|connector| {
+                        connector["key"].as_str().unwrap_or_default() > cursor.as_str()
+                    });
+                }
+                let next_cursor = (connectors.len() > limit)
+                    .then(|| {
+                        connectors
+                            .get(limit.saturating_sub(1))
+                            .and_then(|c| c["key"].as_str().map(str::to_owned))
+                    })
+                    .flatten();
+                connectors.truncate(limit);
+                Ok(ok(
+                    serde_json::json!({"connectors":connectors,"nextCursor":next_cursor,"total":total}),
+                ))
             }
             ("GET", ["v1", "connectors", key]) => {
                 let c = self
@@ -299,7 +335,7 @@ impl<B: Backend> Api<B> {
                 let m = c.manifest();
                 let operations=m.operations.iter().map(|(k,o)|serde_json::json!({"key":k,"kind":o.kind,"timeoutMs":o.timeout_ms,"maxInputBytes":o.max_input_bytes,"maxResponseBytes":o.max_response_bytes})).collect::<Vec<_>>();
                 Ok(ok(
-                    serde_json::json!({"key":m.key,"name":m.name,"authType":m.auth.type_,"setupMode":m.auth.setup.mode,"setupFields":m.auth.setup.fields,"runtime":m.runtime,"categories":nullable_list(&m.categories),"models":nullable_list(&m.models),"operations":operations}),
+                    serde_json::json!({"key":m.key,"name":m.name,"authType":m.auth.type_,"setupMode":m.auth.setup.mode,"setupFields":m.auth.setup.fields,"runtime":m.runtime,"categories":nullable_list(&m.categories),"models":nullable_list(&m.models),"operations":operations,"iconUrl":m.resolved_icon_url()}),
                 ))
             }
             ("GET", ["v1", "connectors", key, "setup"]) => {
@@ -587,6 +623,59 @@ pub(crate) fn error_response(error: ApiError) -> Response {
         body,
         headers,
     }
+}
+
+const CATALOG_PAGE_DEFAULT: usize = 50;
+const CATALOG_PAGE_MAX: usize = 100;
+
+fn catalog_limit(url: &url::Url) -> Result<usize> {
+    let mut limit = CATALOG_PAGE_DEFAULT;
+    for (key, value) in url.query_pairs() {
+        if key != "limit" {
+            continue;
+        }
+        let parsed = value
+            .parse::<usize>()
+            .map_err(|_| ApiError::new("INVALID_REQUEST"))?;
+        if parsed == 0 || parsed > CATALOG_PAGE_MAX {
+            return Err(ApiError::new("INVALID_REQUEST"));
+        }
+        limit = parsed;
+    }
+    Ok(limit)
+}
+
+fn catalog_cursor(url: &url::Url) -> Result<String> {
+    let mut cursor = String::new();
+    for (key, value) in url.query_pairs() {
+        if key != "cursor" {
+            continue;
+        }
+        if value.len() > 256
+            || !value
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+        {
+            return Err(ApiError::new("INVALID_REQUEST"));
+        }
+        cursor = value.into_owned();
+    }
+    Ok(cursor)
+}
+
+fn catalog_connector(manifest: &appcall_connectors::Manifest, platform_connected: bool) -> Value {
+    serde_json::json!({
+        "key": manifest.key,
+        "name": manifest.name,
+        "authType": manifest.auth.type_,
+        "setupMode": manifest.auth.setup.mode,
+        "runtime": manifest.runtime,
+        "platformConnected": platform_connected,
+        "categories": nullable_list(&manifest.categories),
+        "models": nullable_list(&manifest.models),
+        "toolCount": manifest.operations.values().filter(|o| o.has_tool_schema()).count(),
+        "iconUrl": manifest.resolved_icon_url(),
+    })
 }
 
 fn ok(body: Value) -> Response {

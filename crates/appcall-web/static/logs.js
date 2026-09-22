@@ -60,7 +60,7 @@
   function traceURL(anchor) {
     if (!anchor || anchor.hasAttribute('download') || anchor.hasAttribute('target')) return null;
     const href = anchor.getAttribute('href');
-    if (!href || !/^\/app\/logs\/[A-Za-z0-9_.-]{1,256}$/.test(href)) return null;
+    if (!href || !/^\/app\/calls\/[A-Za-z0-9_.-]{1,256}$/.test(href)) return null;
     const url = new URL(href, window.location.href);
     if (url.origin !== window.location.origin || url.pathname !== href) return null;
     url.searchParams.set('view', 'drawer');
@@ -88,7 +88,7 @@
       if (!current()) return;
       const parsed = new DOMParser().parseFromString(html, 'text/html');
       const root = parsed.body.querySelector('#trace-content');
-      const requestId = url.pathname.slice('/app/logs/'.length);
+      const requestId = url.pathname.slice('/app/calls/'.length);
       if (parsed.body.children.length !== 1 || parsed.body.children[0] !== root || root.getAttribute('data-request-id') !== requestId || !root.querySelector('#trace-title')) throw Error('Invalid trace fragment');
       // Only the authenticated, marked server fragment is eligible for insertion.
       // Reject active embedded resources rather than allowing response HTML to run.

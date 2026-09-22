@@ -439,7 +439,7 @@ fn connection_value(row: &ConnectionRow) -> Value {
 }
 
 fn failure_href(row: &FailureRow) -> String {
-    let mut query = url::form_urlencoded::Serializer::new(String::from("/app/logs?status=failed"));
+    let mut query = url::form_urlencoded::Serializer::new(String::from("/app/calls?status=failed"));
     query.append_pair("connector", &row.connector);
     if !row.request_id.is_empty() {
         query.append_pair("requestId", &row.request_id);
@@ -457,7 +457,7 @@ fn dead_run_href(run_id: &str) -> Option<String> {
     {
         return None;
     }
-    let mut url = url::Url::parse("https://local.invalid/app/runs").ok()?;
+    let mut url = url::Url::parse("https://local.invalid/app/syncs").ok()?;
     {
         let mut segments = url.path_segments_mut().ok()?;
         segments.push(run_id);
@@ -649,7 +649,7 @@ mod tests {
         assert_eq!(value["attention"].as_array().unwrap().len(), 2);
         assert_eq!(
             value["attention"][0]["href"],
-            "/app/logs?status=failed&connector=slack&requestId=req_failed"
+            "/app/calls?status=failed&connector=slack&requestId=req_failed"
         );
         assert_eq!(value["attention"][1]["href"], "/app/connections");
         assert!(!value.to_string().contains("OLD_FAILURE"));
@@ -672,7 +672,10 @@ mod tests {
 
     #[test]
     fn dead_run_href_uses_bounded_detail_route_and_rejects_unsafe_ids() {
-        assert_eq!(dead_run_href("run_42"), Some("/app/runs/run_42".to_owned()));
+        assert_eq!(
+            dead_run_href("run_42"),
+            Some("/app/syncs/run_42".to_owned())
+        );
         for run_id in [
             "",
             ".",
@@ -704,14 +707,14 @@ mod tests {
                 "runId": "run/43",
                 "kind": "dead_run",
                 "state": "dead",
-                "href": "/app/runs?status=dead"
+                "href": "/app/syncs?status=dead"
             }
         ]);
 
         project_dead_run_links(&mut rows).unwrap();
 
         assert_eq!(rows.as_array().unwrap().len(), 1);
-        assert_eq!(rows[0]["href"], "/app/runs/run_42");
+        assert_eq!(rows[0]["href"], "/app/syncs/run_42");
     }
 
     #[test]
@@ -848,7 +851,7 @@ mod tests {
         );
         assert_eq!(runs["deadRuns"][0]["kind"], "dead_run");
         assert_eq!(runs["deadRuns"][0]["state"], "dead");
-        assert_eq!(runs["deadRuns"][0]["href"], "/app/runs/dead-b");
+        assert_eq!(runs["deadRuns"][0]["href"], "/app/syncs/dead-b");
         let project = read(
             &mut client,
             &Identity {

@@ -141,7 +141,7 @@ pub async fn dispatch_preview(
     if method == "GET"
         && response.status == 200
         && is_logs_scenario(data.scenario)
-        && path.strip_prefix("/app/logs/").is_some_and(logs_trace_id)
+        && path.strip_prefix("/app/calls/").is_some_and(logs_trace_id)
         && request
             .fields
             .get("view")
