@@ -192,7 +192,7 @@ fn memory_api_dashboard_actions_and_restart_share_ephemeral_state() {
     let mut host = Host::start(&[]);
     assert_eq!(host.request("GET", "/readyz", false, "").0, 200);
     assert_eq!(host.request("GET", "/v1/connections", false, "").0, 401);
-    let catalog = host.json("GET", "/v1/connectors", 200, Value::Null);
+    let catalog = host.json("GET", "/v1/connectors?limit=100&cursor=tel", 200, Value::Null);
     assert!(catalog["connectors"]
         .as_array()
         .unwrap()
