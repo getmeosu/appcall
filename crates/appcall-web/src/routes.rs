@@ -64,6 +64,25 @@ pub fn canonical_browser_path(method: &str, path: &str) -> Option<String> {
     }
 }
 
+/// Hosts call this only after normal request validation. Raw query bytes remain intact.
+pub fn legacy_browser_location(method: &str, target: &str) -> Option<String> {
+    if method != "GET" || target.contains(['#', '\r', '\n']) {
+        return None;
+    }
+    let (path, query) = target
+        .split_once('?')
+        .map_or((target, None), |(p, q)| (p, Some(q)));
+    let mut location = canonical_browser_path(method, path)?;
+    if let Some(query) = query {
+        location.push('?');
+        location.push_str(query);
+    }
+    if path == "/app/sessions" {
+        location.push_str("#account-sessions");
+    }
+    Some(location)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -102,23 +121,4 @@ mod tests {
         assert!(canonical_browser_path("GET", "/app/syncs").is_none());
         assert!(canonical_browser_path("GET", "/app/workflows/runs").is_none());
     }
-}
-
-/// Hosts call this only after normal request validation. Raw query bytes remain intact.
-pub fn legacy_browser_location(method: &str, target: &str) -> Option<String> {
-    if method != "GET" || target.contains(['#', '\r', '\n']) {
-        return None;
-    }
-    let (path, query) = target
-        .split_once('?')
-        .map_or((target, None), |(p, q)| (p, Some(q)));
-    let mut location = canonical_browser_path(method, path)?;
-    if let Some(query) = query {
-        location.push('?');
-        location.push_str(query);
-    }
-    if path == "/app/sessions" {
-        location.push_str("#account-sessions");
-    }
-    Some(location)
 }
