@@ -27,6 +27,79 @@ fn assert_referrer_policy(response: &Response, expected: &str) {
     );
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum MockHttpRequestError {
+    DeadlineExpired,
+    ClosedBeforeRequestLine,
+    ClosedBeforeHeaderEnd,
+}
+
+async fn accept_mock_http_request(
+    listener: &tokio::net::TcpListener,
+    deadline: std::time::Duration,
+) -> Result<(tokio::io::BufReader<tokio::net::TcpStream>, String), MockHttpRequestError> {
+    use tokio::io::AsyncBufReadExt;
+
+    match tokio::time::timeout(deadline, async {
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut stream = tokio::io::BufReader::new(stream);
+        let mut request_line = String::new();
+        if stream.read_line(&mut request_line).await.unwrap() == 0 {
+            return Err(MockHttpRequestError::ClosedBeforeRequestLine);
+        }
+        loop {
+            let mut line = String::new();
+            if stream.read_line(&mut line).await.unwrap() == 0 {
+                return Err(MockHttpRequestError::ClosedBeforeHeaderEnd);
+            }
+            if line == "\r\n" {
+                break;
+            }
+        }
+        Ok((stream, request_line))
+    })
+    .await
+    {
+        Ok(result) => result,
+        Err(_) => Err(MockHttpRequestError::DeadlineExpired),
+    }
+}
+
+#[tokio::test]
+async fn signal_auth_mock_server_bounds_missing_requests() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(1),
+        accept_mock_http_request(&listener, std::time::Duration::from_millis(20)),
+    )
+    .await
+    .expect("mock request deadline must be shorter than the test deadline");
+
+    assert!(matches!(result, Err(MockHttpRequestError::DeadlineExpired)));
+}
+
+#[tokio::test]
+async fn signal_auth_mock_server_rejects_closed_incomplete_headers() {
+    use tokio::io::AsyncWriteExt;
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let accepting = tokio::spawn(async move {
+        accept_mock_http_request(&listener, std::time::Duration::from_secs(1)).await
+    });
+    let mut client = tokio::net::TcpStream::connect(address).await.unwrap();
+    client
+        .write_all(b"GET /test HTTP/1.1\r\nHost: localhost\r\n")
+        .await
+        .unwrap();
+    client.shutdown().await.unwrap();
+
+    assert!(matches!(
+        accepting.await.unwrap(),
+        Err(MockHttpRequestError::ClosedBeforeHeaderEnd)
+    ));
+}
+
 #[test]
 fn signal_auth_forms_use_native_shared_controls() {
     for path in [
@@ -140,28 +213,21 @@ impl appcall_auth::MembershipVerifier for Deny {
 
 #[tokio::test]
 async fn signal_auth_routes_apply_form_referrer_policy_to_rendered_forms() {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::io::AsyncWriteExt;
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let server = tokio::spawn(async move {
         for _ in 0..5 {
-            let (stream, _) = listener.accept().await.unwrap();
-            let mut stream = BufReader::new(stream);
-            let mut request_line = String::new();
-            stream.read_line(&mut request_line).await.unwrap();
+            let (mut stream, request_line) =
+                accept_mock_http_request(&listener, std::time::Duration::from_secs(5))
+                    .await
+                    .expect("mock server request deadline expired");
             let path = request_line
                 .split_whitespace()
                 .nth(1)
                 .unwrap_or_default()
                 .to_owned();
-            loop {
-                let mut line = String::new();
-                stream.read_line(&mut line).await.unwrap();
-                if line == "\r\n" {
-                    break;
-                }
-            }
             let (status, body) = match path.as_str() {
                 "/api/auth/providers" => (200, r#"{"google":false}"#),
                 "/api/auth/otp/request" => (200, "{}"),
