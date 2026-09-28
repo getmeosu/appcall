@@ -50,6 +50,19 @@ impl Response {
         r.headers.push(("Location".into(), target.into()));
         r
     }
+    /// Keep native form submissions same-origin verifiable without exposing
+    /// callback or reset tokens from the page URL in referrer paths.
+    pub(crate) fn auth_form(status: u16, body: String) -> Self {
+        let mut response = Self::new(status, body);
+        if let Some((_, value)) = response
+            .headers
+            .iter_mut()
+            .find(|(name, _)| name == "Referrer-Policy")
+        {
+            *value = "strict-origin".into();
+        }
+        response
+    }
     pub(crate) fn cookie(mut self, c: String) -> Self {
         self.headers.push(("Set-Cookie".into(), c));
         self
@@ -205,7 +218,7 @@ impl Browser<'_> {
                     );
                 }
             }
-            return Ok(Response::new(200, body));
+            return Ok(Response::auth_form(200, body));
         }
         if r.method != "POST" {
             return Ok(Response::new(
@@ -260,7 +273,7 @@ impl Browser<'_> {
             return match result {
                 Ok(result) => self.complete(result, r),
                 Err(Error::Invalid | Error::Unauthorized) => {
-                    Ok(Response::new(200, auth_failure(r)?))
+                    Ok(Response::auth_form(200, auth_failure(r)?))
                 }
                 Err(error) => Err(error),
             };
@@ -287,13 +300,13 @@ impl Browser<'_> {
                 } else {
                     400
                 };
-                return Ok(Response::new(status, auth_failure(r)?));
+                return Ok(Response::auth_form(status, auth_failure(r)?));
             }
             Err(error) => return Err(error),
             Ok(_) => {}
         }
         if r.path == "/app/otp" {
-            return Ok(Response::new(
+            return Ok(Response::auth_form(
                 200,
                 challenge_form(
                     "/app/otp/verify",
@@ -318,7 +331,7 @@ impl Browser<'_> {
             if result.mfa_token.is_empty() {
                 return Err(Error::Unauthorized);
             }
-            return Ok(Response::new(
+            return Ok(Response::auth_form(
                 200,
                 challenge_form(
                     "/app/login/mfa",
