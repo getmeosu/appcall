@@ -16,6 +16,90 @@ fn signal(html: &str) {
     }
 }
 
+fn assert_referrer_policy(response: &Response, expected: &str) {
+    assert_eq!(
+        response
+            .headers
+            .iter()
+            .find(|(key, _)| key == "Referrer-Policy")
+            .map(|(_, value)| value.as_str()),
+        Some(expected)
+    );
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum MockHttpRequestError {
+    DeadlineExpired,
+    ClosedBeforeRequestLine,
+    ClosedBeforeHeaderEnd,
+}
+
+async fn accept_mock_http_request(
+    listener: &tokio::net::TcpListener,
+    deadline: std::time::Duration,
+) -> Result<(tokio::io::BufReader<tokio::net::TcpStream>, String), MockHttpRequestError> {
+    use tokio::io::AsyncBufReadExt;
+
+    match tokio::time::timeout(deadline, async {
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut stream = tokio::io::BufReader::new(stream);
+        let mut request_line = String::new();
+        if stream.read_line(&mut request_line).await.unwrap() == 0 {
+            return Err(MockHttpRequestError::ClosedBeforeRequestLine);
+        }
+        loop {
+            let mut line = String::new();
+            if stream.read_line(&mut line).await.unwrap() == 0 {
+                return Err(MockHttpRequestError::ClosedBeforeHeaderEnd);
+            }
+            if line == "\r\n" {
+                break;
+            }
+        }
+        Ok((stream, request_line))
+    })
+    .await
+    {
+        Ok(result) => result,
+        Err(_) => Err(MockHttpRequestError::DeadlineExpired),
+    }
+}
+
+#[tokio::test]
+async fn signal_auth_mock_server_bounds_missing_requests() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(1),
+        accept_mock_http_request(&listener, std::time::Duration::from_millis(20)),
+    )
+    .await
+    .expect("mock request deadline must be shorter than the test deadline");
+
+    assert!(matches!(result, Err(MockHttpRequestError::DeadlineExpired)));
+}
+
+#[tokio::test]
+async fn signal_auth_mock_server_rejects_closed_incomplete_headers() {
+    use tokio::io::AsyncWriteExt;
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let accepting = tokio::spawn(async move {
+        accept_mock_http_request(&listener, std::time::Duration::from_secs(1)).await
+    });
+    let mut client = tokio::net::TcpStream::connect(address).await.unwrap();
+    client
+        .write_all(b"GET /test HTTP/1.1\r\nHost: localhost\r\n")
+        .await
+        .unwrap();
+    client.shutdown().await.unwrap();
+
+    assert!(matches!(
+        accepting.await.unwrap(),
+        Err(MockHttpRequestError::ClosedBeforeHeaderEnd)
+    ));
+}
+
 #[test]
 fn signal_auth_forms_use_native_shared_controls() {
     for path in [
@@ -66,6 +150,55 @@ fn signal_auth_challenges_preserve_native_security_fields() {
     }
 }
 
+#[test]
+fn signal_auth_form_responses_use_origin_only_referrers() {
+    assert_referrer_policy(&Response::new(200, String::new()), "no-referrer");
+    for path in [
+        "/app/login",
+        "/app/login/password",
+        "/app/signup",
+        "/app/otp",
+        "/app/forgot-password",
+        "/reset-password",
+        "/app/magic-link",
+    ] {
+        let response = Response::auth_form(
+            200,
+            form(path, "/app/calls", "synthetic-reset-token", "invite"),
+        );
+        assert!(response.body.contains("<form method=\"post\""), "{path}");
+        assert_referrer_policy(&response, "strict-origin");
+    }
+
+    for (action, token_name) in [("/app/otp/verify", "email"), ("/app/login/mfa", "mfaToken")] {
+        let response = Response::auth_form(
+            200,
+            challenge_form(action, "Verify", token_name, "synthetic-challenge", "/app"),
+        );
+        assert!(response.body.contains("<form method=\"post\""), "{action}");
+        assert_referrer_policy(&response, "strict-origin");
+    }
+}
+
+#[test]
+fn signal_browser_mutations_still_reject_missing_null_and_cross_origin_evidence() {
+    for (origin, referer) in [
+        (None, None),
+        (Some("null"), None),
+        (Some("https://evil.example"), None),
+        (None, Some("https://evil.example/app/login")),
+    ] {
+        assert!(matches!(
+            crate::session::verify_csrf("https://app.example", origin, referer),
+            Err(Error::Forbidden)
+        ));
+    }
+    assert!(
+        crate::session::verify_csrf("https://app.example", Some("https://app.example"), None)
+            .is_ok()
+    );
+}
+
 struct Deny;
 impl appcall_auth::MembershipVerifier for Deny {
     fn verify_membership(
@@ -76,6 +209,139 @@ impl appcall_auth::MembershipVerifier for Deny {
     ) -> Result<Option<appcall_auth::Membership>, appcall_auth::AuthError> {
         Ok(None)
     }
+}
+
+#[tokio::test]
+async fn signal_auth_routes_apply_form_referrer_policy_to_rendered_forms() {
+    use tokio::io::AsyncWriteExt;
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        for _ in 0..5 {
+            let (mut stream, request_line) =
+                accept_mock_http_request(&listener, std::time::Duration::from_secs(5))
+                    .await
+                    .expect("mock server request deadline expired");
+            let path = request_line
+                .split_whitespace()
+                .nth(1)
+                .unwrap_or_default()
+                .to_owned();
+            let (status, body) = match path.as_str() {
+                "/api/auth/providers" => (200, r#"{"google":false}"#),
+                "/api/auth/otp/request" => (200, "{}"),
+                "/api/auth/login" => (200, r#"{"mfaRequired":true,"mfaToken":"synthetic-mfa"}"#),
+                "/api/auth/mfa/challenge" => (401, r#"{"code":"UNAUTHORIZED"}"#),
+                _ => panic!("unexpected auth request: {path}"),
+            };
+            let reason = if status == 200 { "OK" } else { "Unauthorized" };
+            stream
+                .get_mut()
+                .write_all(
+                    format!(
+                        "HTTP/1.1 {status} {reason}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+        }
+    });
+
+    let codec = SessionCodec::new("synthetic", false).unwrap();
+    let jwt = appcall_auth::JwtVerifier::new("synthetic", Default::default()).unwrap();
+    let broker = Broker::new(&format!("http://{address}"), "appcall").unwrap();
+    let browser = Browser {
+        codec: &codec,
+        identity: Identity {
+            jwt: &jwt,
+            memberships: &Deny,
+            broker: &broker,
+        },
+        public_origin: "https://app.example",
+    };
+
+    for (path, action) in [
+        ("/app/login", "/app/otp"),
+        ("/app/login/password", "/app/login"),
+        ("/app/signup", "/app/signup"),
+        ("/app/otp", "/app/otp"),
+        ("/app/forgot-password", "/app/forgot-password"),
+        ("/reset-password", "/reset-password"),
+        ("/app/magic-link", "/app/magic-link"),
+    ] {
+        let request = Request {
+            method: "GET",
+            path,
+            cookies: "",
+            origin: None,
+            referer: None,
+            fields: BTreeMap::from([
+                ("next".into(), vec!["/app".into()]),
+                ("token".into(), vec!["synthetic-reset-token".into()]),
+            ]),
+            now: 0,
+        };
+        let response = browser.handle(&request).await.unwrap();
+        assert!(response.body.contains("<form method=\"post\""), "{path}");
+        assert!(
+            response.body.contains(&format!("action=\"{action}\"")),
+            "{path}"
+        );
+        assert_referrer_policy(&response, "strict-origin");
+    }
+
+    for (path, fields, expected_action) in [
+        (
+            "/app/otp",
+            BTreeMap::from([
+                ("email".into(), vec!["user@example.invalid".into()]),
+                ("next".into(), vec!["/app".into()]),
+            ]),
+            "/app/otp/verify",
+        ),
+        (
+            "/app/login",
+            BTreeMap::from([
+                ("email".into(), vec!["user@example.invalid".into()]),
+                ("password".into(), vec!["synthetic-password".into()]),
+                ("next".into(), vec!["/app".into()]),
+            ]),
+            "/app/login/mfa",
+        ),
+        (
+            "/app/login/mfa",
+            BTreeMap::from([
+                ("mfaToken".into(), vec!["synthetic-mfa".into()]),
+                ("code".into(), vec!["123456".into()]),
+            ]),
+            "",
+        ),
+    ] {
+        let request = Request {
+            method: "POST",
+            path,
+            cookies: "",
+            origin: Some("https://app.example"),
+            referer: None,
+            fields,
+            now: 0,
+        };
+        let response = browser.handle(&request).await.unwrap();
+        assert!(response.body.contains("<form method=\"post\""), "{path}");
+        if !expected_action.is_empty() {
+            assert!(
+                response
+                    .body
+                    .contains(&format!("action=\"{expected_action}\"")),
+                "{path}"
+            );
+        }
+        assert_referrer_policy(&response, "strict-origin");
+    }
+    server.await.unwrap();
 }
 
 #[tokio::test]
