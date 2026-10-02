@@ -144,7 +144,9 @@ export function validateGetCommitStatusInput(input: unknown): GetCommitStatusInp
   return {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
-    ref: requireString(input.ref, "ref"),
+    // Accept `sha` as alias for `ref` so EffectPolicy Reconcile can reuse
+    // commits.statuses.create input (sha) when calling commits.status.get.
+    ref: requireString(input.ref ?? input.sha, "ref"),
   };
 }
 
@@ -155,7 +157,8 @@ export function validateListCommitStatusesInput(input: unknown): ListCommitStatu
   return {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
-    ref: requireString(input.ref, "ref"),
+    // Accept `sha` as alias for `ref` (same reconcile-friendly alias as status.get).
+    ref: requireString(input.ref ?? input.sha, "ref"),
     perPage: typeof input.perPage === "number" ? input.perPage : undefined,
     page: typeof input.page === "number" ? input.page : undefined,
   };
@@ -173,11 +176,16 @@ export type CreateCommitStatusInput = {
 
 export function validateCreateCommitStatusInput(input: unknown): CreateCommitStatusInput {
   if (!isRecord(input)) throw new Error("create commit status input must be an object");
+  const allowedStates = new Set(["error", "failure", "pending", "success"]);
+  const state = requireString(input.state, "state");
+  if (!allowedStates.has(state)) {
+    throw new Error("state must be one of: error, failure, pending, success");
+  }
   return {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
     sha: requireString(input.sha, "sha"),
-    state: requireString(input.state, "state"),
+    state,
     targetUrl: typeof input.targetUrl === "string" ? input.targetUrl : undefined,
     description: typeof input.description === "string" ? input.description : undefined,
     context: typeof input.context === "string" ? input.context : undefined,
