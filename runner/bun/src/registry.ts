@@ -167,6 +167,16 @@ import {
   updateRepo as ghUpdateRepo,
   deleteBranch as ghDeleteBranch,
   createCommitComment as ghCreateCommitComment,
+  listNotifications as ghListNotifications,
+  getNotification as ghGetNotification,
+  markNotificationRead as ghMarkNotificationRead,
+  markAllNotificationsRead as ghMarkAllNotificationsRead,
+  listOrgTeams as ghListOrgTeams,
+  listTeamMembers as ghListTeamMembers,
+  addTeamMembership as ghAddTeamMembership,
+  forkRepo as ghForkRepo,
+  starRepo as ghStarRepo,
+  unstarRepo as ghUnstarRepo,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -937,6 +947,16 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "repos.update": ghUpdateRepo,
       "branches.delete": ghDeleteBranch,
       "commits.comments.create": ghCreateCommitComment,
+      "notifications.list": ghListNotifications,
+      "notifications.get": ghGetNotification,
+      "notifications.mark_read": ghMarkNotificationRead,
+      "notifications.mark_all_read": ghMarkAllNotificationsRead,
+      "orgs.teams.list": ghListOrgTeams,
+      "teams.members.list": ghListTeamMembers,
+      "teams.membership.add": ghAddTeamMembership,
+      "repos.fork": ghForkRepo,
+      "repos.star": ghStarRepo,
+      "repos.unstar": ghUnstarRepo,
     },
     salesforce: {
       "contacts.create": createContact,
