@@ -81,6 +81,14 @@ export function createGitHubClient(options: GitHubClientOptions) {
       }
       return { status: response.status, headers: response.headers, body };
     },
+
+    async graphql(query: string, variables: Record<string, unknown> = {}) {
+      return this.fetchJSON("/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, variables }),
+      });
+    },
   };
 }
 

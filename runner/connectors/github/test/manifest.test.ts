@@ -255,8 +255,8 @@ describe("github connector manifest", () => {
   });
 
 
-  test("manifest version is 0.8.0 after S7 on tip (post-S4+S6+S8)", () => {
-    expect(manifest.version).toBe("0.8.0");
+  test("manifest version is 0.9.0 after S9 discussions on S7 tip", () => {
+    expect(manifest.version).toBe("0.9.0");
   });
 
   test("manifest declares S8 labels milestones collab ops", () => {
@@ -324,5 +324,39 @@ describe("github connector manifest", () => {
     expect(gistUpdate.reconcile).toBe("gists.get");
   });
 
+
+  test("manifest declares S9 discussion ops", () => {
+    for (const key of [
+      "discussions.categories.list",
+      "discussions.list",
+      "discussions.get",
+      "discussions.create",
+      "discussions.update",
+      "discussions.comments.list",
+      "discussions.comments.create",
+      "discussions.comments.update",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+    }
+    expect(Object.keys(manifest.operations).length).toBe(107);
+  });
+
+  test("S9 write ops wire EffectPolicy Reconcile", () => {
+    for (const [key, reconcile] of [
+      ["discussions.create", "discussions.get"],
+      ["discussions.update", "discussions.get"],
+      ["discussions.comments.create", "discussions.comments.list"],
+      ["discussions.comments.update", "discussions.comments.list"],
+    ] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Reconcile");
+      expect(op.reconcile).toBe(reconcile);
+    }
+    for (const key of ["discussions.categories.list", "discussions.list", "discussions.get", "discussions.comments.list"] as const) {
+      expect(manifest.operations[key].sideEffect).toBe("read");
+    }
+    expect(manifest.network.allowedHosts).toContain("api.github.com");
+  });
 
 });

@@ -106,6 +106,17 @@ import { createTagsClient, validateListTagsInput } from "./tags";
 import { createChecksClient, validateListCheckRunsForRefInput, validateGetCheckRunInput, validateListCheckSuitesForRefInput } from "./checks";
 import { createCommitsClient, validateGetCommitStatusInput, validateListCommitStatusesInput, validateCreateCommitStatusInput, validateGetCommitInput } from "./commits";
 import { createGitHubClient } from "./http";
+import {
+  createDiscussionsClient,
+  validateListDiscussionCategoriesInput,
+  validateListDiscussionsInput,
+  validateGetDiscussionInput,
+  validateCreateDiscussionInput,
+  validateUpdateDiscussionInput,
+  validateListDiscussionCommentsInput,
+  validateCreateDiscussionCommentInput,
+  validateUpdateDiscussionCommentInput,
+} from "./discussions";
 
 // ─── Existing actions ─────────────────────────────────────────────────────────
 
@@ -1678,6 +1689,104 @@ export function updateGist(input: unknown): Record<string, unknown> | Promise<Re
     });
   }
   return { connector: "github", action: "gists.update", source: "connector", validated: validateUpdateGistInput(input) };
+}
+
+// ─── S9: discussions (GraphQL) ───────────────────────────────────────────────
+
+function discussionClient(input: Record<string, unknown>) {
+  return createDiscussionsClient({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+  });
+}
+
+function discussionFailure(result: { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }): never {
+  throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+}
+
+export function listDiscussionCategories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return discussionClient(input).listCategories(input).then((result) => {
+      if (!result.ok) discussionFailure(result);
+      return { connector: "github", action: "discussions.categories.list", source: "connector", categories: result.categories, pageInfo: result.pageInfo };
+    });
+  }
+  return { connector: "github", action: "discussions.categories.list", source: "connector", validated: validateListDiscussionCategoriesInput(input) };
+}
+
+export function listDiscussions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return discussionClient(input).list(input).then((result) => {
+      if (!result.ok) discussionFailure(result);
+      return { connector: "github", action: "discussions.list", source: "connector", discussions: result.discussions, pageInfo: result.pageInfo };
+    });
+  }
+  return { connector: "github", action: "discussions.list", source: "connector", validated: validateListDiscussionsInput(input) };
+}
+
+export function getDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    validateGetDiscussionInput(input);
+    return discussionClient(input).get(input).then((result) => {
+      if (!result.ok) discussionFailure(result);
+      return { connector: "github", action: "discussions.get", source: "connector", found: result.found, discussion: result.discussion };
+    });
+  }
+  return { connector: "github", action: "discussions.get", source: "connector", validated: validateGetDiscussionInput(input) };
+}
+
+export function createDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return discussionClient(input).create(input).then((result) => {
+      if (!result.ok) discussionFailure(result);
+      return { connector: "github", action: "discussions.create", source: "connector", discussion: result.discussion };
+    });
+  }
+  return { connector: "github", action: "discussions.create", source: "connector", validated: validateCreateDiscussionInput(input) };
+}
+
+export function updateDiscussion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    validateUpdateDiscussionInput(input);
+    return discussionClient(input).update(input).then((result) => {
+      if (!result.ok) discussionFailure(result);
+      return { connector: "github", action: "discussions.update", source: "connector", discussion: result.discussion };
+    });
+  }
+  return { connector: "github", action: "discussions.update", source: "connector", validated: validateUpdateDiscussionInput(input) };
+}
+
+export function listDiscussionComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    validateListDiscussionCommentsInput(input);
+    return discussionClient(input).listComments(input).then((result) => {
+      if (!result.ok) discussionFailure(result);
+      return { connector: "github", action: "discussions.comments.list", source: "connector", comments: result.comments, pageInfo: result.pageInfo };
+    });
+  }
+  return { connector: "github", action: "discussions.comments.list", source: "connector", validated: validateListDiscussionCommentsInput(input) };
+}
+
+export function createDiscussionComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    validateCreateDiscussionCommentInput(input);
+    return discussionClient(input).createComment(input).then((result) => {
+      if (!result.ok) discussionFailure(result);
+      return { connector: "github", action: "discussions.comments.create", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "discussions.comments.create", source: "connector", validated: validateCreateDiscussionCommentInput(input) };
+}
+
+export function updateDiscussionComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    validateUpdateDiscussionCommentInput(input);
+    return discussionClient(input).updateComment(input).then((result) => {
+      if (!result.ok) discussionFailure(result);
+      return { connector: "github", action: "discussions.comments.update", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "discussions.comments.update", source: "connector", validated: validateUpdateDiscussionCommentInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
