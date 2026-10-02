@@ -43,7 +43,7 @@ describe("recipe loader shape", () => {
 });
 
 describe("recipe filesystem discovery", () => {
-  test("loads the reviewed Coda and Buildkite recipes", async () => {
+  test("loads the reviewed Coda and Ably recipes", async () => {
     for (const provider of ["coda", "ably"]) await expect(readRecipe(join(import.meta.dir, "..", "recipes", provider))).resolves.toMatchObject({ providerId: provider });
   });
   const roots: string[] = [];
