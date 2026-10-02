@@ -252,7 +252,45 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.6.0 after S4 rebase onto S6", () => {
-    expect(manifest.version).toBe("0.6.0");
+
+  test("manifest version is 0.7.0 after S8 on tip (post-S4+S6)", () => {
+    expect(manifest.version).toBe("0.7.0");
   });
+
+  test("manifest declares S8 labels milestones collab ops", () => {
+    for (const key of [
+      "labels.get",
+      "labels.create",
+      "labels.update",
+      "labels.delete",
+      "milestones.list",
+      "milestones.get",
+      "milestones.create",
+      "milestones.update",
+      "repos.collaborators.list",
+      "repos.collaborators.add",
+      "repos.collaborators.remove",
+      "repos.collaborators.check",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+    }
+  });
+
+  test("S8 write ops wire EffectPolicy Reconcile/Idempotent", () => {
+    for (const [key, policy, reconcile] of [
+      ["labels.create", "Reconcile", "labels.get"],
+      ["labels.update", "Reconcile", "labels.get"],
+      ["labels.delete", "Reconcile", "labels.get"],
+      ["milestones.create", "Idempotent", "milestones.get"],
+      ["milestones.update", "Reconcile", "milestones.get"],
+      ["repos.collaborators.add", "Reconcile", "repos.collaborators.check"],
+      ["repos.collaborators.remove", "Reconcile", "repos.collaborators.check"],
+    ] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe(policy);
+      expect(op.reconcile).toBe(reconcile);
+    }
+  });
+
 });

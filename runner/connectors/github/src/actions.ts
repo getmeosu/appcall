@@ -68,6 +68,21 @@ import {
   validateListArtifactsInput,
   validateGetArtifactInput,
 } from "./workflows";
+import {
+  createLabelsMilestonesClient,
+  validateGetLabelInput,
+  validateCreateLabelInput,
+  validateUpdateLabelInput,
+  validateDeleteLabelInput,
+  validateListMilestonesInput,
+  validateGetMilestoneInput,
+  validateCreateMilestoneInput,
+  validateUpdateMilestoneInput,
+  validateListCollaboratorsInput,
+  validateAddCollaboratorInput,
+  validateRemoveCollaboratorInput,
+  validateCheckCollaboratorInput,
+} from "./labels_milestones";
 import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput } from "./repos";
 import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput, validateListBranchesInput } from "./branches";
 import { createReleasesClient, validateCreateReleaseInput } from "./releases";
@@ -1298,6 +1313,219 @@ export function listBranches(input: unknown): Record<string, unknown> | Promise<
   }
   return { connector: "github", action: "branches.list", source: "connector", validated: validateListBranchesInput(input) };
 }
+
+// ─── S8: labels.get|create|update|delete ──────────────────────────────────────
+
+export function getLabel(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getLabel(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return {
+        connector: "github",
+        action: "labels.get",
+        source: "connector",
+        found: result.found,
+        label: result.label,
+        ...(result.found ? {} : { name: result.name }),
+      };
+    });
+  }
+  return { connector: "github", action: "labels.get", source: "connector", validated: validateGetLabelInput(input) };
+}
+
+export function createLabel(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).createLabel(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "labels.create", source: "connector", label: result.label };
+    });
+  }
+  return { connector: "github", action: "labels.create", source: "connector", validated: validateCreateLabelInput(input) };
+}
+
+export function updateLabel(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).updateLabel(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "labels.update", source: "connector", label: result.label };
+    });
+  }
+  return { connector: "github", action: "labels.update", source: "connector", validated: validateUpdateLabelInput(input) };
+}
+
+export function deleteLabel(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).deleteLabel(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "labels.delete", source: "connector", deleted: result.deleted, name: result.name };
+    });
+  }
+  return { connector: "github", action: "labels.delete", source: "connector", validated: validateDeleteLabelInput(input) };
+}
+
+// ─── S8: milestones.list|get|create|update ────────────────────────────────────
+
+export function listMilestones(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listMilestones(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "milestones.list", source: "connector", milestones: result.milestones };
+    });
+  }
+  return { connector: "github", action: "milestones.list", source: "connector", validated: validateListMilestonesInput(input) };
+}
+
+export function getMilestone(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getMilestone(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "milestones.get", source: "connector", milestone: result.milestone };
+    });
+  }
+  return { connector: "github", action: "milestones.get", source: "connector", validated: validateGetMilestoneInput(input) };
+}
+
+export function createMilestone(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).createMilestone(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return {
+        connector: "github",
+        action: "milestones.create",
+        source: "connector",
+        id: result.milestone.number,
+        milestone: result.milestone,
+      };
+    });
+  }
+  return { connector: "github", action: "milestones.create", source: "connector", validated: validateCreateMilestoneInput(input) };
+}
+
+export function updateMilestone(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).updateMilestone(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "milestones.update", source: "connector", milestone: result.milestone };
+    });
+  }
+  return { connector: "github", action: "milestones.update", source: "connector", validated: validateUpdateMilestoneInput(input) };
+}
+
+// ─── S8: repos.collaborators.list|add|remove|check ────────────────────────────
+
+export function listCollaborators(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listCollaborators(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "repos.collaborators.list", source: "connector", collaborators: result.collaborators };
+    });
+  }
+  return { connector: "github", action: "repos.collaborators.list", source: "connector", validated: validateListCollaboratorsInput(input) };
+}
+
+export function addCollaborator(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).addCollaborator(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return {
+        connector: "github",
+        action: "repos.collaborators.add",
+        source: "connector",
+        username: result.username,
+        invited: result.invited,
+        alreadyCollaborator: result.alreadyCollaborator,
+      };
+    });
+  }
+  return { connector: "github", action: "repos.collaborators.add", source: "connector", validated: validateAddCollaboratorInput(input) };
+}
+
+export function removeCollaborator(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).removeCollaborator(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "repos.collaborators.remove", source: "connector", removed: result.removed, username: result.username };
+    });
+  }
+  return { connector: "github", action: "repos.collaborators.remove", source: "connector", validated: validateRemoveCollaboratorInput(input) };
+}
+
+export function checkCollaborator(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createLabelsMilestonesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).checkCollaborator(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return {
+        connector: "github",
+        action: "repos.collaborators.check",
+        source: "connector",
+        isCollaborator: result.isCollaborator,
+        username: result.username,
+      };
+    });
+  }
+  return { connector: "github", action: "repos.collaborators.check", source: "connector", validated: validateCheckCollaboratorInput(input) };
+}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
