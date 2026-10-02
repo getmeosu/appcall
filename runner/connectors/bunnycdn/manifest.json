@@ -1,7 +1,7 @@
 {
   "key": "bunnycdn",
   "name": "BunnyCDN",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -28,7 +28,8 @@
     ]
   },
   "models": [
-    "pullZone"
+    "pullZone",
+    "storageZone"
   ],
   "http": {
     "baseUrl": "https://api.bunny.net",
@@ -131,6 +132,176 @@
       "request": {
         "method": "GET",
         "path": "/pullzone",
+        "query": {
+          "page": "{{page}}",
+          "perPage": "{{perPage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pullzones.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Pull Zone",
+      "description": "Retrieve one BunnyCDN pull zone by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Pull zone ID."
+          },
+          "includeCertificate": {
+            "type": "boolean",
+            "description": "When true, include certificate details in the response."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/pullzone/{{id}}",
+        "query": {
+          "includeCertificate": "{{includeCertificate}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pullzones.purge": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Purge Pull Zone Cache",
+      "description": "Purge BunnyCDN pull-zone cache via POST /pullzone/{id}/purgeCache. Omit cacheTag for a full purge; set cacheTag to purge one tag. Double-purge is safe (EffectPolicy Idempotent; no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Pull zone ID."
+          },
+          "cacheTag": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional cache tag to purge; omit for a full-zone purge."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "purged"
+        ],
+        "properties": {
+          "purged": {
+            "type": "boolean",
+            "description": "True when BunnyCDN acknowledges the purge with HTTP 204."
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/pullzone/{{id}}/purgeCache",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "CacheTag": "{{cacheTag}}"
+        },
+        "success": [
+          204
+        ],
+        "result": {
+          "purged": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storagezones.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Storage Zones",
+      "description": "List BunnyCDN storage zones with bounded pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storagezone",
         "query": {
           "page": "{{page}}",
           "perPage": "{{perPage}}"
