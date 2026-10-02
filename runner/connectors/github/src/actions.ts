@@ -106,6 +106,19 @@ import {
   validateUpdateGistInput,
 } from "./gists";
 import { createTagsClient, validateListTagsInput } from "./tags";
+import {
+  createNotificationsSocialClient,
+  validateListNotificationsInput,
+  validateGetNotificationInput,
+  validateMarkNotificationReadInput,
+  validateMarkAllNotificationsReadInput,
+  validateListOrgTeamsInput,
+  validateListTeamMembersInput,
+  validateAddTeamMembershipInput,
+  validateForkRepoInput,
+  validateStarRepoInput,
+  validateUnstarRepoInput,
+} from "./notifications_social";
 import { createChecksClient, validateListCheckRunsForRefInput, validateGetCheckRunInput, validateListCheckSuitesForRefInput } from "./checks";
 import { createCommitsClient, validateGetCommitStatusInput, validateListCommitStatusesInput, validateCreateCommitStatusInput, validateGetCommitInput, validateCreateCommitCommentInput } from "./commits";
 import { createGitHubClient } from "./http";
@@ -2057,6 +2070,138 @@ export function createCommitComment(input: unknown): Record<string, unknown> | P
     });
   }
   return { connector: "github", action: "commits.comments.create", source: "connector", validated: validateCreateCommitCommentInput(input) };
+}
+
+// ─── S10: notifications / orgs teams / fork+star ─────────────────────────────
+
+export function listNotifications(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listNotifications(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "notifications.list", source: "connector", notifications: result.notifications };
+    });
+  }
+  return { connector: "github", action: "notifications.list", source: "connector", validated: validateListNotificationsInput(input) };
+}
+
+export function getNotification(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getNotification(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "notifications.get", source: "connector", notification: result.notification };
+    });
+  }
+  return { connector: "github", action: "notifications.get", source: "connector", validated: validateGetNotificationInput(input) };
+}
+
+export function markNotificationRead(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).markRead(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "notifications.mark_read", source: "connector", threadId: result.threadId, unread: result.unread };
+    });
+  }
+  return { connector: "github", action: "notifications.mark_read", source: "connector", validated: validateMarkNotificationReadInput(input) };
+}
+
+export function markAllNotificationsRead(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).markAllRead(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "notifications.mark_all_read", source: "connector", marked: result.marked };
+    });
+  }
+  return { connector: "github", action: "notifications.mark_all_read", source: "connector", validated: validateMarkAllNotificationsReadInput(input) };
+}
+
+export function listOrgTeams(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listOrgTeams(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "orgs.teams.list", source: "connector", teams: result.teams };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.list", source: "connector", validated: validateListOrgTeamsInput(input) };
+}
+
+export function listTeamMembers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listTeamMembers(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "teams.members.list", source: "connector", members: result.members };
+    });
+  }
+  return { connector: "github", action: "teams.members.list", source: "connector", validated: validateListTeamMembersInput(input) };
+}
+
+export function addTeamMembership(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).addTeamMembership(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "teams.membership.add", source: "connector", username: result.username, role: result.role, state: result.state };
+    });
+  }
+  return { connector: "github", action: "teams.membership.add", source: "connector", validated: validateAddTeamMembershipInput(input) };
+}
+
+export function forkRepo(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).forkRepo(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.fork", source: "connector", repository: result.repository, id: result.id };
+    });
+  }
+  return { connector: "github", action: "repos.fork", source: "connector", validated: validateForkRepoInput(input) };
+}
+
+export function starRepo(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).starRepo(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.star", source: "connector", owner: result.owner, repo: result.repo, starred: result.starred };
+    });
+  }
+  return { connector: "github", action: "repos.star", source: "connector", validated: validateStarRepoInput(input) };
+}
+
+export function unstarRepo(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createNotificationsSocialClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).unstarRepo(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.unstar", source: "connector", owner: result.owner, repo: result.repo, starred: result.starred };
+    });
+  }
+  return { connector: "github", action: "repos.unstar", source: "connector", validated: validateUnstarRepoInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

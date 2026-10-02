@@ -9,6 +9,8 @@ describe("github connector manifest", () => {
     expect(manifest.auth.scopes).toContain("repo");
     expect(manifest.auth.scopes).toContain("read:org");
     expect(manifest.auth.scopes).toContain("admin:repo_hook");
+    expect(manifest.auth.scopes).toContain("notifications");
+    expect(manifest.auth.scopes).toContain("admin:org");
   });
 
   test("manifest declares network controls", () => {
@@ -65,6 +67,8 @@ describe("github connector manifest", () => {
     expect(manifest.models).toContain("organization");
     expect(manifest.models).toContain("tag");
     expect(manifest.models).toContain("release_asset");
+    expect(manifest.models).toContain("notification");
+    expect(manifest.models).toContain("team");
   });
 
   test("manifest has timeout and size limits on all operations", () => {
@@ -95,8 +99,8 @@ describe("github connector manifest", () => {
     const actionOps = Object.entries(manifest.operations).filter(
       ([, spec]) => (spec as Record<string, unknown>).kind === "action"
     );
-    expect(actionOps.length).toBeGreaterThanOrEqual(78);
-    expect(actionOps.length).toBeGreaterThanOrEqual(78);
+    expect(actionOps.length).toBeGreaterThanOrEqual(88);
+    expect(actionOps.length).toBeGreaterThanOrEqual(88);
   });
 
 
@@ -293,8 +297,8 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.11.0 after S11 agent polish on S5 tip", () => {
-    expect(manifest.version).toBe("0.11.0");
+  test("manifest version is 0.12.0 after S10 on S11 tip", () => {
+    expect(manifest.version).toBe("0.12.0");
   });
 
   test("manifest declares S8 labels milestones collab ops", () => {
@@ -414,7 +418,41 @@ describe("github connector manifest", () => {
     expect(comment.sideEffect).toBe("write");
     expect(comment.effectPolicy).toBe("Reconcile");
     expect(comment.reconcile).toBe("commits.get");
-    expect(Object.keys(manifest.operations).length).toBe(122);
+    expect(Object.keys(manifest.operations).length).toBeGreaterThanOrEqual(122);
   });
 
+  test("manifest declares S10 notifications-orgs-social ops", () => {
+    for (const key of [
+      "notifications.list",
+      "notifications.get",
+      "notifications.mark_read",
+      "notifications.mark_all_read",
+      "orgs.teams.list",
+      "teams.members.list",
+      "teams.membership.add",
+      "repos.fork",
+      "repos.star",
+      "repos.unstar",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+    }
+    expect(manifest.operations["orgs.members.list"].kind).toBe("action");
+    expect(Object.keys(manifest.operations).length).toBe(132);
+  });
+
+  test("S10 write ops wire EffectPolicy Reconcile", () => {
+    for (const [key, reconcile] of [
+      ["notifications.mark_read", "notifications.get"],
+      ["notifications.mark_all_read", "notifications.list"],
+      ["teams.membership.add", "teams.members.list"],
+      ["repos.fork", "repos.get"],
+      ["repos.star", "repos.get"],
+      ["repos.unstar", "repos.get"],
+    ] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Reconcile");
+      expect(op.reconcile).toBe(reconcile);
+    }
+  });
 });
