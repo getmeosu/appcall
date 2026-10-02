@@ -960,7 +960,15 @@ impl ApiDashboard {
                 }
             },
             Op::Overview=>{let toolkit_count=self.registry.public_list().count();Ok(self.db(|client|crate::data_routes::overview::read(client,&identity,toolkit_count).map_err(api_error))?)},
-            Op::Connections=>{let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"connections":self.connection_values(&identity,&connections)?}))},
+            Op::Connections=>{
+                let listed = match self.core.connections(&identity).await {
+                    Ok(connections) => self
+                        .connection_values(&identity, &connections)
+                        .map_err(DashboardFailure::from),
+                    Err(error) => Err(dashboard_failure::map_api_error(error)),
+                };
+                connections_list_response(listed)
+            },
             Op::TestConnection=>Ok(connection_value(&self.core.test_connection(&identity,resource).await.map_err(dashboard_failure::map_api_error)?)),
             Op::DisconnectConnection=>{self.core.disconnect(&identity,resource).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"disconnected":true}))},
             Op::Logs|Op::Events|Op::Stream|Op::Trace=>{
@@ -1277,6 +1285,28 @@ fn sync_error(error: appcall_sync::Error) -> appcall_web::Error {
         _ => appcall_web::Error::Unavailable,
     }
 }
+
+/// Ordinary Connections list fetch failures become typed EmptyState surfaces.
+/// Auth and contract failures stay hard errors so callers keep fail-closed.
+/// `Configuration` mirrors Workflows' missing-engine `unavailable`; ordinary
+/// `Unavailable` fetch failures mirror Workflows' read `error`.
+pub(crate) fn connections_list_response(
+    result: std::result::Result<Vec<Value>, DashboardFailure>,
+) -> std::result::Result<Value, DashboardFailure> {
+    match result {
+        Ok(connections) => Ok(json!({"status": "ok", "connections": connections})),
+        Err(failure) => match failure.classification() {
+            appcall_web::Error::Configuration => Ok(json!({"status": "unavailable"})),
+            appcall_web::Error::Unavailable => Ok(json!({"status": "error"})),
+            appcall_web::Error::Unauthorized
+            | appcall_web::Error::Forbidden
+            | appcall_web::Error::Invalid
+            | appcall_web::Error::NotFound
+            | appcall_web::Error::Conflict
+            | appcall_web::Error::RequestTooLarge => Err(failure),
+        },
+    }
+}
 pub(crate) fn connection_value(c: &appcall_store::Connection) -> Value {
     // The provider has not approved an identity read model yet. Keep the
     // dashboard explicit about that absence instead of deriving an identity
@@ -1395,4 +1425,57 @@ fn browser_request_too_large_error_preserves_public_code() {
         api_error(ApiError::new("REQUEST_TOO_LARGE")),
         appcall_web::Error::RequestTooLarge
     );
+}
+
+#[cfg(test)]
+mod connections_list_response_tests {
+    use super::connections_list_response;
+    use appcall_web::{DashboardFailure, Error, FailureCause};
+    use serde_json::json;
+
+    #[test]
+    fn ok_list_emits_status_ok_with_rows() {
+        let value = connections_list_response(Ok(vec![json!({"id": "conn_1"})])).unwrap();
+        assert_eq!(value["status"], "ok");
+        assert_eq!(value["connections"][0]["id"], "conn_1");
+    }
+
+    #[test]
+    fn configuration_emits_unavailable_surface() {
+        let value = connections_list_response(Err(DashboardFailure::new(
+            Error::Configuration,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "unavailable"}));
+    }
+
+    #[test]
+    fn ordinary_unavailable_fetch_emits_error_surface() {
+        let value = connections_list_response(Err(DashboardFailure::new(
+            Error::Unavailable,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "error"}));
+    }
+
+    #[test]
+    fn auth_and_contract_failures_stay_hard_errors() {
+        for classification in [
+            Error::Unauthorized,
+            Error::Forbidden,
+            Error::Invalid,
+            Error::NotFound,
+            Error::Conflict,
+            Error::RequestTooLarge,
+        ] {
+            let err = connections_list_response(Err(DashboardFailure::new(
+                classification,
+                FailureCause::Unknown,
+            )))
+            .unwrap_err();
+            assert_eq!(err.classification(), classification);
+        }
+    }
 }

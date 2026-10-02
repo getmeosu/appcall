@@ -172,9 +172,16 @@ impl MemoryDashboard {
                     chrono::Utc::now(),
                 ))
             }
-            Op::Connections => Ok(
-                json!({"connections":self.core.connections(&identity).await.map_err(web_error)?.iter().map(crate::browser_host::connection_value).collect::<Vec<_>>()}),
-            ),
+            Op::Connections => {
+                let listed = match self.core.connections(&identity).await {
+                    Ok(connections) => Ok(connections
+                        .iter()
+                        .map(crate::browser_host::connection_value)
+                        .collect::<Vec<_>>()),
+                    Err(error) => Err(web_error(error)),
+                };
+                crate::browser_host::connections_list_response(listed)
+            },
             Op::TestConnection => Ok(crate::browser_host::connection_value(
                 &self
                     .core
