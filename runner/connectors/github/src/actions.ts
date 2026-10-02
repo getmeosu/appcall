@@ -85,8 +85,24 @@ import {
 } from "./labels_milestones";
 import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput } from "./repos";
 import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput, validateListBranchesInput } from "./branches";
-import { createReleasesClient, validateCreateReleaseInput } from "./releases";
-import { createGistsClient, validateCreateGistInput } from "./gists";
+import {
+  createReleasesClient,
+  validateCreateReleaseInput,
+  validateListReleasesInput,
+  validateGetReleaseInput,
+  validateGetLatestReleaseInput,
+  validateGetReleaseByTagInput,
+  validateUpdateReleaseInput,
+  validateListReleaseAssetsInput,
+} from "./releases";
+import {
+  createGistsClient,
+  validateCreateGistInput,
+  validateListGistsInput,
+  validateGetGistInput,
+  validateUpdateGistInput,
+} from "./gists";
+import { createTagsClient, validateListTagsInput } from "./tags";
 import { createChecksClient, validateListCheckRunsForRefInput, validateGetCheckRunInput, validateListCheckSuitesForRefInput } from "./checks";
 import { createCommitsClient, validateGetCommitStatusInput, validateListCommitStatusesInput, validateCreateCommitStatusInput, validateGetCommitInput } from "./commits";
 import { createGitHubClient } from "./http";
@@ -1526,6 +1542,143 @@ export function checkCollaborator(input: unknown): Record<string, unknown> | Pro
   return { connector: "github", action: "repos.collaborators.check", source: "connector", validated: validateCheckCollaboratorInput(input) };
 }
 
+
+
+// ─── S7: releases.list|get|get_latest|get_by_tag|update + assets.list ─────────
+
+export function listReleases(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createReleasesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).list(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "releases.list", source: "connector", releases: result.releases };
+    });
+  }
+  return { connector: "github", action: "releases.list", source: "connector", validated: validateListReleasesInput(input) };
+}
+
+export function getRelease(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createReleasesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "releases.get", source: "connector", release: result.release };
+    });
+  }
+  return { connector: "github", action: "releases.get", source: "connector", validated: validateGetReleaseInput(input) };
+}
+
+export function getLatestRelease(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createReleasesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getLatest(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "releases.get_latest", source: "connector", release: result.release };
+    });
+  }
+  return { connector: "github", action: "releases.get_latest", source: "connector", validated: validateGetLatestReleaseInput(input) };
+}
+
+export function getReleaseByTag(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createReleasesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getByTag(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "releases.get_by_tag", source: "connector", release: result.release };
+    });
+  }
+  return { connector: "github", action: "releases.get_by_tag", source: "connector", validated: validateGetReleaseByTagInput(input) };
+}
+
+export function updateRelease(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createReleasesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).update(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "releases.update", source: "connector", release: result.release };
+    });
+  }
+  return { connector: "github", action: "releases.update", source: "connector", validated: validateUpdateReleaseInput(input) };
+}
+
+export function listReleaseAssets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createReleasesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listAssets(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "releases.assets.list", source: "connector", assets: result.assets };
+    });
+  }
+  return { connector: "github", action: "releases.assets.list", source: "connector", validated: validateListReleaseAssetsInput(input) };
+}
+
+// ─── S7: tags.list ────────────────────────────────────────────────────────────
+
+export function listTags(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createTagsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).list(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "tags.list", source: "connector", tags: result.tags };
+    });
+  }
+  return { connector: "github", action: "tags.list", source: "connector", validated: validateListTagsInput(input) };
+}
+
+// ─── S7: gists.list|get|update ────────────────────────────────────────────────
+
+export function listGists(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGistsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).list(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "gists.list", source: "connector", gists: result.gists };
+    });
+  }
+  return { connector: "github", action: "gists.list", source: "connector", validated: validateListGistsInput(input) };
+}
+
+export function getGist(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGistsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "gists.get", source: "connector", gist: result.gist };
+    });
+  }
+  return { connector: "github", action: "gists.get", source: "connector", validated: validateGetGistInput(input) };
+}
+
+export function updateGist(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGistsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).update(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "gists.update", source: "connector", gist: result.gist };
+    });
+  }
+  return { connector: "github", action: "gists.update", source: "connector", validated: validateUpdateGistInput(input) };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

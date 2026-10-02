@@ -63,6 +63,8 @@ describe("github connector manifest", () => {
     expect(manifest.models).toContain("artifact");
     expect(manifest.models).toContain("user");
     expect(manifest.models).toContain("organization");
+    expect(manifest.models).toContain("tag");
+    expect(manifest.models).toContain("release_asset");
   });
 
   test("manifest has timeout and size limits on all operations", () => {
@@ -93,8 +95,8 @@ describe("github connector manifest", () => {
     const actionOps = Object.entries(manifest.operations).filter(
       ([, spec]) => (spec as Record<string, unknown>).kind === "action"
     );
-    expect(actionOps.length).toBeGreaterThanOrEqual(58);
-    expect(actionOps.length).toBeGreaterThanOrEqual(58);
+    expect(actionOps.length).toBeGreaterThanOrEqual(78);
+    expect(actionOps.length).toBeGreaterThanOrEqual(78);
   });
 
 
@@ -253,8 +255,8 @@ describe("github connector manifest", () => {
   });
 
 
-  test("manifest version is 0.7.0 after S8 on tip (post-S4+S6)", () => {
-    expect(manifest.version).toBe("0.7.0");
+  test("manifest version is 0.8.0 after S7 on tip (post-S4+S6+S8)", () => {
+    expect(manifest.version).toBe("0.8.0");
   });
 
   test("manifest declares S8 labels milestones collab ops", () => {
@@ -292,5 +294,35 @@ describe("github connector manifest", () => {
       expect(op.reconcile).toBe(reconcile);
     }
   });
+
+
+  test("manifest declares S7 releases-tags-gists ops", () => {
+    for (const key of [
+      "releases.list",
+      "releases.get",
+      "releases.get_latest",
+      "releases.get_by_tag",
+      "releases.update",
+      "releases.assets.list",
+      "tags.list",
+      "gists.list",
+      "gists.get",
+      "gists.update",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+    }
+  });
+
+  test("S7 write ops wire EffectPolicy Reconcile", () => {
+    const releaseUpdate = manifest.operations["releases.update"] as Record<string, unknown>;
+    expect(releaseUpdate.sideEffect).toBe("write");
+    expect(releaseUpdate.effectPolicy).toBe("Reconcile");
+    expect(releaseUpdate.reconcile).toBe("releases.get");
+    const gistUpdate = manifest.operations["gists.update"] as Record<string, unknown>;
+    expect(gistUpdate.sideEffect).toBe("write");
+    expect(gistUpdate.effectPolicy).toBe("Reconcile");
+    expect(gistUpdate.reconcile).toBe("gists.get");
+  });
+
 
 });
