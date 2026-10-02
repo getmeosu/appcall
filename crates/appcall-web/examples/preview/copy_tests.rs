@@ -372,7 +372,7 @@ async fn real_filters_produce_real_empty_copy() {
         ),
         (
             "/app/calls?status=failed",
-            "No tool runs match these filters.",
+            "No calls match these filters.",
         ),
     ] {
         let request = Request {

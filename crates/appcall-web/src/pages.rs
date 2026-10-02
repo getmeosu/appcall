@@ -1710,7 +1710,7 @@ mod rendering_contract_tests {
             (
                 Op::Logs,
                 vec!["logs", "items", "rows"],
-                "No tool runs to show.",
+                "No calls to show.",
                 "Browse connectors to choose a tool to run.",
                 "Browse connectors",
             ),
@@ -2075,7 +2075,7 @@ mod rendering_contract_tests {
             ),
             (
                 Op::Logs,
-                json!({"logs":[{"requestId":"req_1","connector":"<evil>","errorCode":42}]}),
+                json!({"logs":[{"requestId":"req_1","status":"succeeded","connector":"<evil>","errorCode":42}]}),
                 "/app/calls/req_1\"",
             ),
             (

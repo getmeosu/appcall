@@ -176,15 +176,15 @@ async fn copy_empty_filter_state_comes_from_request() {
         ] {
             let (result, calls) = response(value.clone(), "/app/calls", &[(key, val)]).await;
             let expected = if filtered {
-                "No tool runs match these filters."
+                "No calls match these filters."
             } else {
-                "No tool runs to show."
+                "No calls to show."
             };
             assert!(result.body.contains(expected), "{key}: {}", result.body);
             if filtered {
                 assert!(result
                     .body
-                    .contains("Clear the filters to view recorded runs."));
+                    .contains("Clear the filters to view recorded calls."));
                 assert!(result.body.contains("Clear filters</span>"));
             }
             assert_eq!(calls.len(), 1);

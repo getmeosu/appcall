@@ -105,7 +105,7 @@ async fn logs_filter_form_uses_trusted_escaped_values_and_resets_cursor() {
     }
     assert!(!form.contains("datetime-local"));
     assert!(response.body.contains("Clear filters"));
-    assert!(response.body.contains("No tool runs match these filters."));
+    assert!(response.body.contains("No calls match these filters."));
 }
 
 #[tokio::test]
@@ -161,10 +161,10 @@ async fn logs_request_error_and_time_filters_produce_filtered_empty_copy() {
         .await
         .unwrap();
         assert!(
-            response.body.contains("No tool runs match these filters."),
+            response.body.contains("No calls match these filters."),
             "{key}"
         );
-        assert!(!response.body.contains("No tool runs to show."));
+        assert!(!response.body.contains("No calls to show."));
     }
 }
 
@@ -182,7 +182,7 @@ async fn logs_invalid_filter_keeps_form_and_live_recovery_without_fake_results()
     assert!(response.body.contains("role=\"alert\""));
     assert!(response.body.contains("Clear filters"));
     assert!(response.body.contains("RFC3339"));
-    assert!(!response.body.contains("No tool runs"));
+    assert!(!response.body.contains("No calls"));
     assert!(!response.body.contains("<table"));
     for error in [Error::Unauthorized, Error::Forbidden] {
         assert!(
@@ -257,7 +257,7 @@ async fn logs_inspector_has_native_fallback_accessible_result_and_shared_control
     assert!(!inspector.contains("aria-modal=\"true\""));
     let logs_page = response
         .body
-        .split("<section class=\"logs-page\"")
+        .split("<section id=\"logs-page\"")
         .nth(1)
         .expect("rendered Logs page")
         .split("</section>")

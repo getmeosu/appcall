@@ -406,3 +406,107 @@ fn table(items: &[Value]) -> Result<String, Error> {
     body.push_str("</tbody></table></div>");
     Ok(body)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn calls_triad_empty_states_and_page_id() {
+        let unavailable =
+            render(&json!({"status": "unavailable"}), &Filters::default(), false).unwrap();
+        assert!(unavailable.contains("id=\"logs-page\""));
+        assert!(unavailable.contains("Calls unavailable"));
+        assert!(unavailable.contains("does not invent call rows or statuses"));
+        assert!(unavailable.contains("role=\"alert\""));
+        assert!(unavailable.contains("href=\"/app/calls\""));
+        assert!(!unavailable.contains("No calls to show."));
+        assert!(!unavailable.contains("logs-filters"));
+        assert!(!unavailable.contains("logs-table"));
+
+        let legacy = render(&json!({"unavailable": true}), &Filters::default(), false).unwrap();
+        assert!(legacy.contains("Calls unavailable"));
+        assert!(legacy.contains("role=\"alert\""));
+        assert!(!legacy.contains("logs-filters"));
+
+        let error = render(&json!({"status": "error"}), &Filters::default(), false).unwrap();
+        assert!(error.contains("Calls unreachable"));
+        assert!(error.contains("role=\"alert\""));
+        assert!(error.contains("href=\"/app/calls\""));
+        assert!(!error.contains("No calls to show."));
+        assert!(!error.contains("logs-filters"));
+
+        let empty = render(&json!({"logs": []}), &Filters::default(), false).unwrap();
+        assert!(empty.contains("No calls to show."));
+        assert!(empty.contains("role=\"status\""));
+        assert!(empty.contains("href=\"/app/connectors\""));
+        assert!(empty.contains("logs-filters"));
+        assert!(!empty.contains("Calls unavailable"));
+        assert!(!empty.contains("match these filters"));
+
+        let filtered =
+            render(&json!({"logs": [], "hasFilters": true}), &Filters::default(), false).unwrap();
+        assert!(filtered.contains("No calls match these filters."));
+        assert!(filtered.contains("role=\"status\""));
+        assert!(filtered.contains("href=\"/app/calls\""));
+        assert!(!filtered.contains("No calls to show."));
+        assert!(!filtered.contains("Calls unavailable"));
+
+        let filtered_arg = render(&json!({"logs": []}), &Filters::default(), true).unwrap();
+        assert!(filtered_arg.contains("No calls match these filters."));
+
+        assert_eq!(
+            render(&json!({"status": "mystery"}), &Filters::default(), false),
+            Err(Error::Unavailable),
+            "unknown status stays fail-closed"
+        );
+        assert_eq!(
+            render(&json!({}), &Filters::default(), false),
+            Err(Error::Unavailable),
+            "missing list without unavailable marker stays fail-closed"
+        );
+
+        let populated = render(
+            &json!({"status":"ok","logs":[{
+                "requestId":"req_1",
+                "status":"succeeded",
+                "connector":"mail",
+                "action":"send",
+                "createdAt":"2026-09-07T10:00:00Z",
+                "errorCode":""
+            }]}),
+            &Filters::default(),
+            false,
+        )
+        .unwrap();
+        assert!(populated.contains("id=\"logs-page\""));
+        assert!(populated.contains("req_1"));
+        assert!(populated.contains("logs-table"));
+        assert!(populated.contains("logs-filters"));
+        assert!(!populated.contains("Calls unavailable"));
+        assert!(!populated.contains("Calls unreachable"));
+    }
+
+    #[test]
+    fn uncertain_row_status_fails_closed() {
+        assert_eq!(
+            render(
+                &json!({"logs":[{"requestId":"req_1","status":"mystery"}]}),
+                &Filters::default(),
+                false,
+            ),
+            Err(Error::Unavailable),
+            "unknown row status must not paint as success"
+        );
+        assert_eq!(
+            render(
+                &json!({"logs":[{"requestId":"req_1"}]}),
+                &Filters::default(),
+                false,
+            ),
+            Err(Error::Unavailable),
+            "missing row status must not paint Unknown as idle"
+        );
+    }
+}
