@@ -137,7 +137,7 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "REST POST /channels/{channelId}/messages with optional name and required data."
+        "REST POST /channels/{channelId}/messages; Ably returns 201 with empty body \u2014 result echoes channelId/name."
       ]
     },
     "messages.history": {
@@ -352,7 +352,7 @@
         "maxInputBytes": 65536,
         "maxResponseBytes": 1048576,
         "title": "Publish a message to a channel.",
-        "description": "Publish one message on an Ably channel via REST POST /channels/{channelId}/messages.",
+        "description": "Publish one message to a channel. Ably answers 201 with an empty body on success, so the result echoes channelId and optional name.",
         "inputSchema": {
           "type": "object",
           "properties": {
@@ -374,24 +374,27 @@
         },
         "outputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "required": [
-            "data"
+            "published",
+            "channelId"
           ],
           "properties": {
-            "data": {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
+            "published": {
+              "type": "boolean"
+            },
+            "channelId": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
             }
-          },
-          "additionalProperties": false
+          }
         },
         "request": {
           "method": "POST",
           "path": "/channels/{{channelId}}/messages",
           "success": [
-            200,
             201
           ],
           "headers": {
@@ -400,6 +403,11 @@
           "body": {
             "name": "{{name}}",
             "data": "{{data}}"
+          },
+          "result": {
+            "published": true,
+            "channelId": "{{input.channelId}}",
+            "name": "{{input.name}}"
           }
         },
         "validationMode": "strict-generated",
