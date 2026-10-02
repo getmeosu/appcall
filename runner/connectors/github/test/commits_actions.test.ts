@@ -82,6 +82,34 @@ describe("github commits actions", () => {
     expect(() => createCommitStatus({ owner: "acme", repo: "app", sha: "abc" })).toThrow("state is required");
   });
 
+  test("createCommitStatus rejects invalid state", () => {
+    expect(() =>
+      createCommitStatus({ owner: "acme", repo: "app", sha: "abc", state: "shipped" })
+    ).toThrow("state must be one of: error, failure, pending, success");
+  });
+
+  test("getCommitStatus accepts sha as ref alias", () => {
+    const result = getCommitStatus({
+      owner: "acme",
+      repo: "app",
+      sha: "abc123def456abc123def456abc123def456abc1",
+    });
+    expect(result.validated).toEqual({
+      owner: "acme",
+      repo: "app",
+      ref: "abc123def456abc123def456abc123def456abc1",
+    });
+  });
+
+  test("listCommitStatuses accepts sha as ref alias", () => {
+    const result = listCommitStatuses({
+      owner: "acme",
+      repo: "app",
+      sha: "abc123",
+    });
+    expect((result.validated as Record<string, unknown>).ref).toBe("abc123");
+  });
+
   test("getCommit fetches a single commit", async () => {
     const requests: Request[] = [];
     const result = await getCommit({
