@@ -419,7 +419,7 @@ import { listDomains as resendListDomains } from "../../connectors/resend/src/do
 
 import googlemeetManifest from "../../connectors/googlemeet/manifest.json";
 import { healthcheck as googlemeetHealthcheck } from "../../connectors/googlemeet/src/healthcheck";
-import { createMeeting as gmeetCreateMeeting, listMeetings as gmeetListMeetings } from "../../connectors/googlemeet/src/actions";
+import { createMeeting as gmeetCreateMeeting, listMeetings as gmeetListMeetings, getMeeting as gmeetGetMeeting, updateMeeting as gmeetUpdateMeeting, deleteMeeting as gmeetDeleteMeeting } from "../../connectors/googlemeet/src/actions";
 
 // Google Meet operations (extend the existing google-workspace connector).
 import {
@@ -1028,6 +1028,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     googlemeet: {
       "meetings.create": gmeetCreateMeeting,
       "meetings.list": gmeetListMeetings,
+      "meetings.get": gmeetGetMeeting,
+      "meetings.update": gmeetUpdateMeeting,
+      "meetings.delete": gmeetDeleteMeeting,
     },
   },
   syncs: {
