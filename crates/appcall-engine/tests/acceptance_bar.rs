@@ -1,4 +1,14 @@
+//! Acceptance gate for appcall-engine (fail CI on regression).
+//!
+//! Contract enforced here + durability_perf:
+//! - History cap stays **1024**; encoded record cap stays **1 MiB** (never raise).
+//! - Exclusive-owner store: flock + bumping `owner_epoch`; second open → Conflict.
+//! - Durable commits are revision CAS; stale expected revision → Conflict, no mutation.
+//! - Fenced reconcile requires matching attempt + owner_epoch (see durability.rs).
+//! - Continuous RSS/latency budgets live in `durability_perf` + `benchmarks/*.json`.
+
 use appcall_engine::*;
+use std::path::PathBuf;
 
 const SECRET: &str = "synthetic-secret-token-47";
 
@@ -237,7 +247,10 @@ fn waiting_noise_signals_revision_delta_proves_noop_drive_skip() {
         delta <= (n as u64) + 1,
         "revision delta {delta} after {n} noisy Waiting re-drives exceeds N+1 (noop save skip broken)"
     );
-    assert_eq!(delta, 0, "pure Waiting re-drives must not commit; delta={delta}");
+    assert_eq!(
+        delta, 0,
+        "pure Waiting re-drives must not commit; delta={delta}"
+    );
 }
 
 #[test]
@@ -281,4 +294,106 @@ fn recover_no_retry_storm_drop_engine_before_sqlite_reopen() {
         again.attempt
     );
     assert_eq!(again.effect_id, attempt.effect_id);
+}
+
+#[test]
+fn caps_1024_and_1mib_remain_frozen_in_source() {
+    // Load-bearing literals — raising either breaks the acceptance bar.
+    let engine = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/engine.rs"));
+    let store = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/store.rs"));
+    assert!(
+        engine.contains("if r.history.len() >= 1024"),
+        "history cap must remain 1024 in engine.rs"
+    );
+    assert!(
+        engine.contains("if bytes.len() > 1024 * 1024"),
+        "1 MiB payload Limit must remain in engine.rs"
+    );
+    assert!(
+        store.contains("if bytes.len() > 1024 * 1024"),
+        "1 MiB encoded-record Limit must remain in store.rs encoded()"
+    );
+    assert!(
+        !engine.contains("history.len() >= 2048") && !engine.contains("history.len() >= 4096"),
+        "history cap must not be silently raised"
+    );
+    let artifact =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("benchmarks/acceptance-gate.json");
+    assert!(
+        artifact.is_file(),
+        "missing acceptance-gate evidence at {artifact:?}"
+    );
+    let body = std::fs::read_to_string(&artifact).unwrap();
+    assert!(body.contains("\"history_cap\": 1024"));
+    assert!(body.contains("\"encoded_record_cap_bytes\": 1048576"));
+    assert!(body.contains("\"caps_may_raise\": false"));
+}
+
+#[test]
+fn exclusive_owner_epoch_cas_stale_revision_conflict_no_mutation() {
+    // Single-owner store: exclusive flock, epoch bump on open, revision CAS on commit.
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("engine.db");
+    let mut e = Engine::open(&db).unwrap();
+    assert!(
+        matches!(Engine::open(&db), Err(Error::Conflict)),
+        "second open must Conflict while first owner holds the flock"
+    );
+    e.register_workflow("park", "v1", |c| {
+        c.signal("go")?;
+        Ok(c.input().clone())
+    })
+    .unwrap();
+    e.start("r", "park", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    drop(e);
+
+    let (epoch1, original) = {
+        let s = SqliteStore::open(&db).unwrap();
+        let epoch = s.owner_epoch();
+        let original = s.load("r").unwrap();
+        (epoch, original)
+    };
+
+    let mut s = SqliteStore::open(&db).unwrap();
+    let epoch2 = s.owner_epoch();
+    assert!(
+        epoch2 > epoch1,
+        "owner_epoch must bump on each exclusive open; was {epoch1} now {epoch2}"
+    );
+
+    let mut stale = original.clone();
+    // revision == expected (not expected+1) → Conflict before any write.
+    stale.state = RunState::Cancelled;
+    assert!(
+        matches!(
+            s.commit(original.revision, &stale, &[]),
+            Err(Error::Conflict)
+        ),
+        "commit where revision != expected+1 must Conflict"
+    );
+    assert_eq!(
+        s.load("r").unwrap().revision,
+        original.revision,
+        "failed CAS must not mutate the durable record"
+    );
+    assert_eq!(s.load("r").unwrap().state, original.state);
+
+    // Wrong expected revision (already advanced) → Conflict, no mutation.
+    let mut forged = original.clone();
+    forged.revision = original.revision + 1;
+    forged.state = RunState::Cancelled;
+    assert!(matches!(
+        s.commit(original.revision.saturating_add(9), &forged, &[]),
+        Err(Error::Conflict)
+    ));
+    assert_eq!(s.load("r").unwrap().revision, original.revision);
+
+    let mut ok = original.clone();
+    ok.revision = original.revision + 1;
+    ok.state = RunState::Cancelled;
+    s.commit(original.revision, &ok, &[]).unwrap();
+    assert_eq!(s.load("r").unwrap().revision, original.revision + 1);
+    assert_eq!(s.load("r").unwrap().state, RunState::Cancelled);
 }
