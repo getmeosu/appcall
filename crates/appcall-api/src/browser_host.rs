@@ -979,10 +979,16 @@ impl ApiDashboard {
             Op::Runs=>{
                 let mut url=url::Url::parse("http://local.invalid/v1/sync-runs").map_err(|_|Error::Invalid)?;
                 for (k,v) in &r.fields {if ["limit","cursor","connector","tool","status","accountId","externalAccountId"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
-                let value = self.db(|client| crate::data_routes::read(client,&identity,&url).map_err(api_error))?
-                    .map(|r|r.body)
-                    .ok_or(Error::Invalid)?;
-                Ok(enrich_runs_operator(value, operator_authorized))
+                let listed = match self.db(|client| {
+                    crate::data_routes::read(client, &identity, &url)
+                        .map_err(api_error)?
+                        .map(|r| r.body)
+                        .ok_or(Error::Invalid)
+                }) {
+                    Ok(value) => Ok(enrich_runs_operator(value, operator_authorized)),
+                    Err(error) => Err(DashboardFailure::from(error)),
+                };
+                runs_list_response(listed)
             },
             Op::RunDetail=>{
                 let url = run_history_url(resource, &r.fields)?;
@@ -1307,6 +1313,41 @@ pub(crate) fn connections_list_response(
         },
     }
 }
+
+/// Ordinary Syncs list fetch failures become typed EmptyState surfaces.
+/// Auth and contract failures stay hard errors so callers keep fail-closed.
+/// `Configuration` / missing queue mirrors Workflows' missing-engine
+/// `unavailable`; ordinary `Unavailable` fetch failures mirror Workflows' read
+/// `error`. Success preserves existing projection fields under `status: ok`.
+pub(crate) fn runs_list_response(
+    result: std::result::Result<Value, DashboardFailure>,
+) -> std::result::Result<Value, DashboardFailure> {
+    match result {
+        Ok(value) => {
+            let mut out = json!({"status": "ok"});
+            if let Some(obj) = out.as_object_mut() {
+                if let Some(map) = value.as_object() {
+                    for (k, v) in map {
+                        if k != "status" {
+                            obj.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
+            }
+            Ok(out)
+        }
+        Err(failure) => match failure.classification() {
+            appcall_web::Error::Configuration => Ok(json!({"status": "unavailable"})),
+            appcall_web::Error::Unavailable => Ok(json!({"status": "error"})),
+            appcall_web::Error::Unauthorized
+            | appcall_web::Error::Forbidden
+            | appcall_web::Error::Invalid
+            | appcall_web::Error::NotFound
+            | appcall_web::Error::Conflict
+            | appcall_web::Error::RequestTooLarge => Err(failure),
+        },
+    }
+}
 pub(crate) fn connection_value(c: &appcall_store::Connection) -> Value {
     // The provider has not approved an identity read model yet. Keep the
     // dashboard explicit about that absence instead of deriving an identity
@@ -1471,6 +1512,69 @@ mod connections_list_response_tests {
             Error::RequestTooLarge,
         ] {
             let err = connections_list_response(Err(DashboardFailure::new(
+                classification,
+                FailureCause::Unknown,
+            )))
+            .unwrap_err();
+            assert_eq!(err.classification(), classification);
+        }
+    }
+}
+
+#[cfg(test)]
+mod runs_list_response_tests {
+    use super::runs_list_response;
+    use appcall_web::{DashboardFailure, Error, FailureCause};
+    use serde_json::json;
+
+    #[test]
+    fn ok_list_emits_status_ok_preserving_projection_fields() {
+        let value = runs_list_response(Ok(json!({
+            "runs": [{"id": "run_1"}],
+            "pendingRuns": 1,
+            "runningRuns": 0,
+            "backingoffRuns": 0,
+            "deadRuns": 0,
+            "workerHeartbeatUnavailable": true
+        })))
+        .unwrap();
+        assert_eq!(value["status"], "ok");
+        assert_eq!(value["runs"][0]["id"], "run_1");
+        assert_eq!(value["pendingRuns"], 1);
+        assert_eq!(value["workerHeartbeatUnavailable"], true);
+    }
+
+    #[test]
+    fn configuration_emits_unavailable_surface() {
+        let value = runs_list_response(Err(DashboardFailure::new(
+            Error::Configuration,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "unavailable"}));
+    }
+
+    #[test]
+    fn ordinary_unavailable_fetch_emits_error_surface() {
+        let value = runs_list_response(Err(DashboardFailure::new(
+            Error::Unavailable,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "error"}));
+    }
+
+    #[test]
+    fn auth_and_contract_failures_stay_hard_errors() {
+        for classification in [
+            Error::Unauthorized,
+            Error::Forbidden,
+            Error::Invalid,
+            Error::NotFound,
+            Error::Conflict,
+            Error::RequestTooLarge,
+        ] {
+            let err = runs_list_response(Err(DashboardFailure::new(
                 classification,
                 FailureCause::Unknown,
             )))

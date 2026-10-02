@@ -205,7 +205,7 @@ impl MemoryDashboard {
                 Ok(value)
             }
             Op::Certification => Ok(json!({"unavailable":true,"certifications":[]})),
-            Op::Runs => Ok(json!({"unavailable":true})),
+            Op::Runs => Ok(json!({"status":"unavailable"})),
             Op::RunDetail => Err(Error::NotFound.into()),
             Op::RunNow | Op::ResetRun | Op::CancelRun => Err(Error::Forbidden.into()),
             Op::Logs | Op::Trace | Op::Events | Op::Stream => {
