@@ -1,7 +1,7 @@
 {
   "key": "ashby",
   "name": "Ashby",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -95,6 +95,63 @@
       "title": "Get application",
       "description": "Fetch a single application via authenticated POST /application.info. Requires applicationId or submittedFormInstanceId."
     },
+    "applications.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "reconcile": "applications.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create application",
+      "description": "Consider a candidate for a job via authenticated POST /application.create. Requires candidateId and jobId. EffectPolicy Idempotent observes the created application via applications.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId",
+          "jobId"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "Ashby candidate UUID to consider for a job."
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Ashby job UUID."
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Optional source UUID."
+          },
+          "creditedToUserId": {
+            "type": "string",
+            "description": "Optional user UUID credited for the application."
+          },
+          "interviewStageId": {
+            "type": "string",
+            "description": "Optional interview stage UUID, or Ashby special string FirstPreInterviewScreen."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized application after reconcile via applications.get."
+          }
+        }
+      }
+    },
     "candidates.search": {
       "kind": "sync",
       "timeoutMs": 15000,
@@ -102,6 +159,74 @@
       "maxResponseBytes": 1048576,
       "title": "Search candidates",
       "description": "Search candidates by email and/or name via authenticated POST /candidate.search. Requires email or name (AND-combined when both set). Not paginated; responses capped by Ashby (~100)."
+    },
+    "candidates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "reconcile": "candidates.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate",
+      "description": "Create a candidate via authenticated POST /candidate.create. Requires name. AppCall websiteUrl maps to Ashby native body field website. EffectPolicy Idempotent observes the created candidate via candidates.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Candidate full name (Ashby-required)."
+          },
+          "email": {
+            "type": "string",
+            "description": "Primary personal email."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "Primary personal phone number."
+          },
+          "linkedInUrl": {
+            "type": "string",
+            "description": "LinkedIn profile URL."
+          },
+          "githubUrl": {
+            "type": "string",
+            "description": "GitHub profile URL."
+          },
+          "websiteUrl": {
+            "type": "string",
+            "description": "Website URL. Mapped to Ashby native body field website."
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "Source UUID credited on the candidate."
+          },
+          "creditedToUserId": {
+            "type": "string",
+            "description": "User UUID the candidate is credited to."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate"
+        ],
+        "properties": {
+          "candidate": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized candidate after reconcile via candidates.get."
+          }
+        }
+      }
     },
     "interviews.list": {
       "kind": "sync",

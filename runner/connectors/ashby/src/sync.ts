@@ -8,6 +8,10 @@
  * applications.get        → authenticated POST /application.info
  * candidates.search       → authenticated POST /candidate.search
  * interviews.list         → authenticated POST /interview.list
+ * candidates.create       → POST /candidate.create
+ *                           (runner EffectPolicy Idempotent → candidates.get)
+ * applications.create     → POST /application.create
+ *                           (runner EffectPolicy Idempotent → applications.get)
  * applications.move       → POST /application.changeStage
  *                           (runner EffectPolicy Reconcile → applications.get)
  * applications.reject     → POST /application.changeStage (Archived + archiveReasonId)
@@ -191,8 +195,14 @@ export async function executeCandidatesGetSync(
 // ---------------------------------------------------------------------------
 
 export interface ExecuteApplicationsGetSyncInput extends AshbyAuthInput {
-  /** Ashby application UUID. Required unless submittedFormInstanceId is set. */
+  /** Ashby application UUID. Required unless submittedFormInstanceId / id is set. */
   applicationId?: string;
+  /**
+   * Alias for applicationId. Idempotent EffectPolicy observe injects top-level `id`
+   * from the create primary response; accept it here so applications.create can
+   * reconcile via applications.get without a separate id→applicationId remap.
+   */
+  id?: string;
   /** Submitted form instance id (from applicationForm.submit). Alternative to applicationId. */
   submittedFormInstanceId?: string;
 }
@@ -205,9 +215,10 @@ export async function executeApplicationsGetSync(
   input: ExecuteApplicationsGetSyncInput,
 ): Promise<ExecuteApplicationsGetSyncOutput> {
   const hasAppId = typeof input.applicationId === "string" && input.applicationId.length > 0;
+  const hasIdAlias = typeof input.id === "string" && input.id.length > 0;
   const hasFormId =
     typeof input.submittedFormInstanceId === "string" && input.submittedFormInstanceId.length > 0;
-  if (!hasAppId && !hasFormId) {
+  if (!hasAppId && !hasIdAlias && !hasFormId) {
     throw new Error("applicationId or submittedFormInstanceId is required");
   }
   const client = createAuthClient({
@@ -216,11 +227,14 @@ export async function executeApplicationsGetSync(
     operation: "applications.get",
   });
   // Official Ashby precedence: when both are provided, lookup uses applicationId.
+  // Idempotent observe supplies `id`; prefer applicationId when both present.
+  const applicationId = hasAppId ? input.applicationId : hasIdAlias ? input.id : undefined;
   const raw = await client.postJSON(
     "/application.info",
     compactBody({
-      applicationId: hasAppId ? input.applicationId : undefined,
-      submittedFormInstanceId: hasFormId && !hasAppId ? input.submittedFormInstanceId : undefined,
+      applicationId,
+      submittedFormInstanceId:
+        hasFormId && applicationId == null ? input.submittedFormInstanceId : undefined,
     }),
   );
   return parseApplicationInfoResponse(raw);
@@ -385,6 +399,126 @@ export async function executeApplicationsHireSync(
 ): Promise<ExecuteApplicationsChangeStageSyncOutput> {
   return executeApplicationsChangeStageWrite(input, "applications.hire");
 }
+
+// ---------------------------------------------------------------------------
+// candidates.create — POST /candidate.create
+// Runtime owns EffectPolicy Idempotent → candidates.get
+// ---------------------------------------------------------------------------
+
+export interface ExecuteCandidatesCreateSyncInput extends AshbyAuthInput {
+  /** Candidate full name (required by Ashby). */
+  name: string;
+  /** Primary personal email. */
+  email?: string;
+  /** Primary personal phone number. */
+  phoneNumber?: string;
+  /** LinkedIn profile URL. */
+  linkedInUrl?: string;
+  /** GitHub profile URL. */
+  githubUrl?: string;
+  /**
+   * Website URL. AppCall field `websiteUrl` maps to Ashby native body field `website`
+   * (official candidate.create schema).
+   */
+  websiteUrl?: string;
+  /** Source UUID credited on the candidate. */
+  sourceId?: string;
+  /** User UUID the candidate is credited to. */
+  creditedToUserId?: string;
+}
+
+export interface ExecuteCandidatesCreateSyncOutput {
+  /** Raw Ashby results payload; runner Idempotent replaces with candidates.get. */
+  id?: string;
+  [key: string]: unknown;
+}
+
+function unwrapAshbyCreateResults(raw: unknown, label: string): Record<string, unknown> {
+  if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
+    const results = (raw as { results?: unknown }).results;
+    if (results != null && typeof results === "object" && !Array.isArray(results)) {
+      return results as Record<string, unknown>;
+    }
+  }
+  throw new Error(`Ashby ${label} response missing results object`);
+}
+
+export async function executeCandidatesCreateSync(
+  input: ExecuteCandidatesCreateSyncInput,
+): Promise<ExecuteCandidatesCreateSyncOutput> {
+  const name = requireNonEmptyString(input.name, "name");
+  const body = compactBody({
+    name,
+    email: input.email,
+    phoneNumber: input.phoneNumber,
+    linkedInUrl: input.linkedInUrl,
+    githubUrl: input.githubUrl,
+    // Native Ashby field is `website`; AppCall exposes websiteUrl.
+    website: input.websiteUrl,
+    sourceId: input.sourceId,
+    creditedToUserId: input.creditedToUserId,
+  });
+
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "candidates.create",
+  });
+  // POST only — runner EffectPolicy Idempotent observes via candidates.get.
+  const raw = await client.postJSON("/candidate.create", body);
+  return unwrapAshbyCreateResults(raw, "candidates.create");
+}
+
+// ---------------------------------------------------------------------------
+// applications.create — POST /application.create
+// Runtime owns EffectPolicy Idempotent → applications.get
+// ---------------------------------------------------------------------------
+
+export interface ExecuteApplicationsCreateSyncInput extends AshbyAuthInput {
+  /** Ashby candidate UUID to consider for a job. */
+  candidateId: string;
+  /** Ashby job UUID. */
+  jobId: string;
+  /** Optional source UUID. */
+  sourceId?: string;
+  /** Optional user UUID credited for the application. */
+  creditedToUserId?: string;
+  /**
+   * Optional interview stage UUID, or Ashby special string
+   * `FirstPreInterviewScreen`.
+   */
+  interviewStageId?: string;
+}
+
+export interface ExecuteApplicationsCreateSyncOutput {
+  /** Raw Ashby results payload; runner Idempotent replaces with applications.get. */
+  id?: string;
+  [key: string]: unknown;
+}
+
+export async function executeApplicationsCreateSync(
+  input: ExecuteApplicationsCreateSyncInput,
+): Promise<ExecuteApplicationsCreateSyncOutput> {
+  const candidateId = requireNonEmptyString(input.candidateId, "candidateId");
+  const jobId = requireNonEmptyString(input.jobId, "jobId");
+  const body = compactBody({
+    candidateId,
+    jobId,
+    sourceId: input.sourceId,
+    creditedToUserId: input.creditedToUserId,
+    interviewStageId: input.interviewStageId,
+  });
+
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "applications.create",
+  });
+  // POST only — runner EffectPolicy Idempotent observes via applications.get.
+  const raw = await client.postJSON("/application.create", body);
+  return unwrapAshbyCreateResults(raw, "applications.create");
+}
+
 
 // ---------------------------------------------------------------------------
 // interviews.schedule — POST /interviewSchedule.create
