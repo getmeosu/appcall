@@ -188,26 +188,87 @@ fn form(filters: &Filters) -> String {
     body
 }
 
-fn heading(filters: &Filters) -> String {
+fn page_header() -> String {
+    ui::PageHeader {
+        title: "Calls",
+        purpose: "Inspect recorded tool executions.",
+        action: None,
+    }
+    .render()
+    .replacen("<h1>", "<h1 id=\"logs-heading\" tabindex=\"-1\">", 1)
+}
+
+fn surface_status(value: &Value) -> Result<&'static str, Error> {
+    // Legacy bare boolean remains accepted during host transition to status.
+    if value.get("unavailable").and_then(Value::as_bool) == Some(true) {
+        return Ok("unavailable");
+    }
+    match value.get("status").and_then(Value::as_str) {
+        Some("unavailable") => Ok("unavailable"),
+        Some("error") => Ok("error"),
+        Some("ok") | None => Ok("ok"),
+        Some(_) => Err(Error::Unavailable),
+    }
+}
+
+fn empty_state(
+    title: &str,
+    body: &str,
+    action_label: &str,
+    action_href: &str,
+    role: ui::EmptyStateRole,
+) -> String {
+    ui::EmptyState {
+        title,
+        body,
+        action_label,
+        action_href: ui::LocalPath::new(action_href).expect("static local empty-state link"),
+        role,
+    }
+    .render()
+}
+
+pub(crate) fn invalid(filters: &Filters) -> String {
     format!(
-        "<section class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}",
-        ui::PageHeader {
-            title: "Calls",
-            purpose: "Inspect recorded tool executions.",
-            action: None,
-        }
-        .render()
-        .replacen("<h1>", "<h1 id=\"logs-heading\" tabindex=\"-1\">", 1),
+        "<section id=\"logs-page\" class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}<div class=\"logs-filter-error\" role=\"alert\"><h3>Review the log filters.</h3><p>Use a supported status and error code, a valid page size, and RFC3339 timestamps with UTC or an explicit offset. Created from must be earlier than Created before. Correct the filters and apply them again, or choose Clear filters to start over.</p></div></section>",
+        page_header(),
         form(filters)
     )
 }
 
-pub(crate) fn invalid(filters: &Filters) -> String {
-    heading(filters) + "<div class=\"logs-filter-error\" role=\"alert\"><h3>Review the log filters.</h3><p>Use a supported status and error code, a valid page size, and RFC3339 timestamps with UTC or an explicit offset. Created from must be earlier than Created before. Correct the filters and apply them again, or choose Clear filters to start over.</p></div></section>"
-}
-
 pub(crate) fn render(raw: &Value, filters: &Filters, filtered: bool) -> Result<String, Error> {
     let data = raw.get("data").unwrap_or(raw);
+    let surface = surface_status(data)?;
+    match surface {
+        "unavailable" => {
+            return Ok(format!(
+                "<section id=\"logs-page\" class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}</section>",
+                page_header(),
+                empty_state(
+                    "Calls unavailable",
+                    "The console could not load recorded calls. This page does not invent call rows or statuses.",
+                    "Reload",
+                    "/app/calls",
+                    ui::EmptyStateRole::Alert,
+                ),
+            ));
+        }
+        "error" => {
+            return Ok(format!(
+                "<section id=\"logs-page\" class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}</section>",
+                page_header(),
+                empty_state(
+                    "Calls unreachable",
+                    "The console is configured to list calls, but the read failed. Nothing here is invented.",
+                    "Reload",
+                    "/app/calls",
+                    ui::EmptyStateRole::Alert,
+                ),
+            ));
+        }
+        "ok" => {}
+        _ => return Err(Error::Unavailable),
+    }
     let items = data
         .as_array()
         .or_else(|| {
@@ -216,26 +277,33 @@ pub(crate) fn render(raw: &Value, filters: &Filters, filtered: bool) -> Result<S
                 .find_map(|key| data.get(key).and_then(Value::as_array))
         })
         .ok_or(Error::Unavailable)?;
-    let mut body = heading(filters);
+    let filtered = filtered
+        || data.get("hasFilters").and_then(Value::as_bool) == Some(true)
+        || data.get("filtered").and_then(Value::as_bool) == Some(true);
+    let mut body = format!(
+        "<section id=\"logs-page\" class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}",
+        page_header(),
+        form(filters)
+    );
     if items.is_empty() {
         let empty = if filtered {
-            ui::EmptyState {
-                title: "No tool runs match these filters.",
-                body: "Clear the filters to view recorded runs.",
-                action_label: "Clear filters",
-                action_href: ui::LocalPath::new("/app/calls").unwrap(),
-                role: ui::EmptyStateRole::Status,
-            }
+            empty_state(
+                "No calls match these filters.",
+                "Clear the filters to view recorded calls.",
+                "Clear filters",
+                "/app/calls",
+                ui::EmptyStateRole::Status,
+            )
         } else {
-            ui::EmptyState {
-                title: "No tool runs to show.",
-                body: "Browse connectors to choose a tool to run.",
-                action_label: "Browse connectors",
-                action_href: ui::LocalPath::new("/app/connectors").unwrap(),
-                role: ui::EmptyStateRole::Status,
-            }
+            empty_state(
+                "No calls to show.",
+                "Browse connectors to choose a tool to run.",
+                "Browse connectors",
+                "/app/connectors",
+                ui::EmptyStateRole::Status,
+            )
         };
-        body.push_str(&empty.render());
+        body.push_str(&empty);
     } else {
         body.push_str(&format!(
             "<div class=\"logs-workspace\">{}{}</div>",
