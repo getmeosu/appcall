@@ -992,6 +992,8 @@ export function getArtifact(input: unknown): Record<string, unknown> | Promise<R
     });
   }
   return { connector: "github", action: "actions.artifacts.get", source: "connector", validated: validateGetArtifactInput(input) };
+}
+
 // ─── S6: search.users / users.* / orgs.* ──────────────────────────────────────
 
 export function searchUsers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {

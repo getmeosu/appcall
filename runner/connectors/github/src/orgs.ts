@@ -88,6 +88,7 @@ export type ListOrgMembersInput = {
 };
 export function validateListOrgMembersInput(input: unknown): ListOrgMembersInput {
   if (!isRecord(input)) throw new Error("orgs.members.list input must be an object");
+  if (input.role !== undefined && typeof input.role !== "string") throw new Error("role must be a string");
   const role = typeof input.role === "string" ? input.role : undefined;
   if (role !== undefined && role !== "all" && role !== "admin" && role !== "member") {
     throw new Error("role must be all, admin, or member");
@@ -110,6 +111,9 @@ export type ListOrgReposInput = {
 };
 export function validateListOrgReposInput(input: unknown): ListOrgReposInput {
   if (!isRecord(input)) throw new Error("orgs.repos.list input must be an object");
+  if (input.type !== undefined && typeof input.type !== "string") throw new Error("type must be a string");
+  if (input.sort !== undefined && typeof input.sort !== "string") throw new Error("sort must be a string");
+  if (input.direction !== undefined && typeof input.direction !== "string") throw new Error("direction must be a string");
   const type = typeof input.type === "string" ? input.type : undefined;
   if (type !== undefined && !["all", "public", "private", "forks", "sources", "member"].includes(type)) {
     throw new Error("type must be all, public, private, forks, sources, or member");
@@ -136,11 +140,11 @@ export function createOrgsClient(options: { accessToken: string; fetch?: typeof 
       const client = base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "orgs.get" });
       const response = await client.fetchJSON(`/orgs/${encodeURIComponent(payload.org)}`);
       const rate = parseGitHubRateLimit(response.status, response.headers);
-      if (rate.limited) return { ok: false as const, error: { code: "rate_limited", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
+      if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && isRecord(response.body)) {
         return { ok: true as const, organization: normalizeGitHubOrg(response.body as GitHubOrg) };
       }
-      return { ok: false as const, error: { code: "upstream", message: `GitHub orgs.get failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub orgs.get failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },
 
     async list(input: unknown) {
@@ -152,11 +156,11 @@ export function createOrgsClient(options: { accessToken: string; fetch?: typeof 
       const qs = params.toString();
       const response = await client.fetchJSON(`/user/orgs${qs ? `?${qs}` : ""}`);
       const rate = parseGitHubRateLimit(response.status, response.headers);
-      if (rate.limited) return { ok: false as const, error: { code: "rate_limited", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
+      if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && Array.isArray(response.body)) {
         return { ok: true as const, organizations: (response.body as GitHubOrg[]).map(normalizeGitHubOrg) };
       }
-      return { ok: false as const, error: { code: "upstream", message: `GitHub orgs.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub orgs.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },
 
     async listMembers(input: unknown) {
@@ -170,12 +174,12 @@ export function createOrgsClient(options: { accessToken: string; fetch?: typeof 
       const path = `/orgs/${encodeURIComponent(payload.org)}/members${qs ? `?${qs}` : ""}`;
       const response = await client.fetchJSON(path);
       const rate = parseGitHubRateLimit(response.status, response.headers);
-      if (rate.limited) return { ok: false as const, error: { code: "rate_limited", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
+      if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && Array.isArray(response.body)) {
         const members: NormalizedUser[] = (response.body as GitHubUser[]).map(normalizeGitHubUser);
         return { ok: true as const, members };
       }
-      return { ok: false as const, error: { code: "upstream", message: `GitHub orgs.members.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub orgs.members.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },
 
     async listRepos(input: unknown) {
@@ -191,11 +195,11 @@ export function createOrgsClient(options: { accessToken: string; fetch?: typeof 
       const path = `/orgs/${encodeURIComponent(payload.org)}/repos${qs ? `?${qs}` : ""}`;
       const response = await client.fetchJSON(path);
       const rate = parseGitHubRateLimit(response.status, response.headers);
-      if (rate.limited) return { ok: false as const, error: { code: "rate_limited", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
+      if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && Array.isArray(response.body)) {
         return { ok: true as const, repositories: (response.body as GitHubRepo[]).map(normalizeGitHubRepo) };
       }
-      return { ok: false as const, error: { code: "upstream", message: `GitHub orgs.repos.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub orgs.repos.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },
   };
 }

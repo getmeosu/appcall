@@ -94,6 +94,9 @@ export type ListUserReposInput = {
 
 export function validateListUserReposInput(input: unknown): ListUserReposInput {
   if (!isRecord(input)) throw new Error("users.repos.list input must be an object");
+  if (input.type !== undefined && typeof input.type !== "string") throw new Error("type must be a string");
+  if (input.sort !== undefined && typeof input.sort !== "string") throw new Error("sort must be a string");
+  if (input.direction !== undefined && typeof input.direction !== "string") throw new Error("direction must be a string");
   const type = typeof input.type === "string" ? input.type : undefined;
   if (type !== undefined && !["all", "owner", "member"].includes(type)) {
     throw new Error("type must be all, owner, or member");
@@ -121,11 +124,11 @@ export function createUsersClient(options: { accessToken: string; fetch?: typeof
       const client = base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "users.get" });
       const response = await client.fetchJSON("/user");
       const rate = parseGitHubRateLimit(response.status, response.headers);
-      if (rate.limited) return { ok: false as const, error: { code: "rate_limited", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
+      if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && isRecord(response.body)) {
         return { ok: true as const, user: normalizeGitHubUser(response.body as GitHubUser) };
       }
-      return { ok: false as const, error: { code: "upstream", message: `GitHub users.get failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub users.get failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },
 
     async getByUsername(input: unknown) {
@@ -133,11 +136,11 @@ export function createUsersClient(options: { accessToken: string; fetch?: typeof
       const client = base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "users.get_by_username" });
       const response = await client.fetchJSON(`/users/${encodeURIComponent(payload.username)}`);
       const rate = parseGitHubRateLimit(response.status, response.headers);
-      if (rate.limited) return { ok: false as const, error: { code: "rate_limited", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
+      if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && isRecord(response.body)) {
         return { ok: true as const, user: normalizeGitHubUser(response.body as GitHubUser) };
       }
-      return { ok: false as const, error: { code: "upstream", message: `GitHub users.get_by_username failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub users.get_by_username failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },
 
     async listRepos(input: unknown) {
@@ -153,12 +156,12 @@ export function createUsersClient(options: { accessToken: string; fetch?: typeof
       const path = `/users/${encodeURIComponent(payload.username)}/repos${qs ? `?${qs}` : ""}`;
       const response = await client.fetchJSON(path);
       const rate = parseGitHubRateLimit(response.status, response.headers);
-      if (rate.limited) return { ok: false as const, error: { code: "rate_limited", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
+      if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
       if (response.status === 200 && Array.isArray(response.body)) {
         const repos = (response.body as GitHubRepo[]).map(normalizeGitHubRepo);
         return { ok: true as const, repositories: repos };
       }
-      return { ok: false as const, error: { code: "upstream", message: `GitHub users.repos.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub users.repos.list failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },
   };
 }
