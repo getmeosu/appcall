@@ -7,6 +7,7 @@ import {
   executeApplicationsListSync,
   executeApplicationsGetSync,
   executeApplicationsMoveSync,
+  executeApplicationsCreateSync,
   executeUsersListSync,
   executeInterviewsListSync,
   executeJobInterviewStagesListSync,
@@ -15,7 +16,7 @@ import candidatesFixture from "../fixtures/candidates_list.json";
 import candidateGetFixture from "../fixtures/candidate_get.json";
 import applicationsFixture from "../fixtures/applications_list.json";
 import applicationGetFixture from "../fixtures/application_get.json";
-import applicationMovedFixture from "../fixtures/application_moved.json";
+import applicationCreatedFixture from "../fixtures/application_created.json";
 import usersFixture from "../fixtures/users_list.json";
 import jobGetFixture from "../fixtures/job_get.json";
 import interviewsFixture from "../fixtures/interviews_list.json";
@@ -226,11 +227,10 @@ describe("Greenhouse applications.get sync", () => {
   });
 });
 
-describe("Greenhouse applications.move (EffectPolicy Reconcile)", () => {
-  test("POSTs /v3/applications/{id}/move then reconciles via applications.get", async () => {
+describe("Greenhouse applications.move (write; runner owns Reconcile)", () => {
+  test("POSTs /v3/applications/{id}/move without in-handler GET", async () => {
     const { calls, impl } = stubSequence([
       { body: "", status: 204 },
-      { body: JSON.stringify(applicationMovedFixture), status: 200 },
     ]);
 
     const result = await executeApplicationsMoveSync({
@@ -241,27 +241,19 @@ describe("Greenhouse applications.move (EffectPolicy Reconcile)", () => {
       fetch: impl,
     });
 
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(1);
     const moveUrl = new URL(calls[0].url);
     expect(moveUrl.pathname).toBe("/v3/applications/69306314/move");
     expect(calls[0].method).toBe("POST");
     expect(calls[0].headers.get("content-type")).toBe("application/json");
     const posted = JSON.parse(await calls[0].clone().text());
     expect(posted).toEqual({ from_stage_id: 767358, to_stage_id: 767359 });
-
-    const getUrl = new URL(calls[1].url);
-    expect(getUrl.pathname).toBe("/v3/applications/69306314");
-    expect(calls[1].method).toBe("GET");
-
-    expect(result.application?.id).toBe("gh-application:69306314");
-    expect(result.application?.stageId).toBe("767359");
-    expect(result.application?.stageName).toBe("Phone Screen");
+    expect(result.application).toBeNull();
   });
 
   test("forwards toJobId / emailFromUserId on move body", async () => {
     const { calls, impl } = stubSequence([
       { body: "", status: 204 },
-      { body: JSON.stringify(applicationMovedFixture), status: 200 },
     ]);
 
     await executeApplicationsMoveSync({
@@ -305,6 +297,119 @@ describe("Greenhouse applications.move (EffectPolicy Reconcile)", () => {
         fetch: impl,
       }),
     ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Greenhouse applications.create (EffectPolicy Idempotent)", () => {
+  test("POSTs /v3/applications then reconciles via applications.get", async () => {
+    const { calls, impl } = stubSequence([
+      { body: JSON.stringify(applicationCreatedFixture), status: 201 },
+      { body: JSON.stringify(applicationGetFixture), status: 200 },
+    ]);
+
+    const result = await executeApplicationsCreateSync({
+      ...auth,
+      candidateId: 57683957,
+      jobId: 107761,
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(2);
+    const createUrl = new URL(calls[0].url);
+    expect(createUrl.pathname).toBe("/v3/applications");
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].headers.get("content-type")).toBe("application/json");
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({ candidate_id: 57683957, job_id: 107761 });
+
+    const getUrl = new URL(calls[1].url);
+    expect(getUrl.pathname).toBe("/v3/applications/69306314");
+    expect(calls[1].method).toBe("GET");
+
+    expect(result.application?.id).toBe("gh-application:69306314");
+    expect(result.application?.candidateId).toBe("57683957");
+    expect(result.application?.stageName).toBe("Application Review");
+  });
+
+  test("forwards optional stage/source/recruiter/coordinator/referrer ids", async () => {
+    const { calls, impl } = stubSequence([
+      { body: JSON.stringify(applicationCreatedFixture), status: 201 },
+      { body: JSON.stringify(applicationGetFixture), status: 200 },
+    ]);
+
+    await executeApplicationsCreateSync({
+      ...auth,
+      candidateId: "57683957",
+      jobId: "107761",
+      initialStageId: 767358,
+      sourceId: 2,
+      recruiterId: 92120,
+      coordinatorId: 453636,
+      referrerId: 99,
+      fetch: impl,
+    });
+
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({
+      candidate_id: 57683957,
+      job_id: 107761,
+      initial_stage_id: 767358,
+      source_id: 2,
+      recruiter_id: 92120,
+      coordinator_id: 453636,
+      referrer_id: 99,
+    });
+  });
+
+  test("rejects missing candidateId before fetch", async () => {
+    const { calls, impl } = stubFetch("");
+    await expect(
+      executeApplicationsCreateSync({
+        ...auth,
+        candidateId: "" as unknown as string,
+        jobId: 107761,
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/candidateId/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("rejects missing jobId before fetch", async () => {
+    const { calls, impl } = stubFetch("");
+    await expect(
+      executeApplicationsCreateSync({
+        ...auth,
+        candidateId: 57683957,
+        jobId: "" as unknown as string,
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/jobId/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors on create", async () => {
+    const { impl } = stubFetch("{}", { status: 422 });
+    await expect(
+      executeApplicationsCreateSync({
+        ...auth,
+        candidateId: 57683957,
+        jobId: 107761,
+        fetch: impl,
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  test("errors when create response lacks id (no search invent)", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify({ status: "in_process" }), { status: 201 });
+    await expect(
+      executeApplicationsCreateSync({
+        ...auth,
+        candidateId: 57683957,
+        jobId: 107761,
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/missing id/);
+    expect(calls).toHaveLength(1);
   });
 });
 

@@ -8,12 +8,12 @@
  * applications.get        → authenticated POST /application.info
  * candidates.search       → authenticated POST /candidate.search
  * interviews.list         → authenticated POST /interview.list
- * applications.move       → POST /application.changeStage then
- *                           EffectPolicy Reconcile via applications.get
+ * applications.move       → POST /application.changeStage
+ *                           (runner EffectPolicy Reconcile → applications.get)
  * applications.reject     → POST /application.changeStage (Archived + archiveReasonId)
- *                           then EffectPolicy Reconcile via applications.get
+ *                           (runner EffectPolicy Reconcile → applications.get)
  * applications.hire       → POST /application.changeStage (Hired stage)
- *                           then EffectPolicy Reconcile via applications.get
+ *                           (runner EffectPolicy Reconcile → applications.get)
  * interviews.schedule     → authenticated POST /interviewSchedule.create
  * interviews.cancel       → authenticated POST /interviewSchedule.cancel
  */
@@ -305,7 +305,7 @@ export async function executeInterviewsListSync(
 
 // ---------------------------------------------------------------------------
 // applications.move / reject / hire — POST /application.changeStage
-// EffectPolicy Reconcile → applications.get
+// Runtime owns EffectPolicy Reconcile → applications.get
 // ---------------------------------------------------------------------------
 
 function requireNonEmptyString(value: unknown, field: string): string {
@@ -334,10 +334,11 @@ export type ExecuteApplicationsRejectSyncInput = ExecuteApplicationsChangeStageS
 export type ExecuteApplicationsHireSyncInput = ExecuteApplicationsChangeStageSyncInput;
 
 export interface ExecuteApplicationsChangeStageSyncOutput {
-  application: NormalizedApplication | null;
+  /** Placeholder; runner Reconcile replaces this with applications.get output. */
+  application: null;
 }
 
-async function executeApplicationsChangeStageThenReconcile(
+async function executeApplicationsChangeStageWrite(
   input: ExecuteApplicationsChangeStageSyncInput,
   operation: string,
   opts: { requireArchiveReason?: boolean } = {},
@@ -361,25 +362,20 @@ async function executeApplicationsChangeStageThenReconcile(
     operation,
   });
   await client.postJSON("/application.changeStage", body);
-
-  // EffectPolicy::Reconcile — observe post-mutate state via applications.get.
-  return executeApplicationsGetSync({
-    apiKey: input.apiKey,
-    applicationId,
-    fetch: input.fetch,
-  });
+  // Runner owns EffectPolicy Reconcile → applications.get.
+  return { application: null };
 }
 
 export async function executeApplicationsMoveSync(
   input: ExecuteApplicationsMoveSyncInput,
 ): Promise<ExecuteApplicationsChangeStageSyncOutput> {
-  return executeApplicationsChangeStageThenReconcile(input, "applications.move");
+  return executeApplicationsChangeStageWrite(input, "applications.move");
 }
 
 export async function executeApplicationsRejectSync(
   input: ExecuteApplicationsRejectSyncInput,
 ): Promise<ExecuteApplicationsChangeStageSyncOutput> {
-  return executeApplicationsChangeStageThenReconcile(input, "applications.reject", {
+  return executeApplicationsChangeStageWrite(input, "applications.reject", {
     requireArchiveReason: true,
   });
 }
@@ -387,7 +383,7 @@ export async function executeApplicationsRejectSync(
 export async function executeApplicationsHireSync(
   input: ExecuteApplicationsHireSyncInput,
 ): Promise<ExecuteApplicationsChangeStageSyncOutput> {
-  return executeApplicationsChangeStageThenReconcile(input, "applications.hire");
+  return executeApplicationsChangeStageWrite(input, "applications.hire");
 }
 
 // ---------------------------------------------------------------------------

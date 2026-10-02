@@ -17,9 +17,6 @@ import candidatesFixture from "../fixtures/candidates_list.json";
 import applicationsFixture from "../fixtures/applications_list.json";
 import candidateInfoFixture from "../fixtures/candidate_info.json";
 import applicationInfoFixture from "../fixtures/application_info.json";
-import applicationMovedFixture from "../fixtures/application_moved.json";
-import applicationRejectedFixture from "../fixtures/application_rejected.json";
-import applicationHiredFixture from "../fixtures/application_hired.json";
 import applicationChangeStageFixture from "../fixtures/application_change_stage.json";
 import candidatesSearchFixture from "../fixtures/candidates_search.json";
 import interviewsFixture from "../fixtures/interviews_list.json";
@@ -440,11 +437,10 @@ describe("Ashby interviews.list sync", () => {
   });
 });
 
-describe("Ashby applications.move (EffectPolicy Reconcile)", () => {
-  test("POSTs /application.changeStage then reconciles via applications.get", async () => {
+describe("Ashby applications.move (write; runner owns Reconcile)", () => {
+  test("POSTs /application.changeStage without in-handler GET", async () => {
     const { calls, impl } = stubSequence([
       { body: JSON.stringify(applicationChangeStageFixture) },
-      { body: JSON.stringify(applicationMovedFixture) },
     ]);
 
     const result = await executeApplicationsMoveSync({
@@ -454,7 +450,7 @@ describe("Ashby applications.move (EffectPolicy Reconcile)", () => {
       fetch: impl,
     });
 
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(1);
     expect(new URL(calls[0].url).pathname).toBe("/application.changeStage");
     expect(calls[0].method).toBe("POST");
     const posted = JSON.parse(await calls[0].clone().text());
@@ -462,16 +458,7 @@ describe("Ashby applications.move (EffectPolicy Reconcile)", () => {
       applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
       interviewStageId: "a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5",
     });
-
-    expect(new URL(calls[1].url).pathname).toBe("/application.info");
-    const getBody = JSON.parse(await calls[1].clone().text());
-    expect(getBody).toEqual({ applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e" });
-
-    expect(result.application?.id).toBe(
-      "ash-application:e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
-    );
-    expect(result.application?.stageId).toBe("a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5");
-    expect(result.application?.stageTitle).toBe("Phone Screen");
+    expect(result.application).toBeNull();
   });
 
   test("rejects missing interviewStageId before fetch", async () => {
@@ -500,11 +487,10 @@ describe("Ashby applications.move (EffectPolicy Reconcile)", () => {
   });
 });
 
-describe("Ashby applications.reject (EffectPolicy Reconcile)", () => {
-  test("POSTs changeStage with archiveReasonId then reconciles", async () => {
+describe("Ashby applications.reject (write; runner owns Reconcile)", () => {
+  test("POSTs changeStage with archiveReasonId without in-handler GET", async () => {
     const { calls, impl } = stubSequence([
       { body: JSON.stringify(applicationChangeStageFixture) },
-      { body: JSON.stringify(applicationRejectedFixture) },
     ]);
 
     const result = await executeApplicationsRejectSync({
@@ -515,15 +501,14 @@ describe("Ashby applications.reject (EffectPolicy Reconcile)", () => {
       fetch: impl,
     });
 
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(1);
     const posted = JSON.parse(await calls[0].clone().text());
     expect(posted).toEqual({
       applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
       interviewStageId: "cccccccc-dddd-4eee-8fff-000000000001",
       archiveReasonId: "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff",
     });
-    expect(result.application?.status).toBe("Archived");
-    expect(result.application?.stageTitle).toBe("Archived");
+    expect(result.application).toBeNull();
   });
 
   test("requires archiveReasonId before fetch", async () => {
@@ -541,11 +526,10 @@ describe("Ashby applications.reject (EffectPolicy Reconcile)", () => {
   });
 });
 
-describe("Ashby applications.hire (EffectPolicy Reconcile)", () => {
-  test("POSTs changeStage then reconciles hired application", async () => {
+describe("Ashby applications.hire (write; runner owns Reconcile)", () => {
+  test("POSTs changeStage without in-handler GET", async () => {
     const { calls, impl } = stubSequence([
       { body: JSON.stringify(applicationChangeStageFixture) },
-      { body: JSON.stringify(applicationHiredFixture) },
     ]);
 
     const result = await executeApplicationsHireSync({
@@ -555,10 +539,9 @@ describe("Ashby applications.hire (EffectPolicy Reconcile)", () => {
       fetch: impl,
     });
 
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(1);
     expect(new URL(calls[0].url).pathname).toBe("/application.changeStage");
-    expect(result.application?.status).toBe("Hired");
-    expect(result.application?.stageTitle).toBe("Hired");
+    expect(result.application).toBeNull();
   });
 });
 

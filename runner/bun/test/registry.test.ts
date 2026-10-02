@@ -23,6 +23,56 @@ describe("runner connector registry", () => {
     expect(defaultConnectorRegistry.validate()).toEqual([]);
   });
 
+  test("executeAction Reconcile returns reconcile handler output", async () => {
+    const registry = createConnectorRegistry({
+      manifests: [{
+        key: "reconcile-demo",
+        name: "Reconcile Demo",
+        version: "0.1.0",
+        runtime: "bun",
+        auth: { type: "none", scopes: [] },
+        network: { allowedHosts: ["runner.local"] },
+        operations: {
+          "items.move": {
+            kind: "action",
+            sideEffect: "write",
+            effectPolicy: "Reconcile",
+            reconcile: "items.get",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
+            maxResponseBytes: 1_024,
+          },
+          "items.get": {
+            kind: "sync",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
+            maxResponseBytes: 1_024,
+          },
+        },
+      }],
+      healthchecks: {
+        "reconcile-demo": () => ({ status: "ok" }),
+      },
+      actions: {
+        "reconcile-demo": {
+          "items.move": () => ({ moved: true }),
+        },
+      },
+      syncs: {
+        "reconcile-demo": {
+          "items.get": (input) => ({ item: input, observed: true }),
+        },
+      },
+    });
+
+    expect(registry.validate()).toEqual([]);
+    const result = registry.executeAction("reconcile-demo", "items.move", { id: "42" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const output = await Promise.resolve(result.output);
+    expect(output).toEqual({ item: { id: "42" }, observed: true });
+  });
+
   test("rejects an operation budget above the shared contract before dispatch", () => {
     let called = false;
     const registry = createConnectorRegistry({

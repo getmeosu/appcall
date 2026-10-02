@@ -7,8 +7,10 @@
  * candidates.get               → authenticated GET /v3/candidates/{id}
  * applications.list            → authenticated GET /v3/applications
  * applications.get             → authenticated GET /v3/applications/{id}
- * applications.move            → POST /v3/applications/{id}/move then
- *                                EffectPolicy Reconcile via applications.get
+ * applications.move            → POST /v3/applications/{id}/move
+ *                                (runner EffectPolicy Reconcile → applications.get)
+ * applications.create          → POST /v3/applications then
+ *                                EffectPolicy Idempotent via applications.get
  * users.list                   → authenticated GET /v3/users
  * interviews.list              → authenticated GET /v3/interviews
  * job_interview_stages.list    → authenticated GET /v3/job_interview_stages
@@ -223,7 +225,7 @@ export async function executeApplicationsGetSync(
 
 // ---------------------------------------------------------------------------
 // applications.move — POST /v3/applications/{id}/move
-// EffectPolicy Reconcile → applications.get (move returns 204 No Content)
+// Runtime owns EffectPolicy Reconcile → applications.get (move returns 204).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteApplicationsMoveSyncInput extends GreenhouseAuthInput {
@@ -240,7 +242,8 @@ export interface ExecuteApplicationsMoveSyncInput extends GreenhouseAuthInput {
 }
 
 export interface ExecuteApplicationsMoveSyncOutput {
-  application: NormalizedApplication | null;
+  /** Placeholder; runner Reconcile replaces this with applications.get output. */
+  application: null;
 }
 
 export async function executeApplicationsMoveSync(
@@ -262,8 +265,77 @@ export async function executeApplicationsMoveSync(
     operation: "applications.move",
   });
   await client.postJSON(`/applications/${id}/move`, body);
+  return { application: null };
+}
 
-  // EffectPolicy::Reconcile — observe post-move state via applications.get.
+
+// ---------------------------------------------------------------------------
+// applications.create — POST /v3/applications
+// EffectPolicy Idempotent → applications.get (create returns 201 + application)
+// ---------------------------------------------------------------------------
+
+export interface ExecuteApplicationsCreateSyncInput extends GreenhouseAuthInput {
+  /** Harvest candidate id to attach the application to. */
+  candidateId: string | number;
+  /** Harvest job id for a candidate application. */
+  jobId: string | number;
+  /** Optional initial interview stage id. */
+  initialStageId?: string | number;
+  /** Optional source id credited for this application. */
+  sourceId?: string | number;
+  /** Optional recruiter user id. */
+  recruiterId?: string | number;
+  /** Optional coordinator user id. */
+  coordinatorId?: string | number;
+  /** Optional referrer id. */
+  referrerId?: string | number;
+}
+
+export interface ExecuteApplicationsCreateSyncOutput {
+  application: NormalizedApplication | null;
+}
+
+function createdApplicationId(raw: unknown): string {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("applications.create response missing id");
+  }
+  const id = (raw as { id?: unknown }).id;
+  if (typeof id === "number" && Number.isFinite(id)) return String(Math.trunc(id));
+  if (typeof id === "string" && id.length > 0 && /^-?\d+$/.test(id)) return id;
+  throw new Error("applications.create response missing id");
+}
+
+export async function executeApplicationsCreateSync(
+  input: ExecuteApplicationsCreateSyncInput,
+): Promise<ExecuteApplicationsCreateSyncOutput> {
+  const candidateId = asStageId(input.candidateId, "candidateId");
+  const jobId = asStageId(input.jobId, "jobId");
+  const body: Record<string, unknown> = {
+    candidate_id: candidateId,
+    job_id: jobId,
+  };
+  const initialStageId = optionalStageId(input.initialStageId);
+  const sourceId = optionalStageId(input.sourceId);
+  const recruiterId = optionalStageId(input.recruiterId);
+  const coordinatorId = optionalStageId(input.coordinatorId);
+  const referrerId = optionalStageId(input.referrerId);
+  if (initialStageId != null) body.initial_stage_id = initialStageId;
+  if (sourceId != null) body.source_id = sourceId;
+  if (recruiterId != null) body.recruiter_id = recruiterId;
+  if (coordinatorId != null) body.coordinator_id = coordinatorId;
+  if (referrerId != null) body.referrer_id = referrerId;
+
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "applications.create",
+  });
+  const created = await client.postJSON("/applications", body);
+  const id = createdApplicationId(created);
+
+  // EffectPolicy::Idempotent — observe created application via applications.get.
+  // (Runtime auto-reconcile applies only to EffectPolicy Reconcile; create must
+  // map response id → applications.get itself.)
   return executeApplicationsGetSync({
     apiKey: input.apiKey,
     id,

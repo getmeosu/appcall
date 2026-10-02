@@ -180,6 +180,7 @@ import {
   executeApplicationsListSync as listGreenhouseApplications,
   executeApplicationsGetSync as getGreenhouseApplication,
   executeApplicationsMoveSync as moveGreenhouseApplication,
+  executeApplicationsCreateSync as createGreenhouseApplication,
   executeUsersListSync as listGreenhouseUsers,
   executeInterviewsListSync as listGreenhouseInterviews,
   executeJobInterviewStagesListSync as listGreenhouseJobInterviewStages,
@@ -912,6 +913,17 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "customers.update": wooUpdateCustomer,
       "coupons.create": wooCreateCoupon,
     },
+    greenhouse: {
+      "applications.move": moveGreenhouseApplication,
+      "applications.create": createGreenhouseApplication,
+    },
+    ashby: {
+      "applications.move": moveAshbyApplication,
+      "applications.reject": rejectAshbyApplication,
+      "applications.hire": hireAshbyApplication,
+      "interviews.schedule": scheduleAshbyInterview,
+      "interviews.cancel": cancelAshbyInterview,
+    },
     "cal-com": {
       "me.get": calComGetMe,
       "event_types.list": calComListEventTypes,
@@ -1138,7 +1150,6 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "candidates.get": getGreenhouseCandidate,
       "applications.list": listGreenhouseApplications,
       "applications.get": getGreenhouseApplication,
-      "applications.move": moveGreenhouseApplication,
       "users.list": listGreenhouseUsers,
       "interviews.list": listGreenhouseInterviews,
       "job_interview_stages.list": listGreenhouseJobInterviewStages,
@@ -1160,11 +1171,6 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "applications.get": getAshbyApplication,
       "candidates.search": searchAshbyCandidates,
       "interviews.list": listAshbyInterviews,
-      "applications.move": moveAshbyApplication,
-      "applications.reject": rejectAshbyApplication,
-      "applications.hire": hireAshbyApplication,
-      "interviews.schedule": scheduleAshbyInterview,
-      "interviews.cancel": cancelAshbyInterview,
     },
     workable: {
       "jobs.list": listWorkableJobs,
@@ -1381,7 +1387,24 @@ export function createConnectorRegistry(input: {
           };
         }
       }
-      return { ok: true, output: runExecution(() => boundedOutput(handler(inputValue), operationSpec.maxResponseBytes), operationSpec.timeoutMs) };
+      return {
+        ok: true,
+        output: runExecution(
+          () => {
+            const primary = boundedOutput(handler(inputValue), operationSpec.maxResponseBytes);
+            return applyEffectPolicyReconcile(
+              connectorKey,
+              inputValue,
+              primary,
+              operationSpec,
+              operationSpecs,
+              input.actions,
+              input.syncs,
+            );
+          },
+          operationSpec.timeoutMs,
+        ),
+      };
     },
     executeSync(connectorKey: string, sync: string, inputValue: unknown): RegistryActionResult {
       if (!input.syncs?.[connectorKey]) {
@@ -1589,7 +1612,11 @@ function hasCredentialedHealthcheckInput(
   ));
 }
 
-type OperationSpec = OperationBudgetLike & { kind?: string };
+type OperationSpec = OperationBudgetLike & {
+  kind?: string;
+  effectPolicy?: string;
+  reconcile?: string;
+};
 
 function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations: unknown }>): Record<string, Record<string, OperationSpec>> {
   return Object.fromEntries(
@@ -1605,6 +1632,8 @@ function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations
             timeoutMs: typeof spec.timeoutMs === "number" ? spec.timeoutMs : undefined,
             maxInputBytes: typeof spec.maxInputBytes === "number" ? spec.maxInputBytes : undefined,
             maxResponseBytes: typeof spec.maxResponseBytes === "number" ? spec.maxResponseBytes : undefined,
+            effectPolicy: typeof spec.effectPolicy === "string" ? spec.effectPolicy : undefined,
+            reconcile: typeof spec.reconcile === "string" ? spec.reconcile : undefined,
           }]];
         }),
       );
@@ -1657,6 +1686,49 @@ function buildConnectorNetworks(manifests: Array<{ key: string; network: unknown
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// Manifest effectPolicy Reconcile: after a successful mutating action, observe
+// post-write state via the declared reconcile handler and return that output.
+function applyEffectPolicyReconcile(
+  connectorKey: string,
+  inputValue: unknown,
+  primary: unknown,
+  operationSpec: OperationSpec,
+  operationSpecs: Record<string, Record<string, OperationSpec>>,
+  actions: Record<string, Record<string, ActionHandler>>,
+  syncs: Record<string, Record<string, ActionHandler>> | undefined,
+): unknown {
+  if (operationSpec.effectPolicy !== "Reconcile") {
+    return primary;
+  }
+  const reconcileName = operationSpec.reconcile;
+  if (typeof reconcileName !== "string" || reconcileName.length === 0) {
+    throw {
+      ok: false,
+      code: "RECONCILE_NOT_DECLARED",
+      message: "Reconcile effectPolicy requires a reconcile operation.",
+    };
+  }
+  const reconcileHandler =
+    actions[connectorKey]?.[reconcileName]
+    ?? syncs?.[connectorKey]?.[reconcileName];
+  if (!reconcileHandler) {
+    throw {
+      ok: false,
+      code: "RECONCILE_HANDLER_MISSING",
+      message: "Reconcile operation has no registered handler.",
+    };
+  }
+  const reconcileSpec = operationSpecs[connectorKey]?.[reconcileName];
+  const runReconcile = () => boundedOutput(
+    reconcileHandler(inputValue),
+    reconcileSpec?.maxResponseBytes ?? operationSpec.maxResponseBytes,
+  );
+  if (isPromiseLike(primary)) {
+    return Promise.resolve(primary).then(() => runReconcile());
+  }
+  return runReconcile();
 }
 
 function unsupportedBudget(spec: OperationSpec | undefined): RegistryFailure | null {
