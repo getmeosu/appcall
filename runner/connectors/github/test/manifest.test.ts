@@ -54,6 +54,10 @@ describe("github connector manifest", () => {
     expect(manifest.models).toContain("label");
     expect(manifest.models).toContain("pull_request_review");
     expect(manifest.models).toContain("pull_request_review_comment");
+    expect(manifest.models).toContain("workflow");
+    expect(manifest.models).toContain("workflow_run");
+    expect(manifest.models).toContain("workflow_job");
+    expect(manifest.models).toContain("artifact");
   });
 
   test("manifest has timeout and size limits on all operations", () => {
@@ -84,7 +88,7 @@ describe("github connector manifest", () => {
     const actionOps = Object.entries(manifest.operations).filter(
       ([, spec]) => (spec as Record<string, unknown>).kind === "action"
     );
-    expect(actionOps.length).toBeGreaterThanOrEqual(38);
+    expect(actionOps.length).toBeGreaterThanOrEqual(50);
   });
 
 
@@ -165,7 +169,41 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.3.0 after S1 on S2", () => {
-    expect(manifest.version).toBe("0.3.0");
+  test("manifest declares S3 actions workflows ops", () => {
+    for (const key of [
+      "actions.workflows.list",
+      "actions.workflows.get",
+      "actions.runs.list",
+      "actions.runs.get",
+      "actions.runs.cancel",
+      "actions.runs.rerun",
+      "actions.workflows.dispatch",
+      "actions.jobs.list",
+      "actions.jobs.get",
+      "actions.jobs.logs.get",
+      "actions.artifacts.list",
+      "actions.artifacts.get",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+    }
+  });
+
+  test("S3 write ops wire EffectPolicy Reconcile", () => {
+    const cancel = manifest.operations["actions.runs.cancel"] as Record<string, unknown>;
+    expect(cancel.sideEffect).toBe("write");
+    expect(cancel.effectPolicy).toBe("Reconcile");
+    expect(cancel.reconcile).toBe("actions.runs.get");
+    const rerun = manifest.operations["actions.runs.rerun"] as Record<string, unknown>;
+    expect(rerun.sideEffect).toBe("write");
+    expect(rerun.effectPolicy).toBe("Reconcile");
+    expect(rerun.reconcile).toBe("actions.runs.get");
+    const dispatch = manifest.operations["actions.workflows.dispatch"] as Record<string, unknown>;
+    expect(dispatch.sideEffect).toBe("write");
+    expect(dispatch.effectPolicy).toBe("Reconcile");
+    expect(dispatch.reconcile).toBe("actions.workflows.get");
+  });
+
+  test("manifest version is 0.4.0 after S3 on S1+S2", () => {
+    expect(manifest.version).toBe("0.4.0");
   });
 });

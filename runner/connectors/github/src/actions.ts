@@ -38,6 +38,21 @@ import {
   validateCheckMergedInput,
   validateDraftStateInput,
 } from "./pull_requests";
+import {
+  createWorkflowsClient,
+  validateListWorkflowsInput,
+  validateGetWorkflowInput,
+  validateListRunsInput,
+  validateGetRunInput,
+  validateCancelRunInput,
+  validateRerunRunInput,
+  validateDispatchWorkflowInput,
+  validateListJobsInput,
+  validateGetJobInput,
+  validateGetJobLogsInput,
+  validateListArtifactsInput,
+  validateGetArtifactInput,
+} from "./workflows";
 import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput } from "./repos";
 import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput } from "./branches";
 import { createReleasesClient, validateCreateReleaseInput } from "./releases";
@@ -759,6 +774,211 @@ export function markPullRequestReady(input: unknown): Record<string, unknown> | 
   return { connector: "github", action: "pull_requests.mark_ready", source: "connector", validated: validateDraftStateInput(input) };
 }
 
+
+
+// ─── S3: actions.workflows.list ───────────────────────────────────────────────
+
+export function listWorkflows(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listWorkflows(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.workflows.list", source: "connector", totalCount: result.totalCount, workflows: result.workflows };
+    });
+  }
+  return { connector: "github", action: "actions.workflows.list", source: "connector", validated: validateListWorkflowsInput(input) };
+}
+
+// ─── S3: actions.workflows.get ────────────────────────────────────────────────
+
+export function getWorkflow(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getWorkflow(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.workflows.get", source: "connector", workflow: result.workflow };
+    });
+  }
+  return { connector: "github", action: "actions.workflows.get", source: "connector", validated: validateGetWorkflowInput(input) };
+}
+
+// ─── S3: actions.runs.list ────────────────────────────────────────────────────
+
+export function listWorkflowRuns(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listRuns(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.runs.list", source: "connector", totalCount: result.totalCount, runs: result.runs };
+    });
+  }
+  return { connector: "github", action: "actions.runs.list", source: "connector", validated: validateListRunsInput(input) };
+}
+
+// ─── S3: actions.runs.get ─────────────────────────────────────────────────────
+
+export function getWorkflowRun(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getRun(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.runs.get", source: "connector", run: result.run };
+    });
+  }
+  return { connector: "github", action: "actions.runs.get", source: "connector", validated: validateGetRunInput(input) };
+}
+
+// ─── S3: actions.runs.cancel ──────────────────────────────────────────────────
+
+export function cancelWorkflowRun(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).cancelRun(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.runs.cancel", source: "connector", cancelled: true, runId: result.runId };
+    });
+  }
+  return { connector: "github", action: "actions.runs.cancel", source: "connector", validated: validateCancelRunInput(input) };
+}
+
+// ─── S3: actions.runs.rerun ───────────────────────────────────────────────────
+
+export function rerunWorkflowRun(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).rerunRun(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.runs.rerun", source: "connector", rerun: true, runId: result.runId };
+    });
+  }
+  return { connector: "github", action: "actions.runs.rerun", source: "connector", validated: validateRerunRunInput(input) };
+}
+
+// ─── S3: actions.workflows.dispatch ───────────────────────────────────────────
+
+export function dispatchWorkflow(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).dispatchWorkflow(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.workflows.dispatch", source: "connector", dispatched: true, workflowId: result.workflowId, ref: result.ref };
+    });
+  }
+  return { connector: "github", action: "actions.workflows.dispatch", source: "connector", validated: validateDispatchWorkflowInput(input) };
+}
+
+// ─── S3: actions.jobs.list ────────────────────────────────────────────────────
+
+export function listWorkflowJobs(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listJobs(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.jobs.list", source: "connector", totalCount: result.totalCount, jobs: result.jobs };
+    });
+  }
+  return { connector: "github", action: "actions.jobs.list", source: "connector", validated: validateListJobsInput(input) };
+}
+
+// ─── S3: actions.jobs.get ─────────────────────────────────────────────────────
+
+export function getWorkflowJob(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getJob(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.jobs.get", source: "connector", job: result.job };
+    });
+  }
+  return { connector: "github", action: "actions.jobs.get", source: "connector", validated: validateGetJobInput(input) };
+}
+
+// ─── S3: actions.jobs.logs.get ────────────────────────────────────────────────
+
+export function getWorkflowJobLogs(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getJobLogs(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.jobs.logs.get", source: "connector", logs: result.logs };
+    });
+  }
+  return { connector: "github", action: "actions.jobs.logs.get", source: "connector", validated: validateGetJobLogsInput(input) };
+}
+
+// ─── S3: actions.artifacts.list ───────────────────────────────────────────────
+
+export function listArtifacts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listArtifacts(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.artifacts.list", source: "connector", totalCount: result.totalCount, artifacts: result.artifacts };
+    });
+  }
+  return { connector: "github", action: "actions.artifacts.list", source: "connector", validated: validateListArtifactsInput(input) };
+}
+
+// ─── S3: actions.artifacts.get ────────────────────────────────────────────────
+
+export function getArtifact(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getArtifact(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "actions.artifacts.get", source: "connector", artifact: result.artifact };
+    });
+  }
+  return { connector: "github", action: "actions.artifacts.get", source: "connector", validated: validateGetArtifactInput(input) };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
