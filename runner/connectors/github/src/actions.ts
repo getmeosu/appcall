@@ -52,6 +52,7 @@ import {
   validateCheckMergedInput,
   validateDraftStateInput,
   validateUpdatePullRequestBranchInput,
+  validateListConversationCommentsInput,
 } from "./pull_requests";
 import {
   createWorkflowsClient,
@@ -83,10 +84,10 @@ import {
   validateRemoveCollaboratorInput,
   validateCheckCollaboratorInput,
 } from "./labels_milestones";
-import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput, validateGetRepoTreeInput } from "./repos";
+import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateUpdateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput, validateGetRepoTreeInput } from "./repos";
 import { createContentsClient, validatePutContentsInput, validateDeleteContentsInput, validatePushFilesInput } from "./contents";
 import { createGitClient, validateCreateBlobInput, validateGetBlobInput, validateCreateTreeInput, validateGetTreeInput, validateCreateRefInput, validateUpdateRefInput, validateCreateGitCommitInput } from "./git";
-import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput, validateListBranchesInput } from "./branches";
+import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput, validateDeleteBranchInput, validateListBranchesInput } from "./branches";
 import {
   createReleasesClient,
   validateCreateReleaseInput,
@@ -106,7 +107,7 @@ import {
 } from "./gists";
 import { createTagsClient, validateListTagsInput } from "./tags";
 import { createChecksClient, validateListCheckRunsForRefInput, validateGetCheckRunInput, validateListCheckSuitesForRefInput } from "./checks";
-import { createCommitsClient, validateGetCommitStatusInput, validateListCommitStatusesInput, validateCreateCommitStatusInput, validateGetCommitInput } from "./commits";
+import { createCommitsClient, validateGetCommitStatusInput, validateListCommitStatusesInput, validateCreateCommitStatusInput, validateGetCommitInput, validateCreateCommitCommentInput } from "./commits";
 import { createGitHubClient } from "./http";
 import {
   createDiscussionsClient,
@@ -385,7 +386,14 @@ export function getBranch(input: unknown): Record<string, unknown> | Promise<Rec
       if (!result.ok) {
         throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
       }
-      return { connector: "github", action: "branches.get", source: "connector", branch: result.branch };
+      return {
+        connector: "github",
+        action: "branches.get",
+        source: "connector",
+        found: result.found,
+        branch: result.branch,
+        ...(result.found ? {} : { name: result.name }),
+      };
     });
   }
   return { connector: "github", action: "branches.get", source: "connector", validated: validateGetBranchInput(input) };
@@ -1987,6 +1995,68 @@ export function getRepoTree(input: unknown): Record<string, unknown> | Promise<R
     });
   }
   return { connector: "github", action: "repos.tree.get", source: "connector", validated: validateGetRepoTreeInput(input) };
+}
+
+// ─── S11: pull_requests.comments.list / repos.update / branches.delete / commits.comments.create ──
+
+export function listPullRequestComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.comments.list" }),
+    }).listConversationComments(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.comments.list", source: "connector", comments: result.comments };
+    });
+  }
+  return { connector: "github", action: "pull_requests.comments.list", source: "connector", validated: validateListConversationCommentsInput(input) };
+}
+
+export function updateRepo(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createReposClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "repos.update" }),
+    }).update(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.update", source: "connector", repo: result.repo };
+    });
+  }
+  return { connector: "github", action: "repos.update", source: "connector", validated: validateUpdateRepoInput(input) };
+}
+
+export function deleteBranch(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createBranchesClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "branches.delete" }),
+    }).delete(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "branches.delete", source: "connector", deleted: result.deleted, branch: result.branch };
+    });
+  }
+  return { connector: "github", action: "branches.delete", source: "connector", validated: validateDeleteBranchInput(input) };
+}
+
+export function createCommitComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createCommitsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "commits.comments.create" }),
+    }).createComment(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "commits.comments.create", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "commits.comments.create", source: "connector", validated: validateCreateCommitCommentInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

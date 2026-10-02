@@ -293,8 +293,8 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.10.0 after S5 contents-write on S9 tip", () => {
-    expect(manifest.version).toBe("0.10.0");
+  test("manifest version is 0.11.0 after S11 agent polish on S5 tip", () => {
+    expect(manifest.version).toBe("0.11.0");
   });
 
   test("manifest declares S8 labels milestones collab ops", () => {
@@ -376,7 +376,7 @@ describe("github connector manifest", () => {
     ] as const) {
       expect(manifest.operations[key].kind).toBe("action");
     }
-    expect(Object.keys(manifest.operations).length).toBe(118);
+    expect(Object.keys(manifest.operations).length).toBeGreaterThanOrEqual(118);
   });
 
   test("S9 write ops wire EffectPolicy Reconcile", () => {
@@ -395,6 +395,26 @@ describe("github connector manifest", () => {
       expect(manifest.operations[key].sideEffect).toBe("read");
     }
     expect(manifest.network.allowedHosts).toContain("api.github.com");
+  });
+
+  test("manifest declares S11 agent-polish ops", () => {
+    expect(manifest.operations["pull_requests.comments.list"].kind).toBe("action");
+    expect(manifest.operations["pull_requests.comments.list"].sideEffect).toBe("read");
+    expect(manifest.operations["pull_requests.comments.list"].effectPolicy).toBeUndefined();
+    const update = manifest.operations["repos.update"] as Record<string, unknown>;
+    expect(update.sideEffect).toBe("write");
+    expect(update.effectPolicy).toBe("Reconcile");
+    expect(update.reconcile).toBe("repos.get");
+    const del = manifest.operations["branches.delete"] as Record<string, unknown>;
+    expect(del.sideEffect).toBe("write");
+    expect(del.effectPolicy).toBe("Reconcile");
+    expect(del.reconcile).toBe("branches.get");
+    expect(manifest.operations["branches.get"].sideEffect).toBe("read");
+    const comment = manifest.operations["commits.comments.create"] as Record<string, unknown>;
+    expect(comment.sideEffect).toBe("write");
+    expect(comment.effectPolicy).toBe("Reconcile");
+    expect(comment.reconcile).toBe("commits.get");
+    expect(Object.keys(manifest.operations).length).toBe(122);
   });
 
 });

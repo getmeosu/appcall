@@ -257,6 +257,56 @@ export function validateListReviewCommentsInput(input: unknown): ListReviewComme
   };
 }
 
+export type ListConversationCommentsInput = {
+  owner: string;
+  repo: string;
+  pullNumber: number;
+  perPage?: number;
+  page?: number;
+  since?: string;
+};
+
+export function validateListConversationCommentsInput(input: unknown): ListConversationCommentsInput {
+  if (!isRecord(input)) throw new Error("list pull request comments input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+    page: typeof input.page === "number" ? input.page : undefined,
+    since: typeof input.since === "string" && input.since.length > 0 ? input.since : undefined,
+  };
+}
+
+export type NormalizedConversationComment = {
+  id: string;
+  provider: "github";
+  providerCommentId: number;
+  body: string;
+  author: string;
+  htmlUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeConversationComment(comment: Record<string, unknown>): NormalizedConversationComment {
+  const user = isRecord(comment.user) ? comment.user : {};
+  return {
+    id: `gh-pr-comment:${comment.id}`,
+    provider: "github",
+    providerCommentId: typeof comment.id === "number" ? comment.id : 0,
+    body: typeof comment.body === "string" ? comment.body : "",
+    author: typeof user.login === "string" ? user.login : "",
+    htmlUrl: typeof comment.html_url === "string" ? comment.html_url : "",
+    createdAt: typeof comment.created_at === "string" ? comment.created_at : "",
+    updatedAt: typeof comment.updated_at === "string" ? comment.updated_at : "",
+    modelVersion: "2026-05-16",
+    raw: comment,
+  };
+}
+
 export type CreateReviewCommentInput = {
   owner: string; repo: string; pullNumber: number;
   body: string; commitId: string; path: string;
@@ -799,6 +849,26 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
         return { ok: true as const, pullRequest: normalizeGitHubPullRequest(response.body as GitHubPullRequest) };
       }
       return mapGithubError(response, "mark ready for review");
+    },
+
+    async listConversationComments(input: unknown) {
+      const payload = validateListConversationCommentsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      if (payload.since) params.set("since", payload.since);
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      // Issue-comment thread on the pull request (conversation), not diff review comments.
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/issues/${payload.pullNumber}/comments${qs}`,
+      );
+      if (response.status === 200) {
+        const comments = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).filter(isRecord).map((c) => normalizeConversationComment(c))
+          : [];
+        return { ok: true as const, comments };
+      }
+      return mapGithubError(response, "list pull request comments");
     },
   };
 }

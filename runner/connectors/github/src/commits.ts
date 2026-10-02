@@ -205,6 +205,66 @@ export function validateGetCommitInput(input: unknown): GetCommitInput {
   };
 }
 
+export type CreateCommitCommentInput = {
+  owner: string;
+  repo: string;
+  sha: string;
+  body: string;
+  path?: string;
+  line?: number;
+  side?: string;
+  position?: number;
+};
+
+export function validateCreateCommitCommentInput(input: unknown): CreateCommitCommentInput {
+  if (!isRecord(input)) throw new Error("create commit comment input must be an object");
+  const side = typeof input.side === "string" ? input.side : undefined;
+  if (side !== undefined && side !== "LEFT" && side !== "RIGHT") {
+    throw new Error("side must be LEFT or RIGHT");
+  }
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    sha: requireString(input.sha, "sha"),
+    body: requireString(input.body, "body"),
+    path: typeof input.path === "string" && input.path.length > 0 ? input.path : undefined,
+    line: typeof input.line === "number" ? input.line : undefined,
+    side,
+    position: typeof input.position === "number" ? input.position : undefined,
+  };
+}
+
+export type NormalizedCommitComment = {
+  id: string;
+  provider: "github";
+  providerCommentId: number;
+  body: string;
+  author: string;
+  sha: string;
+  path: string;
+  htmlUrl: string;
+  createdAt: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeCommitComment(comment: Record<string, unknown>): NormalizedCommitComment {
+  const user = isRecord(comment.user) ? comment.user : {};
+  return {
+    id: `gh-commit-comment:${comment.id}`,
+    provider: "github",
+    providerCommentId: typeof comment.id === "number" ? comment.id : 0,
+    body: typeof comment.body === "string" ? comment.body : "",
+    author: typeof user.login === "string" ? user.login : "",
+    sha: typeof comment.commit_id === "string" ? comment.commit_id : "",
+    path: typeof comment.path === "string" ? comment.path : "",
+    htmlUrl: typeof comment.html_url === "string" ? comment.html_url : "",
+    createdAt: typeof comment.created_at === "string" ? comment.created_at : "",
+    modelVersion: "2026-05-16",
+    raw: comment,
+  };
+}
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 export function createCommitsClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
@@ -285,6 +345,33 @@ export function createCommitsClient(options: { accessToken: string; fetch?: type
         return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit SHA is invalid." } };
       }
       return mapRateOrUpstream(response, "GitHub rejected the get commit request.");
+    },
+
+    async createComment(input: unknown) {
+      const payload = validateCreateCommitCommentInput(input);
+      const body: Record<string, unknown> = { body: payload.body };
+      if (payload.path !== undefined) body.path = payload.path;
+      if (payload.line !== undefined) body.line = payload.line;
+      if (payload.side !== undefined) body.side = payload.side;
+      if (payload.position !== undefined) body.position = payload.position;
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/commits/${encodeURIComponent(payload.sha)}/comments`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+      if (response.status === 201 && isRecord(response.body)) {
+        return { ok: true as const, comment: normalizeCommitComment(response.body) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit SHA or repository not found." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for create commit comment." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the create commit comment request.");
     },
   };
 }
