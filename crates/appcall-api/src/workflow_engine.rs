@@ -78,8 +78,7 @@ impl WorkflowEngineClient {
 
     pub async fn list_workflows(&self) -> Result<Value, WorkflowEngineError> {
         let data = self.get("workflows").await?;
-        data
-            .get("workflows")
+        data.get("workflows")
             .cloned()
             .ok_or(WorkflowEngineError::Response)
     }
