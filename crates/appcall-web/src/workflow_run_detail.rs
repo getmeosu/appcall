@@ -45,6 +45,19 @@ pub(crate) fn standalone(value: &Value, run_id: &str) -> Result<String, Error> {
             ));
             Ok(html)
         }
+        "not_found" => {
+            html.push_str(&detail_shell(
+                run_id,
+                empty_state(
+                    "Run not found",
+                    "The engine has no durable run with this id for this project. This page does not invent run state or history.",
+                    "Back to Runs",
+                    "/app/workflows/runs",
+                    ui::EmptyStateRole::Status,
+                )?,
+            ));
+            Ok(html)
+        }
         "ok" => {
             let data = value.get("data").unwrap_or(value);
             let dto_id = bounded_text(data.get("id"), MAX_ID_BYTES).ok_or(Error::Unavailable)?;
@@ -76,12 +89,22 @@ fn detail_shell(run_id: &str, body: String) -> String {
 }
 
 fn empty_alert(title: &str, body: &str, action: &str, href: &str) -> Result<String, Error> {
+    empty_state(title, body, action, href, ui::EmptyStateRole::Alert)
+}
+
+fn empty_state(
+    title: &str,
+    body: &str,
+    action: &str,
+    href: &str,
+    role: ui::EmptyStateRole,
+) -> Result<String, Error> {
     Ok(ui::EmptyState {
         title,
         body,
         action_label: action,
         action_href: ui::LocalPath::new(href).ok_or(Error::Invalid)?,
-        role: ui::EmptyStateRole::Alert,
+        role,
     }
     .render())
 }

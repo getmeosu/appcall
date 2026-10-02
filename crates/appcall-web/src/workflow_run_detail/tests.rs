@@ -22,6 +22,19 @@ fn unavailable_and_error_never_look_like_success() {
 }
 
 #[test]
+fn not_found_uses_empty_state_with_back_to_runs() {
+    let html = render(&json!({"status":"not_found"}), "missing-run").unwrap();
+    assert!(html.contains("id=\"workflow-run-detail-page\""));
+    assert!(html.contains("Back to Runs"));
+    assert!(html.contains("href=\"/app/workflows/runs\""));
+    assert!(html.contains("Run not found"));
+    assert!(html.contains("role=\"status\""));
+    assert!(html.contains("ui-empty-state"));
+    assert!(!html.contains("ui-state-ok"));
+    assert!(!html.contains("Reconciliation history"));
+}
+
+#[test]
 fn outcome_unknown_is_reconcile_not_success() {
     let html = render(
         &json!({

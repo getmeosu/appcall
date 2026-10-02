@@ -953,7 +953,7 @@ impl ApiDashboard {
                             Ok(out)
                         }
                         Err(crate::workflow_engine::WorkflowEngineError::NotFound) => {
-                            Err(Error::NotFound.into())
+                            Ok(json!({"status":"not_found"}))
                         }
                         Err(_) => Ok(json!({"status":"error"})),
                     }
