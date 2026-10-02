@@ -8,18 +8,23 @@ import {
   parseCandidateGetResponse,
   normalizeApplication,
   parseApplicationsResponse,
+  parseApplicationGetResponse,
   normalizeUser,
   parseUsersResponse,
   normalizeInterview,
   parseInterviewsResponse,
+  normalizeJobInterviewStage,
+  parseJobInterviewStagesResponse,
 } from "../src/objects";
 import jobsFixture from "../fixtures/jobs_list.json";
 import jobGetFixture from "../fixtures/job_get.json";
 import candidatesFixture from "../fixtures/candidates_list.json";
 import candidateGetFixture from "../fixtures/candidate_get.json";
 import applicationsFixture from "../fixtures/applications_list.json";
+import applicationGetFixture from "../fixtures/application_get.json";
 import usersFixture from "../fixtures/users_list.json";
 import interviewsFixture from "../fixtures/interviews_list.json";
+import stagesFixture from "../fixtures/job_interview_stages_list.json";
 
 describe("Greenhouse normalizeJob", () => {
   it("normalizes a full job correctly", () => {
@@ -326,5 +331,51 @@ describe("Greenhouse parseInterviewsResponse", () => {
   it("handles non-array body", () => {
     expect(parseInterviewsResponse({}).interviews).toHaveLength(0);
     expect(parseInterviewsResponse(null).interviews).toHaveLength(0);
+  });
+});
+
+describe("Greenhouse normalizeJobInterviewStage", () => {
+  it("normalizes a full stage from fixture", () => {
+    const stage = normalizeJobInterviewStage(stagesFixture[0] as never);
+    expect(stage.id).toBe("gh-job-interview-stage:767358");
+    expect(stage.provider).toBe("greenhouse");
+    expect(stage.name).toBe("Application Review");
+    expect(stage.jobId).toBe("107761");
+    expect(stage.sortOrder).toBe(0);
+    expect(stage.active).toBe(true);
+  });
+
+  it("handles sparse stage", () => {
+    const stage = normalizeJobInterviewStage({ id: 9 });
+    expect(stage.id).toBe("gh-job-interview-stage:9");
+    expect(stage.name).toBe("");
+    expect(stage.jobId).toBeNull();
+    expect(stage.sortOrder).toBeNull();
+    expect(stage.active).toBe(false);
+  });
+});
+
+describe("Greenhouse parseJobInterviewStagesResponse", () => {
+  it("parses fixture response", () => {
+    const result = parseJobInterviewStagesResponse(stagesFixture);
+    expect(result.stages).toHaveLength(4);
+    expect(result.stages[1].name).toBe("Phone Screen");
+  });
+
+  it("handles non-array body", () => {
+    expect(parseJobInterviewStagesResponse({}).stages).toHaveLength(0);
+  });
+});
+
+describe("Greenhouse parseApplicationGetResponse", () => {
+  it("parses fixture application", () => {
+    const result = parseApplicationGetResponse(applicationGetFixture);
+    expect(result.application?.id).toBe("gh-application:69306314");
+    expect(result.application?.stageName).toBe("Application Review");
+  });
+
+  it("returns null for non-object", () => {
+    expect(parseApplicationGetResponse([]).application).toBeNull();
+    expect(parseApplicationGetResponse(null).application).toBeNull();
   });
 });

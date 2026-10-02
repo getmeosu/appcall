@@ -2,9 +2,10 @@
  * Greenhouse object normalization.
  *
  * jobs.list uses the public Job Board shape ({ jobs: [...] }).
- * jobs.get uses authenticated Harvest GET /v1/jobs/{id} (name/offices).
+ * jobs.get uses authenticated Harvest GET /v3/jobs/{id} (name/offices).
  * Authenticated Harvest list/get ops return bare JSON
- * (GET /v1/candidates, /v1/applications, /v1/users, /v1/scheduled_interviews).
+ * (GET /v3/candidates, /v3/applications, /v3/users, /v3/interviews,
+ *  /v3/job_interview_stages).
  */
 
 export interface NormalizedJob {
@@ -94,7 +95,7 @@ interface GreenhouseJob {
   id: number | string;
   /** Job Board field. */
   title?: string | null;
-  /** Harvest jobs field (GET /v1/jobs/{id}). */
+  /** Harvest jobs field (GET /v3/jobs/{id}). */
   name?: string | null;
   location?: GreenhouseLocation | null;
   departments?: Array<{ name?: string | null }> | null;
@@ -334,7 +335,7 @@ export function parseUsersResponse(raw: unknown): {
   return { users: items.map(normalizeUser) };
 }
 
-/** Harvest GET /v1/candidates/{id} returns the candidate object at the top level. */
+/** Harvest GET /v3/candidates/{id} returns the candidate object at the top level. */
 export function parseCandidateGetResponse(raw: unknown): {
   candidate: NormalizedCandidate | null;
 } {
@@ -348,7 +349,7 @@ export function parseCandidateGetResponse(raw: unknown): {
   return { candidate: normalizeCandidate(candidate) };
 }
 
-/** Harvest GET /v1/jobs/{id} returns the job object at the top level. */
+/** Harvest GET /v3/jobs/{id} returns the job object at the top level. */
 export function parseJobGetResponse(raw: unknown): { job: NormalizedJob | null } {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { job: null };
@@ -424,4 +425,64 @@ export function parseInterviewsResponse(raw: unknown): {
 } {
   const items = Array.isArray(raw) ? (raw as GreenhouseInterview[]) : [];
   return { interviews: items.map(normalizeInterview) };
+}
+
+export interface NormalizedJobInterviewStage {
+  id: string;
+  provider: string;
+  name: string;
+  jobId: string | null;
+  sortOrder: number | null;
+  active: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface GreenhouseJobInterviewStage {
+  id: number | string;
+  name?: string | null;
+  job_id?: number | string | null;
+  sort_order?: number | null;
+  active?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export function normalizeJobInterviewStage(
+  stage: GreenhouseJobInterviewStage,
+): NormalizedJobInterviewStage {
+  const id = asStringId(stage.id) ?? "";
+  return {
+    id: `gh-job-interview-stage:${id}`,
+    provider: "greenhouse",
+    name: typeof stage.name === "string" ? stage.name : "",
+    jobId: asStringId(stage.job_id ?? null),
+    sortOrder: typeof stage.sort_order === "number" && Number.isFinite(stage.sort_order)
+      ? stage.sort_order
+      : null,
+    active: stage.active === true,
+    createdAt: asIso(stage.created_at),
+    updatedAt: asIso(stage.updated_at),
+  };
+}
+
+export function parseJobInterviewStagesResponse(raw: unknown): {
+  stages: NormalizedJobInterviewStage[];
+} {
+  const items = Array.isArray(raw) ? (raw as GreenhouseJobInterviewStage[]) : [];
+  return { stages: items.map(normalizeJobInterviewStage) };
+}
+
+/** Harvest GET /v3/applications/{id} returns the application object at the top level. */
+export function parseApplicationGetResponse(raw: unknown): {
+  application: NormalizedApplication | null;
+} {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { application: null };
+  }
+  const application = raw as GreenhouseApplication;
+  if (application.id == null || asStringId(application.id) == null) {
+    return { application: null };
+  }
+  return { application: normalizeApplication(application) };
 }

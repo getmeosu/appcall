@@ -6,8 +6,8 @@ describe("Greenhouse manifest", () => {
     expect(manifest.key).toBe("greenhouse");
   });
 
-  it("has version 0.3.0", () => {
-    expect(manifest.version).toBe("0.3.0");
+  it("has version 0.4.0", () => {
+    expect(manifest.version).toBe("0.4.0");
   });
 
   it("uses bun runtime", () => {
@@ -24,20 +24,40 @@ describe("Greenhouse manifest", () => {
     expect(manifest.network.allowedHosts).toEqual(["harvest.greenhouse.io", "boards-api.greenhouse.io"]);
   });
 
-  it("uses Harvest Basic auth and keeps boards host", () => {
-    expect(manifest.http.baseUrl).toBe("https://harvest.greenhouse.io/v1");
+  it("uses Harvest v3 Basic auth and keeps boards host", () => {
+    expect(manifest.http.baseUrl).toBe("https://harvest.greenhouse.io/v3");
     expect(manifest.http.auth.basic).toEqual({ username: "{{apiKey}}", password: "" });
     expect(manifest.network.allowedHosts).toContain("boards-api.greenhouse.io");
   });
 
-  it("declares P0 list + P1 get/interview ops", () => {
+  it("declares list/get + write/move + stages ops", () => {
     expect(manifest.operations["candidates.list"]).toBeTruthy();
     expect(manifest.operations["candidates.get"]).toBeTruthy();
     expect(manifest.operations["applications.list"]).toBeTruthy();
+    expect(manifest.operations["applications.get"]).toBeTruthy();
+    expect(manifest.operations["applications.move"]).toBeTruthy();
     expect(manifest.operations["users.list"]).toBeTruthy();
     expect(manifest.operations["jobs.list"]).toBeTruthy();
     expect(manifest.operations["jobs.get"]).toBeTruthy();
     expect(manifest.operations["interviews.list"]).toBeTruthy();
+    expect(manifest.operations["job_interview_stages.list"]).toBeTruthy();
+  });
+
+  it("wires applications.move EffectPolicy Reconcile to applications.get", () => {
+    const move = manifest.operations["applications.move"] as {
+      kind: string;
+      sideEffect: string;
+      effectPolicy: string;
+      reconcile: string;
+    };
+    expect(move.kind).toBe("action");
+    expect(move.sideEffect).toBe("write");
+    expect(move.effectPolicy).toBe("Reconcile");
+    expect(move.reconcile).toBe("applications.get");
+  });
+
+  it("does not declare scorecards.list", () => {
+    expect((manifest.operations as Record<string, unknown>)["scorecards.list"]).toBeUndefined();
   });
 
   it("declares authenticated healthcheck request", () => {
@@ -45,7 +65,14 @@ describe("Greenhouse manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares job/candidate/application/user/interview models", () => {
-    expect(manifest.models).toEqual(["job", "candidate", "application", "user", "interview"]);
+  it("declares job/candidate/application/user/interview/stage models", () => {
+    expect(manifest.models).toEqual([
+      "job",
+      "candidate",
+      "application",
+      "user",
+      "interview",
+      "job_interview_stage",
+    ]);
   });
 });

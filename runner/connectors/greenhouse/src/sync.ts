@@ -1,13 +1,17 @@
 /**
- * Greenhouse list/get syncs.
+ * Greenhouse list/get/write syncs (Harvest v3 + boards v1).
  *
- * jobs.list          → public GET /v1/boards/{boardToken}/jobs
- * jobs.get           → authenticated Harvest GET /v1/jobs/{id}
- * candidates.list    → authenticated GET /v1/candidates
- * candidates.get     → authenticated GET /v1/candidates/{id}
- * applications.list  → authenticated GET /v1/applications
- * users.list         → authenticated GET /v1/users
- * interviews.list    → authenticated GET /v1/scheduled_interviews
+ * jobs.list                    → public GET /v1/boards/{boardToken}/jobs
+ * jobs.get                     → authenticated Harvest GET /v3/jobs/{id}
+ * candidates.list              → authenticated GET /v3/candidates
+ * candidates.get               → authenticated GET /v3/candidates/{id}
+ * applications.list            → authenticated GET /v3/applications
+ * applications.get             → authenticated GET /v3/applications/{id}
+ * applications.move            → POST /v3/applications/{id}/move then
+ *                                EffectPolicy Reconcile via applications.get
+ * users.list                   → authenticated GET /v3/users
+ * interviews.list              → authenticated GET /v3/interviews
+ * job_interview_stages.list    → authenticated GET /v3/job_interview_stages
  */
 
 import { createClient, createAuthClient } from "./http";
@@ -18,13 +22,16 @@ import {
   parseCandidatesResponse,
   parseCandidateGetResponse,
   parseApplicationsResponse,
+  parseApplicationGetResponse,
   parseUsersResponse,
   parseInterviewsResponse,
+  parseJobInterviewStagesResponse,
   type NormalizedJob,
   type NormalizedCandidate,
   type NormalizedApplication,
   type NormalizedUser,
   type NormalizedInterview,
+  type NormalizedJobInterviewStage,
 } from "./objects";
 
 export interface ExecuteJobsListSyncInput {
@@ -61,8 +68,23 @@ function buildQuery(params: Record<string, string | undefined>): string {
   return encoded.length > 0 ? `?${encoded}` : "";
 }
 
+function asStageId(value: string | number | undefined, field: string): number {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+  if (typeof value === "string" && value.length > 0 && /^-?\d+$/.test(value)) {
+    return Number(value);
+  }
+  throw new Error(`${field} is required`);
+}
+
+function optionalStageId(value: string | number | undefined): number | undefined {
+  if (value == null || value === "") return undefined;
+  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+  if (typeof value === "string" && /^-?\d+$/.test(value)) return Number(value);
+  throw new Error("stage/job id must be an integer");
+}
+
 // ---------------------------------------------------------------------------
-// candidates.list — GET /v1/candidates
+// candidates.list — GET /v3/candidates
 // ---------------------------------------------------------------------------
 
 export interface ExecuteCandidatesListSyncInput extends GreenhouseAuthInput {
@@ -107,7 +129,7 @@ export async function executeCandidatesListSync(
 }
 
 // ---------------------------------------------------------------------------
-// candidates.get — GET /v1/candidates/{id}
+// candidates.get — GET /v3/candidates/{id}
 // ---------------------------------------------------------------------------
 
 export interface ExecuteCandidatesGetSyncInput extends GreenhouseAuthInput {
@@ -133,7 +155,7 @@ export async function executeCandidatesGetSync(
 }
 
 // ---------------------------------------------------------------------------
-// applications.list — GET /v1/applications
+// applications.list — GET /v3/applications
 // ---------------------------------------------------------------------------
 
 export interface ExecuteApplicationsListSyncInput extends GreenhouseAuthInput {
@@ -174,7 +196,83 @@ export async function executeApplicationsListSync(
 }
 
 // ---------------------------------------------------------------------------
-// users.list — GET /v1/users
+// applications.get — GET /v3/applications/{id}
+// ---------------------------------------------------------------------------
+
+export interface ExecuteApplicationsGetSyncInput extends GreenhouseAuthInput {
+  /** Harvest application id. */
+  id: string;
+}
+
+export interface ExecuteApplicationsGetSyncOutput {
+  application: NormalizedApplication | null;
+}
+
+export async function executeApplicationsGetSync(
+  input: ExecuteApplicationsGetSyncInput,
+): Promise<ExecuteApplicationsGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "applications.get",
+  });
+  const raw = await client.getJSON(`/applications/${id}`);
+  return parseApplicationGetResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// applications.move — POST /v3/applications/{id}/move
+// EffectPolicy Reconcile → applications.get (move returns 204 No Content)
+// ---------------------------------------------------------------------------
+
+export interface ExecuteApplicationsMoveSyncInput extends GreenhouseAuthInput {
+  /** Harvest application id. */
+  id: string;
+  /** Current job interview stage id (required guard). */
+  fromStageId: string | number;
+  /** Destination stage within the same job (optional). */
+  toStageId?: string | number;
+  /** Transfer onto a different job (optional; lands on that job's first stage). */
+  toJobId?: string | number;
+  /** Optional user id to send stage-transition emails from. */
+  emailFromUserId?: string | number;
+}
+
+export interface ExecuteApplicationsMoveSyncOutput {
+  application: NormalizedApplication | null;
+}
+
+export async function executeApplicationsMoveSync(
+  input: ExecuteApplicationsMoveSyncInput,
+): Promise<ExecuteApplicationsMoveSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const fromStageId = asStageId(input.fromStageId, "fromStageId");
+  const body: Record<string, unknown> = { from_stage_id: fromStageId };
+  const toStageId = optionalStageId(input.toStageId);
+  const toJobId = optionalStageId(input.toJobId);
+  const emailFromUserId = optionalStageId(input.emailFromUserId);
+  if (toStageId != null) body.to_stage_id = toStageId;
+  if (toJobId != null) body.to_job_id = toJobId;
+  if (emailFromUserId != null) body.email_from_user_id = emailFromUserId;
+
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "applications.move",
+  });
+  await client.postJSON(`/applications/${id}/move`, body);
+
+  // EffectPolicy::Reconcile — observe post-move state via applications.get.
+  return executeApplicationsGetSync({
+    apiKey: input.apiKey,
+    id,
+    fetch: input.fetch,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// users.list — GET /v3/users
 // ---------------------------------------------------------------------------
 
 export interface ExecuteUsersListSyncInput extends GreenhouseAuthInput {
@@ -217,7 +315,7 @@ export async function executeUsersListSync(
 }
 
 // ---------------------------------------------------------------------------
-// jobs.get — Harvest GET /v1/jobs/{id} (NOT boards)
+// jobs.get — Harvest GET /v3/jobs/{id} (NOT boards)
 // ---------------------------------------------------------------------------
 
 export interface ExecuteJobsGetSyncInput extends GreenhouseAuthInput {
@@ -243,7 +341,7 @@ export async function executeJobsGetSync(
 }
 
 // ---------------------------------------------------------------------------
-// interviews.list — GET /v1/scheduled_interviews
+// interviews.list — GET /v3/interviews (was /v1/scheduled_interviews)
 // ---------------------------------------------------------------------------
 
 export interface ExecuteInterviewsListSyncInput extends GreenhouseAuthInput {
@@ -270,7 +368,7 @@ export async function executeInterviewsListSync(
     operation: "interviews.list",
   });
   const path =
-    "/scheduled_interviews" +
+    "/interviews" +
     buildQuery({
       per_page: input.perPage != null ? String(input.perPage) : undefined,
       page: input.page != null ? String(input.page) : undefined,
@@ -283,4 +381,39 @@ export async function executeInterviewsListSync(
     });
   const raw = await client.getJSON(path);
   return parseInterviewsResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// job_interview_stages.list — GET /v3/job_interview_stages
+// ---------------------------------------------------------------------------
+
+export interface ExecuteJobInterviewStagesListSyncInput extends GreenhouseAuthInput {
+  perPage?: number;
+  jobIds?: string;
+  ids?: string;
+  active?: boolean;
+}
+
+export interface ExecuteJobInterviewStagesListSyncOutput {
+  stages: NormalizedJobInterviewStage[];
+}
+
+export async function executeJobInterviewStagesListSync(
+  input: ExecuteJobInterviewStagesListSyncInput,
+): Promise<ExecuteJobInterviewStagesListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "job_interview_stages.list",
+  });
+  const path =
+    "/job_interview_stages" +
+    buildQuery({
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+      job_ids: input.jobIds,
+      ids: input.ids,
+      active: input.active == null ? undefined : input.active ? "true" : "false",
+    });
+  const raw = await client.getJSON(path);
+  return parseJobInterviewStagesResponse(raw);
 }

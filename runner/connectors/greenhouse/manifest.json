@@ -1,7 +1,7 @@
 {
   "key": "greenhouse",
   "name": "Greenhouse",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -28,7 +28,7 @@
     ]
   },
   "http": {
-    "baseUrl": "https://harvest.greenhouse.io/v1",
+    "baseUrl": "https://harvest.greenhouse.io/v3",
     "auth": {
       "in": "header",
       "name": "Authorization",
@@ -68,7 +68,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Get job",
-      "description": "Fetch a single Harvest job via authenticated GET /v1/jobs/{id}. Distinct from boards jobs.list."
+      "description": "Fetch a single Harvest job via authenticated GET /v3/jobs/{id}. Distinct from boards jobs.list."
     },
     "candidates.list": {
       "kind": "sync",
@@ -76,7 +76,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List candidates",
-      "description": "List candidates via authenticated Harvest GET /v1/candidates. Optional perPage, page, createdBefore/After, updatedBefore/After, jobId, email, and candidateIds filters."
+      "description": "List candidates via authenticated Harvest GET /v3/candidates. Optional perPage, page, createdBefore/After, updatedBefore/After, jobId, email, and candidateIds filters."
     },
     "candidates.get": {
       "kind": "sync",
@@ -84,7 +84,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Get candidate",
-      "description": "Fetch a single candidate via authenticated Harvest GET /v1/candidates/{id}."
+      "description": "Fetch a single candidate via authenticated Harvest GET /v3/candidates/{id}."
     },
     "applications.list": {
       "kind": "sync",
@@ -92,7 +92,84 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List applications",
-      "description": "List applications via authenticated Harvest GET /v1/applications. Optional perPage, page, createdBefore/After, lastActivityAfter, jobId, and status filters."
+      "description": "List applications via authenticated Harvest GET /v3/applications. Optional perPage, page, createdBefore/After, lastActivityAfter, jobId, and status filters."
+    },
+    "applications.get": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get application",
+      "description": "Fetch a single application via authenticated Harvest GET /v3/applications/{id}."
+    },
+    "applications.move": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Move application",
+      "description": "Move an application to another interview stage (or transfer to another job) via authenticated Harvest POST /v3/applications/{id}/move. Requires fromStageId matching the current stage. EffectPolicy Reconcile observes the post-move application via applications.get (move itself returns 204).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "fromStageId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest application id."
+          },
+          "fromStageId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Current job interview stage id; must match the application's current stage."
+          },
+          "toStageId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Destination stage id within the same job."
+          },
+          "toJobId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Destination job id when transferring the application to another job."
+          },
+          "emailFromUserId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional user id used as the from address for stage-transition emails."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized application after reconcile via applications.get."
+          }
+        }
+      }
     },
     "users.list": {
       "kind": "sync",
@@ -100,7 +177,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List users",
-      "description": "List users via authenticated Harvest GET /v1/users. Optional perPage, page, email, employeeId, and created/updated before/after filters."
+      "description": "List users via authenticated Harvest GET /v3/users. Optional perPage, page, email, employeeId, and created/updated before/after filters."
     },
     "interviews.list": {
       "kind": "sync",
@@ -108,7 +185,15 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "List interviews",
-      "description": "List scheduled interviews via authenticated Harvest GET /v1/scheduled_interviews. Optional perPage, page, applicationId, jobId, and created/updated before/after filters."
+      "description": "List interviews via authenticated Harvest GET /v3/interviews (v1: scheduled_interviews). Optional perPage, page, applicationId, jobId, and created/updated before/after filters."
+    },
+    "job_interview_stages.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List job interview stages",
+      "description": "List job interview stages via authenticated Harvest GET /v3/job_interview_stages. Optional perPage, jobIds, ids, and active filters. Supports move-stage workflows."
     },
     "healthcheck": {
       "kind": "action",
@@ -158,6 +243,7 @@
     "candidate",
     "application",
     "user",
-    "interview"
+    "interview",
+    "job_interview_stage"
   ]
 }

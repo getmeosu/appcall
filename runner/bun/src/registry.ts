@@ -178,8 +178,11 @@ import {
   executeCandidatesListSync as listGreenhouseCandidates,
   executeCandidatesGetSync as getGreenhouseCandidate,
   executeApplicationsListSync as listGreenhouseApplications,
+  executeApplicationsGetSync as getGreenhouseApplication,
+  executeApplicationsMoveSync as moveGreenhouseApplication,
   executeUsersListSync as listGreenhouseUsers,
   executeInterviewsListSync as listGreenhouseInterviews,
+  executeJobInterviewStagesListSync as listGreenhouseJobInterviewStages,
 } from "../../connectors/greenhouse/src/sync";
 import leverManifest from "../../connectors/lever/manifest.json";
 import {
@@ -1129,8 +1132,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "candidates.list": listGreenhouseCandidates,
       "candidates.get": getGreenhouseCandidate,
       "applications.list": listGreenhouseApplications,
+      "applications.get": getGreenhouseApplication,
+      "applications.move": moveGreenhouseApplication,
       "users.list": listGreenhouseUsers,
       "interviews.list": listGreenhouseInterviews,
+      "job_interview_stages.list": listGreenhouseJobInterviewStages,
     },
     lever: {
       "jobs.list": listLeverJobs,

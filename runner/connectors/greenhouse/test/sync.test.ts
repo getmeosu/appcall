@@ -5,15 +5,21 @@ import {
   executeCandidatesListSync,
   executeCandidatesGetSync,
   executeApplicationsListSync,
+  executeApplicationsGetSync,
+  executeApplicationsMoveSync,
   executeUsersListSync,
   executeInterviewsListSync,
+  executeJobInterviewStagesListSync,
 } from "../src/sync";
 import candidatesFixture from "../fixtures/candidates_list.json";
 import candidateGetFixture from "../fixtures/candidate_get.json";
 import applicationsFixture from "../fixtures/applications_list.json";
+import applicationGetFixture from "../fixtures/application_get.json";
+import applicationMovedFixture from "../fixtures/application_moved.json";
 import usersFixture from "../fixtures/users_list.json";
 import jobGetFixture from "../fixtures/job_get.json";
 import interviewsFixture from "../fixtures/interviews_list.json";
+import stagesFixture from "../fixtures/job_interview_stages_list.json";
 
 // Every request is served by an injected fetch. No real network.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
@@ -21,6 +27,23 @@ function stubFetch(body: string, init: { status?: number; headers?: Record<strin
   const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
     calls.push(new Request(input as string, requestInit));
     return new Response(body, { status: init.status ?? 200, headers: init.headers });
+  }) as unknown as typeof fetch;
+  return { calls, impl };
+}
+
+function stubSequence(
+  responses: Array<{ body: string; status?: number; headers?: Record<string, string> }>,
+) {
+  const calls: Request[] = [];
+  let i = 0;
+  const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
+    calls.push(new Request(input as string, requestInit));
+    const next = responses[Math.min(i, responses.length - 1)];
+    i += 1;
+    return new Response(next.body, {
+      status: next.status ?? 200,
+      headers: next.headers,
+    });
   }) as unknown as typeof fetch;
   return { calls, impl };
 }
@@ -80,7 +103,7 @@ describe("Greenhouse jobs.list sync", () => {
 });
 
 describe("Greenhouse candidates.list sync", () => {
-  test("GETs /v1/candidates with Basic auth on harvest host", async () => {
+  test("GETs /v3/candidates with Basic auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(candidatesFixture));
 
     const result = await executeCandidatesListSync({ ...auth, fetch: impl });
@@ -88,7 +111,7 @@ describe("Greenhouse candidates.list sync", () => {
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
-    expect(url.pathname).toBe("/v1/candidates");
+    expect(url.pathname).toBe("/v3/candidates");
     expect(calls[0].method).toBe("GET");
     expect(calls[0].headers.get("authorization")).toBe(
       `Basic ${Buffer.from("fixturekey:", "utf8").toString("base64")}`,
@@ -134,7 +157,7 @@ describe("Greenhouse candidates.list sync", () => {
 });
 
 describe("Greenhouse applications.list sync", () => {
-  test("GETs /v1/applications with Basic auth on harvest host", async () => {
+  test("GETs /v3/applications with Basic auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(applicationsFixture));
 
     const result = await executeApplicationsListSync({ ...auth, fetch: impl });
@@ -142,7 +165,7 @@ describe("Greenhouse applications.list sync", () => {
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
-    expect(url.pathname).toBe("/v1/applications");
+    expect(url.pathname).toBe("/v3/applications");
     expect(calls[0].method).toBe("GET");
     expect(result.applications).toHaveLength(2);
     expect(result.applications[0].id).toBe("gh-application:69306314");
@@ -179,8 +202,114 @@ describe("Greenhouse applications.list sync", () => {
   });
 });
 
+describe("Greenhouse applications.get sync", () => {
+  test("GETs /v3/applications/{id} with Basic auth", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(applicationGetFixture));
+
+    const result = await executeApplicationsGetSync({ ...auth, id: "69306314", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("harvest.greenhouse.io");
+    expect(url.pathname).toBe("/v3/applications/69306314");
+    expect(calls[0].method).toBe("GET");
+    expect(result.application?.id).toBe("gh-application:69306314");
+    expect(result.application?.stageName).toBe("Application Review");
+  });
+
+  test("rejects unsafe id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeApplicationsGetSync({ ...auth, id: "../evil", fetch: impl }),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("Greenhouse applications.move (EffectPolicy Reconcile)", () => {
+  test("POSTs /v3/applications/{id}/move then reconciles via applications.get", async () => {
+    const { calls, impl } = stubSequence([
+      { body: "", status: 204 },
+      { body: JSON.stringify(applicationMovedFixture), status: 200 },
+    ]);
+
+    const result = await executeApplicationsMoveSync({
+      ...auth,
+      id: "69306314",
+      fromStageId: 767358,
+      toStageId: 767359,
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(2);
+    const moveUrl = new URL(calls[0].url);
+    expect(moveUrl.pathname).toBe("/v3/applications/69306314/move");
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].headers.get("content-type")).toBe("application/json");
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({ from_stage_id: 767358, to_stage_id: 767359 });
+
+    const getUrl = new URL(calls[1].url);
+    expect(getUrl.pathname).toBe("/v3/applications/69306314");
+    expect(calls[1].method).toBe("GET");
+
+    expect(result.application?.id).toBe("gh-application:69306314");
+    expect(result.application?.stageId).toBe("767359");
+    expect(result.application?.stageName).toBe("Phone Screen");
+  });
+
+  test("forwards toJobId / emailFromUserId on move body", async () => {
+    const { calls, impl } = stubSequence([
+      { body: "", status: 204 },
+      { body: JSON.stringify(applicationMovedFixture), status: 200 },
+    ]);
+
+    await executeApplicationsMoveSync({
+      ...auth,
+      id: "69306314",
+      fromStageId: "767358",
+      toJobId: 224587,
+      emailFromUserId: 92120,
+      fetch: impl,
+    });
+
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({
+      from_stage_id: 767358,
+      to_job_id: 224587,
+      email_from_user_id: 92120,
+    });
+  });
+
+  test("rejects missing fromStageId before fetch", async () => {
+    const { calls, impl } = stubFetch("");
+    await expect(
+      executeApplicationsMoveSync({
+        ...auth,
+        id: "69306314",
+        fromStageId: "" as unknown as string,
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/fromStageId/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors on move", async () => {
+    const { impl } = stubFetch("{}", { status: 422 });
+    await expect(
+      executeApplicationsMoveSync({
+        ...auth,
+        id: "69306314",
+        fromStageId: 767358,
+        toStageId: 767359,
+        fetch: impl,
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
 describe("Greenhouse users.list sync", () => {
-  test("GETs /v1/users with Basic auth on harvest host", async () => {
+  test("GETs /v3/users with Basic auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(usersFixture));
 
     const result = await executeUsersListSync({ ...auth, fetch: impl });
@@ -188,7 +317,7 @@ describe("Greenhouse users.list sync", () => {
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
-    expect(url.pathname).toBe("/v1/users");
+    expect(url.pathname).toBe("/v3/users");
     expect(calls[0].method).toBe("GET");
     expect(result.users).toHaveLength(2);
     expect(result.users[0].id).toBe("gh-user:1049756");
@@ -224,7 +353,7 @@ describe("Greenhouse users.list sync", () => {
 });
 
 describe("Greenhouse candidates.get sync", () => {
-  test("GETs /v1/candidates/{id} with Basic auth on harvest host", async () => {
+  test("GETs /v3/candidates/{id} with Basic auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(candidateGetFixture));
 
     const result = await executeCandidatesGetSync({ ...auth, id: "53883394", fetch: impl });
@@ -232,7 +361,7 @@ describe("Greenhouse candidates.get sync", () => {
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
-    expect(url.pathname).toBe("/v1/candidates/53883394");
+    expect(url.pathname).toBe("/v3/candidates/53883394");
     expect(calls[0].method).toBe("GET");
     expect(calls[0].headers.get("authorization")).toBe(
       `Basic ${Buffer.from("fixturekey:", "utf8").toString("base64")}`,
@@ -258,7 +387,7 @@ describe("Greenhouse candidates.get sync", () => {
 });
 
 describe("Greenhouse jobs.get sync", () => {
-  test("GETs Harvest /v1/jobs/{id} (not boards)", async () => {
+  test("GETs Harvest /v3/jobs/{id} (not boards)", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(jobGetFixture));
 
     const result = await executeJobsGetSync({ ...auth, id: "224588", fetch: impl });
@@ -266,7 +395,7 @@ describe("Greenhouse jobs.get sync", () => {
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
-    expect(url.pathname).toBe("/v1/jobs/224588");
+    expect(url.pathname).toBe("/v3/jobs/224588");
     expect(calls[0].method).toBe("GET");
     expect(result.job?.id).toBe("gh-job:224588");
     expect(result.job?.title).toBe("Product Manager");
@@ -288,7 +417,7 @@ describe("Greenhouse jobs.get sync", () => {
 });
 
 describe("Greenhouse interviews.list sync", () => {
-  test("GETs /v1/scheduled_interviews with Basic auth on harvest host", async () => {
+  test("GETs /v3/interviews with Basic auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
 
     const result = await executeInterviewsListSync({ ...auth, fetch: impl });
@@ -296,7 +425,7 @@ describe("Greenhouse interviews.list sync", () => {
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
-    expect(url.pathname).toBe("/v1/scheduled_interviews");
+    expect(url.pathname).toBe("/v3/interviews");
     expect(calls[0].method).toBe("GET");
     expect(result.interviews).toHaveLength(2);
     expect(result.interviews[0].id).toBe("gh-interview:997234");
@@ -329,5 +458,49 @@ describe("Greenhouse interviews.list sync", () => {
     await expect(executeInterviewsListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
       code: "CONNECTOR_UPSTREAM_ERROR",
     });
+  });
+});
+
+describe("Greenhouse job_interview_stages.list sync", () => {
+  test("GETs /v3/job_interview_stages with Basic auth", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(stagesFixture));
+
+    const result = await executeJobInterviewStagesListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("harvest.greenhouse.io");
+    expect(url.pathname).toBe("/v3/job_interview_stages");
+    expect(calls[0].method).toBe("GET");
+    expect(result.stages).toHaveLength(4);
+    expect(result.stages[0].id).toBe("gh-job-interview-stage:767358");
+    expect(result.stages[0].name).toBe("Application Review");
+    expect(result.stages[0].jobId).toBe("107761");
+    expect(result.stages[0].sortOrder).toBe(0);
+    expect(result.stages[0].active).toBe(true);
+  });
+
+  test("forwards jobIds/active/perPage filters", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(stagesFixture));
+
+    await executeJobInterviewStagesListSync({
+      ...auth,
+      jobIds: "107761,224588",
+      active: true,
+      perPage: 50,
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("job_ids")).toBe("107761,224588");
+    expect(url.searchParams.get("active")).toBe("true");
+    expect(url.searchParams.get("per_page")).toBe("50");
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 500 });
+    await expect(
+      executeJobInterviewStagesListSync({ ...auth, fetch: impl }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
   });
 });
