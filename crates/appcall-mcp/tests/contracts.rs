@@ -883,6 +883,61 @@ async fn tools_list_exposes_effect_policy_and_reconcile_for_mutating_ops() {
 }
 
 #[tokio::test]
+async fn tools_list_omits_effect_meta_for_read_ops_even_with_non_none_policy() {
+    let connector = json!({
+        "key": "greenhouse",
+        "name": "Greenhouse",
+        "version": "1.0.0",
+        "runtime": "bun",
+        "models": ["application"],
+        "auth": {"type": "api_key"},
+        "network": {"allowedHosts": ["harvest.greenhouse.io"]},
+        "operations": {
+            "applications.get": {
+                "kind": "action",
+                "timeoutMs": 1000,
+                "maxInputBytes": 4096,
+                "maxResponseBytes": 4096,
+                "description": "Get application",
+                "inputSchema": {"type": "object"},
+                "outputSchema": {"type": "object"},
+                "sideEffect": "read",
+                "effectPolicy": "Reconcile",
+                "reconcile": "applications.get"
+            }
+        }
+    });
+    let registry = Registry::from_connectors([Connector::from_bytes(
+        &serde_json::to_vec(&connector).unwrap(),
+    )
+    .unwrap()])
+    .unwrap();
+    let server = Server::new(
+        registry,
+        Connections(vec![connection_with(
+            "gh-1",
+            "p",
+            "brand",
+            "greenhouse",
+            "active",
+        )]),
+        Executor::default(),
+        (),
+    );
+    let tools = server.list_tools(&Scope::new("p", "brand")).await.unwrap();
+    assert_eq!(tools.len(), 1);
+    let appcall = &tools[0]["_meta"]["appcall"];
+    assert!(
+        appcall.get("effectPolicy").is_none(),
+        "read tools omit effectPolicy even when policy is non-None"
+    );
+    assert!(
+        appcall.get("reconcile").is_none(),
+        "read tools omit reconcile even when set"
+    );
+}
+
+#[tokio::test]
 async fn public_call_tool_for_connection_targets_the_selected_connection() {
     let executor = Executor::default();
     let server = Server::new(
