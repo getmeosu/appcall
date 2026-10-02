@@ -3,6 +3,8 @@ use appcall_engine::*;
 use postgres::{types::ToSql, Client, Transaction};
 use std::sync::{Mutex, MutexGuard};
 const OWNER_LOCK: i64 = 0x61707063616c6c;
+const RECORD_CAP: usize = 1024 * 1024;
+const HISTORY_CAP: usize = 1024;
 /// A single host-configured session; TLS and credentials stay with its Client.
 /// Session advisory ownership is exclusive for this engine database. Use a
 /// dedicated database/schema with a stable search_path and direct sessions,
@@ -32,7 +34,13 @@ impl PostgresStore {
                 record BYTEA NOT NULL CHECK(octet_length(record)<=1048576),
                 recoverable BOOLEAN NOT NULL DEFAULT FALSE
             );
-            CREATE INDEX IF NOT EXISTS appcall_workflow_wakeup ON appcall_workflow_runs(state,wakeup);",
+            CREATE INDEX IF NOT EXISTS appcall_workflow_wakeup ON appcall_workflow_runs(state,wakeup);
+            CREATE TABLE IF NOT EXISTS appcall_workflow_history(
+                run_id TEXT NOT NULL,
+                seq INTEGER NOT NULL CHECK(seq >= 0 AND seq < 1024),
+                event BYTEA NOT NULL CHECK(octet_length(event)<=1048576),
+                PRIMARY KEY (run_id, seq)
+            );",
             )
             .map_err(safe)?;
         ensure_recoverable_column(&mut client)?;
@@ -68,15 +76,104 @@ fn safe(error: postgres::Error) -> Error {
         Error::Storage("postgres operation failed".into())
     }
 }
-fn encoded(run: &RunRecord) -> Result<Vec<u8>> {
-    let bytes = serde_json::to_vec(run).map_err(|_| Error::Invalid("record encoding"))?;
-    if bytes.len() > 1024 * 1024 {
+fn encode_event(event: &HistoryEvent) -> Result<Vec<u8>> {
+    serde_json::to_vec(event).map_err(|_| Error::Invalid("record encoding"))
+}
+fn decode_event(bytes: &[u8]) -> Result<HistoryEvent> {
+    serde_json::from_slice(bytes).map_err(|_| Error::Storage("invalid durable record".into()))
+}
+fn decode_record(record: &[u8]) -> Result<RunRecord> {
+    serde_json::from_slice(record).map_err(|_| Error::Storage("invalid durable record".into()))
+}
+/// Seal index: first unresolved event, or len if all resolved. Engine fills
+/// values in order, so [0..seal) is append-only and never rewritten.
+fn seal_end(history: &[HistoryEvent]) -> usize {
+    history
+        .iter()
+        .position(|event| event.value.is_none())
+        .unwrap_or(history.len())
+}
+/// Persist run body with only the unsealed history suffix; sealed prefix lives
+/// in appcall_workflow_history. Enforces the same 1MiB total + 1024 caps.
+fn encode_body(run: &RunRecord, seal: usize) -> Result<Vec<u8>> {
+    if run.history.len() > HISTORY_CAP {
+        return Err(Error::Limit);
+    }
+    let mut sealed_bytes = 0usize;
+    for event in &run.history[..seal] {
+        sealed_bytes = sealed_bytes
+            .checked_add(encode_event(event)?.len())
+            .ok_or(Error::Limit)?;
+    }
+    let mut body = run.clone();
+    body.history = run.history[seal..].to_vec();
+    let bytes = serde_json::to_vec(&body).map_err(|_| Error::Invalid("record encoding"))?;
+    let total = sealed_bytes.checked_add(bytes.len()).ok_or(Error::Limit)?;
+    if total > RECORD_CAP || bytes.len() > RECORD_CAP {
         return Err(Error::Limit);
     }
     Ok(bytes)
 }
-fn decode_record(record: &[u8]) -> Result<RunRecord> {
-    serde_json::from_slice(record).map_err(|_| Error::Storage("invalid durable record".into()))
+fn sealed_count(tx: &mut Transaction<'_>, id: &str) -> Result<usize> {
+    let n: i64 = tx
+        .query_one(
+            "SELECT COUNT(*)::bigint FROM appcall_workflow_history WHERE run_id=$1",
+            &[&id],
+        )
+        .map_err(safe)?
+        .get(0);
+    usize::try_from(n).map_err(|_| Error::Limit)
+}
+fn load_sealed_client(client: &mut Client, id: &str) -> Result<Vec<HistoryEvent>> {
+    let rows = client
+        .query(
+            "SELECT seq,event FROM appcall_workflow_history
+             WHERE run_id=$1 ORDER BY seq",
+            &[&id],
+        )
+        .map_err(safe)?;
+    let mut out = Vec::with_capacity(rows.len());
+    for (expected, row) in rows.iter().enumerate() {
+        let seq: i32 = row.get(0);
+        if seq as usize != expected {
+            return Err(Error::Storage("invalid durable record".into()));
+        }
+        let bytes: Vec<u8> = row.get(1);
+        out.push(decode_event(&bytes)?);
+    }
+    Ok(out)
+}
+fn assemble(record: &[u8], sealed: Vec<HistoryEvent>) -> Result<RunRecord> {
+    let mut run = decode_record(record)?;
+    if sealed.is_empty() {
+        // Legacy row: full history still embedded in the blob.
+        return Ok(run);
+    }
+    // Split layout: sealed prefix in history table, unresolved suffix in blob.
+    let mut history = sealed;
+    history.extend(run.history.drain(..));
+    if history.len() > HISTORY_CAP {
+        return Err(Error::Limit);
+    }
+    run.history = history;
+    Ok(run)
+}
+fn append_sealed(
+    tx: &mut Transaction<'_>,
+    id: &str,
+    history: &[HistoryEvent],
+    from: usize,
+    to: usize,
+) -> Result<()> {
+    for (seq, event) in history.iter().enumerate().take(to).skip(from) {
+        let seq_i = i32::try_from(seq).map_err(|_| Error::Limit)?;
+        tx.execute(
+            "INSERT INTO appcall_workflow_history(run_id,seq,event) VALUES($1,$2,$3)",
+            &[&id as &(dyn ToSql + Sync), &seq_i, &encode_event(event)?],
+        )
+        .map_err(safe)?;
+    }
+    Ok(())
 }
 fn state(r: &RunRecord) -> &'static str {
     if matches!(r.state, RunState::Running | RunState::CancelRequested) {
@@ -169,8 +266,18 @@ fn recover_running(tx: &mut Transaction<'_>) -> Result<()> {
     }
     Ok(())
 }
+fn persist_history(tx: &mut Transaction<'_>, run: &RunRecord) -> Result<Vec<u8>> {
+    let seal = seal_end(&run.history);
+    let already = sealed_count(tx, &run.id)?;
+    if seal < already {
+        return Err(Error::Invalid("history shrink"));
+    }
+    append_sealed(tx, &run.id, &run.history, already, seal)?;
+    encode_body(run, seal)
+}
 fn insert(tx: &mut Transaction<'_>, run: &RunRecord) -> Result<()> {
     let revision = i64::try_from(run.revision).map_err(|_| Error::Limit)?;
+    let body = persist_history(tx, run)?;
     tx.execute(
         "INSERT INTO appcall_workflow_runs(id,revision,state,wakeup,record,recoverable)
          VALUES($1,$2,$3,$4,$5,$6)",
@@ -179,7 +286,7 @@ fn insert(tx: &mut Transaction<'_>, run: &RunRecord) -> Result<()> {
             &revision,
             &state(run),
             &run.wakeup,
-            &encoded(run)?,
+            &body,
             &recoverable_flag(run),
         ],
     )
@@ -204,8 +311,8 @@ impl Store for PostgresStore {
         self.epoch
     }
     fn load(&self, id: &str) -> Result<RunRecord> {
-        let row = self
-            .client()?
+        let mut client = self.client()?;
+        let row = client
             .query_opt(
                 "SELECT record FROM appcall_workflow_runs WHERE id=$1",
                 &[&id],
@@ -213,7 +320,8 @@ impl Store for PostgresStore {
             .map_err(safe)?
             .ok_or(Error::NotFound)?;
         let bytes: Vec<u8> = row.get(0);
-        decode_record(&bytes)
+        let sealed = load_sealed_client(&mut client, id)?;
+        assemble(&bytes, sealed)
     }
     fn insert(&mut self, run: &RunRecord) -> Result<()> {
         let mut client = self.client()?;
@@ -231,6 +339,7 @@ impl Store for PostgresStore {
         let mut client = self.client()?;
         let mut tx = client.transaction().map_err(safe)?;
         fence(&mut tx, self.epoch)?;
+        let body = persist_history(&mut tx, run)?;
         let count = tx
             .execute(
                 "UPDATE appcall_workflow_runs
@@ -241,7 +350,7 @@ impl Store for PostgresStore {
                     &revision,
                     &state(run),
                     &run.wakeup,
-                    &encoded(run)?,
+                    &body,
                     &recoverable_flag(run),
                     &expected,
                 ],
@@ -312,6 +421,8 @@ impl Store for PostgresStore {
         let mut out = Vec::with_capacity(rows.len());
         for row in rows {
             let bytes: Vec<u8> = row.get(0);
+            // Summaries only need identity fields present on the body blob;
+            // sealed history is not required.
             let run = decode_record(&bytes)?;
             out.push(RunSummary {
                 id: run.id,

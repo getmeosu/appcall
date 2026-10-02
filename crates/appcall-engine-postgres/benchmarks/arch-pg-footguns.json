@@ -1,14 +1,14 @@
 {
   "suite": "arch-pg-footguns",
-  "note": "Code-inspected evidence; live WAL/TOAST timings require APPCALL_ENGINE_POSTGRES_URL. Open-scan visits only recoverable=true via index (O(K)), validates blob, bumps wakeup. Passive waits are not decoded. No multi-worker SKIP LOCKED.",
+  "note": "Live PG measured blob-rewrite before/after (see blob-rewrite-*.json). Open-scan visits only recoverable=true via index (O(K)). No multi-worker SKIP LOCKED. Sealed history is append-only in appcall_workflow_history; main record BYTEA holds unresolved suffix only.",
   "session_advisory_required": true,
   "txn_pooling_rejected": true,
   "evidence": {
     "advisory_lock": "PostgresStore::from_client uses pg_try_advisory_lock(OWNER_LOCK); Conflict if not owned",
     "session_not_txn_pool": "lib.rs docs: dedicated database/schema with direct sessions, never a transaction-pooling proxy",
     "record_cap_bytes": 1048576,
-    "record_cap_enforced": "CREATE TABLE ... record BYTEA NOT NULL CHECK(octet_length(record)<=1048576) plus encoded() Limit",
-    "blob_rewrite_vs_history_depth": "SKIPPED_NO_LIVE_PG — full-row BYTEA rewrite on every commit; cost grows with serde size of history (same 1MiB cap as SQLite)",
+    "record_cap_enforced": "CREATE TABLE ... record BYTEA NOT NULL CHECK(octet_length(record)<=1048576) plus encode_body Limit; history events CHECK + HISTORY_CAP 1024",
+    "blob_rewrite_vs_history_depth": "FIXED — sealed prefix append-only in appcall_workflow_history; commit WAL median flat ~568B at depths 1..1024 (before scaled 736→15288). See blob-rewrite-before.json / blob-rewrite-after.json",
     "open_scan_at_n_running": "recover_running SELECTs id,record WHERE state=running AND recoverable (indexed); O(K) not O(N). Denormalized recoverable on insert/commit. Passive waits skipped.",
     "skip_locked_multi_worker": false
   }
