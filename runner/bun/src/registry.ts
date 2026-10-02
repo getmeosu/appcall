@@ -192,6 +192,9 @@ import {
   executeOpportunitiesGetSync as getLeverOpportunity,
   executeOpportunitiesInterviewsListSync as listLeverOpportunityInterviews,
   executeOpportunitiesFeedbackListSync as listLeverOpportunityFeedback,
+  executeOpportunitiesUpdateStageSync as updateLeverOpportunityStage,
+  executeOpportunitiesArchiveSync as archiveLeverOpportunity,
+  executeArchiveReasonsListSync as listLeverArchiveReasons,
   executeStagesListSync as listLeverStages,
   executeUsersListSync as listLeverUsers,
 } from "../../connectors/lever/src/sync";
@@ -941,6 +944,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "applications.move": moveGreenhouseApplication,
       "applications.create": createGreenhouseApplication,
     },
+    lever: {
+      "opportunities.update_stage": updateLeverOpportunityStage,
+      "opportunities.archive": archiveLeverOpportunity,
+    },
     ashby: {
       "applications.move": moveAshbyApplication,
       "applications.reject": rejectAshbyApplication,
@@ -1190,6 +1197,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "opportunities.get": getLeverOpportunity,
       "opportunities.interviews.list": listLeverOpportunityInterviews,
       "opportunities.feedback.list": listLeverOpportunityFeedback,
+      "archive_reasons.list": listLeverArchiveReasons,
       "stages.list": listLeverStages,
       "users.list": listLeverUsers,
     },

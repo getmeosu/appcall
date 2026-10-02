@@ -6,8 +6,8 @@ describe("Lever manifest", () => {
     expect(manifest.key).toBe("lever");
   });
 
-  it("has version 0.3.0", () => {
-    expect(manifest.version).toBe("0.3.0");
+  it("has version 0.4.0", () => {
+    expect(manifest.version).toBe("0.4.0");
   });
 
   it("uses bun runtime", () => {
@@ -35,14 +35,17 @@ describe("Lever manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares P0 list ops plus P1 get/interviews/feedback", () => {
+  it("declares list/get/write depth ops", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
+      "archive_reasons.list",
       "healthcheck",
       "jobs.list",
+      "opportunities.archive",
       "opportunities.feedback.list",
       "opportunities.get",
       "opportunities.interviews.list",
       "opportunities.list",
+      "opportunities.update_stage",
       "stages.list",
       "users.list",
     ]);
@@ -53,9 +56,44 @@ describe("Lever manifest", () => {
     expect(manifest.operations["opportunities.feedback.list"].kind).toBe("sync");
     expect(manifest.operations["stages.list"].kind).toBe("sync");
     expect(manifest.operations["users.list"].kind).toBe("sync");
+    expect(manifest.operations["archive_reasons.list"].kind).toBe("action");
+    expect(manifest.operations["archive_reasons.list"].sideEffect).toBe("read");
   });
 
-  it("declares job, opportunity, stage, user, interview, feedback models", () => {
+  it("wires opportunities.update_stage EffectPolicy Reconcile to opportunities.get", () => {
+    const op = manifest.operations["opportunities.update_stage"] as {
+      kind: string;
+      sideEffect: string;
+      effectPolicy: string;
+      reconcile: string;
+      request: { method: string; body: { stage: string } };
+    };
+    expect(op.kind).toBe("action");
+    expect(op.sideEffect).toBe("write");
+    expect(op.effectPolicy).toBe("Reconcile");
+    expect(op.reconcile).toBe("opportunities.get");
+    expect(op.request.method).toBe("PUT");
+    // Official Lever body field is `stage` (Stage UID).
+    expect(op.request.body.stage).toBe("{{stageId}}");
+  });
+
+  it("wires opportunities.archive EffectPolicy Reconcile to opportunities.get", () => {
+    const op = manifest.operations["opportunities.archive"] as {
+      kind: string;
+      sideEffect: string;
+      effectPolicy: string;
+      reconcile: string;
+      request: { method: string; body: { reason: string } };
+    };
+    expect(op.kind).toBe("action");
+    expect(op.sideEffect).toBe("write");
+    expect(op.effectPolicy).toBe("Reconcile");
+    expect(op.reconcile).toBe("opportunities.get");
+    expect(op.request.method).toBe("PUT");
+    expect(op.request.body.reason).toBe("{{reason}}");
+  });
+
+  it("declares job, opportunity, stage, user, interview, feedback, archive_reason models", () => {
     expect(manifest.models).toEqual([
       "job",
       "opportunity",
@@ -63,6 +101,7 @@ describe("Lever manifest", () => {
       "user",
       "interview",
       "feedback",
+      "archive_reason",
     ]);
   });
 });

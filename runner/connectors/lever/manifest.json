@@ -1,7 +1,7 @@
 {
   "key": "lever",
   "name": "Lever",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -154,6 +154,207 @@
       "responseFormat": "json",
       "enforceOutputSchema": true,
       "validationMode": "strict-generated"
+    },
+    "opportunities.update_stage": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "opportunities.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update opportunity stage",
+      "description": "Move an opportunity to another pipeline stage via authenticated PUT /v1/opportunities/{id}/stage. Connector input stageId maps to Lever body field stage (Stage UID per official docs). EffectPolicy Reconcile observes via opportunities.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "stageId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "stageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination stage UID; sent as Lever request body field stage."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional user UID to perform_as (query)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/opportunities/{{id}}/stage",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "stage": "{{stageId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "opportunities.archive": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "opportunities.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Archive opportunity",
+      "description": "Archive (or unarchive) an opportunity via authenticated PUT /v1/opportunities/{id}/archived. Body field reason is the archive reason UID; null unarchives. EffectPolicy Reconcile observes via opportunities.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lever opportunity UID."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Archive reason UID; null unarchives an already-archived opportunity."
+          },
+          "cleanInterviews": {
+            "type": "boolean",
+            "description": "Remove pending interviews when archiving (Lever default false)."
+          },
+          "requisitionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional requisition UID when archiving as Hired."
+          },
+          "performAs": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional user UID to perform_as (query)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/opportunities/{{id}}/archived",
+        "query": {
+          "perform_as": "{{performAs}}"
+        },
+        "body": {
+          "reason": "{{reason}}",
+          "cleanInterviews": "{{cleanInterviews}}",
+          "requisitionId": "{{requisitionId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
+    },
+    "archive_reasons.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List archive reasons",
+      "description": "List account archive reasons via authenticated GET /v1/archive_reasons. Optional type filter (hired | non-hired), limit, and offset.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "hired",
+              "non-hired"
+            ],
+            "description": "Optional filter for archive reason type."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size (1-100)."
+          },
+          "offset": {
+            "type": "string",
+            "description": "Opaque pagination offset token from a prior next field."
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/archive_reasons",
+        "query": {
+          "type": "{{type}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "sideEffect": "read"
     }
   },
   "models": [
@@ -162,6 +363,7 @@
     "stage",
     "user",
     "interview",
-    "feedback"
+    "feedback",
+    "archive_reason"
   ]
 }

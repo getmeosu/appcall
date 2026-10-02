@@ -11,6 +11,8 @@ import {
   parseFeedbackResponse,
   normalizeStage,
   parseStagesResponse,
+  parseArchiveReasonsResponse,
+  normalizeArchiveReason,
   normalizeUser,
   parseUsersResponse,
 } from "../src/objects";
@@ -350,6 +352,36 @@ describe("Lever parseFeedbackResponse", () => {
     expect(result.feedback[0].fields).toHaveLength(2);
     expect(result.feedback[1].type).toBe("share");
     expect(result.feedback[1].deletedAt).toBe(new Date(1526925087354).toISOString());
+    expect(result.hasNext).toBe(false);
+  });
+});
+
+describe("Lever archive reason normalization", () => {
+  it("normalizes archive reason fields", () => {
+    const reason = normalizeArchiveReason({
+      id: "63dd55b2-a99f-4e7b-985f-22c7bf80ab42",
+      text: "Underqualified",
+      status: "active",
+      type: "non-hired",
+    });
+    expect(reason.id).toBe("lev-archive-reason:63dd55b2-a99f-4e7b-985f-22c7bf80ab42");
+    expect(reason.provider).toBe("lever");
+    expect(reason.text).toBe("Underqualified");
+    expect(reason.status).toBe("active");
+    expect(reason.type).toBe("non-hired");
+  });
+
+  it("parses archive_reasons list envelope", () => {
+    const result = parseArchiveReasonsResponse({
+      data: [
+        { id: "a", text: "Timing", status: "active", type: "non-hired" },
+        { id: "b", text: "Hired", status: "active", type: "hired" },
+      ],
+      next: null,
+      hasNext: false,
+    });
+    expect(result.archiveReasons).toHaveLength(2);
+    expect(result.archiveReasons[1].type).toBe("hired");
     expect(result.hasNext).toBe(false);
   });
 });
