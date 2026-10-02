@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -887,7 +887,8 @@
             "description": "GitHub contents object (file has type=file and base64 content field)."
           }
         }
-      }
+      },
+      "sideEffect": "read"
     },
     "branches.get": {
       "kind": "action",
@@ -6047,6 +6048,817 @@
           }
         }
       }
+    },
+    "contents.put": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "title": "Put File Contents",
+      "description": "Create or update a file via PUT /repos/{owner}/{repo}/contents/{path}. EffectPolicy Reconcile observes via repos.contents.get (accepts branch as ref alias).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "path": {
+            "type": "string",
+            "description": "File path within the repository."
+          },
+          "message": {
+            "type": "string",
+            "description": "Commit message."
+          },
+          "content": {
+            "type": "string",
+            "description": "Base64-encoded file content."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name to write to. Also accepted as `ref` for Reconcile."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Alias for branch (Reconcile-friendly)."
+          },
+          "sha": {
+            "type": "string",
+            "description": "Blob SHA of the file being replaced (required for updates)."
+          },
+          "committerName": {
+            "type": "string",
+            "description": "Committer name."
+          },
+          "committerEmail": {
+            "type": "string",
+            "description": "Committer email."
+          },
+          "authorName": {
+            "type": "string",
+            "description": "Author name."
+          },
+          "authorEmail": {
+            "type": "string",
+            "description": "Author email."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "path",
+          "message",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "sha": {
+                "type": "string"
+              },
+              "commitSha": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "reconcile": "repos.contents.get"
+    },
+    "contents.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Delete File Contents",
+      "description": "Delete a file via DELETE /repos/{owner}/{repo}/contents/{path}. EffectPolicy Idempotent (double-delete is safe to classify; no reconcile \u2014 observe would 404).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "path": {
+            "type": "string",
+            "description": "File path within the repository."
+          },
+          "message": {
+            "type": "string",
+            "description": "Commit message."
+          },
+          "sha": {
+            "type": "string",
+            "description": "Blob SHA of the file being replaced (required for updates)."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name to write to. Also accepted as `ref` for Reconcile."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Alias for branch."
+          },
+          "committerName": {
+            "type": "string",
+            "description": "Committer name."
+          },
+          "committerEmail": {
+            "type": "string",
+            "description": "Committer email."
+          },
+          "authorName": {
+            "type": "string",
+            "description": "Author name."
+          },
+          "authorEmail": {
+            "type": "string",
+            "description": "Author email."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "path",
+          "message",
+          "sha"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          },
+          "commitSha": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "contents.push_files": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "title": "Push Files (Git Data Compose)",
+      "description": "Create a multi-file commit by composing Git Data API calls (get ref \u2192 get commit \u2192 create blobs \u2192 create tree \u2192 create commit \u2192 update ref). EffectPolicy Reconcile observes the branch tip via commits.get (branch accepted as ref).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch to update. Also accepted as `ref` for Reconcile\u2192commits.get."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Alias for branch (Reconcile-friendly for commits.get)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Commit message."
+          },
+          "files": {
+            "type": "array",
+            "description": "Files to create or update in one commit.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "File path."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "File content (utf-8 text or base64 when encoding=base64)."
+                },
+                "encoding": {
+                  "type": "string",
+                  "enum": [
+                    "utf-8",
+                    "base64"
+                  ],
+                  "description": "Content encoding."
+                }
+              },
+              "required": [
+                "path",
+                "content"
+              ]
+            }
+          },
+          "expectedHeadSha": {
+            "type": "string",
+            "description": "Optional expected branch tip SHA; fails if tip differs."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "branch",
+          "message",
+          "files"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "commit": {
+            "type": "object",
+            "properties": {
+              "sha": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "treeSha": {
+                "type": "string"
+              },
+              "branch": {
+                "type": "string"
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "reconcile": "commits.get"
+    },
+    "git.blobs.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Create Git Blob",
+      "description": "Create a blob via POST /repos/{owner}/{repo}/git/blobs. EffectPolicy Idempotent (content-addressed; no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "content": {
+            "type": "string",
+            "description": "Blob content."
+          },
+          "encoding": {
+            "type": "string",
+            "enum": [
+              "utf-8",
+              "base64"
+            ],
+            "description": "Content encoding (default utf-8)."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "blob": {
+            "type": "object",
+            "properties": {
+              "sha": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "git.blobs.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Git Blob",
+      "description": "Get a blob via GET /repos/{owner}/{repo}/git/blobs/{file_sha}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "fileSha": {
+            "type": "string",
+            "description": "Blob SHA."
+          },
+          "sha": {
+            "type": "string",
+            "description": "Alias for fileSha."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "fileSha"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "blob": {
+            "type": "object",
+            "properties": {
+              "sha": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "encoding": {
+                "type": "string"
+              },
+              "size": {
+                "type": "number"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "git.trees.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Create Git Tree",
+      "description": "Create a tree via POST /repos/{owner}/{repo}/git/trees. EffectPolicy Idempotent (content-addressed; no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "baseTree": {
+            "type": "string",
+            "description": "Optional base tree SHA to update from."
+          },
+          "tree": {
+            "type": "array",
+            "description": "Tree entries to create.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "mode": {
+                  "type": "string",
+                  "description": "File mode (e.g. 100644, 100755, 040000, 160000, 120000)."
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Entry type: blob, tree, or commit."
+                },
+                "sha": {
+                  "type": "string",
+                  "description": "SHA of the blob/tree (omit when content is set)."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Inline content (GitHub creates the blob)."
+                }
+              },
+              "required": [
+                "path",
+                "mode",
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tree": {
+            "type": "object",
+            "properties": {
+              "sha": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "truncated": {
+                "type": "boolean"
+              },
+              "tree": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    "git.trees.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Git Tree",
+      "description": "Get a tree via GET /repos/{owner}/{repo}/git/trees/{tree_sha}. Set recursive=true to flatten.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "treeSha": {
+            "type": "string",
+            "description": "Tree SHA."
+          },
+          "sha": {
+            "type": "string",
+            "description": "Alias for treeSha."
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "When true, return a recursively flattened tree."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "treeSha"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tree": {
+            "type": "object",
+            "properties": {
+              "sha": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "truncated": {
+                "type": "boolean"
+              },
+              "tree": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    "git.refs.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Create Git Ref",
+      "description": "Create a ref via POST /repos/{owner}/{repo}/git/refs. EffectPolicy Idempotent (no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Fully qualified ref (refs/heads/...) or heads/... (prefixed automatically)."
+          },
+          "sha": {
+            "type": "string",
+            "description": "SHA the ref should point to."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "ref",
+          "sha"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string"
+              },
+              "sha": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "git.refs.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Update Git Ref",
+      "description": "Update a ref via PATCH /repos/{owner}/{repo}/git/refs/{ref}. EffectPolicy Idempotent (no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Ref path (heads/main or refs/heads/main)."
+          },
+          "sha": {
+            "type": "string",
+            "description": "New SHA for the ref."
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Force update even if not a fast-forward."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "ref",
+          "sha"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string"
+              },
+              "sha": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "git.commits.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Create Git Commit",
+      "description": "Create a commit via POST /repos/{owner}/{repo}/git/commits. EffectPolicy Idempotent (no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "message": {
+            "type": "string",
+            "description": "Commit message."
+          },
+          "tree": {
+            "type": "string",
+            "description": "Tree SHA for the commit."
+          },
+          "parents": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Parent commit SHAs."
+          },
+          "authorName": {
+            "type": "string",
+            "description": "Author name."
+          },
+          "authorEmail": {
+            "type": "string",
+            "description": "Author email."
+          },
+          "authorDate": {
+            "type": "string",
+            "description": "Author date (ISO 8601)."
+          },
+          "committerName": {
+            "type": "string",
+            "description": "Committer name."
+          },
+          "committerEmail": {
+            "type": "string",
+            "description": "Committer email."
+          },
+          "committerDate": {
+            "type": "string",
+            "description": "Committer date (ISO 8601)."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "message",
+          "tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "commit": {
+            "type": "object",
+            "properties": {
+              "sha": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "treeSha": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "repos.tree.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Repository Tree",
+      "description": "Get a git tree via GET /repos/{owner}/{repo}/git/trees/{tree_sha} (optionally recursive). Read helper that wraps the Git Trees API for repository browsing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "treeSha": {
+            "type": "string",
+            "description": "Tree SHA."
+          },
+          "sha": {
+            "type": "string",
+            "description": "Alias for treeSha."
+          },
+          "recursive": {
+            "type": "boolean",
+            "description": "When true, return a recursively flattened tree."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "treeSha"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "tree": {
+            "type": "object",
+            "properties": {
+              "sha": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "truncated": {
+                "type": "boolean"
+              },
+              "tree": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "models": [
@@ -6074,6 +6886,9 @@
     "release_asset",
     "discussion",
     "discussion_category",
-    "discussion_comment"
+    "discussion_comment",
+    "git_blob",
+    "git_tree",
+    "git_ref"
   ]
 }
