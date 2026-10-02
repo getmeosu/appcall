@@ -80,7 +80,7 @@ async fn runs_preview_fixed_scenarios_are_truthful_and_dto_shaped() {
         if name == "runs" {
             assert!(response
                 .body
-                .contains("aria-label=\"Durable sync runs\" tabindex=\"0\""));
+                .contains("aria-label=\"Durable syncs\" tabindex=\"0\""));
         }
     }
 }

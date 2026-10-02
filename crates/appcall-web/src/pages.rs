@@ -276,23 +276,23 @@ pub(crate) fn run_control(
     let (allowed_key, label, heading, body) = match action {
         "run-now" => (
             "runNowAllowed",
-            "Run now",
-            format!("Run {id} now?"),
-            format!("Run {id} now? This queues the run immediately."),
+            "Queue now",
+            format!("Queue sync {id} now?"),
+            format!("Queue sync {id} now? This wakes the sync immediately."),
         ),
         "reset" => (
             "resetAllowed",
             "Reset attempts",
-            format!("Reset {id} attempts?"),
+            format!("Reset sync {id} attempts?"),
             format!(
-                "This resets run {id} attempts to zero, preserves the current cursor and queues the run from that checkpoint."
+                "This resets sync {id} attempts to zero, preserves the current cursor and queues the sync from that checkpoint."
             ),
         ),
         "cancel" => (
             "cancelAllowed",
             "Cancel",
-            format!("Cancel {id}?"),
-            format!("Cancelling run {id} stops future work. An in-flight provider request or external side effect cannot be recalled."),
+            format!("Cancel sync {id}?"),
+            format!("Cancelling sync {id} stops future work. An in-flight provider request or external side effect cannot be recalled."),
         ),
         _ => return Err(Error::Invalid),
     };
@@ -531,7 +531,7 @@ fn runs(v: &Value) -> Result<String, Error> {
             == Some(false);
     let operator_controls_unavailable = !operator_controls_available;
     if operator_controls_unavailable {
-        body.push_str("<div id=\"runs-operator-controls-unavailable\" role=\"note\" class=\"runs-card runs-operator-notice\"><h3>Operator controls unavailable</h3><p>Run, reset, and cancel require a trusted operator principal. Queue state remains available as read-only evidence.</p></div>");
+        body.push_str("<div id=\"runs-operator-controls-unavailable\" role=\"note\" class=\"runs-card runs-operator-notice\"><h3>Operator controls unavailable</h3><p>Queue, reset, and cancel require a trusted operator principal. Queue state remains available as read-only evidence.</p></div>");
     } else {
         let action_claims_link = runs_link_button(
             "Inspect action claims",
@@ -616,7 +616,7 @@ fn runs(v: &Value) -> Result<String, Error> {
         body.push_str("</section>");
         return Ok(body);
     }
-    body.push_str("<div class=\"runs-card runs-table\"><div class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable sync runs\" tabindex=\"0\"><table><caption class=\"sr-only\">Durable sync runs</caption><thead><tr>");
+    body.push_str("<div class=\"runs-card runs-table\"><div class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable syncs\" tabindex=\"0\"><table><caption class=\"sr-only\">Durable syncs</caption><thead><tr>");
     for label in [
         "Health",
         "Sync ID",
@@ -1066,7 +1066,7 @@ mod rendering_contract_tests {
             "name=\"connector\"",
             "name=\"tool\"",
             "name=\"accountId\"",
-            "<caption class=\"sr-only\">Durable sync runs</caption>",
+            "<caption class=\"sr-only\">Durable syncs</caption>",
             "<th scope=\"col\"",
             "ui-state-running",
             "messages.list",
@@ -1634,7 +1634,7 @@ mod rendering_contract_tests {
         )
         .unwrap();
         assert!(html.contains(
-            "class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable sync runs\" tabindex=\"0\""
+            "class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable syncs\" tabindex=\"0\""
         ));
     }
 

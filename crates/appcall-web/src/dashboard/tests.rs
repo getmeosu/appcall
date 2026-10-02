@@ -1272,7 +1272,7 @@ async fn run_controls_report_confirmed_success_after_redirect() {
     let response = render(&data, &request, Some(DashboardOperation::Runs))
         .await
         .unwrap();
-    assert!(response.body.contains("Run queued now."));
+    assert!(response.body.contains("Sync queued now."));
     assert!(response.body.contains("No durable syncs to show."));
 }
 fn location(response: &Response) -> Option<&str> {

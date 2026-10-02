@@ -711,13 +711,13 @@ impl DashboardRenderer<'_> {
                 "Check the connection's current status before running another tool.",
                 false,
             ),
-            (Runs, "run-now", _) => ("Run queued now. Refreshing the current queue state.", false),
+            (Runs, "run-now", _) => ("Sync queued now. Refreshing the current queue state.", false),
             (Runs, "reset", _) => (
-                "Attempts reset and the run was queued from its saved checkpoint.",
+                "Attempts reset and the sync was queued from its saved checkpoint.",
                 false,
             ),
             (Runs, "cancelled", _) => (
-                "Run cancelled. Any older worker lease is fenced from committing.",
+                "Sync cancelled. Any older worker lease is fenced from committing.",
                 false,
             ),
             _ => ("", false),

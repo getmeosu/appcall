@@ -504,7 +504,7 @@ fn render_pagination(data: &Value, run_id: &str) -> Result<String, Error> {
     }
     .render();
     Ok(format!(
-        "<nav class=\"run-detail-pagination\" aria-label=\"Run history pages\">{next}</nav>"
+        "<nav class=\"run-detail-pagination\" aria-label=\"Sync history pages\">{next}</nav>"
     ))
 }
 
