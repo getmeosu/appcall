@@ -432,12 +432,16 @@ fn unavailable_and_error_never_look_like_success() {
     assert!(unavailable.contains("role=\"alert\""));
     assert!(!unavailable.contains("ui-state-ok"));
     assert!(!unavailable.contains("id=\"run-detail\""));
+    assert!(!unavailable.contains("run-detail-controls"));
+    assert!(!unavailable.contains("Persisted history"));
 
     let error = super::standalone(&json!({"status":"error"}), "run-42").unwrap();
     assert!(error.contains("Syncs unreachable"));
     assert!(error.contains("role=\"alert\""));
     assert!(error.contains("href=\"/app/syncs/run-42\""));
     assert!(!error.contains("ui-state-ok"));
+    assert!(!error.contains("id=\"run-detail\""));
+    assert!(!error.contains("Persisted history"));
 }
 
 #[test]

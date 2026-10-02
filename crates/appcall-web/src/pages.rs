@@ -2239,6 +2239,44 @@ mod rendering_contract_tests {
             Err(Error::Unavailable),
             "unknown status stays fail-closed"
         );
+
+        let populated = render(
+            Op::Runs,
+            &json!({
+                "status":"ok",
+                "runs":[{
+                    "id":"run_1",
+                    "connector":"slack",
+                    "tool":"messages.list",
+                    "accountId":"brand-a",
+                    "health":"pending",
+                    "attemptsSpent":0,
+                    "attemptsRemaining":10,
+                    "maxAttempts":10,
+                    "wakeAt":"",
+                    "leaseUntil":"",
+                    "currentCursor":"",
+                    "lastError":"",
+                    "runNowAllowed":false,
+                    "resetAllowed":false,
+                    "cancelAllowed":false
+                }],
+                "pendingRuns":1,
+                "runningRuns":0,
+                "backingoffRuns":0,
+                "deadRuns":0,
+                "records24hUnavailable":true,
+                "workerHeartbeatUnavailable":true,
+                "operatorControlsUnavailable":true
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(populated.contains("data-runs-page"));
+        assert!(populated.contains("run_1"));
+        assert!(populated.contains("runs-stats"));
+        assert!(!populated.contains("Syncs unavailable"));
+        assert!(!populated.contains("Syncs unreachable"));
     }
 
     #[test]
