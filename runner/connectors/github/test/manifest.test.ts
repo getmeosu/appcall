@@ -52,6 +52,8 @@ describe("github connector manifest", () => {
     expect(manifest.models).toContain("gist");
     expect(manifest.models).toContain("branch");
     expect(manifest.models).toContain("label");
+    expect(manifest.models).toContain("pull_request_review");
+    expect(manifest.models).toContain("pull_request_review_comment");
   });
 
   test("manifest has timeout and size limits on all operations", () => {
@@ -82,7 +84,27 @@ describe("github connector manifest", () => {
     const actionOps = Object.entries(manifest.operations).filter(
       ([, spec]) => (spec as Record<string, unknown>).kind === "action"
     );
-    expect(actionOps.length).toBeGreaterThanOrEqual(26);
+    expect(actionOps.length).toBeGreaterThanOrEqual(38);
+  });
+
+
+  test("manifest declares S1 pr-reviews-comments ops", () => {
+    for (const key of [
+      "pull_requests.reviews.list",
+      "pull_requests.reviews.create",
+      "pull_requests.reviews.dismiss",
+      "pull_requests.review_comments.list",
+      "pull_requests.review_comments.create",
+      "pull_requests.review_comments.reply",
+      "pull_requests.requested_reviewers.add",
+      "pull_requests.requested_reviewers.remove",
+      "pull_requests.commits.list",
+      "pull_requests.check_merged",
+      "pull_requests.convert_to_draft",
+      "pull_requests.mark_ready",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+    }
   });
 
   test("manifest declares S2 issue deepen and search ops", () => {
@@ -123,7 +145,27 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.2.0 after S2", () => {
-    expect(manifest.version).toBe("0.2.0");
+
+  test("S1 write ops wire EffectPolicy Reconcile to pull_requests.get", () => {
+    const writes = [
+      "pull_requests.reviews.create",
+      "pull_requests.reviews.dismiss",
+      "pull_requests.review_comments.create",
+      "pull_requests.review_comments.reply",
+      "pull_requests.requested_reviewers.add",
+      "pull_requests.requested_reviewers.remove",
+      "pull_requests.convert_to_draft",
+      "pull_requests.mark_ready",
+    ];
+    for (const key of writes) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Reconcile");
+      expect(op.reconcile).toBe("pull_requests.get");
+    }
+  });
+
+  test("manifest version is 0.3.0 after S1 on S2", () => {
+    expect(manifest.version).toBe("0.3.0");
   });
 });

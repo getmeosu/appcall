@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -471,7 +471,8 @@
             }
           }
         }
-      }
+      },
+      "sideEffect": "read"
     },
     "pull_requests.update": {
       "kind": "action",
@@ -1774,6 +1775,812 @@
           }
         }
       }
+    },
+    "pull_requests.check_merged": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Check Pull Request Merged",
+      "description": "Check whether a pull request has been merged via GET /repos/{owner}/{repo}/pulls/{pull_number}/merge (204 merged, 404 not merged).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "merged": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "pull_requests.commits.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pull Request Commits",
+      "description": "List commits on a pull request via GET /repos/{owner}/{repo}/pulls/{pull_number}/commits. Distinct from top-level commits.list (repo commits).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number of results."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "commits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sha": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "author": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "pull_requests.convert_to_draft": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Convert Pull Request to Draft",
+      "description": "Convert an open pull request to draft via POST /repos/{owner}/{repo}/pulls/{pull_number}/convert_to_draft. EffectPolicy Reconcile observes via pull_requests.get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pullRequest": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "number"
+              },
+              "title": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "isDraft": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "pull_requests.get"
+    },
+    "pull_requests.mark_ready": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Mark Pull Request Ready for Review",
+      "description": "Mark a draft pull request ready for review via POST /repos/{owner}/{repo}/pulls/{pull_number}/ready_for_review. EffectPolicy Reconcile observes via pull_requests.get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pullRequest": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "number"
+              },
+              "title": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "isDraft": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "pull_requests.get"
+    },
+    "pull_requests.requested_reviewers.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add Requested Reviewers",
+      "description": "Request reviewers on a pull request via POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers. EffectPolicy Reconcile observes via pull_requests.get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "reviewers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "User logins to request."
+          },
+          "teamReviewers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Team slugs to request."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pullRequest": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "number"
+              },
+              "title": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "isDraft": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "pull_requests.get"
+    },
+    "pull_requests.requested_reviewers.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Remove Requested Reviewers",
+      "description": "Remove requested reviewers from a pull request via DELETE /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers. EffectPolicy Reconcile observes via pull_requests.get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "reviewers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "User logins to remove."
+          },
+          "teamReviewers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Team slugs to remove."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pullRequest": {
+            "type": "object",
+            "properties": {
+              "number": {
+                "type": "number"
+              },
+              "title": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "isDraft": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "pull_requests.get"
+    },
+    "pull_requests.review_comments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Pull Request Review Comment",
+      "description": "Create a review comment on a pull request diff via POST /repos/{owner}/{repo}/pulls/{pull_number}/comments. EffectPolicy Reconcile observes via pull_requests.get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment body markdown."
+          },
+          "commitId": {
+            "type": "string",
+            "description": "SHA of the commit needing a comment."
+          },
+          "path": {
+            "type": "string",
+            "description": "Relative path of the file to comment on."
+          },
+          "line": {
+            "type": "number",
+            "description": "Line index in the diff to comment on."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "description": "Side of the diff."
+          },
+          "startLine": {
+            "type": "number",
+            "description": "Start line for multi-line comments."
+          },
+          "startSide": {
+            "type": "string",
+            "enum": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "description": "Start side for multi-line comments."
+          },
+          "inReplyTo": {
+            "type": "number",
+            "description": "Id of the review comment being replied to."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber",
+          "body",
+          "commitId",
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object",
+            "properties": {
+              "providerCommentId": {
+                "type": "number"
+              },
+              "body": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "author": {
+                "type": "string"
+              },
+              "htmlUrl": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "pull_requests.get"
+    },
+    "pull_requests.review_comments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pull Request Review Comments",
+      "description": "List review comments on a pull request via GET /repos/{owner}/{repo}/pulls/{pull_number}/comments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number of results."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "providerCommentId": {
+                  "type": "number"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "author": {
+                  "type": "string"
+                },
+                "htmlUrl": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "pull_requests.review_comments.reply": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Reply to Pull Request Review Comment",
+      "description": "Reply to an existing pull request review comment via POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies. EffectPolicy Reconcile observes via pull_requests.get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "commentId": {
+            "type": "number",
+            "description": "Id of the review comment to reply to."
+          },
+          "body": {
+            "type": "string",
+            "description": "Reply body markdown."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber",
+          "commentId",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object",
+            "properties": {
+              "providerCommentId": {
+                "type": "number"
+              },
+              "body": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "author": {
+                "type": "string"
+              },
+              "htmlUrl": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "pull_requests.get"
+    },
+    "pull_requests.reviews.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Pull Request Review",
+      "description": "Create a review on a GitHub pull request via POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews. EffectPolicy Reconcile observes via pull_requests.get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "body": {
+            "type": "string",
+            "description": "Review body markdown."
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "APPROVE",
+              "REQUEST_CHANGES",
+              "COMMENT",
+              "PENDING"
+            ],
+            "description": "Review event. Omit or PENDING to leave the review pending."
+          },
+          "commitId": {
+            "type": "string",
+            "description": "SHA of the commit to review."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "review": {
+            "type": "object",
+            "properties": {
+              "providerReviewId": {
+                "type": "number"
+              },
+              "state": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "author": {
+                "type": "string"
+              },
+              "htmlUrl": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "pull_requests.get"
+    },
+    "pull_requests.reviews.dismiss": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Dismiss Pull Request Review",
+      "description": "Dismiss a pull request review via PUT /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/dismissals. EffectPolicy Reconcile observes via pull_requests.get.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "reviewId": {
+            "type": "number",
+            "description": "Review id to dismiss."
+          },
+          "message": {
+            "type": "string",
+            "description": "Dismissal message shown in the UI."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber",
+          "reviewId",
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "review": {
+            "type": "object",
+            "properties": {
+              "providerReviewId": {
+                "type": "number"
+              },
+              "state": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "author": {
+                "type": "string"
+              },
+              "htmlUrl": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "pull_requests.get"
+    },
+    "pull_requests.reviews.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pull Request Reviews",
+      "description": "List reviews on a GitHub pull request via GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number of results."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "reviews": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "providerReviewId": {
+                  "type": "number"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "author": {
+                  "type": "string"
+                },
+                "htmlUrl": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "models": [
@@ -1785,6 +2592,8 @@
     "release",
     "gist",
     "branch",
-    "label"
+    "label",
+    "pull_request_review",
+    "pull_request_review_comment"
   ]
 }
