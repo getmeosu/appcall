@@ -3,6 +3,9 @@
  *
  * jobs.list uses the public postings shape (array of postings).
  * Authenticated list ops use Lever's collection envelope: { data, next, hasNext }.
+ * opportunities.get uses the singular envelope: { data: opportunity }.
+ * Nested reads (interviews/feedback) use the same collection envelope under
+ * /opportunities/{id}/...
  */
 
 export interface NormalizedJob {
@@ -51,6 +54,48 @@ export interface NormalizedUser {
   photo: string | null;
   createdAt: string | null;
   deactivatedAt: string | null;
+}
+
+export interface NormalizedInterview {
+  id: string;
+  provider: string;
+  opportunityId: string | null;
+  panelId: string | null;
+  subject: string;
+  note: string | null;
+  interviewerIds: string[];
+  timezone: string | null;
+  date: string | null;
+  durationMinutes: number | null;
+  location: string | null;
+  stageId: string | null;
+  userId: string | null;
+  canceledAt: string | null;
+  createdAt: string | null;
+  postings: string[];
+}
+
+export interface NormalizedFeedbackField {
+  id: string | null;
+  type: string | null;
+  text: string | null;
+  value: unknown;
+}
+
+export interface NormalizedFeedback {
+  id: string;
+  provider: string;
+  type: string | null;
+  text: string;
+  userId: string | null;
+  panelId: string | null;
+  interviewId: string | null;
+  baseTemplateId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  completedAt: string | null;
+  deletedAt: string | null;
+  fields: NormalizedFeedbackField[];
 }
 
 interface LeverCategories {
@@ -169,6 +214,20 @@ export function parseOpportunitiesResponse(raw: unknown): {
   };
 }
 
+export function parseOpportunityGetResponse(raw: unknown): {
+  opportunity: NormalizedOpportunity | null;
+} {
+  const envelope = raw as { data?: LeverOpportunity } | null;
+  const opp = envelope && typeof envelope === "object" ? envelope.data : undefined;
+  if (opp == null || typeof opp !== "object" || Array.isArray(opp)) {
+    return { opportunity: null };
+  }
+  if (asStringId(opp.id) == null) {
+    return { opportunity: null };
+  }
+  return { opportunity: normalizeOpportunity(opp) };
+}
+
 interface LeverStage {
   id: string;
   text?: string | null;
@@ -240,6 +299,151 @@ export function parseUsersResponse(raw: unknown): {
   const items = Array.isArray(data.data) ? data.data : [];
   return {
     users: items.map(normalizeUser),
+    next: typeof data.next === "string" ? data.next : null,
+    hasNext: data.hasNext === true,
+  };
+}
+
+interface LeverInterviewer {
+  id?: string | null;
+  email?: string | null;
+  name?: string | null;
+  feedbackTemplate?: string | null;
+}
+
+interface LeverInterview {
+  id: string;
+  panel?: string | null;
+  subject?: string | null;
+  note?: string | null;
+  interviewers?: LeverInterviewer[] | null;
+  timezone?: string | null;
+  createdAt?: number | null;
+  date?: number | null;
+  duration?: number | null;
+  location?: string | null;
+  feedbackTemplate?: string | null;
+  feedbackForms?: unknown;
+  feedbackReminder?: string | null;
+  user?: string | null;
+  stage?: string | null;
+  canceledAt?: number | null;
+  postings?: unknown;
+  gcalEventUrl?: string | null;
+}
+
+export function normalizeInterview(
+  interview: LeverInterview,
+  opportunityId?: string | null,
+): NormalizedInterview {
+  const id = asStringId(interview.id) ?? "";
+  const interviewers = Array.isArray(interview.interviewers) ? interview.interviewers : [];
+  return {
+    id: `lev-interview:${id}`,
+    provider: "lever",
+    opportunityId: opportunityId ?? null,
+    panelId: interview.panel ?? null,
+    subject: interview.subject ?? "",
+    note: interview.note ?? null,
+    interviewerIds: interviewers
+      .map((i) => asStringId(i?.id))
+      .filter((v): v is string => v != null),
+    timezone: interview.timezone ?? null,
+    date: msToIso(interview.date),
+    durationMinutes: typeof interview.duration === "number" && Number.isFinite(interview.duration)
+      ? interview.duration
+      : null,
+    location: interview.location ?? null,
+    stageId: interview.stage ?? null,
+    userId: interview.user ?? null,
+    canceledAt: msToIso(interview.canceledAt),
+    createdAt: msToIso(interview.createdAt),
+    postings: asStringArray(interview.postings),
+  };
+}
+
+export function parseInterviewsResponse(
+  raw: unknown,
+  opportunityId?: string | null,
+): {
+  interviews: NormalizedInterview[];
+  next: string | null;
+  hasNext: boolean;
+} {
+  const data = raw as {
+    data?: LeverInterview[];
+    next?: string | null;
+    hasNext?: boolean;
+  };
+  const items = Array.isArray(data.data) ? data.data : [];
+  return {
+    interviews: items.map((item) => normalizeInterview(item, opportunityId)),
+    next: typeof data.next === "string" ? data.next : null,
+    hasNext: data.hasNext === true,
+  };
+}
+
+interface LeverFeedbackField {
+  id?: string | null;
+  type?: string | null;
+  text?: string | null;
+  value?: unknown;
+}
+
+interface LeverFeedback {
+  id: string;
+  type?: string | null;
+  text?: string | null;
+  instructions?: string | null;
+  baseTemplateId?: string | null;
+  fields?: LeverFeedbackField[] | null;
+  user?: string | null;
+  panel?: string | null;
+  interview?: string | null;
+  createdAt?: number | null;
+  updatedAt?: number | null;
+  completedAt?: number | null;
+  deletedAt?: number | null;
+}
+
+export function normalizeFeedback(feedback: LeverFeedback): NormalizedFeedback {
+  const id = asStringId(feedback.id) ?? "";
+  const fields = Array.isArray(feedback.fields) ? feedback.fields : [];
+  return {
+    id: `lev-feedback:${id}`,
+    provider: "lever",
+    type: feedback.type ?? null,
+    text: feedback.text ?? "",
+    userId: feedback.user ?? null,
+    panelId: feedback.panel ?? null,
+    interviewId: feedback.interview ?? null,
+    baseTemplateId: feedback.baseTemplateId ?? null,
+    createdAt: msToIso(feedback.createdAt),
+    updatedAt: msToIso(feedback.updatedAt),
+    completedAt: msToIso(feedback.completedAt),
+    deletedAt: msToIso(feedback.deletedAt),
+    fields: fields.map((f) => ({
+      id: f?.id ?? null,
+      type: f?.type ?? null,
+      text: f?.text ?? null,
+      value: f?.value ?? null,
+    })),
+  };
+}
+
+export function parseFeedbackResponse(raw: unknown): {
+  feedback: NormalizedFeedback[];
+  next: string | null;
+  hasNext: boolean;
+} {
+  const data = raw as {
+    data?: LeverFeedback[];
+    next?: string | null;
+    hasNext?: boolean;
+  };
+  const items = Array.isArray(data.data) ? data.data : [];
+  return {
+    feedback: items.map(normalizeFeedback),
     next: typeof data.next === "string" ? data.next : null,
     hasNext: data.hasNext === true,
   };

@@ -2,10 +2,16 @@ import { describe, expect, test } from "bun:test";
 import {
   executeJobsListSync,
   executeOpportunitiesListSync,
+  executeOpportunitiesGetSync,
+  executeOpportunitiesInterviewsListSync,
+  executeOpportunitiesFeedbackListSync,
   executeStagesListSync,
   executeUsersListSync,
 } from "../src/sync";
 import opportunitiesFixture from "../fixtures/opportunities_list.json";
+import opportunitiesGetFixture from "../fixtures/opportunities_get.json";
+import interviewsFixture from "../fixtures/opportunities_interviews_list.json";
+import feedbackFixture from "../fixtures/opportunities_feedback_list.json";
 import stagesFixture from "../fixtures/stages_list.json";
 import usersFixture from "../fixtures/users_list.json";
 
@@ -212,5 +218,151 @@ describe("Lever users.list sync", () => {
     await expect(executeUsersListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
       code: "CONNECTOR_UPSTREAM_ERROR",
     });
+  });
+});
+
+describe("Lever opportunities.get sync", () => {
+  test("GETs /v1/opportunities/{id} with Basic auth", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(opportunitiesGetFixture));
+
+    const result = await executeOpportunitiesGetSync({
+      ...auth,
+      id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.lever.co");
+    expect(url.pathname).toBe("/v1/opportunities/3410c8b9-5c31-4bab-b7e9-9f710206d647");
+    expect(calls[0].headers.get("authorization")).toBe(
+      `Basic ${Buffer.from("fixturekey:", "utf8").toString("base64")}`,
+    );
+    expect(result.opportunity?.id).toBe(
+      "lev-opportunity:3410c8b9-5c31-4bab-b7e9-9f710206d647",
+    );
+    expect(result.opportunity?.name).toBe("Teresa Kale");
+  });
+
+  test("rejects unsafe opportunity id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeOpportunitiesGetSync({ ...auth, id: "../evil", fetch: impl }),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 404 });
+    await expect(
+      executeOpportunitiesGetSync({
+        ...auth,
+        id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+        fetch: impl,
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Lever opportunities.interviews.list sync", () => {
+  test("GETs /v1/opportunities/{id}/interviews with Basic auth", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
+
+    const result = await executeOpportunitiesInterviewsListSync({
+      ...auth,
+      opportunityId: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.lever.co");
+    expect(url.pathname).toBe(
+      "/v1/opportunities/3410c8b9-5c31-4bab-b7e9-9f710206d647/interviews",
+    );
+    expect(result.interviews).toHaveLength(2);
+    expect(result.interviews[0].id).toBe(
+      "lev-interview:85110ec8-e33a-4997-a798-5affc854b7ce",
+    );
+    expect(result.interviews[0].opportunityId).toBe(
+      "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+    );
+  });
+
+  test("forwards limit/offset", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
+
+    await executeOpportunitiesInterviewsListSync({
+      ...auth,
+      opportunityId: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      limit: 10,
+      offset: "tok",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("offset")).toBe("tok");
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 500 });
+    await expect(
+      executeOpportunitiesInterviewsListSync({
+        ...auth,
+        opportunityId: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+        fetch: impl,
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Lever opportunities.feedback.list sync", () => {
+  test("GETs /v1/opportunities/{id}/feedback with Basic auth", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(feedbackFixture));
+
+    const result = await executeOpportunitiesFeedbackListSync({
+      ...auth,
+      opportunityId: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.lever.co");
+    expect(url.pathname).toBe(
+      "/v1/opportunities/3410c8b9-5c31-4bab-b7e9-9f710206d647/feedback",
+    );
+    expect(result.feedback).toHaveLength(2);
+    expect(result.feedback[0].id).toBe(
+      "lev-feedback:c64fb192-d6d8-42dc-ac82-47cb87e9839c",
+    );
+  });
+
+  test("forwards limit/offset", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(feedbackFixture));
+
+    await executeOpportunitiesFeedbackListSync({
+      ...auth,
+      opportunityId: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      limit: 5,
+      offset: "fb_next",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("limit")).toBe("5");
+    expect(url.searchParams.get("offset")).toBe("fb_next");
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 503 });
+    await expect(
+      executeOpportunitiesFeedbackListSync({
+        ...auth,
+        opportunityId: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+        fetch: impl,
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
   });
 });

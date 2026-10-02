@@ -182,6 +182,9 @@ import leverManifest from "../../connectors/lever/manifest.json";
 import {
   executeJobsListSync as listLeverJobs,
   executeOpportunitiesListSync as listLeverOpportunities,
+  executeOpportunitiesGetSync as getLeverOpportunity,
+  executeOpportunitiesInterviewsListSync as listLeverOpportunityInterviews,
+  executeOpportunitiesFeedbackListSync as listLeverOpportunityFeedback,
   executeStagesListSync as listLeverStages,
   executeUsersListSync as listLeverUsers,
 } from "../../connectors/lever/src/sync";
@@ -1108,6 +1111,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     lever: {
       "jobs.list": listLeverJobs,
       "opportunities.list": listLeverOpportunities,
+      "opportunities.get": getLeverOpportunity,
+      "opportunities.interviews.list": listLeverOpportunityInterviews,
+      "opportunities.feedback.list": listLeverOpportunityFeedback,
       "stages.list": listLeverStages,
       "users.list": listLeverUsers,
     },

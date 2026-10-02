@@ -1,20 +1,29 @@
 /**
- * Lever list syncs.
+ * Lever syncs.
  *
- * jobs.list          → public GET /v0/postings/{site}
- * opportunities.list → authenticated GET /v1/opportunities
- * stages.list        → authenticated GET /v1/stages
- * users.list         → authenticated GET /v1/users
+ * jobs.list                     → public GET /v0/postings/{site}
+ * opportunities.list            → authenticated GET /v1/opportunities
+ * opportunities.get             → authenticated GET /v1/opportunities/{id}
+ * opportunities.interviews.list → authenticated GET /v1/opportunities/{id}/interviews
+ * opportunities.feedback.list   → authenticated GET /v1/opportunities/{id}/feedback
+ * stages.list                   → authenticated GET /v1/stages
+ * users.list                    → authenticated GET /v1/users
  */
 
 import { createClient, createAuthClient } from "./http";
+import { assertSafePathSegment } from "../../_shared/jobboard";
 import {
   parseJobsResponse,
   parseOpportunitiesResponse,
+  parseOpportunityGetResponse,
+  parseInterviewsResponse,
+  parseFeedbackResponse,
   parseStagesResponse,
   parseUsersResponse,
   type NormalizedJob,
   type NormalizedOpportunity,
+  type NormalizedInterview,
+  type NormalizedFeedback,
   type NormalizedStage,
   type NormalizedUser,
 } from "./objects";
@@ -96,6 +105,107 @@ export async function executeOpportunitiesListSync(
     });
   const raw = await client.getJSON(path);
   return parseOpportunitiesResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// opportunities.get — GET /v1/opportunities/{id}
+// ---------------------------------------------------------------------------
+
+export interface ExecuteOpportunitiesGetSyncInput extends LeverAuthInput {
+  /** Lever opportunity UID. */
+  id: string;
+}
+
+export interface ExecuteOpportunitiesGetSyncOutput {
+  opportunity: NormalizedOpportunity | null;
+}
+
+export async function executeOpportunitiesGetSync(
+  input: ExecuteOpportunitiesGetSyncInput,
+): Promise<ExecuteOpportunitiesGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "opportunities.get",
+  });
+  const raw = await client.getJSON(`/opportunities/${id}`);
+  return parseOpportunityGetResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// opportunities.interviews.list — GET /v1/opportunities/{id}/interviews
+// ---------------------------------------------------------------------------
+
+export interface ExecuteOpportunitiesInterviewsListSyncInput extends LeverAuthInput {
+  /** Lever opportunity UID. */
+  opportunityId: string;
+  limit?: number;
+  offset?: string;
+}
+
+export interface ExecuteOpportunitiesInterviewsListSyncOutput {
+  interviews: NormalizedInterview[];
+  next: string | null;
+  hasNext: boolean;
+}
+
+export async function executeOpportunitiesInterviewsListSync(
+  input: ExecuteOpportunitiesInterviewsListSyncInput,
+): Promise<ExecuteOpportunitiesInterviewsListSyncOutput> {
+  const opportunityId = assertSafePathSegment(input.opportunityId, "opportunityId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "opportunities.interviews.list",
+  });
+  const path =
+    `/opportunities/${opportunityId}/interviews` +
+    buildQuery({
+      limit: input.limit != null ? String(input.limit) : undefined,
+      offset: input.offset,
+    });
+  const raw = await client.getJSON(path);
+  return parseInterviewsResponse(raw, opportunityId);
+}
+
+// ---------------------------------------------------------------------------
+// opportunities.feedback.list — GET /v1/opportunities/{id}/feedback
+// ---------------------------------------------------------------------------
+
+export interface ExecuteOpportunitiesFeedbackListSyncInput extends LeverAuthInput {
+  /** Lever opportunity UID. */
+  opportunityId: string;
+  limit?: number;
+  offset?: string;
+}
+
+export interface ExecuteOpportunitiesFeedbackListSyncOutput {
+  feedback: NormalizedFeedback[];
+  next: string | null;
+  hasNext: boolean;
+}
+
+export async function executeOpportunitiesFeedbackListSync(
+  input: ExecuteOpportunitiesFeedbackListSyncInput,
+): Promise<ExecuteOpportunitiesFeedbackListSyncOutput> {
+  const opportunityId = assertSafePathSegment(input.opportunityId, "opportunityId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "opportunities.feedback.list",
+  });
+  const path =
+    `/opportunities/${opportunityId}/feedback` +
+    buildQuery({
+      limit: input.limit != null ? String(input.limit) : undefined,
+      offset: input.offset,
+    });
+  const raw = await client.getJSON(path);
+  return parseFeedbackResponse(raw);
 }
 
 // ---------------------------------------------------------------------------
