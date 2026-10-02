@@ -78,6 +78,12 @@ export function validateGetAuthenticatedUserInput(input: unknown): GetAuthentica
 
 export type GetUserByUsernameInput = { username: string };
 
+export function validateUsersGetAuthenticatedInput(input: unknown): GetAuthenticatedUserInput {
+  if (input === undefined || input === null) return {};
+  if (!isRecord(input)) throw new Error("users.get_authenticated input must be an object");
+  return {};
+}
+
 export function validateGetUserByUsernameInput(input: unknown): GetUserByUsernameInput {
   if (!isRecord(input)) throw new Error("users.get_by_username input must be an object");
   return { username: requireString(input.username, "username") };
@@ -129,6 +135,18 @@ export function createUsersClient(options: { accessToken: string; fetch?: typeof
         return { ok: true as const, user: normalizeGitHubUser(response.body as GitHubUser) };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub users.get failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
+    },
+
+    async getAuthenticated(input: unknown) {
+      validateUsersGetAuthenticatedInput(input);
+      const client = base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "users.get_authenticated" });
+      const response = await client.fetchJSON("/user");
+      const rate = parseGitHubRateLimit(response.status, response.headers);
+      if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, user: normalizeGitHubUser(response.body as GitHubUser) };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub users.get_authenticated failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
     },
 
     async getByUsername(input: unknown) {

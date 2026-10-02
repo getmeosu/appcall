@@ -116,6 +116,17 @@ export function validateUpdateRefInput(input: unknown): UpdateRefInput {
   };
 }
 
+export type GetRefInput = { owner: string; repo: string; ref: string };
+
+export function validateGetRefInput(input: unknown): GetRefInput {
+  if (!isRecord(input)) throw new Error("get ref input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    ref: requireString(input.ref, "ref"),
+  };
+}
+
 export type CreateGitCommitInput = {
   owner: string;
   repo: string;
@@ -354,6 +365,30 @@ export function createGitClient(options: { accessToken: string; fetch?: typeof f
         return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed updating ref (non-fast-forward)." } };
       }
       return mapRateOrUpstream(response, "GitHub rejected the update ref request.");
+    },
+
+    async getRef(input: unknown) {
+      const payload = validateGetRefInput(input);
+      const refPath = encodeRefPath(payload.ref);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/git/refs/${refPath}`);
+      if (response.status === 200) {
+        const raw = isRecord(response.body) ? response.body : {};
+        const obj = isRecord(raw.object) ? raw.object : {};
+        return {
+          ok: true as const,
+          ref: {
+            ref: typeof raw.ref === "string" ? raw.ref : payload.ref,
+            sha: typeof obj.sha === "string" ? obj.sha : "",
+            url: typeof raw.url === "string" ? raw.url : "",
+            modelVersion: "2026-05-16" as const,
+            raw,
+          },
+        };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Ref not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the get ref request.");
     },
 
     async createCommit(input: unknown) {
