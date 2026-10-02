@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -4306,6 +4306,654 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "labels.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Repository Label",
+      "description": "Get a single repository label via GET /repos/{owner}/{repo}/labels/{name}. Returns found=false (label=null) when the label is missing (soft 404), so labels.delete Reconcile can confirm absence. When newName is present (labels.update observe input), lookup uses newName.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Label name."
+          },
+          "newName": {
+            "type": "string",
+            "description": "Optional post-rename name; when present, preferred over name for lookup (update Reconcile)."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "labels.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "labels.get",
+      "title": "Create Repository Label",
+      "description": "Create a repository label via POST /repos/{owner}/{repo}/labels. EffectPolicy Reconcile observes via labels.get. Primary action result is returned; EffectPolicy Reconcile observes via labels.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Label name."
+          },
+          "color": {
+            "type": "string",
+            "description": "Label color hex without leading #."
+          },
+          "description": {
+            "type": "string",
+            "description": "Label description."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "name",
+          "color"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "labels.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "labels.get",
+      "title": "Update Repository Label",
+      "description": "Update a repository label via PATCH /repos/{owner}/{repo}/labels/{name}. EffectPolicy Reconcile observes via labels.get (prefers newName when renaming). Primary action result is settled first; EffectPolicy returns the observe output.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Label name."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New label name."
+          },
+          "color": {
+            "type": "string",
+            "description": "Label color hex without leading #."
+          },
+          "description": {
+            "type": "string",
+            "description": "Label description."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "labels.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "labels.get",
+      "title": "Delete Repository Label",
+      "description": "Delete a repository label via DELETE /repos/{owner}/{repo}/labels/{name}. EffectPolicy Reconcile observes via labels.get (soft 404 \u2192 found=false). Primary action result is settled first; EffectPolicy returns the observe output.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Label name."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "milestones.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Milestones",
+      "description": "List repository milestones via GET /repos/{owner}/{repo}/milestones.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed",
+              "all"
+            ],
+            "description": "Milestone state filter."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "due_on",
+              "completeness"
+            ],
+            "description": "Sort field."
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "milestones": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "milestones.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Milestone",
+      "description": "Get a milestone via GET /repos/{owner}/{repo}/milestones/{milestone_number}. Accepts milestoneNumber or id (Idempotent projection from milestones.create).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "milestoneNumber": {
+            "type": "number",
+            "description": "Milestone number."
+          },
+          "id": {
+            "type": [
+              "number",
+              "string"
+            ],
+            "description": "Alias for milestoneNumber (Idempotent id projection)."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "milestone": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "milestones.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "reconcile": "milestones.get",
+      "title": "Create Milestone",
+      "description": "Create a milestone via POST /repos/{owner}/{repo}/milestones. EffectPolicy Idempotent projects id (milestone number) from the primary response and observes via milestones.get. Primary action result is settled first; EffectPolicy returns the observe output.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "title": {
+            "type": "string",
+            "description": "Milestone title."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "description": "Milestone state."
+          },
+          "description": {
+            "type": "string",
+            "description": "Milestone description."
+          },
+          "dueOn": {
+            "type": "string",
+            "description": "Due date (ISO 8601 timestamp)."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "milestone": {
+            "type": "object"
+          },
+          "id": {
+            "type": "number",
+            "description": "Milestone number (projected for Idempotent observe)."
+          }
+        }
+      }
+    },
+    "milestones.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "milestones.get",
+      "title": "Update Milestone",
+      "description": "Update a milestone via PATCH /repos/{owner}/{repo}/milestones/{milestone_number}. EffectPolicy Reconcile observes via milestones.get. Primary action result is returned; EffectPolicy Reconcile observes via milestones.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "milestoneNumber": {
+            "type": "number",
+            "description": "Milestone number."
+          },
+          "title": {
+            "type": "string",
+            "description": "Milestone title."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "description": "Milestone state."
+          },
+          "description": {
+            "type": "string",
+            "description": "Milestone description."
+          },
+          "dueOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Due date (ISO 8601) or null to clear."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "milestoneNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "milestone": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.collaborators.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Collaborators",
+      "description": "List repository collaborators via GET /repos/{owner}/{repo}/collaborators.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "affiliation": {
+            "type": "string",
+            "enum": [
+              "outside",
+              "direct",
+              "all"
+            ],
+            "description": "Collaborator affiliation filter."
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "pull",
+              "triage",
+              "push",
+              "maintain",
+              "admin"
+            ],
+            "description": "Repository permission level."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "collaborators": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "repos.collaborators.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.collaborators.check",
+      "title": "Add Collaborator",
+      "description": "Add a repository collaborator via PUT /repos/{owner}/{repo}/collaborators/{username}. 201 = invitation created; 204 = already a collaborator. EffectPolicy Reconcile observes via repos.collaborators.check (post-invite may report isCollaborator=false until acceptance). Primary action result is settled first; EffectPolicy returns the observe output.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "username": {
+            "type": "string",
+            "description": "GitHub username."
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "pull",
+              "triage",
+              "push",
+              "maintain",
+              "admin"
+            ],
+            "description": "Repository permission level."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "invited": {
+            "type": "boolean"
+          },
+          "alreadyCollaborator": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "repos.collaborators.remove": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.collaborators.check",
+      "title": "Remove Collaborator",
+      "description": "Remove a repository collaborator via DELETE /repos/{owner}/{repo}/collaborators/{username}. EffectPolicy Reconcile observes via repos.collaborators.check. Primary action result is returned; EffectPolicy Reconcile observes via repos.collaborators.check for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "username": {
+            "type": "string",
+            "description": "GitHub username."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.collaborators.check": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Check Collaborator",
+      "description": "Check whether a user is a collaborator via GET /repos/{owner}/{repo}/collaborators/{username} (204 = yes, 404 = no).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "username": {
+            "type": "string",
+            "description": "GitHub username."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "isCollaborator": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": "string"
           }
         }
       }
