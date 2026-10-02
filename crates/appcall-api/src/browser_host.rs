@@ -896,6 +896,7 @@ impl ApiDashboard {
                 let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;
                 item["connections"]=self.connection_values(&identity,&connections)?.into_iter().filter(|c|c.get("connector").and_then(Value::as_str)==Some(resource)).collect();
                 if let Some((action,op))=selected{item["action"]=action.clone().into();item["inputSchema"]=op.input_schema.clone().unwrap_or_else(||json!({"type":"object"}));item["sample"]=op.sample.clone().unwrap_or(Value::Null);item["connectionId"]=field("connectionId").into();}Ok(item)},
+            Op::Workflows | Op::WorkflowRuns => Ok(json!({"status":"unavailable"})),
             Op::Overview=>{let toolkit_count=self.registry.public_list().count();Ok(self.db(|client|crate::data_routes::overview::read(client,&identity,toolkit_count).map_err(api_error))?)},
             Op::Connections=>{let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"connections":self.connection_values(&identity,&connections)?}))},
             Op::TestConnection=>Ok(connection_value(&self.core.test_connection(&identity,resource).await.map_err(dashboard_failure::map_api_error)?)),

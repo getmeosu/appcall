@@ -12,6 +12,8 @@ pub(crate) fn title(op: Op) -> &'static str {
         Op::Certification => "Certification",
         Op::Usage => "Usage",
         Op::Branding => "White Labeling",
+        Op::Workflows => "Workflows",
+        Op::WorkflowRuns => "Runs",
         _ => "Result",
     }
 }
@@ -748,6 +750,8 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::Test=>crate::connector::result(Some(v)),
   Op::Setup=>json(v),
   Op::RequestConnector=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-atomic=\"true\" data-request-state=\"success\" class=\"catalog-request-result\">Connector request received.</div>".into(),
+  Op::Workflows=>workflows_page(v)?,
+  Op::WorkflowRuns=>workflow_runs_page(v)?,
   _=>return Err(Error::Invalid)
  };
     Ok(body)
@@ -758,9 +762,6 @@ pub(crate) fn static_page(path: &str) -> String {
     }
     if path == "/app/start" {
         return start_here();
-    }
-    if path == "/app/workflows" || path == "/app/workflows/runs" {
-        return workflows_unavailable(path);
     }
     let mut content = crate::remaining_pages::heading(
         "Documentation",
@@ -823,33 +824,145 @@ fn start_here() -> String {
         .render()
     )
 }
-fn workflows_unavailable(path: &str) -> String {
-    let title = if path == "/app/workflows/runs" {
-        "Runs"
-    } else {
-        "Workflows"
-    };
-    let purpose = if path == "/app/workflows/runs" {
-        "Durable engine runs for this project."
-    } else {
-        "Workflows are registered from code. This page shows what is registered and what is running."
-    };
-    format!(
-        "{}{}",
-        crate::ui::PageHeader {
-            title,
-            purpose,
-            action: None,
+fn workflow_status(v: &Value) -> &str {
+    v.get("status").and_then(Value::as_str).unwrap_or("")
+}
+
+fn workflows_page(v: &Value) -> Result<String, Error> {
+    let header = crate::ui::PageHeader {
+        title: "Workflows",
+        purpose: "Workflows are registered from code. This page shows what is registered and what is running.",
+        action: None,
+    }
+    .render();
+    let body = match workflow_status(v) {
+        "unavailable" => empty(
+            "Workflow engine is not connected to this console.",
+            "The engine has its own transport. Until it is configured for this console, this page does not invent runs, history, or registered workflows.",
+            "Read the docs",
+            "/app/docs",
+        ),
+        "error" => empty(
+            "Workflow engine unreachable",
+            "The console is configured to talk to the engine, but the read failed. Nothing here is invented.",
+            "Reload",
+            "/app/workflows",
+        ),
+        "ok" => {
+            let list = rows(v, &["workflows"])?;
+            if list.is_empty() {
+                empty(
+                    "No workflows registered",
+                    "Register a workflow from your code. This console is not a builder and will not invent names or versions.",
+                    "How to register a workflow",
+                    "/app/docs",
+                )
+            } else {
+                let mut table = String::from(
+                    "<div class=\"ui-table-wrap\"><table class=\"ui-table\"><thead><tr><th scope=\"col\">Name</th><th scope=\"col\">Version</th></tr></thead><tbody>",
+                );
+                for row in list {
+                    let name = escape(string(row, &["name"]));
+                    let version = escape(string(row, &["version"]));
+                    if name.is_empty() || version.is_empty() {
+                        return Err(Error::Unavailable);
+                    }
+                    table.push_str(&format!(
+                        "<tr><td><a href=\"/app/workflows/runs\">{name}</a></td><td class=\"tabular\">{version}</td></tr>"
+                    ));
+                }
+                table.push_str("</tbody></table></div>");
+                table
+            }
         }
-        .render(),
-        crate::ui::EmptyState {
-            title: "Workflow engine is not connected to this console.",
-            body: "The engine has its own transport. Until a project-scoped read path exists, this page does not invent runs, history, or registered workflows.",
-            action_label: "Read the docs",
-            action_href: crate::ui::LocalPath::new("/app/docs").expect("static workflows path"),
+        _ => return Err(Error::Unavailable),
+    };
+    Ok(format!("<div id=\"workflows-page\">{header}{body}</div>"))
+}
+
+fn workflow_run_state(label: &str) -> Result<String, Error> {
+    use crate::ui::{state, Tone};
+    let (tone, word) = match label {
+        "Running" | "CancelRequested" => (Tone::Running, "Running"),
+        "Completed" | "ContinuedAsNew" => (Tone::Ok, "Completed"),
+        "Failed" | "Cancelled" | "Nondeterminism" => (Tone::Dead, "Failed"),
+        "NeedsInput" | "NeedsImplementation" => (Tone::Warn, "Needs you"),
+        "OutcomeUnknown" => (Tone::Dead, "Reconcile"),
+        _ => return Err(Error::Unavailable),
+    };
+    Ok(state(tone, word))
+}
+
+fn workflow_runs_page(v: &Value) -> Result<String, Error> {
+    let header = crate::ui::PageHeader {
+        title: "Runs",
+        purpose: "Durable engine runs for this project.",
+        action: None,
+    }
+    .render();
+    let filtered = v.get("filtered").and_then(Value::as_bool) == Some(true);
+    let body = match workflow_status(v) {
+        "unavailable" => empty(
+            "Workflow engine is not connected to this console.",
+            "The engine has its own transport. Until it is configured for this console, this page does not invent runs or history.",
+            "Read the docs",
+            "/app/docs",
+        ),
+        "error" => empty(
+            "Workflow engine unreachable",
+            "The console is configured to talk to the engine, but the read failed. Nothing here is invented.",
+            "Reload",
+            "/app/workflows/runs",
+        ),
+        "ok" => {
+            let list = rows(v, &["runs"])?;
+            if list.is_empty() {
+                if filtered {
+                    empty(
+                        "No runs match these filters",
+                        "Clear filters or wait for a matching durable run. This list does not invent rows.",
+                        "Clear filters",
+                        "/app/workflows/runs",
+                    )
+                } else {
+                    empty(
+                        "No durable runs yet",
+                        "Start a workflow from your code. Runs appear here only after the engine records them.",
+                        "How to register a workflow",
+                        "/app/docs",
+                    )
+                }
+            } else {
+                let mut table = String::from(
+                    "<div class=\"ui-table-wrap\"><table class=\"ui-table\"><thead><tr><th scope=\"col\">Id</th><th scope=\"col\">Workflow</th><th scope=\"col\">Version</th><th scope=\"col\">State</th><th scope=\"col\">Parent</th></tr></thead><tbody>",
+                );
+                for row in list {
+                    let id = escape(string(row, &["id"]));
+                    let workflow = escape(string(row, &["workflow"]));
+                    let version = escape(string(row, &["version"]));
+                    let state_label = string(row, &["state"]);
+                    if id.is_empty() || workflow.is_empty() || version.is_empty() || state_label.is_empty()
+                    {
+                        return Err(Error::Unavailable);
+                    }
+                    let parent = string(row, &["parent"]);
+                    let parent_cell = if parent.is_empty() {
+                        "—".into()
+                    } else {
+                        escape(parent)
+                    };
+                    table.push_str(&format!(
+                        "<tr><td class=\"tabular\">{id}</td><td>{workflow}</td><td class=\"tabular\">{version}</td><td>{}</td><td class=\"tabular\">{parent_cell}</td></tr>",
+                        workflow_run_state(state_label)?
+                    ));
+                }
+                table.push_str("</tbody></table></div>");
+                table
+            }
         }
-        .render()
-    )
+        _ => return Err(Error::Unavailable),
+    };
+    Ok(format!("<div id=\"workflow-runs-page\">{header}{body}</div>"))
 }
 #[cfg(test)]
 #[path = "pages/operator_tests.rs"]
@@ -1997,6 +2110,92 @@ mod rendering_contract_tests {
             assert!(docs.contains(&format!("href=\"{target}\"")));
         }
         assert!(static_page("/app/support").contains("mailto:info@manavritti.com"));
+    }
+
+    #[test]
+    fn workflows_page_triad_empty_states_and_page_id() {
+        let unavailable = render(Op::Workflows, &json!({"status":"unavailable"}), None).unwrap();
+        assert!(unavailable.contains("id=\"workflows-page\""));
+        assert!(unavailable.contains("Workflow engine is not connected to this console."));
+        assert!(!unavailable.contains("ui-table"));
+
+        let error = render(Op::Workflows, &json!({"status":"error"}), None).unwrap();
+        assert!(error.contains("workflows-page"));
+        assert!(error.contains("Workflow engine unreachable"));
+
+        let empty_ok = render(Op::Workflows, &json!({"status":"ok","workflows":[]}), None).unwrap();
+        assert!(empty_ok.contains("No workflows registered"));
+        assert!(!empty_ok.contains("not connected"));
+
+        let populated = render(
+            Op::Workflows,
+            &json!({"status":"ok","workflows":[{"name":"echo","version":"v1"}]}),
+            None,
+        )
+        .unwrap();
+        assert!(populated.contains("workflows-page"));
+        assert!(populated.contains("echo"));
+        assert!(populated.contains("v1"));
+        assert!(populated.contains("ui-table"));
+    }
+
+    #[test]
+    fn workflow_runs_page_triad_empty_states_and_page_id() {
+        let unavailable = render(Op::WorkflowRuns, &json!({"status":"unavailable"}), None).unwrap();
+        assert!(unavailable.contains("id=\"workflow-runs-page\""));
+        assert!(unavailable.contains("Workflow engine is not connected to this console."));
+
+        let error = render(Op::WorkflowRuns, &json!({"status":"error"}), None).unwrap();
+        assert!(error.contains("Workflow engine unreachable"));
+
+        let empty_ok = render(Op::WorkflowRuns, &json!({"status":"ok","runs":[]}), None).unwrap();
+        assert!(empty_ok.contains("No durable runs yet"));
+        assert!(!empty_ok.contains("not connected"));
+
+        let filtered = render(
+            Op::WorkflowRuns,
+            &json!({"status":"ok","filtered":true,"runs":[]}),
+            None,
+        )
+        .unwrap();
+        assert!(filtered.contains("No runs match these filters"));
+        assert!(!filtered.contains("No durable runs yet"));
+
+        let populated = render(
+            Op::WorkflowRuns,
+            &json!({
+                "status":"ok",
+                "runs":[{
+                    "id":"r1",
+                    "workflow":"echo",
+                    "version":"v1",
+                    "state":"Running",
+                    "parent":null
+                },{
+                    "id":"r2",
+                    "workflow":"echo",
+                    "version":"v1",
+                    "state":"OutcomeUnknown",
+                    "parent":"r1"
+                }]
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(populated.contains("workflow-runs-page"));
+        assert!(populated.contains("r1"));
+        assert!(populated.contains("Reconcile"));
+        assert!(populated.contains("ui-state-dead"));
+        assert!(!populated.contains("ui-state-ok"));
+        assert!(populated.contains("Running"));
+    }
+
+    #[test]
+    fn workflow_ops_titles_are_not_syncs() {
+        assert_eq!(title(Op::Workflows), "Workflows");
+        assert_eq!(title(Op::WorkflowRuns), "Runs");
+        assert_eq!(title(Op::Runs), "Syncs");
+
     }
 }
 

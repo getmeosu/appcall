@@ -33,6 +33,8 @@ pub enum DashboardOperation {
     Usage,
     Branding,
     SaveBranding,
+    Workflows,
+    WorkflowRuns,
 }
 pub struct DashboardRequest {
     pub principal: Principal,
@@ -234,8 +236,6 @@ impl DashboardRenderer<'_> {
                     match r.path {
                         "/app/docs" => "Documentation",
                         "/app/start" => "Start here",
-                        "/app/workflows" => "Workflows",
-                        "/app/workflows/runs" => "Runs",
                         _ => "Support",
                     },
                     session,
@@ -316,6 +316,8 @@ impl DashboardRenderer<'_> {
                     | DashboardOperation::Stream
                     | DashboardOperation::ActionClaims
                     | DashboardOperation::ReconcileActionClaim
+                    | DashboardOperation::Workflows
+                    | DashboardOperation::WorkflowRuns
             ) {
             Some(segments[2].to_owned())
         } else {
@@ -848,10 +850,11 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
         ("POST", "/app/action-claims/reconcile") => ReconcileActionClaim,
         ("GET", "/app/settings/white-labeling") => Branding,
         ("POST", "/app/settings/white-labeling") => SaveBranding,
-        ("GET", "/app/docs" | "/app/support" | "/app/start" | "/app/workflows") => {
+        ("GET", "/app/docs" | "/app/support" | "/app/start") => {
             return Some(None)
         }
-        ("GET", "/app/workflows/runs") => return Some(None),
+        ("GET", "/app/workflows") => Workflows,
+        ("GET", "/app/workflows/runs") => WorkflowRuns,
         _ => {
             let parts: Vec<_> = path.trim_start_matches('/').split('/').collect();
             if parts.first() != Some(&"app") {
@@ -1293,5 +1296,30 @@ mod redirect_tests {
             "/oauth/local/authorize?connector=google-workspace&connectionId=x#fragment",
             "/oauth/local/authorize?connector=google-workspace&connectionId=%2Foutside",
         ] { assert!(!super::valid_local_setup_redirect(url,"google-workspace"),"{url}"); }
+    }
+}
+
+#[cfg(test)]
+mod workflow_route_tests {
+    use super::*;
+
+    #[test]
+    fn workflows_routes_resolve_to_dedicated_ops_not_static() {
+        assert_eq!(
+            resolve("GET", "/app/workflows"),
+            Some(Some(DashboardOperation::Workflows))
+        );
+        assert_eq!(
+            resolve("GET", "/app/workflows/runs"),
+            Some(Some(DashboardOperation::WorkflowRuns))
+        );
+        assert_ne!(
+            resolve("GET", "/app/workflows"),
+            Some(None)
+        );
+        assert_eq!(
+            resolve("GET", "/app/syncs"),
+            Some(Some(DashboardOperation::Runs))
+        );
     }
 }

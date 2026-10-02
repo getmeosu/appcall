@@ -113,6 +113,7 @@ impl MemoryDashboard {
                 }
                 Ok(item)
             }
+            Op::Workflows | Op::WorkflowRuns => Ok(serde_json::json!({"status":"unavailable"})),
             Op::Overview => {
                 let connections = self
                     .core
