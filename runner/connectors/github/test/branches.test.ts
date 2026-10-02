@@ -44,16 +44,17 @@ describe("github branches actions", () => {
     expect((result.branch as Record<string, unknown>).protected).toBe(false);
   });
 
-  test("getBranch maps 404 to upstream error", async () => {
-    await expect(
-      getBranch({
-        accessToken: "ghp_test-token",
-        owner: "acme",
-        repo: "app",
-        branch: "nonexistent",
-        fetch: async () => new Response(JSON.stringify({ message: "Branch not found" }), { status: 404 }),
-      })
-    ).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  test("getBranch maps 404 to soft not-found for delete reconcile", async () => {
+    const result = await getBranch({
+      accessToken: "ghp_test-token",
+      owner: "acme",
+      repo: "app",
+      branch: "nonexistent",
+      fetch: async () => new Response(JSON.stringify({ message: "Branch not found" }), { status: 404 }),
+    });
+    expect(result.found).toBe(false);
+    expect(result.branch).toBeNull();
+    expect(result.name).toBe("nonexistent");
   });
 
   test("getBranch maps 403 rate limit to CONNECTOR_RATE_LIMITED", async () => {

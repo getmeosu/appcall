@@ -163,6 +163,10 @@ import {
   createGitTree as ghCreateGitTree, getGitTree as ghGetGitTree,
   createGitRef as ghCreateGitRef, updateGitRef as ghUpdateGitRef,
   createGitCommit as ghCreateGitCommit, getRepoTree as ghGetRepoTree,
+  listPullRequestComments as ghListPullRequestComments,
+  updateRepo as ghUpdateRepo,
+  deleteBranch as ghDeleteBranch,
+  createCommitComment as ghCreateCommitComment,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -929,6 +933,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "discussions.comments.list": ghListDiscussionComments,
       "discussions.comments.create": ghCreateDiscussionComment,
       "discussions.comments.update": ghUpdateDiscussionComment,
+      "pull_requests.comments.list": ghListPullRequestComments,
+      "repos.update": ghUpdateRepo,
+      "branches.delete": ghDeleteBranch,
+      "commits.comments.create": ghCreateCommitComment,
     },
     salesforce: {
       "contacts.create": createContact,

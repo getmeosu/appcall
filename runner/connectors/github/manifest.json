@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -896,7 +896,7 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
       "title": "Get Branch",
-      "description": "Retrieve branch metadata including the HEAD commit SHA and protection status.",
+      "description": "Retrieve branch metadata including the HEAD commit SHA and protection status. A GitHub 'Branch not found' 404 is found=false so branches.delete Reconcile can confirm absence. A generic Not Found (missing repository) stays an error.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -922,6 +922,10 @@
       "outputSchema": {
         "type": "object",
         "properties": {
+          "found": {
+            "type": "boolean",
+            "description": "False when the branch does not exist."
+          },
           "branch": {
             "type": "object",
             "properties": {
@@ -937,7 +941,8 @@
             }
           }
         }
-      }
+      },
+      "sideEffect": "read"
     },
     "branches.create": {
       "kind": "action",
@@ -6859,6 +6864,246 @@
           }
         }
       }
+    },
+    "pull_requests.comments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Pull Request Comments",
+      "description": "List conversation comments on a pull request via GET /repos/{owner}/{repo}/issues/{pull_number}/comments. Diff review comments stay on pull_requests.review_comments.list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          },
+          "since": {
+            "type": "string",
+            "description": "Only comments updated at or after this ISO 8601 timestamp."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "repos.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "repos.get",
+      "title": "Update Repository",
+      "description": "Update a repository via PATCH /repos/{owner}/{repo}. EffectPolicy Reconcile observes via repos.get (name is preferred when renaming). Primary action result is returned; EffectPolicy Reconcile observes via repos.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "New repository name. Reconcile observes this name when set."
+          },
+          "description": {
+            "type": "string",
+            "description": "Repository description."
+          },
+          "homepage": {
+            "type": "string",
+            "description": "Homepage URL."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Whether the repository is private."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "public, private, or internal."
+          },
+          "defaultBranch": {
+            "type": "string",
+            "description": "Default branch name."
+          },
+          "hasIssues": {
+            "type": "boolean",
+            "description": "Enable issues."
+          },
+          "hasWiki": {
+            "type": "boolean",
+            "description": "Enable the wiki."
+          },
+          "hasProjects": {
+            "type": "boolean",
+            "description": "Enable projects."
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "Archive the repository."
+          },
+          "deleteBranchOnMerge": {
+            "type": "boolean",
+            "description": "Delete head branches after pull requests merge."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "branches.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "branches.get",
+      "title": "Delete Branch",
+      "description": "Delete a branch via DELETE /repos/{owner}/{repo}/git/refs/heads/{branch}. EffectPolicy Reconcile observes via branches.get (Branch not found means the branch is gone; a missing repository stays an error). Primary action result is returned; EffectPolicy Reconcile observes via branches.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch name to delete."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "branch"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "branch": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "commits.comments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "commits.get",
+      "title": "Create Commit Comment",
+      "description": "Create a commit comment via POST /repos/{owner}/{repo}/commits/{commit_sha}/comments. EffectPolicy Reconcile observes via commits.get (sha is accepted as ref). Primary action result is returned; EffectPolicy Reconcile observes via commits.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "sha": {
+            "type": "string",
+            "description": "Commit SHA to comment on."
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment body (Markdown)."
+          },
+          "path": {
+            "type": "string",
+            "description": "Relative file path the comment applies to."
+          },
+          "line": {
+            "type": "number",
+            "description": "Line index in the diff."
+          },
+          "side": {
+            "type": "string",
+            "description": "LEFT or RIGHT side of the diff."
+          },
+          "position": {
+            "type": "number",
+            "description": "Deprecated line position in the diff."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "sha",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      }
     }
   },
   "models": [
@@ -6889,6 +7134,7 @@
     "discussion_comment",
     "git_blob",
     "git_tree",
-    "git_ref"
+    "git_ref",
+    "commit_comment"
   ]
 }

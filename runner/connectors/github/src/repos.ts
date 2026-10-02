@@ -86,10 +86,56 @@ export type GetRepoInput = { owner: string; repo: string };
 
 export function validateGetRepoInput(input: unknown): GetRepoInput {
   if (!isRecord(input)) throw new Error("get repo input must be an object");
+  // repos.update Reconcile reuses its input. `name` is the post-rename repository name.
+  const renamed = typeof input.name === "string" && input.name.length > 0 ? input.name : undefined;
   return {
     owner: requireString(input.owner, "owner"),
-    repo: requireString(input.repo, "repo"),
+    repo: requireString(renamed ?? input.repo, "repo"),
   };
+}
+
+export type UpdateRepoInput = {
+  owner: string;
+  repo: string;
+  name?: string;
+  description?: string;
+  homepage?: string;
+  private?: boolean;
+  visibility?: string;
+  defaultBranch?: string;
+  hasIssues?: boolean;
+  hasWiki?: boolean;
+  hasProjects?: boolean;
+  archived?: boolean;
+  deleteBranchOnMerge?: boolean;
+};
+
+export function validateUpdateRepoInput(input: unknown): UpdateRepoInput {
+  if (!isRecord(input)) throw new Error("update repo input must be an object");
+  const visibility = typeof input.visibility === "string" ? input.visibility : undefined;
+  if (visibility !== undefined && !["public", "private", "internal"].includes(visibility)) {
+    throw new Error("visibility must be public, private, or internal");
+  }
+  const payload: UpdateRepoInput = {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    name: typeof input.name === "string" && input.name.length > 0 ? input.name : undefined,
+    description: typeof input.description === "string" ? input.description : undefined,
+    homepage: typeof input.homepage === "string" ? input.homepage : undefined,
+    private: typeof input.private === "boolean" ? input.private : undefined,
+    visibility,
+    defaultBranch: typeof input.defaultBranch === "string" && input.defaultBranch.length > 0 ? input.defaultBranch : undefined,
+    hasIssues: typeof input.hasIssues === "boolean" ? input.hasIssues : undefined,
+    hasWiki: typeof input.hasWiki === "boolean" ? input.hasWiki : undefined,
+    hasProjects: typeof input.hasProjects === "boolean" ? input.hasProjects : undefined,
+    archived: typeof input.archived === "boolean" ? input.archived : undefined,
+    deleteBranchOnMerge: typeof input.deleteBranchOnMerge === "boolean" ? input.deleteBranchOnMerge : undefined,
+  };
+  const mutable = ["name", "description", "homepage", "private", "visibility", "defaultBranch", "hasIssues", "hasWiki", "hasProjects", "archived", "deleteBranchOnMerge"] as const;
+  if (!mutable.some((key) => payload[key] !== undefined)) {
+    throw new Error("at least one repository field is required");
+  }
+  return payload;
 }
 
 export type CreateRepoInput = {
@@ -228,6 +274,41 @@ export function createReposClient(options: { accessToken: string; fetch?: typeof
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the get repo request." } };
+    },
+
+    async update(input: unknown) {
+      const payload = validateUpdateRepoInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.name !== undefined) body.name = payload.name;
+      if (payload.description !== undefined) body.description = payload.description;
+      if (payload.homepage !== undefined) body.homepage = payload.homepage;
+      if (payload.private !== undefined) body.private = payload.private;
+      if (payload.visibility !== undefined) body.visibility = payload.visibility;
+      if (payload.defaultBranch !== undefined) body.default_branch = payload.defaultBranch;
+      if (payload.hasIssues !== undefined) body.has_issues = payload.hasIssues;
+      if (payload.hasWiki !== undefined) body.has_wiki = payload.hasWiki;
+      if (payload.hasProjects !== undefined) body.has_projects = payload.hasProjects;
+      if (payload.archived !== undefined) body.archived = payload.archived;
+      if (payload.deleteBranchOnMerge !== undefined) body.delete_branch_on_merge = payload.deleteBranchOnMerge;
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 200) {
+        return { ok: true as const, repo: normalizeGitHubRepo(response.body as GitHubRepo) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository not found." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository update validation failed." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the update repo request." } };
     },
 
     async create(input: unknown) {
