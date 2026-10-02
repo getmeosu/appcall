@@ -241,7 +241,7 @@ fn assemble(record: &[u8], sealed: Vec<HistoryEvent>) -> Result<RunRecord> {
         return Ok(run);
     }
     let mut history = sealed;
-    history.extend(run.history.drain(..));
+    history.append(&mut run.history);
     if history.len() > HISTORY_CAP {
         return Err(Error::Limit);
     }
