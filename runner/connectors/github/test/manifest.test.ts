@@ -254,9 +254,47 @@ describe("github connector manifest", () => {
     }
   });
 
+  test("manifest declares S5 contents-write ops", () => {
+    for (const key of [
+      "contents.put",
+      "contents.delete",
+      "contents.push_files",
+      "git.blobs.create",
+      "git.blobs.get",
+      "git.trees.create",
+      "git.trees.get",
+      "git.refs.create",
+      "git.refs.update",
+      "git.commits.create",
+      "repos.tree.get",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+    }
+  });
 
-  test("manifest version is 0.9.0 after S9 discussions on S7 tip", () => {
-    expect(manifest.version).toBe("0.9.0");
+  test("S5 write ops wire EffectPolicy", () => {
+    expect(manifest.operations["contents.put"].sideEffect).toBe("write");
+    expect(manifest.operations["contents.put"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["contents.put"].reconcile).toBe("repos.contents.get");
+    expect(manifest.operations["contents.delete"].sideEffect).toBe("write");
+    expect(manifest.operations["contents.delete"].effectPolicy).toBe("Idempotent");
+    expect(manifest.operations["contents.push_files"].sideEffect).toBe("write");
+    expect(manifest.operations["contents.push_files"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["contents.push_files"].reconcile).toBe("commits.get");
+    for (const key of [
+      "git.blobs.create",
+      "git.trees.create",
+      "git.refs.create",
+      "git.refs.update",
+      "git.commits.create",
+    ] as const) {
+      expect(manifest.operations[key].sideEffect).toBe("write");
+      expect(manifest.operations[key].effectPolicy).toBe("Idempotent");
+    }
+  });
+
+  test("manifest version is 0.10.0 after S5 contents-write on S9 tip", () => {
+    expect(manifest.version).toBe("0.10.0");
   });
 
   test("manifest declares S8 labels milestones collab ops", () => {
@@ -338,7 +376,7 @@ describe("github connector manifest", () => {
     ] as const) {
       expect(manifest.operations[key].kind).toBe("action");
     }
-    expect(Object.keys(manifest.operations).length).toBe(107);
+    expect(Object.keys(manifest.operations).length).toBe(118);
   });
 
   test("S9 write ops wire EffectPolicy Reconcile", () => {

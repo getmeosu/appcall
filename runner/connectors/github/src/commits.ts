@@ -196,10 +196,12 @@ export type GetCommitInput = { owner: string; repo: string; ref: string };
 
 export function validateGetCommitInput(input: unknown): GetCommitInput {
   if (!isRecord(input)) throw new Error("get commit input must be an object");
+  // Accept `branch` / `sha` as aliases for `ref` so EffectPolicy Reconcile can
+  // reuse contents.push_files input (branch) when calling commits.get.
   return {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
-    ref: requireString(input.ref, "ref"),
+    ref: requireString(input.ref ?? input.branch ?? input.sha, "ref"),
   };
 }
 

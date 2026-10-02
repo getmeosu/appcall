@@ -83,7 +83,9 @@ import {
   validateRemoveCollaboratorInput,
   validateCheckCollaboratorInput,
 } from "./labels_milestones";
-import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput } from "./repos";
+import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput, validateGetRepoTreeInput } from "./repos";
+import { createContentsClient, validatePutContentsInput, validateDeleteContentsInput, validatePushFilesInput } from "./contents";
+import { createGitClient, validateCreateBlobInput, validateGetBlobInput, validateCreateTreeInput, validateGetTreeInput, validateCreateRefInput, validateUpdateRefInput, validateCreateGitCommitInput } from "./git";
 import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput, validateListBranchesInput } from "./branches";
 import {
   createReleasesClient,
@@ -1787,6 +1789,204 @@ export function updateDiscussionComment(input: unknown): Record<string, unknown>
     });
   }
   return { connector: "github", action: "discussions.comments.update", source: "connector", validated: validateUpdateDiscussionCommentInput(input) };
+}
+
+// ─── S5: contents.put ─────────────────────────────────────────────────────────
+
+export function putContents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createContentsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "contents.put" }),
+    }).put(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "contents.put", source: "connector", content: result.content };
+    });
+  }
+  return { connector: "github", action: "contents.put", source: "connector", validated: validatePutContentsInput(input) };
+}
+
+// ─── S5: contents.delete ──────────────────────────────────────────────────────
+
+export function deleteContents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createContentsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "contents.delete" }),
+    }).delete(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "contents.delete", source: "connector", deleted: result.deleted, path: result.path, commitSha: result.commitSha };
+    });
+  }
+  return { connector: "github", action: "contents.delete", source: "connector", validated: validateDeleteContentsInput(input) };
+}
+
+// ─── S5: contents.push_files ──────────────────────────────────────────────────
+
+export function pushFiles(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createContentsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "contents.push_files" }),
+    }).pushFiles(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "contents.push_files", source: "connector", commit: result.commit };
+    });
+  }
+  return { connector: "github", action: "contents.push_files", source: "connector", validated: validatePushFilesInput(input) };
+}
+
+// ─── S5: git.blobs.create ─────────────────────────────────────────────────────
+
+export function createGitBlob(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "git.blobs.create" }),
+    }).createBlob(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "git.blobs.create", source: "connector", blob: result.blob };
+    });
+  }
+  return { connector: "github", action: "git.blobs.create", source: "connector", validated: validateCreateBlobInput(input) };
+}
+
+// ─── S5: git.blobs.get ────────────────────────────────────────────────────────
+
+export function getGitBlob(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "git.blobs.get" }),
+    }).getBlob(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "git.blobs.get", source: "connector", blob: result.blob };
+    });
+  }
+  return { connector: "github", action: "git.blobs.get", source: "connector", validated: validateGetBlobInput(input) };
+}
+
+// ─── S5: git.trees.create ─────────────────────────────────────────────────────
+
+export function createGitTree(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "git.trees.create" }),
+    }).createTree(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "git.trees.create", source: "connector", tree: result.tree };
+    });
+  }
+  return { connector: "github", action: "git.trees.create", source: "connector", validated: validateCreateTreeInput(input) };
+}
+
+// ─── S5: git.trees.get ────────────────────────────────────────────────────────
+
+export function getGitTree(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "git.trees.get" }),
+    }).getTree(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "git.trees.get", source: "connector", tree: result.tree };
+    });
+  }
+  return { connector: "github", action: "git.trees.get", source: "connector", validated: validateGetTreeInput(input) };
+}
+
+// ─── S5: git.refs.create ──────────────────────────────────────────────────────
+
+export function createGitRef(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "git.refs.create" }),
+    }).createRef(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "git.refs.create", source: "connector", ref: result.ref };
+    });
+  }
+  return { connector: "github", action: "git.refs.create", source: "connector", validated: validateCreateRefInput(input) };
+}
+
+// ─── S5: git.refs.update ──────────────────────────────────────────────────────
+
+export function updateGitRef(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "git.refs.update" }),
+    }).updateRef(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "git.refs.update", source: "connector", ref: result.ref };
+    });
+  }
+  return { connector: "github", action: "git.refs.update", source: "connector", validated: validateUpdateRefInput(input) };
+}
+
+// ─── S5: git.commits.create ───────────────────────────────────────────────────
+
+export function createGitCommit(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "git.commits.create" }),
+    }).createCommit(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "git.commits.create", source: "connector", commit: result.commit };
+    });
+  }
+  return { connector: "github", action: "git.commits.create", source: "connector", validated: validateCreateGitCommitInput(input) };
+}
+
+// ─── S5: repos.tree.get ───────────────────────────────────────────────────────
+
+export function getRepoTree(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createReposClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "repos.tree.get" }),
+    }).getTree(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "repos.tree.get", source: "connector", tree: result.tree };
+    });
+  }
+  return { connector: "github", action: "repos.tree.get", source: "connector", validated: validateGetRepoTreeInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

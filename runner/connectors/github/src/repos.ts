@@ -129,11 +129,26 @@ export type GetRepoContentsInput = { owner: string; repo: string; path: string; 
 
 export function validateGetRepoContentsInput(input: unknown): GetRepoContentsInput {
   if (!isRecord(input)) throw new Error("get repo contents input must be an object");
+  // contents.put / contents.delete write `branch` (and only fall back to `ref`).
+  // Reconcile reuses that input, so `branch` wins when both differ.
+  const refRaw = input.branch ?? input.ref;
   return {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
     path: requireString(input.path, "path"),
-    ref: typeof input.ref === "string" ? input.ref : undefined,
+    ref: typeof refRaw === "string" ? refRaw : undefined,
+  };
+}
+
+export type GetRepoTreeInput = { owner: string; repo: string; treeSha: string; recursive?: boolean };
+
+export function validateGetRepoTreeInput(input: unknown): GetRepoTreeInput {
+  if (!isRecord(input)) throw new Error("get repo tree input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    treeSha: requireString(input.treeSha ?? input.sha, "treeSha"),
+    recursive: typeof input.recursive === "boolean" ? input.recursive : undefined,
   };
 }
 
@@ -267,7 +282,8 @@ export function createReposClient(options: { accessToken: string; fetch?: typeof
       const params = new URLSearchParams();
       if (payload.ref) params.set("ref", payload.ref);
       const qs = params.toString() ? `?${params.toString()}` : "";
-      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/contents/${payload.path}${qs}`);
+      const encodedPath = payload.path.split("/").map((segment) => encodeURIComponent(segment)).join("/");
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/contents/${encodedPath}${qs}`);
       if (response.status === 200) {
         return { ok: true as const, contents: response.body };
       }
@@ -279,6 +295,42 @@ export function createReposClient(options: { accessToken: string; fetch?: typeof
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the get contents request." } };
+    },
+
+    async getTree(input: unknown) {
+      const payload = validateGetRepoTreeInput(input);
+      const params = new URLSearchParams();
+      if (payload.recursive === true) params.set("recursive", "1");
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/git/trees/${encodeURIComponent(payload.treeSha)}${qs}`
+      );
+      if (response.status === 200) {
+        const raw = (response.body && typeof response.body === "object") ? response.body as Record<string, unknown> : {};
+        const tree = Array.isArray(raw.tree) ? raw.tree : [];
+        return {
+          ok: true as const,
+          tree: {
+            sha: typeof raw.sha === "string" ? raw.sha : payload.treeSha,
+            url: typeof raw.url === "string" ? raw.url : "",
+            truncated: raw.truncated === true,
+            tree,
+            modelVersion: "2026-05-16" as const,
+            raw,
+          },
+        };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Tree not found." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Tree SHA is invalid." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the get tree request." } };
     },
   };
 }
