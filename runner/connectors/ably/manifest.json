@@ -1,7 +1,7 @@
 {
   "key": "ably",
   "name": "Ably",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -34,6 +34,8 @@
     ]
   },
   "models": [
+    "message",
+    "presence",
     "stats"
   ],
   "http": {
@@ -100,6 +102,205 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "messages.history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Retrieve message history for a channel.",
+      "description": "Retrieve persisted or recent message history for an Ably channel via GET /channels/{channelId}/messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "backwards",
+              "forwards"
+            ]
+          }
+        },
+        "required": [
+          "channelId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channelId}}/messages",
+        "success": [
+          200
+        ],
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "limit": "{{limit}}",
+          "direction": "{{direction}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "enforceOutputSchema": true
+    },
+    "messages.publish": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Publish a message to a channel.",
+      "description": "Publish one message on an Ably channel via REST POST /channels/{channelId}/messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "data": {}
+        },
+        "required": [
+          "channelId",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/channels/{{channelId}}/messages",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "data": "{{data}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "enforceOutputSchema": true
+    },
+    "presence.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List instantaneous presence on a channel.",
+      "description": "Obtain members currently present on an Ably channel via GET /channels/{channelId}/presence.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "clientId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "connectionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "channelId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/channels/{{channelId}}/presence",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "clientId": "{{clientId}}",
+          "connectionId": "{{connectionId}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "enforceOutputSchema": true
     },
     "stats.get": {
       "kind": "action",
