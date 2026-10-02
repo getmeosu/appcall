@@ -215,9 +215,12 @@ import {
 import smartrecruitersManifest from "../../connectors/smartrecruiters/manifest.json";
 import {
   executeJobsListSync as listSmartRecruitersJobs,
+  executeJobsGetSync as getSmartRecruitersJob,
+  executePostingsListSync as listSmartRecruitersPostings,
   executeCandidatesListSync as listSmartRecruitersCandidates,
   executeCandidatesGetSync as getSmartRecruitersCandidate,
   executeUsersListSync as listSmartRecruitersUsers,
+  executeInterviewsListSync as listSmartRecruitersInterviews,
 } from "../../connectors/smartrecruiters/src/sync";
 import recruiteeManifest from "../../connectors/recruitee/manifest.json";
 import { healthcheck as recruiteeHealthcheck } from "../../connectors/recruitee/src/healthcheck";
@@ -1158,9 +1161,12 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
     smartrecruiters: {
       "jobs.list": listSmartRecruitersJobs,
+      "jobs.get": getSmartRecruitersJob,
+      "postings.list": listSmartRecruitersPostings,
       "candidates.list": listSmartRecruitersCandidates,
       "candidates.get": getSmartRecruitersCandidate,
       "users.list": listSmartRecruitersUsers,
+      "interviews.list": listSmartRecruitersInterviews,
     },
     recruitee: {
       "jobs.list": listRecruiteeJobs,

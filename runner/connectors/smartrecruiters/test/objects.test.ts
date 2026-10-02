@@ -2,16 +2,23 @@ import { describe, expect, it } from "bun:test";
 import {
   normalizeJob,
   parseJobsResponse,
+  parsePostingsResponse,
+  parseJobGetResponse,
   normalizeCandidate,
   parseCandidatesResponse,
   parseCandidateDetailsResponse,
   normalizeUser,
   parseUsersResponse,
+  normalizeInterview,
+  parseInterviewsResponse,
 } from "../src/objects";
 import jobsFixture from "../fixtures/jobs_list.json";
+import jobGetFixture from "../fixtures/job_get.json";
+import postingsFixture from "../fixtures/postings_list.json";
 import candidatesFixture from "../fixtures/candidates_list.json";
 import candidateGetFixture from "../fixtures/candidate_get.json";
 import usersFixture from "../fixtures/users_list.json";
+import interviewsFixture from "../fixtures/interviews_list.json";
 
 describe("SmartRecruiters normalizeJob", () => {
   it("normalizes a full job correctly", () => {
@@ -221,3 +228,94 @@ describe("SmartRecruiters parseUsersResponse", () => {
   });
 });
 
+describe("SmartRecruiters parseJobGetResponse", () => {
+  it("parses authenticated JobDetails fixture", () => {
+    const result = parseJobGetResponse(jobGetFixture);
+    expect(result.job?.id).toBe("sr-job:job-100");
+    expect(result.job?.title).toBe("Software Engineer");
+    expect(result.job?.department).toBe("Engineering");
+    expect(result.job?.location).toBe("San Francisco, California, United States");
+    expect(result.job?.type).toBe("Full-time");
+    expect(result.job?.status).toBe("SOURCING");
+    expect(result.job?.postingStatus).toBe("PUBLIC");
+    expect(result.job?.refNumber).toBe("ENG-100");
+    expect(result.job?.provider).toBe("smartrecruiters");
+  });
+
+  it("returns null for non-object bodies", () => {
+    expect(parseJobGetResponse([]).job).toBeNull();
+    expect(parseJobGetResponse(null).job).toBeNull();
+    expect(parseJobGetResponse({}).job).toBeNull();
+  });
+});
+
+describe("SmartRecruiters parsePostingsResponse", () => {
+  it("parses postings fixture", () => {
+    const result = parsePostingsResponse(postingsFixture);
+    expect(result.postings).toHaveLength(2);
+    expect(result.total).toBe(2);
+    expect(result.postings[0].id).toBe("sr-job:post-001");
+    expect(result.postings[1].title).toBe("Product Designer");
+  });
+
+  it("handles missing content", () => {
+    expect(parsePostingsResponse({}).postings).toHaveLength(0);
+    expect(parsePostingsResponse(null).postings).toHaveLength(0);
+  });
+});
+
+describe("SmartRecruiters normalizeInterview", () => {
+  it("normalizes an interview from fixture", () => {
+    const interview = normalizeInterview(interviewsFixture.content[0] as never);
+    expect(interview.id).toBe("sr-interview:int-001-aaaa-bbbb-cccc-dddddddddddd");
+    expect(interview.provider).toBe("smartrecruiters");
+    expect(interview.candidateId).toBe("cand-001");
+    expect(interview.jobId).toBe("job-100");
+    expect(interview.location).toBe("https://zoom.us/j/555111222");
+    expect(interview.locationType).toBe("VIDEO_MEETING_ZOOM");
+    expect(interview.organizerId).toBe("aaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(interview.timezone).toBe("America/Los_Angeles");
+    expect(interview.title).toBe("Technical Screen");
+    expect(interview.interviewType).toBe("Technical");
+    expect(interview.startsAt).toBe("2024-03-10T17:00:00.000Z");
+    expect(interview.endsAt).toBe("2024-03-10T18:00:00.000Z");
+    expect(interview.interviewerIds).toEqual([
+      "aaaaaaaaaaaaaaaaaaaaaaaa",
+      "bbbbbbbbbbbbbbbbbbbbbbbb",
+    ]);
+    expect(interview.refUrl).toBe("https://www.smartrecruiters.com/app/interviews/int-001");
+    expect(interview.source).toBe("API");
+  });
+
+  it("handles sparse interview without organizer", () => {
+    const interview = normalizeInterview(interviewsFixture.content[1] as never);
+    expect(interview.id).toBe("sr-interview:int-002-aaaa-bbbb-cccc-dddddddddddd");
+    expect(interview.organizerId).toBeNull();
+    expect(interview.title).toBe("Onsite Loop");
+    expect(interview.interviewerIds).toEqual(["cccccccccccccccccccccccc"]);
+    expect(interview.refUrl).toBeNull();
+  });
+
+  it("handles interview with no timeslots", () => {
+    const interview = normalizeInterview({ id: "sparse", timeslots: [] });
+    expect(interview.id).toBe("sr-interview:sparse");
+    expect(interview.title).toBeNull();
+    expect(interview.startsAt).toBeNull();
+    expect(interview.interviewerIds).toEqual([]);
+  });
+});
+
+describe("SmartRecruiters parseInterviewsResponse", () => {
+  it("parses fixture response", () => {
+    const result = parseInterviewsResponse(interviewsFixture);
+    expect(result.interviews).toHaveLength(2);
+    expect(result.interviews[0].id).toBe(
+      "sr-interview:int-001-aaaa-bbbb-cccc-dddddddddddd",
+    );
+  });
+
+  it("handles missing content", () => {
+    expect(parseInterviewsResponse({}).interviews).toHaveLength(0);
+    expect(parseInterviewsResponse(null).interviews).toHaveLength(0);
+  });
+});

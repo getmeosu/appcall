@@ -2,21 +2,28 @@
  * SmartRecruiters list/get syncs.
  *
  * jobs.list          → public GET /v1/companies/{company}/postings
+ * postings.list      → public GET /v1/companies/{company}/postings (filtered)
+ * jobs.get           → authenticated GET /jobs/{id}
  * candidates.list    → authenticated GET /candidates
  * candidates.get     → authenticated GET /candidates/{id}
  * users.list         → authenticated GET /users
+ * interviews.list    → authenticated GET /interviews-api/v201904/interviews
  */
 
 import { createClient, createAuthClient } from "./http";
 import { assertSafePathSegment } from "../../_shared/jobboard";
 import {
   parseJobsResponse,
+  parsePostingsResponse,
+  parseJobGetResponse,
   parseCandidatesResponse,
   parseCandidateDetailsResponse,
   parseUsersResponse,
+  parseInterviewsResponse,
   type NormalizedJob,
   type NormalizedCandidate,
   type NormalizedUser,
+  type NormalizedInterview,
 } from "./objects";
 
 export interface ExecuteJobsListSyncInput {
@@ -35,7 +42,8 @@ export async function executeJobsListSync(
 ): Promise<ExecuteJobsListSyncOutput> {
   const client = createClient({ company: input.company, fetch: input.fetch });
   const raw = await client.getJSON("/postings");
-  return parseJobsResponse(raw);
+  const parsed = parseJobsResponse(raw);
+  return { jobs: parsed.jobs, total: parsed.total };
 }
 
 export interface SmartRecruitersAuthInput {
@@ -51,6 +59,73 @@ function buildQuery(params: Record<string, string | undefined>): string {
   }
   const encoded = qs.toString();
   return encoded.length > 0 ? `?${encoded}` : "";
+}
+
+// ---------------------------------------------------------------------------
+// postings.list — public GET /v1/companies/{company}/postings (with filters)
+// ---------------------------------------------------------------------------
+
+export interface ExecutePostingsListSyncInput {
+  company: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+  country?: string;
+  region?: string;
+  city?: string;
+  department?: string;
+  /** Injected by tests; production leaves it unset. */
+  fetch?: typeof fetch;
+}
+
+export interface ExecutePostingsListSyncOutput {
+  postings: NormalizedJob[];
+  total: number | null;
+}
+
+export async function executePostingsListSync(
+  input: ExecutePostingsListSyncInput,
+): Promise<ExecutePostingsListSyncOutput> {
+  const client = createClient({ company: input.company, fetch: input.fetch });
+  const path =
+    "/postings" +
+    buildQuery({
+      q: input.q,
+      limit: input.limit != null ? String(input.limit) : undefined,
+      offset: input.offset != null ? String(input.offset) : undefined,
+      country: input.country,
+      region: input.region,
+      city: input.city,
+      department: input.department,
+    });
+  const raw = await client.getJSON(path);
+  return parsePostingsResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// jobs.get — authenticated GET /jobs/{id}
+// ---------------------------------------------------------------------------
+
+export interface ExecuteJobsGetSyncInput extends SmartRecruitersAuthInput {
+  /** SmartRecruiters job id. */
+  id: string;
+}
+
+export interface ExecuteJobsGetSyncOutput {
+  job: NormalizedJob | null;
+}
+
+export async function executeJobsGetSync(
+  input: ExecuteJobsGetSyncInput,
+): Promise<ExecuteJobsGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "jobs.get",
+  });
+  const raw = await client.getJSON(`/jobs/${id}`);
+  return parseJobGetResponse(raw);
 }
 
 // ---------------------------------------------------------------------------
@@ -154,4 +229,37 @@ export async function executeUsersListSync(
     });
   const raw = await client.getJSON(path);
   return parseUsersResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// interviews.list — GET /interviews-api/v201904/interviews
+// ---------------------------------------------------------------------------
+
+export interface ExecuteInterviewsListSyncInput extends SmartRecruitersAuthInput {
+  /** Required application id (GUID) — Interviews API requires applicationId. */
+  applicationId: string;
+}
+
+export interface ExecuteInterviewsListSyncOutput {
+  interviews: NormalizedInterview[];
+}
+
+export async function executeInterviewsListSync(
+  input: ExecuteInterviewsListSyncInput,
+): Promise<ExecuteInterviewsListSyncOutput> {
+  if (typeof input.applicationId !== "string" || input.applicationId.length === 0) {
+    throw new Error("applicationId is required");
+  }
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "interviews.list",
+  });
+  const path =
+    "/interviews-api/v201904/interviews" +
+    buildQuery({
+      applicationId: input.applicationId,
+    });
+  const raw = await client.getJSON(path);
+  return parseInterviewsResponse(raw);
 }

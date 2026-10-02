@@ -2,11 +2,11 @@
  * SmartRecruiters HTTP clients.
  *
  * Two surfaces:
- * - Public company postings (`createClient`) — jobs.list against
+ * - Public company postings (`createClient`) — jobs.list / postings.list against
  *   api.smartrecruiters.com/v1/companies/{company}
- * - Authenticated Customer API (`createAuthClient`) — candidates/users against
- *   https://api.smartrecruiters.com with X-SmartToken header. Matches the
- *   manifest http.auth scheme (field apiKey → header X-SmartToken).
+ * - Authenticated Customer API (`createAuthClient`) — jobs.get, candidates,
+ *   users, interviews against https://api.smartrecruiters.com with X-SmartToken
+ *   header. Matches the manifest http.auth scheme (field apiKey → header X-SmartToken).
  *
  * Both route through the shared outbound stack for allowlist, redirect blocking,
  * response-size bounds, deadlines, and inject-fetch for tests.

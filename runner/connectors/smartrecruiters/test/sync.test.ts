@@ -1,13 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import {
   executeJobsListSync,
+  executeJobsGetSync,
+  executePostingsListSync,
   executeCandidatesListSync,
   executeCandidatesGetSync,
   executeUsersListSync,
+  executeInterviewsListSync,
 } from "../src/sync";
 import candidatesFixture from "../fixtures/candidates_list.json";
 import candidateGetFixture from "../fixtures/candidate_get.json";
 import usersFixture from "../fixtures/users_list.json";
+import jobGetFixture from "../fixtures/job_get.json";
+import interviewsFixture from "../fixtures/interviews_list.json";
+import postingsFixture from "../fixtures/postings_list.json";
 
 // Every request is served by an injected fetch. No real network.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
@@ -212,3 +218,138 @@ describe("SmartRecruiters users.list sync", () => {
   });
 });
 
+describe("SmartRecruiters jobs.get sync", () => {
+  test("GETs /jobs/{id} with X-SmartToken on api host", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(jobGetFixture));
+
+    const result = await executeJobsGetSync({ ...auth, id: "job-100", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.smartrecruiters.com");
+    expect(url.pathname).toBe("/jobs/job-100");
+    expect(calls[0].method).toBe("GET");
+    expect(calls[0].headers.get("x-smarttoken")).toBe("fixture-smart-token");
+    expect(result.job?.id).toBe("sr-job:job-100");
+    expect(result.job?.title).toBe("Software Engineer");
+    expect(result.job?.department).toBe("Engineering");
+    expect(result.job?.status).toBe("SOURCING");
+    expect(result.job?.postingStatus).toBe("PUBLIC");
+  });
+
+  test("rejects unsafe id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(executeJobsGetSync({ ...auth, id: "../evil", fetch: impl })).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("rejects missing id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(executeJobsGetSync({ ...auth, id: "", fetch: impl })).rejects.toThrow(/id/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 404 });
+    await expect(executeJobsGetSync({ ...auth, id: "missing", fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
+  });
+});
+
+describe("SmartRecruiters interviews.list sync", () => {
+  test("GETs /interviews-api/v201904/interviews with X-SmartToken", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
+
+    const result = await executeInterviewsListSync({
+      ...auth,
+      applicationId: "app-guid-001",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.smartrecruiters.com");
+    expect(url.pathname).toBe("/interviews-api/v201904/interviews");
+    expect(url.searchParams.get("applicationId")).toBe("app-guid-001");
+    expect(calls[0].method).toBe("GET");
+    expect(calls[0].headers.get("x-smarttoken")).toBe("fixture-smart-token");
+    expect(result.interviews).toHaveLength(2);
+    expect(result.interviews[0].id).toBe(
+      "sr-interview:int-001-aaaa-bbbb-cccc-dddddddddddd",
+    );
+    expect(result.interviews[0].title).toBe("Technical Screen");
+  });
+
+  test("rejects missing applicationId before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeInterviewsListSync({ ...auth, applicationId: "", fetch: impl }),
+    ).rejects.toThrow(/applicationId/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 403 });
+    await expect(
+      executeInterviewsListSync({ ...auth, applicationId: "app-1", fetch: impl }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("SmartRecruiters postings.list sync", () => {
+  test("requests public company postings on the allowed host", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(postingsFixture));
+
+    const result = await executePostingsListSync({ company: "acme", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.smartrecruiters.com");
+    expect(url.pathname).toBe("/v1/companies/acme/postings");
+    expect(calls[0].method).toBe("GET");
+    expect(result.postings).toHaveLength(2);
+    expect(result.postings[0].id).toBe("sr-job:post-001");
+    expect(result.total).toBe(2);
+  });
+
+  test("forwards q/limit/offset/country/region/city/department filters", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(postingsFixture));
+
+    await executePostingsListSync({
+      company: "acme",
+      q: "engineer",
+      limit: 20,
+      offset: 5,
+      country: "us",
+      region: "ca",
+      city: "San Francisco",
+      department: "Engineering",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("q")).toBe("engineer");
+    expect(url.searchParams.get("limit")).toBe("20");
+    expect(url.searchParams.get("offset")).toBe("5");
+    expect(url.searchParams.get("country")).toBe("us");
+    expect(url.searchParams.get("region")).toBe("ca");
+    expect(url.searchParams.get("city")).toBe("San Francisco");
+    expect(url.searchParams.get("department")).toBe("Engineering");
+  });
+
+  test("rejects a tenant value that would steer the request off-host", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executePostingsListSync({ company: "evil.example.net/", fetch: impl }),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 500 });
+    await expect(executePostingsListSync({ company: "acme", fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
+  });
+});
