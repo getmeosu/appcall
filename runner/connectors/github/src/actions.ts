@@ -20,7 +20,24 @@ import {
   validateSearchIssuesInput,
   validateSearchPullRequestsInput,
 } from "./search";
-import { createPullRequestsClient, validateCreatePullRequestInput, validateMergePullRequestInput, validateGetPullRequestInput, validateUpdatePullRequestInput, validateListPullRequestFilesInput } from "./pull_requests";
+import {
+  createPullRequestsClient,
+  validateCreatePullRequestInput,
+  validateMergePullRequestInput,
+  validateGetPullRequestInput,
+  validateUpdatePullRequestInput,
+  validateListPullRequestFilesInput,
+  validateListReviewsInput,
+  validateCreateReviewInput,
+  validateDismissReviewInput,
+  validateListReviewCommentsInput,
+  validateCreateReviewCommentInput,
+  validateReplyReviewCommentInput,
+  validateRequestedReviewersInput,
+  validateListPullRequestCommitsInput,
+  validateCheckMergedInput,
+  validateDraftStateInput,
+} from "./pull_requests";
 import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput } from "./repos";
 import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput } from "./branches";
 import { createReleasesClient, validateCreateReleaseInput } from "./releases";
@@ -553,6 +570,195 @@ export function searchPullRequests(input: unknown): Record<string, unknown> | Pr
   }
   return { connector: "github", action: "search.pull_requests", source: "connector", validated: validateSearchPullRequestsInput(input) };
 }
+
+// ─── S1: pull_requests.reviews.* ──────────────────────────────────────────────
+
+export function listPullRequestReviews(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.reviews.list" }),
+    }).listReviews(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.reviews.list", source: "connector", reviews: result.reviews };
+    });
+  }
+  return { connector: "github", action: "pull_requests.reviews.list", source: "connector", validated: validateListReviewsInput(input) };
+}
+
+export function createPullRequestReview(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.reviews.create" }),
+    }).createReview(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.reviews.create", source: "connector", review: result.review };
+    });
+  }
+  return { connector: "github", action: "pull_requests.reviews.create", source: "connector", validated: validateCreateReviewInput(input) };
+}
+
+export function dismissPullRequestReview(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.reviews.dismiss" }),
+    }).dismissReview(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.reviews.dismiss", source: "connector", review: result.review };
+    });
+  }
+  return { connector: "github", action: "pull_requests.reviews.dismiss", source: "connector", validated: validateDismissReviewInput(input) };
+}
+
+// ─── S1: pull_requests.review_comments.* ──────────────────────────────────────
+
+export function listPullRequestReviewComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.review_comments.list" }),
+    }).listReviewComments(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.review_comments.list", source: "connector", comments: result.comments };
+    });
+  }
+  return { connector: "github", action: "pull_requests.review_comments.list", source: "connector", validated: validateListReviewCommentsInput(input) };
+}
+
+export function createPullRequestReviewComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.review_comments.create" }),
+    }).createReviewComment(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.review_comments.create", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "pull_requests.review_comments.create", source: "connector", validated: validateCreateReviewCommentInput(input) };
+}
+
+export function replyPullRequestReviewComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.review_comments.reply" }),
+    }).replyReviewComment(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.review_comments.reply", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "pull_requests.review_comments.reply", source: "connector", validated: validateReplyReviewCommentInput(input) };
+}
+
+// ─── S1: pull_requests.requested_reviewers.* ──────────────────────────────────
+
+export function addPullRequestRequestedReviewers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.requested_reviewers.add" }),
+    }).addRequestedReviewers(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.requested_reviewers.add", source: "connector", pullRequest: result.pullRequest };
+    });
+  }
+  return { connector: "github", action: "pull_requests.requested_reviewers.add", source: "connector", validated: validateRequestedReviewersInput(input) };
+}
+
+export function removePullRequestRequestedReviewers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.requested_reviewers.remove" }),
+    }).removeRequestedReviewers(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.requested_reviewers.remove", source: "connector", pullRequest: result.pullRequest };
+    });
+  }
+  return { connector: "github", action: "pull_requests.requested_reviewers.remove", source: "connector", validated: validateRequestedReviewersInput(input) };
+}
+
+// ─── S1: commits / check_merged / draft ───────────────────────────────────────
+
+export function listPullRequestCommits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.commits.list" }),
+    }).listCommits(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.commits.list", source: "connector", commits: result.commits };
+    });
+  }
+  return { connector: "github", action: "pull_requests.commits.list", source: "connector", validated: validateListPullRequestCommitsInput(input) };
+}
+
+export function checkPullRequestMerged(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.check_merged" }),
+    }).checkMerged(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.check_merged", source: "connector", merged: result.merged };
+    });
+  }
+  return { connector: "github", action: "pull_requests.check_merged", source: "connector", validated: validateCheckMergedInput(input) };
+}
+
+export function convertPullRequestToDraft(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.convert_to_draft" }),
+    }).convertToDraft(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.convert_to_draft", source: "connector", pullRequest: result.pullRequest };
+    });
+  }
+  return { connector: "github", action: "pull_requests.convert_to_draft", source: "connector", validated: validateDraftStateInput(input) };
+}
+
+export function markPullRequestReady(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.mark_ready" }),
+    }).markReady(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.mark_ready", source: "connector", pullRequest: result.pullRequest };
+    });
+  }
+  return { connector: "github", action: "pull_requests.mark_ready", source: "connector", validated: validateDraftStateInput(input) };
+}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

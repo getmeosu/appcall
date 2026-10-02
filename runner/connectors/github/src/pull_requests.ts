@@ -181,6 +181,241 @@ export function validateMergePullRequestInput(input: unknown): MergePullRequestI
   };
 }
 
+
+// ─── S1: Reviews ──────────────────────────────────────────────────────────────
+
+export type ListReviewsInput = { owner: string; repo: string; pullNumber: number; perPage?: number; page?: number };
+
+export function validateListReviewsInput(input: unknown): ListReviewsInput {
+  if (!isRecord(input)) throw new Error("list reviews input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+    page: typeof input.page === "number" ? input.page : undefined,
+  };
+}
+
+export type CreateReviewInput = {
+  owner: string; repo: string; pullNumber: number;
+  body?: string; event?: string; commitId?: string;
+};
+
+export function validateCreateReviewInput(input: unknown): CreateReviewInput {
+  if (!isRecord(input)) throw new Error("create review input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    body: typeof input.body === "string" ? input.body : undefined,
+    event: typeof input.event === "string" ? input.event : undefined,
+    commitId: typeof input.commitId === "string" ? input.commitId : undefined,
+  };
+}
+
+export type DismissReviewInput = {
+  owner: string; repo: string; pullNumber: number; reviewId: number; message: string;
+};
+
+export function validateDismissReviewInput(input: unknown): DismissReviewInput {
+  if (!isRecord(input)) throw new Error("dismiss review input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    reviewId: requireNumber(input.reviewId, "reviewId"),
+    message: requireString(input.message, "message"),
+  };
+}
+
+// ─── S1: Review comments ──────────────────────────────────────────────────────
+
+export type ListReviewCommentsInput = { owner: string; repo: string; pullNumber: number; perPage?: number; page?: number };
+
+export function validateListReviewCommentsInput(input: unknown): ListReviewCommentsInput {
+  if (!isRecord(input)) throw new Error("list review comments input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+    page: typeof input.page === "number" ? input.page : undefined,
+  };
+}
+
+export type CreateReviewCommentInput = {
+  owner: string; repo: string; pullNumber: number;
+  body: string; commitId: string; path: string;
+  line?: number; side?: string; startLine?: number; startSide?: string; inReplyTo?: number;
+};
+
+export function validateCreateReviewCommentInput(input: unknown): CreateReviewCommentInput {
+  if (!isRecord(input)) throw new Error("create review comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    body: requireString(input.body, "body"),
+    commitId: requireString(input.commitId, "commitId"),
+    path: requireString(input.path, "path"),
+    line: typeof input.line === "number" ? input.line : undefined,
+    side: typeof input.side === "string" ? input.side : undefined,
+    startLine: typeof input.startLine === "number" ? input.startLine : undefined,
+    startSide: typeof input.startSide === "string" ? input.startSide : undefined,
+    inReplyTo: typeof input.inReplyTo === "number" ? input.inReplyTo : undefined,
+  };
+}
+
+export type ReplyReviewCommentInput = {
+  owner: string; repo: string; pullNumber: number; commentId: number; body: string;
+};
+
+export function validateReplyReviewCommentInput(input: unknown): ReplyReviewCommentInput {
+  if (!isRecord(input)) throw new Error("reply review comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    commentId: requireNumber(input.commentId, "commentId"),
+    body: requireString(input.body, "body"),
+  };
+}
+
+// ─── S1: Requested reviewers ──────────────────────────────────────────────────
+
+export type RequestedReviewersInput = {
+  owner: string; repo: string; pullNumber: number;
+  reviewers?: string[]; teamReviewers?: string[];
+};
+
+export function validateRequestedReviewersInput(input: unknown): RequestedReviewersInput {
+  if (!isRecord(input)) throw new Error("requested reviewers input must be an object");
+  const reviewers = Array.isArray(input.reviewers)
+    ? input.reviewers.filter((r): r is string => typeof r === "string" && r.length > 0)
+    : undefined;
+  const teamReviewers = Array.isArray(input.teamReviewers)
+    ? input.teamReviewers.filter((r): r is string => typeof r === "string" && r.length > 0)
+    : undefined;
+  if ((!reviewers || reviewers.length === 0) && (!teamReviewers || teamReviewers.length === 0)) {
+    throw new Error("at least one of reviewers or teamReviewers is required");
+  }
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    reviewers,
+    teamReviewers,
+  };
+}
+
+// ─── S1: PR commits / merge check / draft ─────────────────────────────────────
+
+export type ListPullRequestCommitsInput = { owner: string; repo: string; pullNumber: number; perPage?: number; page?: number };
+
+export function validateListPullRequestCommitsInput(input: unknown): ListPullRequestCommitsInput {
+  if (!isRecord(input)) throw new Error("list pull request commits input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+    page: typeof input.page === "number" ? input.page : undefined,
+  };
+}
+
+export type CheckMergedInput = { owner: string; repo: string; pullNumber: number };
+
+export function validateCheckMergedInput(input: unknown): CheckMergedInput {
+  if (!isRecord(input)) throw new Error("check merged input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+  };
+}
+
+export type DraftStateInput = { owner: string; repo: string; pullNumber: number };
+
+export function validateDraftStateInput(input: unknown): DraftStateInput {
+  if (!isRecord(input)) throw new Error("draft state input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+  };
+}
+
+export type NormalizedReview = {
+  id: string;
+  provider: "github";
+  providerReviewId: number;
+  pullRequestUrl: string;
+  state: string;
+  body: string;
+  author: string;
+  commitId: string;
+  submittedAt: string;
+  htmlUrl: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeGitHubReview(review: Record<string, unknown>): NormalizedReview {
+  const user = isRecord(review.user) ? review.user : {};
+  return {
+    id: `gh-review:${review.id}`,
+    provider: "github",
+    providerReviewId: typeof review.id === "number" ? review.id : 0,
+    pullRequestUrl: typeof review.pull_request_url === "string" ? review.pull_request_url : "",
+    state: typeof review.state === "string" ? review.state : "",
+    body: typeof review.body === "string" ? review.body : "",
+    author: typeof user.login === "string" ? user.login : "",
+    commitId: typeof review.commit_id === "string" ? review.commit_id : "",
+    submittedAt: typeof review.submitted_at === "string" ? review.submitted_at : "",
+    htmlUrl: typeof review.html_url === "string" ? review.html_url : "",
+    modelVersion: "2026-05-16",
+    raw: review,
+  };
+}
+
+export type NormalizedReviewComment = {
+  id: string;
+  provider: "github";
+  providerCommentId: number;
+  pullRequestReviewId: number | null;
+  body: string;
+  path: string;
+  commitId: string;
+  author: string;
+  htmlUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  inReplyToId: number | null;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeGitHubReviewComment(comment: Record<string, unknown>): NormalizedReviewComment {
+  const user = isRecord(comment.user) ? comment.user : {};
+  return {
+    id: `gh-review-comment:${comment.id}`,
+    provider: "github",
+    providerCommentId: typeof comment.id === "number" ? comment.id : 0,
+    pullRequestReviewId: typeof comment.pull_request_review_id === "number" ? comment.pull_request_review_id : null,
+    body: typeof comment.body === "string" ? comment.body : "",
+    path: typeof comment.path === "string" ? comment.path : "",
+    commitId: typeof comment.commit_id === "string" ? comment.commit_id : "",
+    author: typeof user.login === "string" ? user.login : "",
+    htmlUrl: typeof comment.html_url === "string" ? comment.html_url : "",
+    createdAt: typeof comment.created_at === "string" ? comment.created_at : "",
+    updatedAt: typeof comment.updated_at === "string" ? comment.updated_at : "",
+    inReplyToId: typeof comment.in_reply_to_id === "number" ? comment.in_reply_to_id : null,
+    modelVersion: "2026-05-16",
+    raw: comment,
+  };
+}
+
 export function createPullRequestsClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "pull_requests.create" });
 
@@ -310,7 +545,228 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the merge request." } };
     },
+
+    async listReviews(input: unknown) {
+      const payload = validateListReviewsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/reviews${qs}`);
+      if (response.status === 200) {
+        const reviews = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).filter(isRecord).map((r) => normalizeGitHubReview(r))
+          : [];
+        return { ok: true as const, reviews };
+      }
+      return mapGithubError(response, "list reviews");
+    },
+
+    async createReview(input: unknown) {
+      const payload = validateCreateReviewInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          body: payload.body,
+          event: payload.event,
+          commit_id: payload.commitId,
+        }),
+      });
+      if (response.status === 200) {
+        return { ok: true as const, review: normalizeGitHubReview(response.body as Record<string, unknown>) };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for create review." } };
+      }
+      return mapGithubError(response, "create review");
+    },
+
+    async dismissReview(input: unknown) {
+      const payload = validateDismissReviewInput(input);
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/reviews/${payload.reviewId}/dismissals`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: payload.message, event: "DISMISS" }),
+        },
+      );
+      if (response.status === 200) {
+        return { ok: true as const, review: normalizeGitHubReview(response.body as Record<string, unknown>) };
+      }
+      return mapGithubError(response, "dismiss review");
+    },
+
+    async listReviewComments(input: unknown) {
+      const payload = validateListReviewCommentsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/comments${qs}`);
+      if (response.status === 200) {
+        const comments = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).filter(isRecord).map((c) => normalizeGitHubReviewComment(c))
+          : [];
+        return { ok: true as const, comments };
+      }
+      return mapGithubError(response, "list review comments");
+    },
+
+    async createReviewComment(input: unknown) {
+      const payload = validateCreateReviewCommentInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          body: payload.body,
+          commit_id: payload.commitId,
+          path: payload.path,
+          line: payload.line,
+          side: payload.side,
+          start_line: payload.startLine,
+          start_side: payload.startSide,
+          in_reply_to: payload.inReplyTo,
+        }),
+      });
+      if (response.status === 201) {
+        return { ok: true as const, comment: normalizeGitHubReviewComment(response.body as Record<string, unknown>) };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for create review comment." } };
+      }
+      return mapGithubError(response, "create review comment");
+    },
+
+    async replyReviewComment(input: unknown) {
+      const payload = validateReplyReviewCommentInput(input);
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/comments/${payload.commentId}/replies`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: payload.body }),
+        },
+      );
+      if (response.status === 201) {
+        return { ok: true as const, comment: normalizeGitHubReviewComment(response.body as Record<string, unknown>) };
+      }
+      return mapGithubError(response, "reply to review comment");
+    },
+
+    async addRequestedReviewers(input: unknown) {
+      const payload = validateRequestedReviewersInput(input);
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/requested_reviewers`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reviewers: payload.reviewers,
+            team_reviewers: payload.teamReviewers,
+          }),
+        },
+      );
+      if (response.status === 201 || response.status === 200) {
+        return { ok: true as const, pullRequest: normalizeGitHubPullRequest(response.body as GitHubPullRequest) };
+      }
+      return mapGithubError(response, "add requested reviewers");
+    },
+
+    async removeRequestedReviewers(input: unknown) {
+      const payload = validateRequestedReviewersInput(input);
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/requested_reviewers`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reviewers: payload.reviewers,
+            team_reviewers: payload.teamReviewers,
+          }),
+        },
+      );
+      if (response.status === 200) {
+        return { ok: true as const, pullRequest: normalizeGitHubPullRequest(response.body as GitHubPullRequest) };
+      }
+      return mapGithubError(response, "remove requested reviewers");
+    },
+
+    async listCommits(input: unknown) {
+      const payload = validateListPullRequestCommitsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/commits${qs}`);
+      if (response.status === 200) {
+        const commits = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).filter(isRecord).map((c) => ({
+              sha: typeof c.sha === "string" ? c.sha : "",
+              message: isRecord(c.commit) && typeof c.commit.message === "string" ? c.commit.message : "",
+              author: isRecord(c.author) && typeof c.author.login === "string"
+                ? c.author.login
+                : (isRecord(c.commit) && isRecord(c.commit.author) && typeof c.commit.author.name === "string"
+                  ? c.commit.author.name
+                  : ""),
+              url: typeof c.html_url === "string" ? c.html_url : "",
+              raw: c,
+            }))
+          : [];
+        return { ok: true as const, commits };
+      }
+      return mapGithubError(response, "list pull request commits");
+    },
+
+    async checkMerged(input: unknown) {
+      const payload = validateCheckMergedInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/merge`);
+      if (response.status === 204) {
+        return { ok: true as const, merged: true };
+      }
+      if (response.status === 404) {
+        return { ok: true as const, merged: false };
+      }
+      return mapGithubError(response, "check merged");
+    },
+
+    async convertToDraft(input: unknown) {
+      const payload = validateDraftStateInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/convert_to_draft`, {
+        method: "POST",
+      });
+      if (response.status === 200) {
+        return { ok: true as const, pullRequest: normalizeGitHubPullRequest(response.body as GitHubPullRequest) };
+      }
+      return mapGithubError(response, "convert to draft");
+    },
+
+    async markReady(input: unknown) {
+      const payload = validateDraftStateInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/ready_for_review`, {
+        method: "POST",
+      });
+      if (response.status === 200) {
+        return { ok: true as const, pullRequest: normalizeGitHubPullRequest(response.body as GitHubPullRequest) };
+      }
+      return mapGithubError(response, "mark ready for review");
+    },
   };
+}
+
+function mapGithubError(
+  response: { status: number; headers: Record<string, string> },
+  action: string,
+): { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } } {
+  if (response.status === 404) {
+    return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `Not found for ${action}.` } };
+  }
+  if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+    const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+    return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+  }
+  return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub rejected the ${action} request.` } };
 }
 
 function parseNextLink(response: Record<string, unknown>): string | null {
