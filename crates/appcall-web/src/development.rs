@@ -44,6 +44,7 @@ impl DevelopmentDashboard<'_> {
                             body: &format!("{title} is powered by anusa identity. Configure anusa auth and sign in to view and manage it here."),
                             action_label: "Read setup documentation",
                             action_href: crate::ui::LocalPath::new("/app/docs").unwrap(),
+                            role: crate::ui::EmptyStateRole::Status,
                         }.render())
                     };
                     Response::new(200, crate::shell::layout(title, &session, &content, r.path))

@@ -46,8 +46,8 @@ async fn runs_preview_fixed_scenarios_are_truthful_and_dto_shaped() {
     let unavailable_message = Error::Unavailable.to_string();
     for (name, expected_status, marker) in [
         ("runs", 200, "Operator controls unavailable"),
-        ("runs-empty", 200, "No durable runs to show."),
-        ("runs-unavailable", 200, "Runs status unavailable"),
+        ("runs-empty", 200, "No durable syncs to show."),
+        ("runs-unavailable", 200, "Syncs status unavailable"),
         ("runs-malformed", 503, unavailable_message.as_str()),
     ] {
         let data = ScenarioData::new(Scenario::parse(name).unwrap());

@@ -283,6 +283,7 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
                 action_label: "Browse connectors",
                 action_href: ui::LocalPath::new("/app/connectors")
                     .expect("static local empty-state link"),
+                role: ui::EmptyStateRole::Status,
             }
             .render(),
         );

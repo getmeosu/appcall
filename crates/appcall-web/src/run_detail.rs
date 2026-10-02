@@ -149,8 +149,8 @@ fn health(value: Option<&Value>) -> (&'static str, ui::Tone) {
 fn render_run_header(run: &Map<String, Value>, account_id: &str) -> String {
     let (health_label, tone) = health(run.get("health"));
     format!(
-        "<section id=\"run-detail\" data-runs-page aria-labelledby=\"run-detail-heading\"><header class=\"runs-header\"><h2 id=\"run-detail-heading\">Run <code class=\"runs-code\">{}</code></h2><p>{}</p></header><p class=\"runs-secondary\">{} / {} · account {}</p>",
-        field(run, "id", "Run ID"),
+        "<section id=\"run-detail\" data-runs-page aria-labelledby=\"run-detail-heading\"><header class=\"runs-header\"><h2 id=\"run-detail-heading\">Sync <code class=\"runs-code\">{}</code></h2><p>{}</p></header><p class=\"runs-secondary\">{} / {} · account {}</p>",
+        field(run, "id", "Sync ID"),
         ui::state(tone, health_label),
         field(run, "connector", "Connector"),
         field(run, "tool", "Tool"),

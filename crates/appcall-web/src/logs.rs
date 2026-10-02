@@ -224,6 +224,7 @@ pub(crate) fn render(raw: &Value, filters: &Filters, filtered: bool) -> Result<S
                 body: "Clear the filters to view recorded runs.",
                 action_label: "Clear filters",
                 action_href: ui::LocalPath::new("/app/calls").unwrap(),
+                role: ui::EmptyStateRole::Status,
             }
         } else {
             ui::EmptyState {
@@ -231,6 +232,7 @@ pub(crate) fn render(raw: &Value, filters: &Filters, filtered: bool) -> Result<S
                 body: "Browse connectors to choose a tool to run.",
                 action_label: "Browse connectors",
                 action_href: ui::LocalPath::new("/app/connectors").unwrap(),
+                role: ui::EmptyStateRole::Status,
             }
         };
         body.push_str(&empty.render());
