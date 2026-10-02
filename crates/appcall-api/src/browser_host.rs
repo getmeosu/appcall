@@ -602,6 +602,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
         ("GET", ["", "app", "connectors" | "calls", key]) => id(key),
         ("GET", ["", "app", "syncs", key]) => id(key),
         ("GET", ["", "app", "syncs"]) => true,
+        ("GET", ["", "app", "workflows", "runs", key]) => id(key),
         ("GET", ["", "app", "connectors", key, "test-form" | "options" | "runinput-fields"]) => {
             id(key)
         }
@@ -671,6 +672,7 @@ pub struct ApiDashboard {
     defaults: crate::data_routes::UsageDefaults,
     state: Arc<DashboardSharedState>,
     run_operator_grants: Arc<RunOperatorGrants>,
+    workflow_engine: Option<crate::workflow_engine::WorkflowEngineClient>,
 }
 impl ApiDashboard {
     pub fn new(
@@ -707,10 +709,18 @@ impl ApiDashboard {
             defaults,
             state,
             run_operator_grants: Arc::new(RunOperatorGrants::default()),
+            workflow_engine: None,
         }
     }
     pub fn with_run_operator_grants(mut self, grants: Arc<RunOperatorGrants>) -> Self {
         self.run_operator_grants = grants;
+        self
+    }
+    pub fn with_workflow_engine(
+        mut self,
+        client: Option<crate::workflow_engine::WorkflowEngineClient>,
+    ) -> Self {
+        self.workflow_engine = client;
         self
     }
     pub fn with_dev_oauth(mut self, dev_oauth: crate::dev_oauth::DevOAuth) -> Self {
@@ -896,37 +906,129 @@ impl ApiDashboard {
                 let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;
                 item["connections"]=self.connection_values(&identity,&connections)?.into_iter().filter(|c|c.get("connector").and_then(Value::as_str)==Some(resource)).collect();
                 if let Some((action,op))=selected{item["action"]=action.clone().into();item["inputSchema"]=op.input_schema.clone().unwrap_or_else(||json!({"type":"object"}));item["sample"]=op.sample.clone().unwrap_or(Value::Null);item["connectionId"]=field("connectionId").into();}Ok(item)},
+            Op::Workflows => match &self.workflow_engine {
+                None => Ok(json!({"status":"unavailable"})),
+                Some(engine) => match engine.list_workflows().await {
+                    Ok(workflows) => Ok(json!({"status":"ok","workflows":workflows})),
+                    Err(_) => Ok(json!({"status":"error"})),
+                },
+            },
+            Op::WorkflowRuns => match &self.workflow_engine {
+                None => Ok(json!({"status":"unavailable"})),
+                Some(engine) => {
+                    let cursor = field("cursor");
+                    let cursor = (!cursor.is_empty()).then_some(cursor);
+                    match engine.list_run_summaries(cursor).await {
+                        Ok(data) => {
+                            let mut out = json!({"status":"ok"});
+                            if let Some(obj) = out.as_object_mut() {
+                                if let Some(map) = data.as_object() {
+                                    for (k, v) in map {
+                                        obj.insert(k.clone(), v.clone());
+                                    }
+                                }
+                            }
+                            Ok(out)
+                        }
+                        Err(_) => Ok(json!({"status":"error"})),
+                    }
+                }
+            },
+            Op::WorkflowRunDetail => match &self.workflow_engine {
+                None => Ok(json!({"status":"unavailable"})),
+                Some(engine) => {
+                    if resource.is_empty() {
+                        return Err(Error::Invalid.into());
+                    }
+                    match engine.get_run(resource).await {
+                        Ok(data) => {
+                            let mut out = json!({"status":"ok"});
+                            if let Some(obj) = out.as_object_mut() {
+                                if let Some(map) = data.as_object() {
+                                    for (k, v) in map {
+                                        obj.insert(k.clone(), v.clone());
+                                    }
+                                }
+                            }
+                            Ok(out)
+                        }
+                        Err(crate::workflow_engine::WorkflowEngineError::NotFound) => {
+                            Ok(json!({"status":"not_found"}))
+                        }
+                        Err(_) => Ok(json!({"status":"error"})),
+                    }
+                }
+            },
             Op::Overview=>{let toolkit_count=self.registry.public_list().count();Ok(self.db(|client|crate::data_routes::overview::read(client,&identity,toolkit_count).map_err(api_error))?)},
-            Op::Connections=>{let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"connections":self.connection_values(&identity,&connections)?}))},
+            Op::Connections=>{
+                let listed = match self.core.connections(&identity).await {
+                    Ok(connections) => self
+                        .connection_values(&identity, &connections)
+                        .map_err(DashboardFailure::from),
+                    Err(error) => Err(dashboard_failure::map_api_error(error)),
+                };
+                connections_list_response(listed)
+            },
             Op::TestConnection=>Ok(connection_value(&self.core.test_connection(&identity,resource).await.map_err(dashboard_failure::map_api_error)?)),
             Op::DisconnectConnection=>{self.core.disconnect(&identity,resource).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"disconnected":true}))},
-            Op::Logs|Op::Events|Op::Stream|Op::Trace=>{
-                let mut url=url::Url::parse(&format!("http://local.invalid{}",match r.operation{Op::Logs=>"/v1/action-logs".to_owned(),Op::Trace=>format!("/v1/requests/{resource}"),_=>"/v1/webhook-events".to_owned()})).map_err(|_|Error::Invalid)?;
-                for (k,v) in &r.fields {if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation"].contains(&k.as_str()) || r.operation == Op::Logs && ["createdFrom","createdBefore"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
+            Op::Logs=>{
+                let mut url=url::Url::parse("http://local.invalid/v1/action-logs").map_err(|_|Error::Invalid)?;
+                for (k,v) in &r.fields {
+                    if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation","createdFrom","createdBefore"].contains(&k.as_str()) {
+                        url.query_pairs_mut().append_pair(k,v);
+                    }
+                }
+                let listed = match self.db(|client| {
+                    crate::data_routes::read(client, &identity, &url)
+                        .map_err(api_error)?
+                        .map(|r| r.body)
+                        .ok_or(Error::Invalid)
+                }) {
+                    Ok(value) => Ok(value),
+                    Err(error) => Err(DashboardFailure::from(error)),
+                };
+                logs_list_response(listed)
+            },
+            Op::Events|Op::Stream|Op::Trace=>{
+                let mut url=url::Url::parse(&format!("http://local.invalid{}",match r.operation{Op::Trace=>format!("/v1/requests/{resource}"),_=>"/v1/webhook-events".to_owned()})).map_err(|_|Error::Invalid)?;
+                for (k,v) in &r.fields {if ["limit","cursor","connectionId","connector","action","status","requestId","errorCode","operation"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
                 self.db(|client| Ok(crate::data_routes::read(client,&identity,&url)))?.map_err(dashboard_failure::map_api_error)?.map(|r|r.body).ok_or_else(|| Error::Invalid.into())
             },
             Op::Runs=>{
                 let mut url=url::Url::parse("http://local.invalid/v1/sync-runs").map_err(|_|Error::Invalid)?;
                 for (k,v) in &r.fields {if ["limit","cursor","connector","tool","status","accountId","externalAccountId"].contains(&k.as_str()){url.query_pairs_mut().append_pair(k,v);}}
-                let value = self.db(|client| crate::data_routes::read(client,&identity,&url).map_err(api_error))?
-                    .map(|r|r.body)
-                    .ok_or(Error::Invalid)?;
-                Ok(enrich_runs_operator(value, operator_authorized))
+                let listed = match self.db(|client| {
+                    crate::data_routes::read(client, &identity, &url)
+                        .map_err(api_error)?
+                        .map(|r| r.body)
+                        .ok_or(Error::Invalid)
+                }) {
+                    Ok(value) => Ok(enrich_runs_operator(value, operator_authorized)),
+                    Err(error) => Err(DashboardFailure::from(error)),
+                };
+                runs_list_response(listed)
             },
             Op::RunDetail=>{
                 let url = run_history_url(resource, &r.fields)?;
-                self.db(|client| crate::data_routes::read(client,&identity,&url).map_err(api_error))?
-                    .map(|r| {
-                        let mut body = r.body;
-                        if let Some(object) = body.as_object_mut() {
-                            object.insert(
-                                "historyAccountScope".into(),
-                                identity.account_id.clone().into(),
-                            );
-                        }
-                        enrich_runs_operator(body, operator_authorized)
-                    })
-                    .ok_or_else(|| Error::Invalid.into())
+                let detail = match self.db(|client| {
+                    crate::data_routes::read(client, &identity, &url)
+                        .map_err(api_error)?
+                        .map(|r| {
+                            let mut body = r.body;
+                            if let Some(object) = body.as_object_mut() {
+                                object.insert(
+                                    "historyAccountScope".into(),
+                                    identity.account_id.clone().into(),
+                                );
+                            }
+                            enrich_runs_operator(body, operator_authorized)
+                        })
+                        .ok_or(Error::Invalid)
+                }) {
+                    Ok(value) => Ok(value),
+                    Err(error) => Err(DashboardFailure::from(error)),
+                };
+                runs_detail_response(detail)
             },
             Op::RunNow|Op::ResetRun|Op::CancelRun=>{
                 let action=match r.operation {Op::RunNow=>appcall_sync::OperatorAction::RunNow,Op::ResetRun=>appcall_sync::OperatorAction::ResetAttempts,Op::CancelRun=>appcall_sync::OperatorAction::Cancel,_=>unreachable!()};
@@ -1214,6 +1316,131 @@ fn sync_error(error: appcall_sync::Error) -> appcall_web::Error {
         _ => appcall_web::Error::Unavailable,
     }
 }
+
+/// Ordinary Connections list fetch failures become typed EmptyState surfaces.
+/// Auth and contract failures stay hard errors so callers keep fail-closed.
+/// `Configuration` mirrors Workflows' missing-engine `unavailable`; ordinary
+/// `Unavailable` fetch failures mirror Workflows' read `error`.
+pub(crate) fn connections_list_response(
+    result: std::result::Result<Vec<Value>, DashboardFailure>,
+) -> std::result::Result<Value, DashboardFailure> {
+    match result {
+        Ok(connections) => Ok(json!({"status": "ok", "connections": connections})),
+        Err(failure) => match failure.classification() {
+            appcall_web::Error::Configuration => Ok(json!({"status": "unavailable"})),
+            appcall_web::Error::Unavailable => Ok(json!({"status": "error"})),
+            appcall_web::Error::Unauthorized
+            | appcall_web::Error::Forbidden
+            | appcall_web::Error::Invalid
+            | appcall_web::Error::NotFound
+            | appcall_web::Error::Conflict
+            | appcall_web::Error::RequestTooLarge => Err(failure),
+        },
+    }
+}
+
+/// Ordinary Syncs list fetch failures become typed EmptyState surfaces.
+/// Auth and contract failures stay hard errors so callers keep fail-closed.
+/// `Configuration` / missing queue mirrors Workflows' missing-engine
+/// `unavailable`; ordinary `Unavailable` fetch failures mirror Workflows' read
+/// `error`. Success preserves existing projection fields under `status: ok`.
+pub(crate) fn runs_list_response(
+    result: std::result::Result<Value, DashboardFailure>,
+) -> std::result::Result<Value, DashboardFailure> {
+    match result {
+        Ok(value) => {
+            let mut out = json!({"status": "ok"});
+            if let Some(obj) = out.as_object_mut() {
+                if let Some(map) = value.as_object() {
+                    for (k, v) in map {
+                        if k != "status" {
+                            obj.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
+            }
+            Ok(out)
+        }
+        Err(failure) => match failure.classification() {
+            appcall_web::Error::Configuration => Ok(json!({"status": "unavailable"})),
+            appcall_web::Error::Unavailable => Ok(json!({"status": "error"})),
+            appcall_web::Error::Unauthorized
+            | appcall_web::Error::Forbidden
+            | appcall_web::Error::Invalid
+            | appcall_web::Error::NotFound
+            | appcall_web::Error::Conflict
+            | appcall_web::Error::RequestTooLarge => Err(failure),
+        },
+    }
+}
+
+/// Ordinary Calls (Op::Logs) list fetch failures become typed EmptyState surfaces.
+/// Auth and contract failures stay hard errors so callers keep fail-closed.
+/// `Configuration` mirrors Workflows' missing-engine `unavailable`; ordinary
+/// `Unavailable` fetch failures mirror Workflows' read `error`. Success
+/// preserves existing projection fields under `status: ok`.
+pub(crate) fn logs_list_response(
+    result: std::result::Result<Value, DashboardFailure>,
+) -> std::result::Result<Value, DashboardFailure> {
+    match result {
+        Ok(value) => {
+            let mut out = json!({"status": "ok"});
+            if let Some(obj) = out.as_object_mut() {
+                if let Some(map) = value.as_object() {
+                    for (k, v) in map {
+                        if k != "status" {
+                            obj.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
+            }
+            Ok(out)
+        }
+        Err(failure) => match failure.classification() {
+            appcall_web::Error::Configuration => Ok(json!({"status": "unavailable"})),
+            appcall_web::Error::Unavailable => Ok(json!({"status": "error"})),
+            appcall_web::Error::Unauthorized
+            | appcall_web::Error::Forbidden
+            | appcall_web::Error::Invalid
+            | appcall_web::Error::NotFound
+            | appcall_web::Error::Conflict
+            | appcall_web::Error::RequestTooLarge => Err(failure),
+        },
+    }
+}
+
+/// Ordinary Syncs detail fetch failures become typed EmptyState surfaces.
+/// `NotFound` is a soft not_found surface (like Workflow run detail); auth and
+/// other contract failures stay hard errors.
+pub(crate) fn runs_detail_response(
+    result: std::result::Result<Value, DashboardFailure>,
+) -> std::result::Result<Value, DashboardFailure> {
+    match result {
+        Ok(value) => {
+            let mut out = json!({"status": "ok"});
+            if let Some(obj) = out.as_object_mut() {
+                if let Some(map) = value.as_object() {
+                    for (k, v) in map {
+                        if k != "status" {
+                            obj.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
+            }
+            Ok(out)
+        }
+        Err(failure) => match failure.classification() {
+            appcall_web::Error::Configuration => Ok(json!({"status": "unavailable"})),
+            appcall_web::Error::Unavailable => Ok(json!({"status": "error"})),
+            appcall_web::Error::NotFound => Ok(json!({"status": "not_found"})),
+            appcall_web::Error::Unauthorized
+            | appcall_web::Error::Forbidden
+            | appcall_web::Error::Invalid
+            | appcall_web::Error::Conflict
+            | appcall_web::Error::RequestTooLarge => Err(failure),
+        },
+    }
+}
 pub(crate) fn connection_value(c: &appcall_store::Connection) -> Value {
     // The provider has not approved an identity read model yet. Keep the
     // dashboard explicit about that absence instead of deriving an identity
@@ -1332,4 +1559,245 @@ fn browser_request_too_large_error_preserves_public_code() {
         api_error(ApiError::new("REQUEST_TOO_LARGE")),
         appcall_web::Error::RequestTooLarge
     );
+}
+
+#[cfg(test)]
+mod connections_list_response_tests {
+    use super::connections_list_response;
+    use appcall_web::{DashboardFailure, Error, FailureCause};
+    use serde_json::json;
+
+    #[test]
+    fn ok_list_emits_status_ok_with_rows() {
+        let value = connections_list_response(Ok(vec![json!({"id": "conn_1"})])).unwrap();
+        assert_eq!(value["status"], "ok");
+        assert_eq!(value["connections"][0]["id"], "conn_1");
+    }
+
+    #[test]
+    fn configuration_emits_unavailable_surface() {
+        let value = connections_list_response(Err(DashboardFailure::new(
+            Error::Configuration,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "unavailable"}));
+    }
+
+    #[test]
+    fn ordinary_unavailable_fetch_emits_error_surface() {
+        let value = connections_list_response(Err(DashboardFailure::new(
+            Error::Unavailable,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "error"}));
+    }
+
+    #[test]
+    fn auth_and_contract_failures_stay_hard_errors() {
+        for classification in [
+            Error::Unauthorized,
+            Error::Forbidden,
+            Error::Invalid,
+            Error::NotFound,
+            Error::Conflict,
+            Error::RequestTooLarge,
+        ] {
+            let err = connections_list_response(Err(DashboardFailure::new(
+                classification,
+                FailureCause::Unknown,
+            )))
+            .unwrap_err();
+            assert_eq!(err.classification(), classification);
+        }
+    }
+}
+
+#[cfg(test)]
+mod runs_list_response_tests {
+    use super::runs_list_response;
+    use appcall_web::{DashboardFailure, Error, FailureCause};
+    use serde_json::json;
+
+    #[test]
+    fn ok_list_emits_status_ok_preserving_projection_fields() {
+        let value = runs_list_response(Ok(json!({
+            "runs": [{"id": "run_1"}],
+            "pendingRuns": 1,
+            "runningRuns": 0,
+            "backingoffRuns": 0,
+            "deadRuns": 0,
+            "workerHeartbeatUnavailable": true
+        })))
+        .unwrap();
+        assert_eq!(value["status"], "ok");
+        assert_eq!(value["runs"][0]["id"], "run_1");
+        assert_eq!(value["pendingRuns"], 1);
+        assert_eq!(value["workerHeartbeatUnavailable"], true);
+    }
+
+    #[test]
+    fn configuration_emits_unavailable_surface() {
+        let value = runs_list_response(Err(DashboardFailure::new(
+            Error::Configuration,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "unavailable"}));
+    }
+
+    #[test]
+    fn ordinary_unavailable_fetch_emits_error_surface() {
+        let value = runs_list_response(Err(DashboardFailure::new(
+            Error::Unavailable,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "error"}));
+    }
+
+    #[test]
+    fn auth_and_contract_failures_stay_hard_errors() {
+        for classification in [
+            Error::Unauthorized,
+            Error::Forbidden,
+            Error::Invalid,
+            Error::NotFound,
+            Error::Conflict,
+            Error::RequestTooLarge,
+        ] {
+            let err = runs_list_response(Err(DashboardFailure::new(
+                classification,
+                FailureCause::Unknown,
+            )))
+            .unwrap_err();
+            assert_eq!(err.classification(), classification);
+        }
+    }
+}
+
+#[cfg(test)]
+mod logs_list_response_tests {
+    use super::logs_list_response;
+    use appcall_web::{DashboardFailure, Error, FailureCause};
+    use serde_json::json;
+
+    #[test]
+    fn ok_list_emits_status_ok_preserving_projection_fields() {
+        let value = logs_list_response(Ok(json!({
+            "logs": [{"requestId": "req_1"}],
+            "pagination": {"hasMore": false}
+        })))
+        .unwrap();
+        assert_eq!(value["status"], "ok");
+        assert_eq!(value["logs"][0]["requestId"], "req_1");
+        assert_eq!(value["pagination"]["hasMore"], false);
+    }
+
+    #[test]
+    fn configuration_emits_unavailable_surface() {
+        let value = logs_list_response(Err(DashboardFailure::new(
+            Error::Configuration,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "unavailable"}));
+    }
+
+    #[test]
+    fn ordinary_unavailable_fetch_emits_error_surface() {
+        let value = logs_list_response(Err(DashboardFailure::new(
+            Error::Unavailable,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "error"}));
+    }
+
+    #[test]
+    fn auth_and_contract_failures_stay_hard_errors() {
+        for classification in [
+            Error::Unauthorized,
+            Error::Forbidden,
+            Error::Invalid,
+            Error::NotFound,
+            Error::Conflict,
+            Error::RequestTooLarge,
+        ] {
+            let err = logs_list_response(Err(DashboardFailure::new(
+                classification,
+                FailureCause::Unknown,
+            )))
+            .unwrap_err();
+            assert_eq!(err.classification(), classification);
+        }
+    }
+}
+
+#[cfg(test)]
+mod runs_detail_response_tests {
+    use super::runs_detail_response;
+    use appcall_web::{DashboardFailure, Error, FailureCause};
+    use serde_json::json;
+
+    #[test]
+    fn ok_detail_emits_status_ok_preserving_fields() {
+        let value = runs_detail_response(Ok(json!({
+            "run": {"id": "run_1"},
+            "history": {"complete": true, "events": []}
+        })))
+        .unwrap();
+        assert_eq!(value["status"], "ok");
+        assert_eq!(value["run"]["id"], "run_1");
+        assert_eq!(value["history"]["complete"], true);
+    }
+
+    #[test]
+    fn configuration_emits_unavailable_surface() {
+        let value = runs_detail_response(Err(DashboardFailure::new(
+            Error::Configuration,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "unavailable"}));
+    }
+
+    #[test]
+    fn ordinary_unavailable_fetch_emits_error_surface() {
+        let value = runs_detail_response(Err(DashboardFailure::new(
+            Error::Unavailable,
+            FailureCause::ServiceUnavailable,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "error"}));
+    }
+
+    #[test]
+    fn not_found_emits_soft_not_found_surface() {
+        let value = runs_detail_response(Err(DashboardFailure::new(
+            Error::NotFound,
+            FailureCause::Unknown,
+        )))
+        .unwrap();
+        assert_eq!(value, json!({"status": "not_found"}));
+    }
+
+    #[test]
+    fn auth_and_contract_failures_stay_hard_errors() {
+        for classification in [
+            Error::Unauthorized,
+            Error::Forbidden,
+            Error::Invalid,
+            Error::Conflict,
+            Error::RequestTooLarge,
+        ] {
+            let err = runs_detail_response(Err(DashboardFailure::new(
+                classification,
+                FailureCause::Unknown,
+            )))
+            .unwrap_err();
+            assert_eq!(err.classification(), classification);
+        }
+    }
 }

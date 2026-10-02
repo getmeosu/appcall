@@ -97,7 +97,8 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
             title: "Workflow engine is not connected to this console.",
             body: "Active runs, completed counts, and Needs you states are not recorded here until a project-scoped engine read path exists.",
             action_label: "How to register a workflow",
-            action_href: ui::LocalPath::new("/app/docs").expect("static overview path"),
+            action_href: ui::LocalPath::new("/app/start").expect("static overview path"),
+            role: ui::EmptyStateRole::Alert,
         }
         .render(),
     );

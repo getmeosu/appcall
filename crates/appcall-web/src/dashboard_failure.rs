@@ -271,7 +271,7 @@ pub(crate) fn recovery(
         Error::Unauthorized => "Appcall could not authorize this request. Sign in again before running the tool.".into(),
         Error::Forbidden => "Appcall denied this request. Check project access and select an account available to this project.".into(),
         Error::NotFound if matches!(operation, Op::RunNow | Op::ResetRun | Op::CancelRun) => "This run is not available in the current project or account scope.".into(),
-        Error::Conflict if matches!(operation, Op::RunNow | Op::ResetRun | Op::CancelRun) => "This run changed state before the operator control completed. Refresh the Runs page before trying again.".into(),
+        Error::Conflict if matches!(operation, Op::RunNow | Op::ResetRun | Op::CancelRun) => "This sync changed state before the operator control completed. Refresh the Syncs page before trying again.".into(),
         Error::NotFound => "This resource is not available in the current project or account scope.".into(),
         Error::Conflict => "This resource changed before the request completed. Review its current state before trying again.".into(),
         Error::Configuration => "Appcall could not complete this request because a required service is not configured. Ask the operator to check server configuration.".into(),
@@ -336,7 +336,7 @@ pub(crate) fn recovery(
         .map(|id| format!("/app/calls/{id}"));
     let (link, label) = match failure.cause() {
         _ if matches!(operation, Op::RunNow | Op::ResetRun | Op::CancelRun) => {
-            ("/app/syncs", "Review Runs")
+            ("/app/syncs", "Review Syncs")
         }
         _ if fields => (
             toolkit.as_deref().unwrap_or("/app/connectors"),
@@ -442,13 +442,13 @@ mod tests {
                 ),
                 (
                     Error::Conflict,
-                    "This run changed state before the operator control completed.",
+                    "This sync changed state before the operator control completed.",
                 ),
             ] {
                 let html = recovery(operation, Some("run-one"), &error.into());
                 assert!(html.contains(expected), "{operation:?}: {html}");
                 assert!(html.contains("href=\"/app/syncs\""));
-                assert!(html.contains("Review Runs"));
+                assert!(html.contains("Review Syncs"));
             }
         }
     }

@@ -1,7 +1,7 @@
 {
   "key": "linkedin-ads",
   "name": "LinkedIn Ads",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["ads"],
   "auth": {
@@ -39,6 +39,228 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880
     },
+    "campaigns.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Campaign",
+      "description": "Fetch a single LinkedIn Ads campaign by account and campaign ID (numeric or URN).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Ad account ID or urn:li:sponsoredAccount:{id}."
+          },
+          "campaignId": {
+            "type": "string",
+            "description": "Campaign ID or urn:li:sponsoredCampaign:{id}."
+          }
+        },
+        "required": ["accountId", "campaignId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "campaign": { "type": ["object", "null"] }
+        }
+      }
+    },
+    "ad_accounts.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Ad Account",
+      "description": "Fetch a single LinkedIn Ads ad account by ID (numeric or URN).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Ad account ID or urn:li:sponsoredAccount:{id}."
+          }
+        },
+        "required": ["accountId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "adAccount": { "type": ["object", "null"] }
+        }
+      }
+    },
+    "campaign_groups.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Campaign Groups",
+      "description": "List campaign groups for an ad account with start/count paging.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Ad account ID or urn:li:sponsoredAccount:{id}."
+          },
+          "start": {
+            "type": "number",
+            "description": "Paging start offset (default 0)."
+          },
+          "count": {
+            "type": "number",
+            "description": "Page size (default 10)."
+          },
+          "status": {
+            "type": "string",
+            "description": "Optional status filter, e.g. ACTIVE."
+          }
+        },
+        "required": ["accountId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "campaignGroups": { "type": "array" },
+          "nextStart": { "type": ["number", "null"] },
+          "count": { "type": "number" }
+        }
+      }
+    },
+    "creatives.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Creatives",
+      "description": "List creatives for an ad account via the creatives finder (distinct from creative_assets.list).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Ad account ID or urn:li:sponsoredAccount:{id}."
+          },
+          "start": {
+            "type": "number",
+            "description": "Paging start offset (default 0)."
+          },
+          "count": {
+            "type": "number",
+            "description": "Page size (default 10)."
+          },
+          "campaignId": {
+            "type": "string",
+            "description": "Optional campaign ID/URN to filter creatives."
+          },
+          "intendedStatus": {
+            "type": "string",
+            "description": "Optional intendedStatus filter, e.g. ACTIVE."
+          }
+        },
+        "required": ["accountId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "creatives": { "type": "array" },
+          "nextStart": { "type": ["number", "null"] },
+          "count": { "type": "number" }
+        }
+      }
+    },
+    "analytics.report.get": {
+      "kind": "action",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "title": "Get Analytics Report",
+      "description": "Fetch aggregated LinkedIn Ads analytics via /rest/adAnalytics (q=analytics). Requires dateRangeStart and at least one of accounts/campaigns/campaignGroups/creatives.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accounts": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Sponsored account IDs or URNs."
+          },
+          "campaigns": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Sponsored campaign IDs or URNs."
+          },
+          "campaignGroups": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Sponsored campaign group IDs or URNs."
+          },
+          "creatives": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Sponsored creative IDs or URNs."
+          },
+          "pivot": {
+            "type": "string",
+            "description": "Analytics pivot, e.g. ACCOUNT, CAMPAIGN, CREATIVE."
+          },
+          "timeGranularity": {
+            "type": "string",
+            "description": "ALL, DAILY, MONTHLY, or YEARLY (default ALL)."
+          },
+          "dateRangeStart": {
+            "description": "Inclusive start date as YYYY-MM-DD or {year,month,day}."
+          },
+          "dateRangeEnd": {
+            "description": "Optional inclusive end date as YYYY-MM-DD or {year,month,day}."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Alias for dateRangeStart (YYYY-MM-DD)."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Alias for dateRangeEnd (YYYY-MM-DD)."
+          },
+          "fields": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional metrics projection (max 20)."
+          }
+        },
+        "required": ["pivot", "dateRangeStart"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "pivot": { "type": "string" },
+          "timeGranularity": { "type": "string" },
+          "rows": { "type": "array" },
+          "rowCount": { "type": "number" }
+        }
+      }
+    },
     "healthcheck": {
       "kind": "action",
       "timeoutMs": 5000,
@@ -65,6 +287,9 @@
   "models": [
     "campaign",
     "ad_account",
-    "creative_asset"
+    "creative_asset",
+    "campaign_group",
+    "creative",
+    "analytics_result"
   ]
 }

@@ -6,23 +6,88 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.1.0", () => {
-    expect(manifest.version).toBe("0.1.0");
+  it("has version 0.4.0", () => {
+    expect(manifest.version).toBe("0.4.0");
   });
 
   it("uses bun runtime", () => {
     expect(manifest.runtime).toBe("bun");
   });
 
-  it("has no auth (public API)", () => {
-    expect(manifest.auth.type).toBe("none");
+  it("declares api_key auth with setup fields", () => {
+    expect(manifest.auth.type).toBe("api_key");
+    expect(manifest.auth.setup.mode).toBe("api_key");
+    expect(manifest.auth.setup.fields.some((field: { key: string }) => field.key === "apiKey")).toBe(true);
   });
 
-  it("allows only ashby host", () => {
+  it("allows expected hosts", () => {
     expect(manifest.network.allowedHosts).toEqual(["api.ashbyhq.com"]);
   });
 
-  it("declares job model", () => {
-    expect(manifest.models).toContain("job");
+  it("uses Basic api_key auth", () => {
+    expect(manifest.http.auth.basic).toEqual({ username: "{{apiKey}}", password: "" });
+  });
+
+  it("declares authenticated healthcheck request", () => {
+    expect(manifest.operations.healthcheck.request).toBeTruthy();
+    expect(manifest.operations.healthcheck.kind).toBe("action");
+  });
+
+  it("declares P0+P1 reads plus write ops", () => {
+    expect(Object.keys(manifest.operations).sort()).toEqual([
+      "applications.get",
+      "applications.hire",
+      "applications.list",
+      "applications.move",
+      "applications.reject",
+      "candidates.get",
+      "candidates.list",
+      "candidates.search",
+      "healthcheck",
+      "interviews.cancel",
+      "interviews.list",
+      "interviews.schedule",
+      "jobs.list",
+    ]);
+    expect(manifest.operations["jobs.list"].kind).toBe("sync");
+    expect(manifest.operations["candidates.list"].kind).toBe("sync");
+    expect(manifest.operations["applications.list"].kind).toBe("sync");
+    expect(manifest.operations["candidates.get"].kind).toBe("sync");
+    expect(manifest.operations["applications.get"].kind).toBe("sync");
+    expect(manifest.operations["candidates.search"].kind).toBe("sync");
+    expect(manifest.operations["interviews.list"].kind).toBe("sync");
+  });
+
+  it("wires applications.move|reject|hire EffectPolicy Reconcile to applications.get", () => {
+    for (const key of ["applications.move", "applications.reject", "applications.hire"] as const) {
+      const op = manifest.operations[key] as {
+        kind: string;
+        sideEffect: string;
+        effectPolicy: string;
+        reconcile: string;
+      };
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Reconcile");
+      expect(op.reconcile).toBe("applications.get");
+    }
+  });
+
+  it("declares interviews.schedule|cancel as write actions", () => {
+    for (const key of ["interviews.schedule", "interviews.cancel"] as const) {
+      const op = manifest.operations[key] as { kind: string; sideEffect: string };
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+    }
+  });
+
+  it("declares job, candidate, application, interview, interview_schedule models", () => {
+    expect(manifest.models).toEqual([
+      "job",
+      "candidate",
+      "application",
+      "interview",
+      "interview_schedule",
+    ]);
   });
 });

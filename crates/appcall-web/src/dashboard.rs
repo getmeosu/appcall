@@ -33,6 +33,9 @@ pub enum DashboardOperation {
     Usage,
     Branding,
     SaveBranding,
+    Workflows,
+    WorkflowRuns,
+    WorkflowRunDetail,
 }
 pub struct DashboardRequest {
     pub principal: Principal,
@@ -234,8 +237,6 @@ impl DashboardRenderer<'_> {
                     match r.path {
                         "/app/docs" => "Documentation",
                         "/app/start" => "Start here",
-                        "/app/workflows" => "Workflows",
-                        "/app/workflows/runs" => "Runs",
                         _ => "Support",
                     },
                     session,
@@ -306,7 +307,10 @@ impl DashboardRenderer<'_> {
             }
         }
         let segments: Vec<_> = r.path.trim_start_matches('/').split('/').collect();
-        let resource = if segments.len() >= 3
+        let resource = if matches!(operation, DashboardOperation::WorkflowRunDetail) {
+            (segments.len() >= 4 && segments.get(2) == Some(&"runs"))
+                .then(|| segments[3].to_owned())
+        } else if segments.len() >= 3
             && !matches!(
                 operation,
                 DashboardOperation::Usage
@@ -316,7 +320,10 @@ impl DashboardRenderer<'_> {
                     | DashboardOperation::Stream
                     | DashboardOperation::ActionClaims
                     | DashboardOperation::ReconcileActionClaim
-            ) {
+                    | DashboardOperation::Workflows
+                    | DashboardOperation::WorkflowRuns
+            )
+        {
             Some(segments[2].to_owned())
         } else {
             None
@@ -477,19 +484,35 @@ impl DashboardRenderer<'_> {
             } else {
                 &mut value
             };
-            if target.is_array() {
-                let key = match operation {
-                    DashboardOperation::Catalog => "connectors",
-                    DashboardOperation::Logs => "logs",
-                    DashboardOperation::Runs => "runs",
-                    _ => unreachable!(),
-                };
-                *target = serde_json::json!({key:target.clone()});
+            let logs_surface = if operation == DashboardOperation::Logs {
+                if target.get("unavailable").and_then(Value::as_bool) == Some(true) {
+                    Some("unavailable")
+                } else {
+                    target.get("status").and_then(Value::as_str)
+                }
+            } else {
+                None
+            };
+            // Calls unavailable/error carry status only. Stamp hasFilters for the
+            // request, but never wrap or invent a logs array on those surfaces.
+            if matches!(logs_surface, Some("unavailable") | Some("error")) {
+                let map = target.as_object_mut().ok_or(Error::Unavailable)?;
+                map.insert("hasFilters".into(), Value::Bool(has_filters));
+            } else {
+                if target.is_array() {
+                    let key = match operation {
+                        DashboardOperation::Catalog => "connectors",
+                        DashboardOperation::Logs => "logs",
+                        DashboardOperation::Runs => "runs",
+                        _ => unreachable!(),
+                    };
+                    *target = serde_json::json!({key:target.clone()});
+                }
+                let map = target.as_object_mut().ok_or(Error::Unavailable)?;
+                // This presentation flag is derived only from the current request,
+                // overwriting any provider-supplied value without echoing query text.
+                map.insert("hasFilters".into(), Value::Bool(has_filters));
             }
-            let map = target.as_object_mut().ok_or(Error::Unavailable)?;
-            // This presentation flag is derived only from the current request,
-            // overwriting any provider-supplied value without echoing query text.
-            map.insert("hasFilters".into(), Value::Bool(has_filters));
         }
         if operation == DashboardOperation::Runs {
             let target = if value.get("data").is_some() {
@@ -705,13 +728,16 @@ impl DashboardRenderer<'_> {
                 "Check the connection's current status before running another tool.",
                 false,
             ),
-            (Runs, "run-now", _) => ("Run queued now. Refreshing the current queue state.", false),
+            (Runs, "run-now", _) => (
+                "Sync queued now. Refreshing the current queue state.",
+                false,
+            ),
             (Runs, "reset", _) => (
-                "Attempts reset and the run was queued from its saved checkpoint.",
+                "Attempts reset and the sync was queued from its saved checkpoint.",
                 false,
             ),
             (Runs, "cancelled", _) => (
-                "Run cancelled. Any older worker lease is fenced from committing.",
+                "Sync cancelled. Any older worker lease is fenced from committing.",
                 false,
             ),
             _ => ("", false),
@@ -848,10 +874,9 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
         ("POST", "/app/action-claims/reconcile") => ReconcileActionClaim,
         ("GET", "/app/settings/white-labeling") => Branding,
         ("POST", "/app/settings/white-labeling") => SaveBranding,
-        ("GET", "/app/docs" | "/app/support" | "/app/start" | "/app/workflows") => {
-            return Some(None)
-        }
-        ("GET", "/app/workflows/runs") => return Some(None),
+        ("GET", "/app/docs" | "/app/support" | "/app/start") => return Some(None),
+        ("GET", "/app/workflows") => Workflows,
+        ("GET", "/app/workflows/runs") => WorkflowRuns,
         _ => {
             let parts: Vec<_> = path.trim_start_matches('/').split('/').collect();
             if parts.first() != Some(&"app") {
@@ -865,6 +890,9 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
             ) {
                 ("GET", Some("connectors"), 3, _) => Connector,
                 ("GET", Some("syncs"), 3, _) => RunDetail,
+                ("GET", Some("workflows"), 4, _) if parts.get(2).copied() == Some("runs") => {
+                    WorkflowRunDetail
+                }
                 ("GET", Some("connectors"), 4, Some("test-form")) => TestForm,
                 ("GET", Some("connectors"), 4, Some("options")) => Options,
                 ("GET", Some("connectors"), 4, Some("runinput-fields")) => RunInputFields,
@@ -1293,5 +1321,45 @@ mod redirect_tests {
             "/oauth/local/authorize?connector=google-workspace&connectionId=x#fragment",
             "/oauth/local/authorize?connector=google-workspace&connectionId=%2Foutside",
         ] { assert!(!super::valid_local_setup_redirect(url,"google-workspace"),"{url}"); }
+    }
+}
+
+#[cfg(test)]
+mod workflow_route_tests {
+    use super::*;
+
+    #[test]
+    fn workflows_routes_resolve_to_dedicated_ops_not_static() {
+        assert_eq!(
+            resolve("GET", "/app/workflows"),
+            Some(Some(DashboardOperation::Workflows))
+        );
+        assert_eq!(
+            resolve("GET", "/app/workflows/runs"),
+            Some(Some(DashboardOperation::WorkflowRuns))
+        );
+        assert_ne!(resolve("GET", "/app/workflows"), Some(None));
+        assert_eq!(
+            resolve("GET", "/app/syncs"),
+            Some(Some(DashboardOperation::Runs))
+        );
+    }
+
+    #[test]
+    fn workflow_run_detail_resolves_only_the_bounded_run_resource_route() {
+        assert_eq!(
+            resolve("GET", "/app/workflows/runs/run-42"),
+            Some(Some(DashboardOperation::WorkflowRunDetail))
+        );
+        assert_eq!(resolve("POST", "/app/workflows/runs/run-42"), None);
+        assert_eq!(resolve("GET", "/app/workflows/runs/run-42/extra"), None);
+        assert_eq!(
+            resolve("GET", "/app/workflows/runs"),
+            Some(Some(DashboardOperation::WorkflowRuns))
+        );
+        assert_ne!(
+            resolve("GET", "/app/workflows/other/run-42"),
+            Some(Some(DashboardOperation::WorkflowRunDetail))
+        );
     }
 }

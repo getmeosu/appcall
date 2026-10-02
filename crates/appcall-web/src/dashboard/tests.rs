@@ -11,7 +11,7 @@ fn runs_control_recovery_releases_page_lock_after_navigation_abort_or_bfcache_re
         "window.addEventListener('pageshow'",
         "window.addEventListener('pagehide'",
         "event.persisted",
-        "Run control outcome is unknown.",
+        "Sync control outcome is unknown.",
         "runs-recovery",
     ] {
         assert!(
@@ -1225,8 +1225,8 @@ async fn runs_account_alias_preserves_effective_filter_and_pagination() {
             );
             assert!(response
                 .body
-                .contains("No durable runs match these filters."));
-            assert!(!response.body.contains("No durable runs to show."));
+                .contains("No durable syncs match these filters."));
+            assert!(!response.body.contains("No durable syncs to show."));
             assert!(
                 response.body.contains(&format!(
                     "href=\"/app/syncs?accountId={expected}&amp;cursor=next%2Bcursor%3D\""
@@ -1272,8 +1272,8 @@ async fn run_controls_report_confirmed_success_after_redirect() {
     let response = render(&data, &request, Some(DashboardOperation::Runs))
         .await
         .unwrap();
-    assert!(response.body.contains("Run queued now."));
-    assert!(response.body.contains("No durable runs to show."));
+    assert!(response.body.contains("Sync queued now."));
+    assert!(response.body.contains("No durable syncs to show."));
 }
 fn location(response: &Response) -> Option<&str> {
     response

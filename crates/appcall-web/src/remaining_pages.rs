@@ -64,7 +64,8 @@ pub(crate) fn events_with_stream(value: &Value, stream_url: &str) -> Result<Stri
                 title: "No webhook events to show.",
                 body: "Browse connectors to inspect their declared events.",
                 action_label: "Browse connectors",
-                action_href: ui::LocalPath::new("/app/connectors").unwrap()
+                action_href: ui::LocalPath::new("/app/connectors").unwrap(),
+                role: ui::EmptyStateRole::Status,
             }
             .render()
         ));

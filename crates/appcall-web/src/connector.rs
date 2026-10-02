@@ -348,6 +348,7 @@ fn tools(
                 body: "Select an available tool to inspect its inputs.",
                 action_label: "Browse toolkits",
                 action_href: ui::LocalPath::new("/app/connectors").unwrap(),
+                role: ui::EmptyStateRole::Status,
             }
             .render(),
         );
@@ -476,6 +477,7 @@ fn accounts_panel(accounts: &[&Value]) -> String {
                 body: "Use Settings to configure a supported connection.",
                 action_label: "Manage accounts",
                 action_href: ui::LocalPath::new("/app/connections").unwrap(),
+                role: ui::EmptyStateRole::Status,
             }
             .render(),
         );

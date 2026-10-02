@@ -13,6 +13,7 @@ pub mod rate_limit;
 pub mod run_operator;
 mod services;
 pub mod streaming;
+pub mod workflow_engine;
 pub use services::*;
 mod transport;
 pub use transport::serve;

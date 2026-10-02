@@ -227,6 +227,8 @@ fn application_run_history_is_project_account_scoped_and_revocable() {
         );
     }
 
+    // Soft not_found: Syncs detail EmptyState triad (200 + identical bodies).
+    // Missing and cross-scope ids must stay indistinguishable.
     let mut not_found_bodies = Vec::new();
     for id in [
         "application-browser-missing-run",
@@ -240,8 +242,13 @@ fn application_run_history_is_project_account_scoped_and_revocable() {
             &session_cookie,
             "",
         );
-        assert_eq!(response_status(&wire), 404, "{id}: {wire}");
-        not_found_bodies.push(response_body(&wire).to_owned());
+        assert_eq!(response_status(&wire), 200, "{id}: {wire}");
+        let body = response_body(&wire).to_owned();
+        assert!(
+            body.contains("Sync not found"),
+            "{id} missing EmptyState: {body}"
+        );
+        not_found_bodies.push(body);
     }
     assert_eq!(not_found_bodies[0], not_found_bodies[1]);
     assert_eq!(not_found_bodies[1], not_found_bodies[2]);

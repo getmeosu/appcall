@@ -113,6 +113,9 @@ impl MemoryDashboard {
                 }
                 Ok(item)
             }
+            Op::Workflows | Op::WorkflowRuns | Op::WorkflowRunDetail => {
+                Ok(serde_json::json!({"status":"unavailable"}))
+            }
             Op::Overview => {
                 let connections = self
                     .core
@@ -171,9 +174,16 @@ impl MemoryDashboard {
                     chrono::Utc::now(),
                 ))
             }
-            Op::Connections => Ok(
-                json!({"connections":self.core.connections(&identity).await.map_err(web_error)?.iter().map(crate::browser_host::connection_value).collect::<Vec<_>>()}),
-            ),
+            Op::Connections => {
+                let listed = match self.core.connections(&identity).await {
+                    Ok(connections) => Ok(connections
+                        .iter()
+                        .map(crate::browser_host::connection_value)
+                        .collect::<Vec<_>>()),
+                    Err(error) => Err(web_error(error)),
+                };
+                crate::browser_host::connections_list_response(listed)
+            }
             Op::TestConnection => Ok(crate::browser_host::connection_value(
                 &self
                     .core
@@ -197,12 +207,41 @@ impl MemoryDashboard {
                 Ok(value)
             }
             Op::Certification => Ok(json!({"unavailable":true,"certifications":[]})),
-            Op::Runs => Ok(json!({"unavailable":true})),
-            Op::RunDetail => Err(Error::NotFound.into()),
+            Op::Runs => Ok(json!({"status":"unavailable"})),
+            Op::RunDetail => Ok(json!({"status":"unavailable"})),
             Op::RunNow | Op::ResetRun | Op::CancelRun => Err(Error::Forbidden.into()),
-            Op::Logs | Op::Trace | Op::Events | Op::Stream => {
+            Op::Logs => {
+                let mut url = url::Url::parse("http://local.invalid/v1/action-logs")
+                    .map_err(|_| Error::Invalid)?;
+                for (k, v) in &r.fields {
+                    if [
+                        "limit",
+                        "cursor",
+                        "connectionId",
+                        "connector",
+                        "action",
+                        "status",
+                        "requestId",
+                        "errorCode",
+                        "operation",
+                        "createdFrom",
+                        "createdBefore",
+                    ]
+                    .contains(&k.as_str())
+                    {
+                        url.query_pairs_mut().append_pair(k, v);
+                    }
+                }
+                let listed = match self.core.history.read(&identity, &url) {
+                    Ok(response) => response
+                        .map(|r| r.body)
+                        .ok_or_else(|| Error::Invalid.into()),
+                    Err(error) => Err(web_error(error)),
+                };
+                crate::browser_host::logs_list_response(listed)
+            }
+            Op::Trace | Op::Events | Op::Stream => {
                 let path = match r.operation {
-                    Op::Logs => "/v1/action-logs".to_owned(),
                     Op::Trace => format!("/v1/requests/{resource}"),
                     _ => "/v1/webhook-events".into(),
                 };
@@ -221,8 +260,6 @@ impl MemoryDashboard {
                         "operation",
                     ]
                     .contains(&k.as_str())
-                        || r.operation == Op::Logs
-                            && ["createdFrom", "createdBefore"].contains(&k.as_str())
                     {
                         url.query_pairs_mut().append_pair(k, v);
                     }

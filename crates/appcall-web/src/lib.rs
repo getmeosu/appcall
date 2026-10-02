@@ -24,6 +24,7 @@ mod pages;
 mod run_detail;
 mod shell;
 mod trace;
+mod workflow_run_detail;
 pub use dashboard::*;
 
 mod refresh;

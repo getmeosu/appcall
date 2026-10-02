@@ -1,14 +1,22 @@
 {
   "key": "recruitee",
   "name": "Recruitee",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "runtime": "bun",
-  "categories": ["ats-recruitment"],
+  "categories": [
+    "ats-recruitment"
+  ],
   "auth": {
     "type": "bearer",
     "setup": {
       "mode": "api_key",
       "fields": [
+        {
+          "key": "company",
+          "label": "Company ID or subdomain",
+          "required": true,
+          "secret": false
+        },
         {
           "key": "accessToken",
           "label": "API token",
@@ -20,7 +28,8 @@
   },
   "network": {
     "allowedHosts": [
-      "*.recruitee.com"
+      "*.recruitee.com",
+      "api.recruitee.com"
     ]
   },
   "operations": {
@@ -28,7 +37,33 @@
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880
+      "maxResponseBytes": 5242880,
+      "title": "List jobs (careers)",
+      "description": "List published career-site job postings via Careers Site API GET /offers on {company}.recruitee.com. Returns NormalizedJob rows. Distinct from offers.list (ATS admin offers)."
+    },
+    "candidates.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidates",
+      "description": "List candidates via ATS API GET /c/{company}/candidates. Optional limit, offset, offerId, and query filters."
+    },
+    "pipeline_stages.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List pipeline stages",
+      "description": "List pipeline stages from an offer (offerId), a pipeline template (pipelineTemplateId), or all company pipeline templates via the ATS API."
+    },
+    "offers.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List offers (ATS)",
+      "description": "List company offers (jobs/talent pools) via authenticated ATS API GET /c/{company}/offers. Richer admin listing than careers jobs.list."
     },
     "healthcheck": {
       "kind": "action",
@@ -51,9 +86,37 @@
           }
         }
       }
+    },
+    "candidates.get": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get candidate",
+      "description": "Fetch a single candidate via authenticated ATS API GET /c/{company}/candidates/{id}. Includes placements and profile fields."
+    },
+    "candidates.search": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search candidates",
+      "description": "Search candidates via authenticated ATS API GET /c/{company}/search/new/candidates. Optional query (all-field filter), filtersJson, limit, page, and sortBy."
+    },
+    "interview_events.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List interview events",
+      "description": "List scheduled interview events via authenticated ATS API GET /c/{company}/interview/events. Optional candidateId, date range, scope, status, adminIds, limit, and page filters."
     }
   },
   "models": [
-    "job"
+    "job",
+    "candidate",
+    "offer",
+    "pipeline_stage",
+    "interview_event"
   ]
 }

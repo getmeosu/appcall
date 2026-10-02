@@ -1,7 +1,7 @@
 {
   "key": "googlemeet",
   "name": "Google Meet",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": ["scheduling"],
@@ -78,6 +78,96 @@
           "connector": { "type": "string" },
           "action": { "type": "string" },
           "meetings": { "type": "array", "description": "Normalized upcoming meetings." }
+        }
+      }
+    },
+    "meetings.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Meeting",
+      "description": "Retrieve a Google Calendar event (with Meet link) by its event/meeting ID.",
+      "sideEffect": "read",
+      "sample": { "meetingId": "evt_123" },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingId": { "type": "string", "description": "Google Calendar event ID for the meeting." }
+        },
+        "required": ["meetingId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "meeting": { "type": "object" }
+        }
+      }
+    },
+    "meetings.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Meeting",
+      "description": "Patch a Google Calendar event that hosts a Google Meet conference (summary, times, description, attendees).",
+      "sideEffect": "write",
+      "sample": {
+        "meetingId": "evt_123",
+        "summary": "Intro call (rescheduled)",
+        "start": "2026-06-01T10:00:00Z",
+        "end": "2026-06-01T10:30:00Z"
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingId": { "type": "string", "description": "Google Calendar event ID for the meeting to update." },
+          "summary": { "type": "string", "description": "Optional. Updated meeting title." },
+          "start": { "type": "string", "description": "Optional. Updated start time, RFC3339." },
+          "end": { "type": "string", "description": "Optional. Updated end time, RFC3339." },
+          "description": { "type": "string", "description": "Optional. Updated event description." },
+          "attendees": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional. Replacement attendee email list; Google emails updates when sendUpdates=all."
+          }
+        },
+        "required": ["meetingId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "meeting": { "type": "object" }
+        }
+      }
+    },
+    "meetings.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Delete Meeting",
+      "description": "Delete a Google Calendar event (and its Meet conference). This action is irreversible.",
+      "sideEffect": "write",
+      "sample": { "meetingId": "evt_123" },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingId": { "type": "string", "description": "Google Calendar event ID for the meeting to delete." }
+        },
+        "required": ["meetingId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "deleted": { "type": "boolean" },
+          "meetingId": { "type": "string" }
         }
       }
     },

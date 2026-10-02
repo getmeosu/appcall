@@ -101,7 +101,7 @@ test('uncertain Runs navigation keeps native reload recovery and only fences mut
   assert.equal(f.unrelatedButton.disabled, false);
 
   f.emitWindow('pageshow', { persisted: true });
-  assert.match(f.status.textContent, /Reload Runs status/);
+  assert.match(f.status.textContent, /Reload Syncs status/);
   assert.equal(f.runButton.disabled, true);
   assert.equal(f.reload.href, '/app/syncs');
   f.flush();

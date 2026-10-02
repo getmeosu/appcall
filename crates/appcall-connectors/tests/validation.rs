@@ -284,3 +284,121 @@ fn connector_icons_are_https_urls_from_provider_hosts_not_bundled_assets() {
         Some("https://github.com/getmeosu.png")
     );
 }
+
+#[test]
+fn effect_policy_reconcile_requires_read_ish_target() {
+    use appcall_connectors::EffectPolicy;
+    let mut ok = manifest();
+    ok["operations"]["observe"] = json!({
+        "kind": "sync",
+        "timeoutMs": 10,
+        "maxInputBytes": 1000,
+        "maxResponseBytes": 1000,
+        "description": "Observe"
+    });
+    ok["operations"]["write"] = json!({
+        "kind": "action",
+        "timeoutMs": 10,
+        "maxInputBytes": 1000,
+        "maxResponseBytes": 1000,
+        "description": "Write",
+        "sideEffect": "write",
+        "effectPolicy": "Reconcile",
+        "reconcile": "observe",
+        "inputSchema": {"type": "object"}
+    });
+    let connector = parse(&ok).unwrap();
+    let write = connector.operation("write").unwrap();
+    assert_eq!(write.effect_policy, EffectPolicy::Reconcile);
+    assert_eq!(write.reconcile, "observe");
+
+    // Missing reconcile target.
+    let mut missing = ok.clone();
+    missing["operations"]["write"]["reconcile"] = json!("nope");
+    assert_eq!(
+        parse(&missing).unwrap_err().code(),
+        ErrorCode::InvalidManifest
+    );
+
+    // Reconcile must not point at another write action.
+    let mut write_target = ok.clone();
+    write_target["operations"]["other_write"] = json!({
+        "kind": "action",
+        "timeoutMs": 10,
+        "maxInputBytes": 1000,
+        "maxResponseBytes": 1000,
+        "description": "Other write",
+        "sideEffect": "write",
+        "inputSchema": {"type": "object"}
+    });
+    write_target["operations"]["write"]["reconcile"] = json!("other_write");
+    assert_eq!(
+        parse(&write_target).unwrap_err().code(),
+        ErrorCode::InvalidManifest
+    );
+
+    // Reconcile without a target name is invalid.
+    let mut empty = ok.clone();
+    empty["operations"]["write"]["reconcile"] = json!("");
+    assert_eq!(
+        parse(&empty).unwrap_err().code(),
+        ErrorCode::InvalidManifest
+    );
+
+    // effectPolicy None must not carry a reconcile name.
+    let mut stray = ok.clone();
+    stray["operations"]["write"]["effectPolicy"] = json!("None");
+    stray["operations"]["write"]["reconcile"] = json!("observe");
+    assert_eq!(
+        parse(&stray).unwrap_err().code(),
+        ErrorCode::InvalidManifest
+    );
+
+    // Explicit read action is an allowed reconcile target.
+    let mut read_action = ok.clone();
+    read_action["operations"]["read_action"] = json!({
+        "kind": "action",
+        "timeoutMs": 10,
+        "maxInputBytes": 1000,
+        "maxResponseBytes": 1000,
+        "description": "Read",
+        "sideEffect": "read",
+        "inputSchema": {"type": "object"}
+    });
+    read_action["operations"]["write"]["reconcile"] = json!("read_action");
+    assert!(parse(&read_action).is_ok());
+}
+
+#[test]
+fn effect_policy_idempotent_allows_optional_reconcile() {
+    use appcall_connectors::EffectPolicy;
+    let mut ok = manifest();
+    ok["operations"]["observe"] = json!({
+        "kind": "sync",
+        "timeoutMs": 10,
+        "maxInputBytes": 1000,
+        "maxResponseBytes": 1000,
+        "description": "Observe"
+    });
+    ok["operations"]["create"] = json!({
+        "kind": "action",
+        "timeoutMs": 10,
+        "maxInputBytes": 1000,
+        "maxResponseBytes": 1000,
+        "description": "Create",
+        "sideEffect": "write",
+        "effectPolicy": "Idempotent",
+        "reconcile": "observe",
+        "inputSchema": {"type": "object"}
+    });
+    let connector = parse(&ok).unwrap();
+    assert_eq!(
+        connector.operation("create").unwrap().effect_policy,
+        EffectPolicy::Idempotent
+    );
+
+    // Idempotent without reconcile is also valid.
+    let mut bare = ok.clone();
+    bare["operations"]["create"]["reconcile"] = json!("");
+    assert!(parse(&bare).is_ok());
+}

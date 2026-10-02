@@ -12,6 +12,8 @@ pub(crate) fn title(op: Op) -> &'static str {
         Op::Certification => "Certification",
         Op::Usage => "Usage",
         Op::Branding => "White Labeling",
+        Op::Workflows => "Workflows",
+        Op::WorkflowRuns | Op::WorkflowRunDetail => "Runs",
         _ => "Result",
     }
 }
@@ -59,12 +61,19 @@ fn evidence_label(item: &Value) -> String {
         fixture
     )
 }
-fn empty(title: &str, body: &str, action: &str, href: &str) -> String {
+fn empty(
+    title: &str,
+    body: &str,
+    action: &str,
+    href: &str,
+    role: crate::ui::EmptyStateRole,
+) -> String {
     crate::ui::EmptyState {
         title,
         body,
         action_label: action,
         action_href: crate::ui::LocalPath::new(href).expect("static local empty-state link"),
+        role,
     }
     .render()
 }
@@ -273,23 +282,23 @@ pub(crate) fn run_control(
     let (allowed_key, label, heading, body) = match action {
         "run-now" => (
             "runNowAllowed",
-            "Run now",
-            format!("Run {id} now?"),
-            format!("Run {id} now? This queues the run immediately."),
+            "Queue now",
+            format!("Queue sync {id} now?"),
+            format!("Queue sync {id} now? This wakes the sync immediately."),
         ),
         "reset" => (
             "resetAllowed",
             "Reset attempts",
-            format!("Reset {id} attempts?"),
+            format!("Reset sync {id} attempts?"),
             format!(
-                "This resets run {id} attempts to zero, preserves the current cursor and queues the run from that checkpoint."
+                "This resets sync {id} attempts to zero, preserves the current cursor and queues the sync from that checkpoint."
             ),
         ),
         "cancel" => (
             "cancelAllowed",
             "Cancel",
-            format!("Cancel {id}?"),
-            format!("Cancelling run {id} stops future work. An in-flight provider request or external side effect cannot be recalled."),
+            format!("Cancel sync {id}?"),
+            format!("Cancelling sync {id} stops future work. An in-flight provider request or external side effect cannot be recalled."),
         ),
         _ => return Err(Error::Invalid),
     };
@@ -336,13 +345,13 @@ pub(crate) fn run_control(
 }
 pub(crate) fn runs_feedback() -> Result<String, Error> {
     let reload = runs_link_button(
-        "Reload Runs status",
+        "Reload Syncs status",
         crate::ui::ButtonVariant::Quiet,
         "/app/syncs",
     )?
     .replacen("<a ", "<a id=\"runs-reload\" ", 1);
     Ok(format!(
-        "<p id=\"runs-live-status\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-busy=\"false\"></p><div id=\"runs-recovery\" class=\"runs-card runs-recovery\" hidden><p id=\"runs-recovery-message\">Run control outcome is unknown. Reload Runs status before trying again.</p>{reload}</div>"
+        "<p id=\"runs-live-status\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-busy=\"false\"></p><div id=\"runs-recovery\" class=\"runs-card runs-recovery\" hidden><p id=\"runs-recovery-message\">Sync control outcome is unknown. Reload Syncs status before trying again.</p>{reload}</div>"
     ))
 }
 fn runs_header() -> String {
@@ -353,9 +362,6 @@ fn runs_header() -> String {
     }
     .render()
         .replacen("<header ", "<header id=\"runs-heading\" ", 1)
-}
-fn runs_card(body: &str) -> String {
-    format!("<div class=\"runs-card\">{body}</div>")
 }
 fn runs_stat(label: &str, value: &str) -> String {
     format!(
@@ -418,7 +424,7 @@ fn runs_status_field(value: &str) -> String {
     field.render()
 }
 fn runs_submit_button() -> String {
-    let mut button = crate::ui::Button::new("Filter runs");
+    let mut button = crate::ui::Button::new("Filter syncs");
     button.size = crate::ui::ButtonSize::Sm;
     button.working_label = Some("Filtering…");
     button.target = crate::ui::ButtonTarget::Button {
@@ -444,26 +450,65 @@ fn run_detail_link(id: &str) -> Result<String, Error> {
     let href = format!("/app/syncs/{id}");
     crate::ui::LocalPath::new(&href).ok_or(Error::Invalid)?;
     Ok(format!(
-        "<a class=\"runs-detail-link\" href=\"{}\" aria-label=\"Open run {}\"><code class=\"runs-code\">{}</code></a>",
+        "<a class=\"runs-detail-link\" href=\"{}\" aria-label=\"Open sync {}\"><code class=\"runs-code\">{}</code></a>",
         escape(&href),
         escape(id),
         escape(id)
     ))
 }
-fn runs(v: &Value) -> Result<String, Error> {
+fn workflow_run_detail_link(id: &str) -> Result<String, Error> {
+    let href = format!("/app/workflows/runs/{id}");
+    crate::ui::LocalPath::new(&href).ok_or(Error::Invalid)?;
+    Ok(format!(
+        "<a class=\"runs-detail-link\" href=\"{}\" aria-label=\"Open workflow run {}\"><code class=\"runs-code\">{}</code></a>",
+        escape(&href),
+        escape(id),
+        escape(id)
+    ))
+}
+fn runs_surface_status(v: &Value) -> Result<&'static str, Error> {
+    // Legacy bare boolean remains accepted during host transition to status.
     if value_bool(v, "unavailable") {
-        return Ok(format!(
-            "<section id=\"runs-page\" data-runs-page aria-labelledby=\"runs-heading\">{}{}</section>",
-            runs_header(),
-            runs_card(
-                "<h3>Runs status unavailable</h3><p>Configure PostgreSQL and the Rust sync queue to inspect durable runs.</p>",
-            )
-            .replacen(
-                "class=\"runs-card\"",
-                "class=\"runs-card runs-unavailable-card\"",
-                1,
-            )
-        ));
+        return Ok("unavailable");
+    }
+    match v.get("status").and_then(Value::as_str) {
+        Some("unavailable") => Ok("unavailable"),
+        Some("error") => Ok("error"),
+        Some("ok") | None => Ok("ok"),
+        Some(_) => Err(Error::Unavailable),
+    }
+}
+
+fn runs(v: &Value) -> Result<String, Error> {
+    match runs_surface_status(v)? {
+        "unavailable" => {
+            return Ok(format!(
+                "<section id=\"runs-page\" data-runs-page aria-labelledby=\"runs-heading\">{}{}</section>",
+                runs_header(),
+                empty(
+                    "Syncs unavailable",
+                    "Configure PostgreSQL and the Rust sync queue to inspect durable syncs. This page does not invent queue rows or health.",
+                    "Start here",
+                    "/app/start",
+                    crate::ui::EmptyStateRole::Alert,
+                ),
+            ));
+        }
+        "error" => {
+            return Ok(format!(
+                "<section id=\"runs-page\" data-runs-page aria-labelledby=\"runs-heading\">{}{}</section>",
+                runs_header(),
+                empty(
+                    "Syncs unreachable",
+                    "The console is configured to read the sync queue, but the read failed. Nothing here is invented.",
+                    "Reload",
+                    "/app/syncs",
+                    crate::ui::EmptyStateRole::Alert,
+                ),
+            ));
+        }
+        "ok" => {}
+        _ => return Err(Error::Unavailable),
     }
     let items = rows(v, &["runs", "items", "rows"])?;
     let records_24h = match v.get("records24h") {
@@ -489,7 +534,7 @@ fn runs(v: &Value) -> Result<String, Error> {
             == Some(false);
     let operator_controls_unavailable = !operator_controls_available;
     if operator_controls_unavailable {
-        body.push_str("<div id=\"runs-operator-controls-unavailable\" role=\"note\" class=\"runs-card runs-operator-notice\"><h3>Operator controls unavailable</h3><p>Run, reset, and cancel require a trusted operator principal. Queue state remains available as read-only evidence.</p></div>");
+        body.push_str("<div id=\"runs-operator-controls-unavailable\" role=\"note\" class=\"runs-card runs-operator-notice\"><h3>Operator controls unavailable</h3><p>Queue, reset, and cancel require a trusted operator principal. Queue state remains available as read-only evidence.</p></div>");
     } else {
         let action_claims_link = runs_link_button(
             "Inspect action claims",
@@ -501,7 +546,7 @@ fn runs(v: &Value) -> Result<String, Error> {
         ));
     }
     body.push_str(
-        "<form id=\"runs-filters\" class=\"runs-card runs-filters\" method=\"get\" action=\"/app/syncs\" role=\"search\" aria-label=\"Filter runs\"><div class=\"runs-filter-grid\">",
+        "<form id=\"runs-filters\" class=\"runs-card runs-filters\" method=\"get\" action=\"/app/syncs\" role=\"search\" aria-label=\"Filter syncs\"><div class=\"runs-filter-grid\">",
     );
     let status = value_text(v, "selectedStatus");
     body.push_str(&runs_status_field(&status));
@@ -556,26 +601,28 @@ fn runs(v: &Value) -> Result<String, Error> {
         let filtered = value_bool(v, "hasFilters");
         body.push_str(&if filtered {
             empty(
-                "No durable runs match these filters.",
-                "Clear the filters to view project runs.",
+                "No durable syncs match these filters.",
+                "Clear the filters to view project syncs.",
                 "Clear filters",
                 "/app/syncs",
+                crate::ui::EmptyStateRole::Status,
             )
         } else {
             empty(
-                "No durable runs to show.",
-                "Queued message synchronization runs will appear here.",
+                "No durable syncs to show.",
+                "Queued message synchronization syncs will appear here.",
                 "Browse connectors",
                 "/app/connectors",
+                crate::ui::EmptyStateRole::Status,
             )
         });
         body.push_str("</section>");
         return Ok(body);
     }
-    body.push_str("<div class=\"runs-card runs-table\"><div class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable sync runs\" tabindex=\"0\"><table><caption class=\"sr-only\">Durable sync runs</caption><thead><tr>");
+    body.push_str("<div class=\"runs-card runs-table\"><div class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable syncs\" tabindex=\"0\"><table><caption class=\"sr-only\">Durable syncs</caption><thead><tr>");
     for label in [
         "Health",
-        "Run ID",
+        "Sync ID",
         "Connector",
         "Tool",
         "Account",
@@ -681,7 +728,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
    body.push_str(&format!("<div id=\"toolkit-catalog-results\" aria-live=\"polite\" aria-atomic=\"true\" aria-labelledby=\"toolkit-catalog-results-heading\"><h3 id=\"toolkit-catalog-results-heading\" class=\"sr-only\">Connector results</h3><p id=\"toolkit-catalog-status\" role=\"status\" aria-live=\"polite\">{result_label}</p><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3\">"));
    for item in items{let key=id(item,&["key"])?;let name=string(item,&["name"]);let count=item.get("operations").and_then(Value::as_array).map(|operations|operations.iter().filter(|operation|operation.get("kind").and_then(Value::as_str)==Some("action")).count()).or_else(||item.get("actionCount").and_then(Value::as_u64).map(|v|v as usize)).unwrap_or(0);let mark=crate::ui::provider_identity(name,item.get("iconUrl").and_then(Value::as_str));body.push_str(&format!("<a href=\"/app/connectors/{key}\" aria-label=\"Open {} connector\" class=\"toolkit-catalog-card flex min-w-0 flex-col gap-3 p-5 transition\"><div class=\"flex min-w-0 items-center gap-3\">{mark}<span class=\"text-sm font-semibold\">{}</span></div><p class=\"text-xs\">{count} tools</p>{}</a>",escape(name),escape(name),evidence_label(item)));}
    body.push_str("</div>");
-   if items.is_empty(){body.push_str(&if !search.trim().is_empty(){empty("No connectors match this search.","Try a different connector, category, or tool title.","Clear search",&clear_search_url)}else if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/connectors")}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/connectors#toolkit-request-form")});}
+   if items.is_empty(){body.push_str(&if !search.trim().is_empty(){empty("No connectors match this search.","Try a different connector, category, or tool title.","Clear search",&clear_search_url,crate::ui::EmptyStateRole::Status)}else if v.get("hasFilters").and_then(Value::as_bool)==Some(true){empty("No connectors match this category.","Choose another category or view the full catalog.","View all connectors","/app/connectors",crate::ui::EmptyStateRole::Status)}else{empty("No connectors are available in this catalog.","Use the request form below to name the connector you need.","Request this connector","/app/connectors#toolkit-request-form",crate::ui::EmptyStateRole::Status)});}
    body.push_str("</div>");
    body.push_str("<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-atomic=\"true\" aria-busy=\"false\" class=\"catalog-request-result\"></div>");body.push_str(&format!("<template id=\"toolkit-request-recovery\">{}</template>",request_recovery()));body.push_str(&catalog_card(&format!("<h3>Request a connector</h3><p>Tell us which connector you need.</p>{}",form_with_variant("/app/connectors/request",&format!("{}{}{}",input("name","Connector name","","text"),input("email","Your email","","email"),input("notes","Notes (optional)","","text")),"Request this connector",if items.is_empty(){crate::ui::ButtonVariant::Secondary}else{crate::ui::ButtonVariant::Primary}).replacen("<form ","<form id=\"toolkit-request-form\" ",1))));body
   },
@@ -748,6 +795,9 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::Test=>crate::connector::result(Some(v)),
   Op::Setup=>json(v),
   Op::RequestConnector=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-atomic=\"true\" data-request-state=\"success\" class=\"catalog-request-result\">Connector request received.</div>".into(),
+  Op::Workflows=>workflows_page(v)?,
+  Op::WorkflowRuns=>workflow_runs_page(v)?,
+  Op::WorkflowRunDetail=>crate::workflow_run_detail::standalone(v, resource.ok_or(Error::Invalid)?)?,
   _=>return Err(Error::Invalid)
  };
     Ok(body)
@@ -758,9 +808,6 @@ pub(crate) fn static_page(path: &str) -> String {
     }
     if path == "/app/start" {
         return start_here();
-    }
-    if path == "/app/workflows" || path == "/app/workflows/runs" {
-        return workflows_unavailable(path);
     }
     let mut content = crate::remaining_pages::heading(
         "Documentation",
@@ -823,33 +870,157 @@ fn start_here() -> String {
         .render()
     )
 }
-fn workflows_unavailable(path: &str) -> String {
-    let title = if path == "/app/workflows/runs" {
-        "Runs"
-    } else {
-        "Workflows"
-    };
-    let purpose = if path == "/app/workflows/runs" {
-        "Durable engine runs for this project."
-    } else {
-        "Workflows are registered from code. This page shows what is registered and what is running."
-    };
-    format!(
-        "{}{}",
-        crate::ui::PageHeader {
-            title,
-            purpose,
-            action: None,
+fn workflow_status(v: &Value) -> &str {
+    v.get("status").and_then(Value::as_str).unwrap_or("")
+}
+
+fn workflows_page(v: &Value) -> Result<String, Error> {
+    let header = crate::ui::PageHeader {
+        title: "Workflows",
+        purpose: "Workflows are registered from code. This page shows what is registered and what is running.",
+        action: None,
+    }
+    .render();
+    let body = match workflow_status(v) {
+        "unavailable" => empty(
+            "Workflow engine is not connected to this console.",
+            "The engine has its own transport. Until it is configured for this console, this page does not invent runs, history, or registered workflows.",
+            "Start here",
+            "/app/start",
+            crate::ui::EmptyStateRole::Alert,
+        ),
+        "error" => empty(
+            "Workflow engine unreachable",
+            "The console is configured to talk to the engine, but the read failed. Nothing here is invented.",
+            "Reload",
+            "/app/workflows",
+            crate::ui::EmptyStateRole::Alert,
+        ),
+        "ok" => {
+            let list = rows(v, &["workflows"])?;
+            if list.is_empty() {
+                empty(
+                    "No workflows registered",
+                    "Register a workflow from your code. This console is not a builder and will not invent names or versions.",
+                    "How to register a workflow",
+                    "/app/start",
+                    crate::ui::EmptyStateRole::Status,
+                )
+            } else {
+                let mut table = String::from(
+                    "<div class=\"ui-table-wrap\"><table class=\"ui-table\"><thead><tr><th scope=\"col\">Name</th><th scope=\"col\">Version</th></tr></thead><tbody>",
+                );
+                for row in list {
+                    let name = escape(string(row, &["name"]));
+                    let version = escape(string(row, &["version"]));
+                    if name.is_empty() || version.is_empty() {
+                        return Err(Error::Unavailable);
+                    }
+                    table.push_str(&format!(
+                        "<tr><td>{name}</td><td class=\"tabular\">{version}</td></tr>"
+                    ));
+                }
+                table.push_str("</tbody></table></div>");
+                table
+            }
         }
-        .render(),
-        crate::ui::EmptyState {
-            title: "Workflow engine is not connected to this console.",
-            body: "The engine has its own transport. Until a project-scoped read path exists, this page does not invent runs, history, or registered workflows.",
-            action_label: "Read the docs",
-            action_href: crate::ui::LocalPath::new("/app/docs").expect("static workflows path"),
+        _ => return Err(Error::Unavailable),
+    };
+    Ok(format!("<div id=\"workflows-page\">{header}{body}</div>"))
+}
+
+pub(crate) fn workflow_run_state(label: &str) -> Result<String, Error> {
+    use crate::ui::{state, Tone};
+    let (tone, word) = match label {
+        "Running" => (Tone::Running, "Running"),
+        "CancelRequested" => (Tone::Warn, "Cancel requested"),
+        "Completed" | "ContinuedAsNew" => (Tone::Ok, "Completed"),
+        "Failed" | "Nondeterminism" => (Tone::Dead, "Failed"),
+        "Cancelled" => (Tone::Dead, "Cancelled"),
+        "NeedsInput" | "NeedsImplementation" => (Tone::Warn, "Needs you"),
+        "OutcomeUnknown" => (Tone::Dead, "Reconcile"),
+        _ => return Err(Error::Unavailable),
+    };
+    Ok(state(tone, word))
+}
+
+fn workflow_runs_page(v: &Value) -> Result<String, Error> {
+    let header = crate::ui::PageHeader {
+        title: "Runs",
+        purpose: "Durable engine runs for this project.",
+        action: None,
+    }
+    .render();
+    let filtered = v.get("filtered").and_then(Value::as_bool) == Some(true);
+    let body = match workflow_status(v) {
+        "unavailable" => empty(
+            "Workflow engine is not connected to this console.",
+            "The engine has its own transport. Until it is configured for this console, this page does not invent runs or history.",
+            "Start here",
+            "/app/start",
+            crate::ui::EmptyStateRole::Alert,
+        ),
+        "error" => empty(
+            "Workflow engine unreachable",
+            "The console is configured to talk to the engine, but the read failed. Nothing here is invented.",
+            "Reload",
+            "/app/workflows/runs",
+            crate::ui::EmptyStateRole::Alert,
+        ),
+        "ok" => {
+            let list = rows(v, &["runs"])?;
+            if list.is_empty() {
+                if filtered {
+                    empty(
+                        "No runs match these filters",
+                        "Clear filters or wait for a matching durable run. This list does not invent rows.",
+                        "Clear filters",
+                        "/app/workflows/runs",
+                        crate::ui::EmptyStateRole::Status,
+                    )
+                } else {
+                    empty(
+                        "No durable runs yet",
+                        "Start a workflow from your code. Runs appear here only after the engine records them.",
+                        "How to register a workflow",
+                        "/app/start",
+                        crate::ui::EmptyStateRole::Status,
+                    )
+                }
+            } else {
+                let mut table = String::from(
+                    "<div class=\"ui-table-wrap\"><table class=\"ui-table\"><thead><tr><th scope=\"col\">Id</th><th scope=\"col\">Workflow</th><th scope=\"col\">Version</th><th scope=\"col\">State</th><th scope=\"col\">Parent</th></tr></thead><tbody>",
+                );
+                for row in list {
+                    let id = escape(string(row, &["id"]));
+                    let workflow = escape(string(row, &["workflow"]));
+                    let version = escape(string(row, &["version"]));
+                    let state_label = string(row, &["state"]);
+                    if id.is_empty() || workflow.is_empty() || version.is_empty() || state_label.is_empty()
+                    {
+                        return Err(Error::Unavailable);
+                    }
+                    let parent = string(row, &["parent"]);
+                    let parent_cell = if parent.is_empty() {
+                        "—".into()
+                    } else {
+                        escape(parent)
+                    };
+                    let detail = workflow_run_detail_link(string(row, &["id"]))?;
+                    table.push_str(&format!(
+                        "<tr><td class=\"tabular\">{detail}</td><td>{workflow}</td><td class=\"tabular\">{version}</td><td>{}</td><td class=\"tabular\">{parent_cell}</td></tr>",
+                        workflow_run_state(state_label)?
+                    ));
+                }
+                table.push_str("</tbody></table></div>");
+                table
+            }
         }
-        .render()
-    )
+        _ => return Err(Error::Unavailable),
+    };
+    Ok(format!(
+        "<div id=\"workflow-runs-page\">{header}{body}</div>"
+    ))
 }
 #[cfg(test)]
 #[path = "pages/operator_tests.rs"]
@@ -900,7 +1071,7 @@ mod rendering_contract_tests {
             "name=\"connector\"",
             "name=\"tool\"",
             "name=\"accountId\"",
-            "<caption class=\"sr-only\">Durable sync runs</caption>",
+            "<caption class=\"sr-only\">Durable syncs</caption>",
             "<th scope=\"col\"",
             "ui-state-running",
             "messages.list",
@@ -957,7 +1128,7 @@ mod rendering_contract_tests {
             "run row did not link to detail route: {html}"
         );
         assert!(
-            html.contains("aria-label=\"Open run run_1\""),
+            html.contains("aria-label=\"Open sync run_1\""),
             "run detail link lacks an accessible label: {html}"
         );
         assert!(!html.contains("/app/syncs/run_1/cancel"));
@@ -1080,7 +1251,7 @@ mod rendering_contract_tests {
         )
         .unwrap();
         assert!(html.contains("Operator controls unavailable"));
-        assert!(html.contains("Reload Runs status"));
+        assert!(html.contains("Reload Syncs status"));
         assert!(html.contains("href=\"/app/syncs\""));
         for action in ["/run-now", "/reset", "/cancel"] {
             assert!(!html.contains(action), "ordinary runs rendered {action}");
@@ -1263,7 +1434,7 @@ mod rendering_contract_tests {
         ] {
             assert!(html.contains(expected), "missing {expected}: {html}");
         }
-        assert!(html.contains("No durable runs to show."));
+        assert!(html.contains("No durable syncs to show."));
         assert!(!html.contains("worker heartbeat active"));
         assert!(!html.contains(
             "Unavailable in the configured storage.</p></div></div><p id=\"runs-summary"
@@ -1468,7 +1639,7 @@ mod rendering_contract_tests {
         )
         .unwrap();
         assert!(html.contains(
-            "class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable sync runs\" tabindex=\"0\""
+            "class=\"runs-table-scroll\" role=\"region\" aria-label=\"Durable syncs\" tabindex=\"0\""
         ));
     }
 
@@ -1547,7 +1718,7 @@ mod rendering_contract_tests {
             (
                 Op::Logs,
                 vec!["logs", "items", "rows"],
-                "No tool runs to show.",
+                "No calls to show.",
                 "Browse connectors to choose a tool to run.",
                 "Browse connectors",
             ),
@@ -1912,7 +2083,7 @@ mod rendering_contract_tests {
             ),
             (
                 Op::Logs,
-                json!({"logs":[{"requestId":"req_1","connector":"<evil>","errorCode":42}]}),
+                json!({"logs":[{"requestId":"req_1","status":"succeeded","connector":"<evil>","errorCode":42}]}),
                 "/app/calls/req_1\"",
             ),
             (
@@ -1997,6 +2168,268 @@ mod rendering_contract_tests {
             assert!(docs.contains(&format!("href=\"{target}\"")));
         }
         assert!(static_page("/app/support").contains("mailto:info@manavritti.com"));
+    }
+
+    #[test]
+    fn runs_page_triad_empty_states_and_page_id() {
+        let unavailable = render(Op::Runs, &json!({"status":"unavailable"}), None).unwrap();
+        assert!(unavailable.contains("id=\"runs-page\""));
+        assert!(unavailable.contains("data-runs-page"));
+        assert!(unavailable.contains("Syncs unavailable"));
+        assert!(unavailable.contains("does not invent queue rows or health"));
+        assert!(unavailable.contains("role=\"alert\""));
+        assert!(unavailable.contains("href=\"/app/start\""));
+        assert!(!unavailable.contains("runs-unavailable-card"));
+        assert!(!unavailable.contains("No durable syncs to show."));
+        assert!(!unavailable.contains("runs-stats"));
+        assert!(!unavailable.contains("Filter syncs"));
+
+        let legacy = render(Op::Runs, &json!({"unavailable":true}), None).unwrap();
+        assert!(legacy.contains("Syncs unavailable"));
+        assert!(legacy.contains("role=\"alert\""));
+        assert!(!legacy.contains("runs-unavailable-card"));
+
+        let error = render(Op::Runs, &json!({"status":"error"}), None).unwrap();
+        assert!(error.contains("Syncs unreachable"));
+        assert!(error.contains("role=\"alert\""));
+        assert!(error.contains("href=\"/app/syncs\""));
+        assert!(!error.contains("No durable syncs to show."));
+        assert!(!error.contains("runs-stats"));
+
+        let empty_ok = render(
+            Op::Runs,
+            &json!({
+                "status":"ok",
+                "runs":[],
+                "pendingRuns":0,
+                "runningRuns":0,
+                "backingoffRuns":0,
+                "deadRuns":0,
+                "records24hUnavailable":true,
+                "workerHeartbeatUnavailable":true,
+                "operatorControlsUnavailable":true
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(empty_ok.contains("No durable syncs to show."));
+        assert!(empty_ok.contains("role=\"status\""));
+        assert!(!empty_ok.contains("Syncs unavailable"));
+        assert!(!empty_ok.contains("role=\"alert\""));
+
+        let filtered = render(
+            Op::Runs,
+            &json!({
+                "status":"ok",
+                "runs":[],
+                "hasFilters":true,
+                "pendingRuns":0,
+                "runningRuns":0,
+                "backingoffRuns":0,
+                "deadRuns":0,
+                "records24hUnavailable":true,
+                "workerHeartbeatUnavailable":true,
+                "operatorControlsUnavailable":true
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(filtered.contains("No durable syncs match these filters."));
+        assert!(filtered.contains("role=\"status\""));
+        assert!(!filtered.contains("No durable syncs to show."));
+        assert!(!filtered.contains("Syncs unavailable"));
+
+        assert_eq!(
+            render(Op::Runs, &json!({"status":"mystery"}), None),
+            Err(Error::Unavailable),
+            "unknown status stays fail-closed"
+        );
+
+        let populated = render(
+            Op::Runs,
+            &json!({
+                "status":"ok",
+                "runs":[{
+                    "id":"run_1",
+                    "connector":"slack",
+                    "tool":"messages.list",
+                    "accountId":"brand-a",
+                    "health":"pending",
+                    "attemptsSpent":0,
+                    "attemptsRemaining":10,
+                    "maxAttempts":10,
+                    "wakeAt":"",
+                    "leaseUntil":"",
+                    "currentCursor":"",
+                    "lastError":"",
+                    "runNowAllowed":false,
+                    "resetAllowed":false,
+                    "cancelAllowed":false
+                }],
+                "pendingRuns":1,
+                "runningRuns":0,
+                "backingoffRuns":0,
+                "deadRuns":0,
+                "records24hUnavailable":true,
+                "workerHeartbeatUnavailable":true,
+                "operatorControlsUnavailable":true
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(populated.contains("data-runs-page"));
+        assert!(populated.contains("run_1"));
+        assert!(populated.contains("runs-stats"));
+        assert!(!populated.contains("Syncs unavailable"));
+        assert!(!populated.contains("Syncs unreachable"));
+    }
+
+    #[test]
+    fn workflows_page_triad_empty_states_and_page_id() {
+        let unavailable = render(Op::Workflows, &json!({"status":"unavailable"}), None).unwrap();
+        assert!(unavailable.contains("id=\"workflows-page\""));
+        assert!(unavailable.contains("Workflow engine is not connected to this console."));
+        assert!(unavailable.contains("role=\"alert\""));
+        assert!(unavailable.contains("href=\"/app/start\""));
+        assert!(!unavailable.contains("ui-table"));
+
+        let error = render(Op::Workflows, &json!({"status":"error"}), None).unwrap();
+        assert!(error.contains("workflows-page"));
+        assert!(error.contains("Workflow engine unreachable"));
+        assert!(error.contains("role=\"alert\""));
+
+        let empty_ok = render(Op::Workflows, &json!({"status":"ok","workflows":[]}), None).unwrap();
+        assert!(empty_ok.contains("No workflows registered"));
+        assert!(empty_ok.contains("role=\"status\""));
+        assert!(empty_ok.contains("href=\"/app/start\""));
+        assert!(!empty_ok.contains("not connected"));
+
+        let populated = render(
+            Op::Workflows,
+            &json!({"status":"ok","workflows":[{"name":"echo","version":"v1"}]}),
+            None,
+        )
+        .unwrap();
+        assert!(populated.contains("workflows-page"));
+        assert!(populated.contains("echo"));
+        assert!(populated.contains("v1"));
+        assert!(populated.contains("ui-table"));
+    }
+
+    #[test]
+    fn workflow_runs_page_triad_empty_states_and_page_id() {
+        let unavailable = render(Op::WorkflowRuns, &json!({"status":"unavailable"}), None).unwrap();
+        assert!(unavailable.contains("id=\"workflow-runs-page\""));
+        assert!(unavailable.contains("Workflow engine is not connected to this console."));
+        assert!(unavailable.contains("role=\"alert\""));
+        assert!(unavailable.contains("href=\"/app/start\""));
+
+        let error = render(Op::WorkflowRuns, &json!({"status":"error"}), None).unwrap();
+        assert!(error.contains("Workflow engine unreachable"));
+        assert!(error.contains("role=\"alert\""));
+
+        let empty_ok = render(Op::WorkflowRuns, &json!({"status":"ok","runs":[]}), None).unwrap();
+        assert!(empty_ok.contains("No durable runs yet"));
+        assert!(empty_ok.contains("role=\"status\""));
+        assert!(empty_ok.contains("href=\"/app/start\""));
+        assert!(!empty_ok.contains("not connected"));
+
+        let filtered = render(
+            Op::WorkflowRuns,
+            &json!({"status":"ok","filtered":true,"runs":[]}),
+            None,
+        )
+        .unwrap();
+        assert!(filtered.contains("No runs match these filters"));
+        assert!(filtered.contains("role=\"status\""));
+        assert!(!filtered.contains("No durable runs yet"));
+
+        let populated = render(
+            Op::WorkflowRuns,
+            &json!({
+                "status":"ok",
+                "runs":[{
+                    "id":"r1",
+                    "workflow":"echo",
+                    "version":"v1",
+                    "state":"Running",
+                    "parent":null
+                },{
+                    "id":"r2",
+                    "workflow":"echo",
+                    "version":"v1",
+                    "state":"OutcomeUnknown",
+                    "parent":"r1"
+                }]
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(populated.contains("workflow-runs-page"));
+        assert!(populated.contains("r1"));
+        assert!(populated.contains("Reconcile"));
+        assert!(populated.contains("ui-state-dead"));
+        assert!(!populated.contains("ui-state-ok"));
+        assert!(populated.contains("Running"));
+        assert!(
+            populated.contains("href=\"/app/workflows/runs/r1\""),
+            "run id must link to detail: {populated}"
+        );
+        assert!(
+            populated.contains("href=\"/app/workflows/runs/r2\""),
+            "run id must link to detail: {populated}"
+        );
+        assert!(
+            populated.contains("aria-label=\"Open workflow run r1\""),
+            "detail link needs accessible label: {populated}"
+        );
+        assert!(
+            !populated.contains("<a href=\"/app/workflows/runs\">echo</a>"),
+            "workflow name must not pretend to be a detail link: {populated}"
+        );
+    }
+
+    #[test]
+    fn workflow_ops_titles_are_not_syncs() {
+        assert_eq!(title(Op::Workflows), "Workflows");
+        assert_eq!(title(Op::WorkflowRuns), "Runs");
+        assert_eq!(title(Op::WorkflowRunDetail), "Runs");
+        assert_eq!(title(Op::Runs), "Syncs");
+    }
+
+    #[test]
+    fn workflows_list_keeps_names_as_plain_text() {
+        let populated = render(
+            Op::Workflows,
+            &json!({"status":"ok","workflows":[{"name":"echo","version":"v1"}]}),
+            None,
+        )
+        .unwrap();
+        assert!(populated.contains("echo"));
+        assert!(
+            !populated.contains("<a href=\"/app/workflows/runs\">echo</a>"),
+            "workflow name must not link to runs list as a fake detail: {populated}"
+        );
+    }
+
+    #[test]
+    fn workflow_run_detail_operation_dispatches_through_the_dedicated_renderer() {
+        let html = render(
+            Op::WorkflowRunDetail,
+            &json!({
+                "status":"ok",
+                "id":"run_1",
+                "state":"OutcomeUnknown",
+                "failure_reason":null,
+                "reconciliation_audit":[]
+            }),
+            Some("run_1"),
+        )
+        .unwrap();
+        assert!(html.contains("id=\"workflow-run-detail-page\""));
+        assert!(html.contains("Reconcile"));
+        assert!(html.contains("Back to Runs"));
+        assert!(!html.contains("ui-state-ok"));
     }
 }
 

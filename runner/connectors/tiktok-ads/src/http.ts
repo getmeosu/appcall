@@ -21,7 +21,8 @@ export function parseTikTokRateLimit(status: number, headers: Record<string, str
 
 export type TikTokClientOptions = {
   accessToken: string;
-  advertiserId: string;
+  /** Required for advertiser-scoped ops; optional for advertisers.list (oauth advertiser get). */
+  advertiserId?: string;
   fetch?: typeof fetch;
   operation?: string;
 };
@@ -36,6 +37,7 @@ export function createTikTokClient(options: TikTokClientOptions) {
   });
 
   return {
+    advertiserId: options.advertiserId,
     async fetchJSON(path: string, init: RequestInit = {}): Promise<{
       status: number;
       headers: Record<string, string>;

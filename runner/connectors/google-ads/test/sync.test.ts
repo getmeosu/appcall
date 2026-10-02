@@ -3,10 +3,18 @@ import {
   executeCampaignsListSync,
   executeAdGroupsListSync,
   executeAdsListSync,
+  executeKeywordsListSync,
+  executeBudgetsListSync,
+  executeCustomerListsListSync,
+  executeConversionActionsListSync,
 } from "../src/sync";
 import campaignsList from "../fixtures/campaigns_list.json";
 import adGroupsList from "../fixtures/ad_groups_list.json";
 import adsList from "../fixtures/ads_list.json";
+import keywordsList from "../fixtures/keywords_list.json";
+import budgetsList from "../fixtures/budgets_list.json";
+import customerLists from "../fixtures/customer_lists_list.json";
+import conversionActions from "../fixtures/conversion_actions_list.json";
 
 describe("campaigns.list sync", () => {
   test("returns normalized campaigns with page token", () => {
@@ -107,5 +115,42 @@ describe("ads.list sync", () => {
     const result = executeAdsListSync({ response: { results: [] } });
     expect(result.items).toHaveLength(0);
     expect(result.nextPageToken).toBeNull();
+  });
+});
+
+describe("keywords.list sync", () => {
+  test("returns normalized keywords", () => {
+    const result = executeKeywordsListSync({ response: keywordsList });
+    expect(result.operation).toBe("keywords.list");
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0].text).toBe("summer sale");
+    expect(result.nextPageToken).toBe("KwPage1");
+  });
+});
+
+describe("budgets.list sync", () => {
+  test("returns normalized budgets", () => {
+    const result = executeBudgetsListSync({ response: budgetsList });
+    expect(result.operation).toBe("budgets.list");
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0].amount).toBe(5000);
+  });
+});
+
+describe("customer_lists.list sync", () => {
+  test("returns normalized user lists", () => {
+    const result = executeCustomerListsListSync({ response: customerLists });
+    expect(result.operation).toBe("customer_lists.list");
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].name).toBe("Newsletter Subscribers");
+  });
+});
+
+describe("conversion_actions.list sync", () => {
+  test("returns normalized conversion actions", () => {
+    const result = executeConversionActionsListSync({ response: conversionActions });
+    expect(result.operation).toBe("conversion_actions.list");
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0].name).toBe("Purchase");
   });
 });

@@ -1,31 +1,119 @@
 {
   "key": "smartrecruiters",
   "name": "SmartRecruiters",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "runtime": "bun",
-  "categories": ["ats-recruitment"],
+  "categories": [
+    "ats-recruitment"
+  ],
   "auth": {
-    "type": "none"
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "SmartRecruiters API key (X-SmartToken)",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
   },
   "network": {
     "allowedHosts": [
       "api.smartrecruiters.com"
     ]
   },
+  "http": {
+    "baseUrl": "https://api.smartrecruiters.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-SmartToken",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
+  },
   "operations": {
     "jobs.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880
+      "maxResponseBytes": 5242880,
+      "title": "List jobs",
+      "description": "List public job postings via GET /v1/companies/{company}/postings."
+    },
+    "jobs.get": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get job",
+      "description": "Fetch a single job via authenticated GET /jobs/{id}. Distinct from public jobs.list/postings.list."
+    },
+    "postings.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List postings",
+      "description": "List public job postings via GET /v1/companies/{company}/postings. Optional q, limit, offset, country, region, city, and department filters."
+    },
+    "candidates.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List candidates",
+      "description": "Search candidates via authenticated GET /candidates. Optional limit, pageId, q, jobId, updatedAfter, and status filters."
+    },
+    "candidates.get": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get candidate",
+      "description": "Fetch a single candidate via authenticated GET /candidates/{id}."
+    },
+    "users.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List company users via authenticated GET /users. Optional limit, offset, q, and updatedAfter filters."
+    },
+    "interviews.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List interviews",
+      "description": "List interviews for an application via authenticated GET /interviews-api/v201904/interviews. Requires applicationId."
     },
     "healthcheck": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
       "title": "Healthcheck",
-      "description": "Verify connectivity and credentials for the SmartRecruiters connector. Takes no input and returns the connector health status.",
+      "description": "Validate SmartRecruiters credentials with GET /users?limit=1.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -33,16 +121,35 @@
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
         "properties": {
-          "status": {
-            "type": "string",
-            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          "data": {
+            "type": "object"
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
     }
   },
   "models": [
-    "job"
+    "job",
+    "candidate",
+    "user",
+    "interview"
   ]
 }

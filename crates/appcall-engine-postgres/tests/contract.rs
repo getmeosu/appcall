@@ -62,7 +62,7 @@ fn postgres_reopen_rejects_malformed_running_record_without_rewriting_it() {
     connection
         .execute(
             "UPDATE appcall_workflow_runs
-                SET state='running',wakeup=$1,record=$2
+                SET state='running',wakeup=$1,record=$2,recoverable=TRUE
               WHERE id=$3",
             &[&4_242_i64, &raw, &"malformed"],
         )
@@ -790,11 +790,11 @@ fn postgres_recovery_preserves_passive_waits_and_recovers_ready_tasks() {
 
 #[test]
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; creates and drops a private test schema"]
-fn postgres_recovery_visits_rows_added_after_the_first_bounded_batch() {
+fn postgres_recovery_bumps_recoverable_subset_without_blob_scan() {
     let _guard = postgres_contract_guard();
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").unwrap();
     let schema = format!(
-        "engine_recovery_batch_test_{}_{}",
+        "engine_recovery_index_test_{}_{}",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -816,59 +816,59 @@ fn postgres_recovery_visits_rows_added_after_the_first_bounded_batch() {
     e.set_dispatch_limit(1).unwrap();
     e.register_workflow("one", "v1", one_read).unwrap();
     e.register_activity("lookup", "v1").unwrap();
-    e.start("a", "one", "v1", PayloadRef::durable("input").unwrap())
-        .unwrap();
-    for i in 0..65 {
-        e.start(
-            &format!("busy-{i:03}"),
-            "one",
-            "v1",
-            PayloadRef::durable("input").unwrap(),
-        )
-        .unwrap();
-    }
+    e.register_workflow("idle", "v1", |c| {
+        c.timer(1_000_000)?;
+        Ok(c.input().clone())
+    })
+    .unwrap();
+    // One in-flight + many Ready (null wakeup, recoverable=true) + many passive waits.
+    e.start(
+        "inflight",
+        "one",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
     assert!(matches!(
-        e.drive("a", 0).unwrap(),
+        e.drive("inflight", 0).unwrap(),
         DriveOutcome::Activity(_)
     ));
-    for i in 0..65 {
-        assert!(matches!(
-            e.drive(&format!("busy-{i:03}"), 0).unwrap(),
-            DriveOutcome::Waiting
-        ));
+    for i in 0..80 {
+        let id = format!("ready-{i:03}");
+        e.start(&id, "one", "v1", PayloadRef::durable("input").unwrap())
+            .unwrap();
+        assert!(matches!(e.drive(&id, 0).unwrap(), DriveOutcome::Waiting));
     }
-    drop(e);
-
-    admin
-        .batch_execute(&format!(
-            "SET search_path TO {schema};
-             CREATE FUNCTION append_recovery_tail() RETURNS trigger LANGUAGE plpgsql AS $$
-             BEGIN
-                 IF NEW.id = 'a' AND OLD.wakeup IS NULL AND NEW.wakeup = 0 THEN
-                     INSERT INTO appcall_workflow_runs(id, revision, state, wakeup, record)
-                     VALUES ('zz', NEW.revision, 'running', NULL,
-                         convert_to(jsonb_set(convert_from(NEW.record, 'UTF8')::jsonb,
-                             '{{id}}', to_jsonb('zz'::text))::text, 'UTF8'))
-                     ON CONFLICT (id) DO NOTHING;
-                 END IF;
-                 RETURN NEW;
-             END;
-             $$;
-             CREATE TRIGGER append_recovery_tail AFTER UPDATE OF wakeup
-                 ON appcall_workflow_runs FOR EACH ROW EXECUTE FUNCTION append_recovery_tail();"
-        ))
-        .unwrap();
-
-    let recovered = PostgresStore::from_client(connect()).unwrap();
-    let tail_wakeup: Option<i64> = connect()
+    for i in 0..80 {
+        let id = format!("idle-{i:03}");
+        e.start(&id, "idle", "v1", PayloadRef::durable("input").unwrap())
+            .unwrap();
+        assert!(matches!(e.drive(&id, 0).unwrap(), DriveOutcome::Waiting));
+    }
+    let flagged: i64 = connect()
         .query_one(
-            "SELECT wakeup FROM appcall_workflow_runs WHERE id=$1",
-            &[&"zz"],
+            "SELECT COUNT(*) FROM appcall_workflow_runs WHERE recoverable",
+            &[],
         )
         .unwrap()
         .get(0);
-    assert_eq!(tail_wakeup, Some(0));
-    drop(recovered);
+    assert!(
+        flagged >= 80,
+        "recoverable denormalized on commit; got {flagged}"
+    );
+    drop(e);
+
+    let e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());
+    let ready = e.runnable(0, 256).unwrap();
+    assert!(
+        ready.iter().filter(|id| id.starts_with("ready-")).count() >= 80,
+        "recoverable Ready rows must be requeued on open; got {ready:?}"
+    );
+    assert!(
+        ready.iter().all(|id| !id.starts_with("idle-")),
+        "passive timer waits must stay asleep; got {ready:?}"
+    );
+    drop(e);
 
     admin
         .batch_execute(&format!("DROP SCHEMA {schema} CASCADE"))

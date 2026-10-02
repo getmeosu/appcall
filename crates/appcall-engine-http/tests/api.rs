@@ -643,3 +643,88 @@ fn scoped_reconciliation_is_authenticated_audited_and_restart_safe() {
         400
     );
 }
+
+#[test]
+fn lists_workflows_and_run_summaries_path_only() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("beta", "v2", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.register_workflow("alpha", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    for id in ["a", "b", "c"] {
+        e.start(id, "alpha", "v1", PayloadRef::durable("input").unwrap())
+            .unwrap();
+    }
+    let mut api = HttpAdapter::new(e, TOKEN).unwrap();
+    let auth = format!("Bearer {TOKEN}");
+
+    assert_eq!(
+        api.handle("GET", "/workflows?x=1", &auth, b"").status,
+        404,
+        "query strings are not path-only list routes"
+    );
+    let workflows = body(api.handle("GET", "/workflows", &auth, b""));
+    assert_eq!(workflows["success"], true);
+    assert_eq!(
+        workflows["data"]["workflows"],
+        serde_json::json!([
+            {"name":"alpha","version":"v1"},
+            {"name":"beta","version":"v2"}
+        ])
+    );
+
+    let page = body(api.handle("GET", "/workflow-runs", &auth, b""));
+    assert_eq!(page["success"], true);
+    let runs = page["data"]["runs"].as_array().unwrap();
+    assert_eq!(runs.len(), 3);
+    assert_eq!(runs[0]["id"], "a");
+    assert_eq!(runs[0]["workflow"], "alpha");
+    assert_eq!(runs[0]["version"], "v1");
+    assert_eq!(runs[0]["state"], "Running");
+    assert!(runs[0]["parent"].is_null());
+    assert!(page["data"]["next_cursor"].is_null());
+
+    let after = body(api.handle("GET", "/workflow-runs/after/a", &auth, b""));
+    assert_eq!(after["data"]["runs"].as_array().unwrap().len(), 2);
+    assert_eq!(after["data"]["runs"][0]["id"], "b");
+}
+
+#[test]
+fn scoped_workflow_run_list_strips_prefix_and_pages_by_unscoped_cursor() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("echo", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    // Foreign (other-scope) row must not appear when scoped.
+    e.start(
+        "other/x",
+        "echo",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
+    for id in ["tenant/r1", "tenant/r2", "tenant/r3"] {
+        e.start(id, "echo", "v1", PayloadRef::durable("input").unwrap())
+            .unwrap();
+    }
+    let mut api = HttpAdapter::with_scope(e, TOKEN, "tenant").unwrap();
+    let auth = format!("Bearer {TOKEN}");
+
+    let page = body(api.handle("GET", "/workflow-runs", &auth, b""));
+    let runs = page["data"]["runs"].as_array().unwrap();
+    assert_eq!(runs.len(), 3);
+    assert_eq!(runs[0]["id"], "r1");
+    assert_eq!(runs[1]["id"], "r2");
+    assert_eq!(runs[2]["id"], "r3");
+    assert!(page["data"]["next_cursor"].is_null());
+
+    let after = body(api.handle("GET", "/workflow-runs/after/r1", &auth, b""));
+    let runs = after["data"]["runs"].as_array().unwrap();
+    assert_eq!(runs.len(), 2);
+    assert_eq!(runs[0]["id"], "r2");
+    assert_eq!(
+        body(api.handle("GET", "/workflows", &auth, b""))["data"]["workflows"],
+        serde_json::json!([{"name":"echo","version":"v1"}])
+    );
+}

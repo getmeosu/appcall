@@ -188,26 +188,87 @@ fn form(filters: &Filters) -> String {
     body
 }
 
-fn heading(filters: &Filters) -> String {
+fn page_header() -> String {
+    ui::PageHeader {
+        title: "Calls",
+        purpose: "Inspect recorded tool executions.",
+        action: None,
+    }
+    .render()
+    .replacen("<h1>", "<h1 id=\"logs-heading\" tabindex=\"-1\">", 1)
+}
+
+fn surface_status(value: &Value) -> Result<&'static str, Error> {
+    // Legacy bare boolean remains accepted during host transition to status.
+    if value.get("unavailable").and_then(Value::as_bool) == Some(true) {
+        return Ok("unavailable");
+    }
+    match value.get("status").and_then(Value::as_str) {
+        Some("unavailable") => Ok("unavailable"),
+        Some("error") => Ok("error"),
+        Some("ok") | None => Ok("ok"),
+        Some(_) => Err(Error::Unavailable),
+    }
+}
+
+fn empty_state(
+    title: &str,
+    body: &str,
+    action_label: &str,
+    action_href: &str,
+    role: ui::EmptyStateRole,
+) -> String {
+    ui::EmptyState {
+        title,
+        body,
+        action_label,
+        action_href: ui::LocalPath::new(action_href).expect("static local empty-state link"),
+        role,
+    }
+    .render()
+}
+
+pub(crate) fn invalid(filters: &Filters) -> String {
     format!(
-        "<section class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}",
-        ui::PageHeader {
-            title: "Calls",
-            purpose: "Inspect recorded tool executions.",
-            action: None,
-        }
-        .render()
-        .replacen("<h1>", "<h1 id=\"logs-heading\" tabindex=\"-1\">", 1),
+        "<section id=\"logs-page\" class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}<div class=\"logs-filter-error\" role=\"alert\"><h3>Review the log filters.</h3><p>Use a supported status and error code, a valid page size, and RFC3339 timestamps with UTC or an explicit offset. Created from must be earlier than Created before. Correct the filters and apply them again, or choose Clear filters to start over.</p></div></section>",
+        page_header(),
         form(filters)
     )
 }
 
-pub(crate) fn invalid(filters: &Filters) -> String {
-    heading(filters) + "<div class=\"logs-filter-error\" role=\"alert\"><h3>Review the log filters.</h3><p>Use a supported status and error code, a valid page size, and RFC3339 timestamps with UTC or an explicit offset. Created from must be earlier than Created before. Correct the filters and apply them again, or choose Clear filters to start over.</p></div></section>"
-}
-
 pub(crate) fn render(raw: &Value, filters: &Filters, filtered: bool) -> Result<String, Error> {
     let data = raw.get("data").unwrap_or(raw);
+    let surface = surface_status(data)?;
+    match surface {
+        "unavailable" => {
+            return Ok(format!(
+                "<section id=\"logs-page\" class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}</section>",
+                page_header(),
+                empty_state(
+                    "Calls unavailable",
+                    "The console could not load recorded calls. This page does not invent call rows or statuses.",
+                    "Reload",
+                    "/app/calls",
+                    ui::EmptyStateRole::Alert,
+                ),
+            ));
+        }
+        "error" => {
+            return Ok(format!(
+                "<section id=\"logs-page\" class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}</section>",
+                page_header(),
+                empty_state(
+                    "Calls unreachable",
+                    "The console is configured to list calls, but the read failed. Nothing here is invented.",
+                    "Reload",
+                    "/app/calls",
+                    ui::EmptyStateRole::Alert,
+                ),
+            ));
+        }
+        "ok" => {}
+        _ => return Err(Error::Unavailable),
+    }
     let items = data
         .as_array()
         .or_else(|| {
@@ -216,24 +277,33 @@ pub(crate) fn render(raw: &Value, filters: &Filters, filtered: bool) -> Result<S
                 .find_map(|key| data.get(key).and_then(Value::as_array))
         })
         .ok_or(Error::Unavailable)?;
-    let mut body = heading(filters);
+    let filtered = filtered
+        || data.get("hasFilters").and_then(Value::as_bool) == Some(true)
+        || data.get("filtered").and_then(Value::as_bool) == Some(true);
+    let mut body = format!(
+        "<section id=\"logs-page\" class=\"logs-page\" aria-labelledby=\"logs-heading\">{}{}",
+        page_header(),
+        form(filters)
+    );
     if items.is_empty() {
         let empty = if filtered {
-            ui::EmptyState {
-                title: "No tool runs match these filters.",
-                body: "Clear the filters to view recorded runs.",
-                action_label: "Clear filters",
-                action_href: ui::LocalPath::new("/app/calls").unwrap(),
-            }
+            empty_state(
+                "No calls match these filters.",
+                "Clear the filters to view recorded calls.",
+                "Clear filters",
+                "/app/calls",
+                ui::EmptyStateRole::Status,
+            )
         } else {
-            ui::EmptyState {
-                title: "No tool runs to show.",
-                body: "Browse connectors to choose a tool to run.",
-                action_label: "Browse connectors",
-                action_href: ui::LocalPath::new("/app/connectors").unwrap(),
-            }
+            empty_state(
+                "No calls to show.",
+                "Browse connectors to choose a tool to run.",
+                "Browse connectors",
+                "/app/connectors",
+                ui::EmptyStateRole::Status,
+            )
         };
-        body.push_str(&empty.render());
+        body.push_str(&empty);
     } else {
         body.push_str(&format!(
             "<div class=\"logs-workspace\">{}{}</div>",
@@ -268,6 +338,16 @@ fn inspector() -> Result<String, Error> {
     let full = link("Open full trace", "/app/calls")?;
     let login = link("Sign in again", "/app/login")?;
     Ok(format!("<dialog id=\"logs-inspector\" aria-labelledby=\"logs-inspector-title\"><header class=\"logs-inspector-heading\"><h2 id=\"logs-inspector-title\">Trace inspector</h2><form id=\"logs-inspector-close\" method=\"dialog\">{close}</form></header><div class=\"logs-inspector-actions\"><span id=\"logs-inspector-full\">{full}</span><span id=\"logs-inspector-login\" hidden>{login}</span></div><div id=\"logs-inspector-result\" aria-live=\"polite\" aria-busy=\"false\"></div></dialog>"))
+}
+
+fn row_status(item: &Value) -> Result<String, Error> {
+    // Uncertain statuses stay fail-closed — never paint Unknown as success/idle.
+    match item.get("status").and_then(Value::as_str) {
+        Some("succeeded") => Ok(ui::state(ui::Tone::Ok, "succeeded")),
+        Some("failed") => Ok(ui::state(ui::Tone::Dead, "failed")),
+        Some("running") => Ok(ui::state(ui::Tone::Running, "running")),
+        _ => Err(Error::Unavailable),
+    }
 }
 
 fn table(items: &[Value]) -> Result<String, Error> {
@@ -307,16 +387,7 @@ fn table(items: &[Value]) -> Result<String, Error> {
             "requestId",
         ] {
             let value = if key == "status" {
-                let label = item.get(key).and_then(Value::as_str).unwrap_or("Unknown");
-                ui::state(
-                    match label {
-                        "succeeded" => ui::Tone::Ok,
-                        "failed" => ui::Tone::Dead,
-                        "running" => ui::Tone::Running,
-                        _ => ui::Tone::Idle,
-                    },
-                    label,
-                )
+                row_status(item)?
             } else {
                 cell(item, key)
             };
@@ -334,4 +405,116 @@ fn table(items: &[Value]) -> Result<String, Error> {
     }
     body.push_str("</tbody></table></div>");
     Ok(body)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn calls_triad_empty_states_and_page_id() {
+        let unavailable = render(
+            &json!({"status": "unavailable"}),
+            &Filters::default(),
+            false,
+        )
+        .unwrap();
+        assert!(unavailable.contains("id=\"logs-page\""));
+        assert!(unavailable.contains("Calls unavailable"));
+        assert!(unavailable.contains("does not invent call rows or statuses"));
+        assert!(unavailable.contains("role=\"alert\""));
+        assert!(unavailable.contains("href=\"/app/calls\""));
+        assert!(!unavailable.contains("No calls to show."));
+        assert!(!unavailable.contains("logs-filters"));
+        assert!(!unavailable.contains("logs-table"));
+
+        let legacy = render(&json!({"unavailable": true}), &Filters::default(), false).unwrap();
+        assert!(legacy.contains("Calls unavailable"));
+        assert!(legacy.contains("role=\"alert\""));
+        assert!(!legacy.contains("logs-filters"));
+
+        let error = render(&json!({"status": "error"}), &Filters::default(), false).unwrap();
+        assert!(error.contains("Calls unreachable"));
+        assert!(error.contains("role=\"alert\""));
+        assert!(error.contains("href=\"/app/calls\""));
+        assert!(!error.contains("No calls to show."));
+        assert!(!error.contains("logs-filters"));
+
+        let empty = render(&json!({"logs": []}), &Filters::default(), false).unwrap();
+        assert!(empty.contains("No calls to show."));
+        assert!(empty.contains("role=\"status\""));
+        assert!(empty.contains("href=\"/app/connectors\""));
+        assert!(empty.contains("logs-filters"));
+        assert!(!empty.contains("Calls unavailable"));
+        assert!(!empty.contains("match these filters"));
+
+        let filtered = render(
+            &json!({"logs": [], "hasFilters": true}),
+            &Filters::default(),
+            false,
+        )
+        .unwrap();
+        assert!(filtered.contains("No calls match these filters."));
+        assert!(filtered.contains("role=\"status\""));
+        assert!(filtered.contains("href=\"/app/calls\""));
+        assert!(!filtered.contains("No calls to show."));
+        assert!(!filtered.contains("Calls unavailable"));
+
+        let filtered_arg = render(&json!({"logs": []}), &Filters::default(), true).unwrap();
+        assert!(filtered_arg.contains("No calls match these filters."));
+
+        assert_eq!(
+            render(&json!({"status": "mystery"}), &Filters::default(), false),
+            Err(Error::Unavailable),
+            "unknown status stays fail-closed"
+        );
+        assert_eq!(
+            render(&json!({}), &Filters::default(), false),
+            Err(Error::Unavailable),
+            "missing list without unavailable marker stays fail-closed"
+        );
+
+        let populated = render(
+            &json!({"status":"ok","logs":[{
+                "requestId":"req_1",
+                "status":"succeeded",
+                "connector":"mail",
+                "action":"send",
+                "createdAt":"2026-09-07T10:00:00Z",
+                "errorCode":""
+            }]}),
+            &Filters::default(),
+            false,
+        )
+        .unwrap();
+        assert!(populated.contains("id=\"logs-page\""));
+        assert!(populated.contains("req_1"));
+        assert!(populated.contains("logs-table"));
+        assert!(populated.contains("logs-filters"));
+        assert!(!populated.contains("Calls unavailable"));
+        assert!(!populated.contains("Calls unreachable"));
+    }
+
+    #[test]
+    fn uncertain_row_status_fails_closed() {
+        assert_eq!(
+            render(
+                &json!({"logs":[{"requestId":"req_1","status":"mystery"}]}),
+                &Filters::default(),
+                false,
+            ),
+            Err(Error::Unavailable),
+            "unknown row status must not paint as success"
+        );
+        assert_eq!(
+            render(
+                &json!({"logs":[{"requestId":"req_1"}]}),
+                &Filters::default(),
+                false,
+            ),
+            Err(Error::Unavailable),
+            "missing row status must not paint Unknown as idle"
+        );
+    }
 }

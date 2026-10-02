@@ -172,26 +172,87 @@ import quickbooksManifest from "../../connectors/quickbooks/manifest.json";
 import { healthcheck as quickbooksHealthcheck } from "../../connectors/quickbooks/src/healthcheck";
 import { executeInvoicesListSync as listQBInvoices, executeCustomersListSync as listQBCustomers, executePaymentsListSync as listQBPayments } from "../../connectors/quickbooks/src/sync";
 import greenhouseManifest from "../../connectors/greenhouse/manifest.json";
-import { healthcheck as greenhouseHealthcheck } from "../../connectors/greenhouse/src/healthcheck";
-import { executeJobsListSync as listGreenhouseJobs } from "../../connectors/greenhouse/src/sync";
+import {
+  executeJobsListSync as listGreenhouseJobs,
+  executeJobsGetSync as getGreenhouseJob,
+  executeCandidatesListSync as listGreenhouseCandidates,
+  executeCandidatesGetSync as getGreenhouseCandidate,
+  executeApplicationsListSync as listGreenhouseApplications,
+  executeApplicationsGetSync as getGreenhouseApplication,
+  executeApplicationsMoveSync as moveGreenhouseApplication,
+  executeApplicationsCreateSync as createGreenhouseApplication,
+  executeUsersListSync as listGreenhouseUsers,
+  executeInterviewsListSync as listGreenhouseInterviews,
+  executeJobInterviewStagesListSync as listGreenhouseJobInterviewStages,
+} from "../../connectors/greenhouse/src/sync";
 import leverManifest from "../../connectors/lever/manifest.json";
-import { healthcheck as leverHealthcheck } from "../../connectors/lever/src/healthcheck";
-import { executeJobsListSync as listLeverJobs } from "../../connectors/lever/src/sync";
+import {
+  executeJobsListSync as listLeverJobs,
+  executeOpportunitiesListSync as listLeverOpportunities,
+  executeOpportunitiesGetSync as getLeverOpportunity,
+  executeOpportunitiesInterviewsListSync as listLeverOpportunityInterviews,
+  executeOpportunitiesFeedbackListSync as listLeverOpportunityFeedback,
+  executeStagesListSync as listLeverStages,
+  executeUsersListSync as listLeverUsers,
+} from "../../connectors/lever/src/sync";
 import ashbyManifest from "../../connectors/ashby/manifest.json";
-import { healthcheck as ashbyHealthcheck } from "../../connectors/ashby/src/healthcheck";
-import { executeJobsListSync as listAshbyJobs } from "../../connectors/ashby/src/sync";
+import {
+  executeJobsListSync as listAshbyJobs,
+  executeCandidatesListSync as listAshbyCandidates,
+  executeApplicationsListSync as listAshbyApplications,
+  executeCandidatesGetSync as getAshbyCandidate,
+  executeApplicationsGetSync as getAshbyApplication,
+  executeCandidatesSearchSync as searchAshbyCandidates,
+  executeInterviewsListSync as listAshbyInterviews,
+  executeApplicationsMoveSync as moveAshbyApplication,
+  executeApplicationsRejectSync as rejectAshbyApplication,
+  executeApplicationsHireSync as hireAshbyApplication,
+  executeInterviewsScheduleSync as scheduleAshbyInterview,
+  executeInterviewsCancelSync as cancelAshbyInterview,
+} from "../../connectors/ashby/src/sync";
 import workableManifest from "../../connectors/workable/manifest.json";
 import { healthcheck as workableHealthcheck } from "../../connectors/workable/src/healthcheck";
-import { executeJobsListSync as listWorkableJobs } from "../../connectors/workable/src/sync";
+import {
+  executeJobsListSync as listWorkableJobs,
+  executeJobsGetSync as getWorkableJob,
+  executeCandidatesListSync as listWorkableCandidates,
+  executeCandidatesGetSync as getWorkableCandidate,
+  executeStagesListSync as listWorkableStages,
+  executeMembersListSync as listWorkableMembers,
+  executeEventsListSync as listWorkableEvents,
+} from "../../connectors/workable/src/sync";
 import smartrecruitersManifest from "../../connectors/smartrecruiters/manifest.json";
-import { healthcheck as smartrecruitersHealthcheck } from "../../connectors/smartrecruiters/src/healthcheck";
-import { executeJobsListSync as listSmartRecruitersJobs } from "../../connectors/smartrecruiters/src/sync";
+import {
+  executeJobsListSync as listSmartRecruitersJobs,
+  executeJobsGetSync as getSmartRecruitersJob,
+  executePostingsListSync as listSmartRecruitersPostings,
+  executeCandidatesListSync as listSmartRecruitersCandidates,
+  executeCandidatesGetSync as getSmartRecruitersCandidate,
+  executeUsersListSync as listSmartRecruitersUsers,
+  executeInterviewsListSync as listSmartRecruitersInterviews,
+} from "../../connectors/smartrecruiters/src/sync";
 import recruiteeManifest from "../../connectors/recruitee/manifest.json";
 import { healthcheck as recruiteeHealthcheck } from "../../connectors/recruitee/src/healthcheck";
-import { executeJobsListSync as listRecruiteeJobs } from "../../connectors/recruitee/src/sync";
+import {
+  executeJobsListSync as listRecruiteeJobs,
+  executeCandidatesListSync as listRecruiteeCandidates,
+  executeCandidatesGetSync as getRecruiteeCandidate,
+  executeCandidatesSearchSync as searchRecruiteeCandidates,
+  executeOffersListSync as listRecruiteeOffers,
+  executePipelineStagesListSync as listRecruiteePipelineStages,
+  executeInterviewEventsListSync as listRecruiteeInterviewEvents,
+} from "../../connectors/recruitee/src/sync";
 import zohoRecruitManifest from "../../connectors/zoho-recruit/manifest.json";
 import { healthcheck as zohoRecruitHealthcheck } from "../../connectors/zoho-recruit/src/healthcheck";
-import { executeJobsListSync as listZohoRecruitJobs } from "../../connectors/zoho-recruit/src/sync";
+import {
+  executeJobsListSync as listZohoRecruitJobs,
+  executeCandidatesListSync as listZohoRecruitCandidates,
+  executeCandidatesGetSync as getZohoRecruitCandidate,
+  executeCandidatesSearchSync as searchZohoRecruitCandidates,
+  executeJobOpeningsListSync as listZohoRecruitJobOpenings,
+  executeApplicationsListSync as listZohoRecruitApplications,
+  executeInterviewsListSync as listZohoRecruitInterviews,
+} from "../../connectors/zoho-recruit/src/sync";
 import typeformManifest from "../../connectors/typeform/manifest.json";
 import { healthcheck as typeformHealthcheck } from "../../connectors/typeform/src/healthcheck";
 import { executeFormsListSync as listTypeformForms, executeResponsesListSync as listTypeformResponses } from "../../connectors/typeform/src/sync";
@@ -208,15 +269,61 @@ import {
 } from "../../connectors/calendly/src/actions";
 import googleAdsManifest from "../../connectors/google-ads/manifest.json";
 import { healthcheck as googleAdsHealthcheck } from "../../connectors/google-ads/src/healthcheck";
-import { executeCampaignsListSync as listGoogleAdsCampaigns, executeAdGroupsListSync as listGoogleAdsAdGroups, executeAdsListSync as listGoogleAdsAds } from "../../connectors/google-ads/src/sync";
+import {
+  listAccessibleCustomers as gadsListAccessibleCustomers,
+  listSubAccounts as gadsListSubAccounts,
+  getCampaign as gadsGetCampaign,
+  getCampaignByName as gadsGetCampaignByName,
+  getAdGroup as gadsGetAdGroup,
+  getAd as gadsGetAd,
+  getKeyword as gadsGetKeyword,
+  getBudget as gadsGetBudget,
+  getConversionAction as gadsGetConversionAction,
+  mutateCampaigns as gadsMutateCampaigns,
+  mutateAdGroups as gadsMutateAdGroups,
+  mutateAds as gadsMutateAds,
+  mutateKeywords as gadsMutateKeywords,
+  mutateBudgets as gadsMutateBudgets,
+  gaqlSearch as gadsGaqlSearch,
+  gaqlSearchStream as gadsGaqlSearchStream,
+  createCustomerList as gadsCreateCustomerList,
+  mutateCustomerListMembers as gadsMutateCustomerListMembers,
+  mutateConversionActions as gadsMutateConversionActions,
+  mutateLabels as gadsMutateLabels,
+  getReport as gadsGetReport,
+} from "../../connectors/google-ads/src/actions";
+import {
+  executeCampaignsListSync as listGoogleAdsCampaigns,
+  executeAdGroupsListSync as listGoogleAdsAdGroups,
+  executeAdsListSync as listGoogleAdsAds,
+  executeKeywordsListSync as listGoogleAdsKeywords,
+  executeBudgetsListSync as listGoogleAdsBudgets,
+  executeCustomerListsListSync as listGoogleAdsCustomerLists,
+  executeConversionActionsListSync as listGoogleAdsConversionActions,
+} from "../../connectors/google-ads/src/sync";
 import metaAdsManifest from "../../connectors/meta-ads/manifest.json";
 import { healthcheck as metaAdsHealthcheck } from "../../connectors/meta-ads/src/healthcheck";
 import { executeCampaignsListSync as listMetaCampaigns, executeAdSetsListSync as listMetaAdSets, executeAdsListSync as listMetaAds, executeAdAccountsListSync as listMetaAdAccounts } from "../../connectors/meta-ads/src/sync";
 import linkedinAdsManifest from "../../connectors/linkedin-ads/manifest.json";
 import { healthcheck as linkedinAdsHealthcheck } from "../../connectors/linkedin-ads/src/healthcheck";
+import {
+  getCampaign as linkedinAdsGetCampaign,
+  getAdAccount as linkedinAdsGetAdAccount,
+  listCampaignGroups as linkedinAdsListCampaignGroups,
+  listCreatives as linkedinAdsListCreatives,
+  getAnalyticsReport as linkedinAdsGetAnalyticsReport,
+} from "../../connectors/linkedin-ads/src/actions";
 import { executeCampaignsListSync as listLinkedInAdsCampaigns, executeAdAccountsListSync as listLinkedInAdsAccounts, executeCreativeAssetsListSync as listLinkedInAdsCreatives } from "../../connectors/linkedin-ads/src/sync";
 import tiktokAdsManifest from "../../connectors/tiktok-ads/manifest.json";
 import { healthcheck as tiktokAdsHealthcheck } from "../../connectors/tiktok-ads/src/healthcheck";
+import {
+  getAnalyticsReport as tiktokAdsGetAnalyticsReport,
+  listAdvertisers as tiktokAdsListAdvertisers,
+  getCampaign as tiktokAdsGetCampaign,
+  getAdGroup as tiktokAdsGetAdGroup,
+  getAd as tiktokAdsGetAd,
+  listPixels as tiktokAdsListPixels,
+} from "../../connectors/tiktok-ads/src/actions";
 import { executeCampaignsListSync as listTikTokCampaigns, executeAdGroupsListSync as listTikTokAdGroups, executeAdsListSync as listTikTokAds } from "../../connectors/tiktok-ads/src/sync";
 import xeroManifest from "../../connectors/xero/manifest.json";
 import { healthcheck as xeroHealthcheck } from "../../connectors/xero/src/healthcheck";
@@ -324,11 +431,12 @@ import {
 
 import resendManifest from "../../connectors/resend/manifest.json";
 import { healthcheck as resendHealthcheck } from "../../connectors/resend/src/healthcheck";
-import { sendEmail as resendSendEmail } from "../../connectors/resend/src/emails";
+import { sendEmail as resendSendEmail, getEmail as resendGetEmail, listEmails as resendListEmails } from "../../connectors/resend/src/emails";
+import { listDomains as resendListDomains } from "../../connectors/resend/src/domains";
 
 import googlemeetManifest from "../../connectors/googlemeet/manifest.json";
 import { healthcheck as googlemeetHealthcheck } from "../../connectors/googlemeet/src/healthcheck";
-import { createMeeting as gmeetCreateMeeting, listMeetings as gmeetListMeetings } from "../../connectors/googlemeet/src/actions";
+import { createMeeting as gmeetCreateMeeting, listMeetings as gmeetListMeetings, getMeeting as gmeetGetMeeting, updateMeeting as gmeetUpdateMeeting, deleteMeeting as gmeetDeleteMeeting } from "../../connectors/googlemeet/src/actions";
 
 // Google Meet operations (extend the existing google-workspace connector).
 import {
@@ -461,11 +569,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     shopify: shopifyHealthcheck,
     woocommerce: woocommerceHealthcheck,
     quickbooks: quickbooksHealthcheck,
-    greenhouse: greenhouseHealthcheck,
-    lever: leverHealthcheck,
-    ashby: ashbyHealthcheck,
     workable: workableHealthcheck,
-    smartrecruiters: smartrecruitersHealthcheck,
     recruitee: recruiteeHealthcheck,
     "zoho-recruit": zohoRecruitHealthcheck,
     typeform: typeformHealthcheck,
@@ -754,6 +858,44 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "slots.available": calGetSlots,
       "bookings.create": calCreateBooking,
     },
+    "google-ads": {
+      "customers.listAccessible": gadsListAccessibleCustomers,
+      "customers.listSubAccounts": gadsListSubAccounts,
+      "campaigns.get": gadsGetCampaign,
+      "campaigns.getByName": gadsGetCampaignByName,
+      "ad_groups.get": gadsGetAdGroup,
+      "ads.get": gadsGetAd,
+      "keywords.get": gadsGetKeyword,
+      "budgets.get": gadsGetBudget,
+      "campaigns.mutate": gadsMutateCampaigns,
+      "ad_groups.mutate": gadsMutateAdGroups,
+      "ads.mutate": gadsMutateAds,
+      "keywords.mutate": gadsMutateKeywords,
+      "budgets.mutate": gadsMutateBudgets,
+      "gaql.search": gadsGaqlSearch,
+      "gaql.searchStream": gadsGaqlSearchStream,
+      "customer_lists.create": gadsCreateCustomerList,
+      "customer_lists.mutateMembers": gadsMutateCustomerListMembers,
+      "conversion_actions.get": gadsGetConversionAction,
+      "conversion_actions.mutate": gadsMutateConversionActions,
+      "labels.mutate": gadsMutateLabels,
+      "reports.get": gadsGetReport,
+    },
+    "linkedin-ads": {
+      "campaigns.get": linkedinAdsGetCampaign,
+      "ad_accounts.get": linkedinAdsGetAdAccount,
+      "campaign_groups.list": linkedinAdsListCampaignGroups,
+      "creatives.list": linkedinAdsListCreatives,
+      "analytics.report.get": linkedinAdsGetAnalyticsReport,
+    },
+    "tiktok-ads": {
+      "analytics.report.get": tiktokAdsGetAnalyticsReport,
+      "advertisers.list": tiktokAdsListAdvertisers,
+      "campaigns.get": tiktokAdsGetCampaign,
+      "ad_groups.get": tiktokAdsGetAdGroup,
+      "ads.get": tiktokAdsGetAd,
+      "pixels.list": tiktokAdsListPixels,
+    },
     shopify: {
       "products.get": shopifyGetProduct,
       "products.create": shopifyCreateProduct,
@@ -780,6 +922,17 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "customers.get": wooGetCustomer,
       "customers.update": wooUpdateCustomer,
       "coupons.create": wooCreateCoupon,
+    },
+    greenhouse: {
+      "applications.move": moveGreenhouseApplication,
+      "applications.create": createGreenhouseApplication,
+    },
+    ashby: {
+      "applications.move": moveAshbyApplication,
+      "applications.reject": rejectAshbyApplication,
+      "applications.hire": hireAshbyApplication,
+      "interviews.schedule": scheduleAshbyInterview,
+      "interviews.cancel": cancelAshbyInterview,
     },
     "cal-com": {
       "me.get": calComGetMe,
@@ -901,10 +1054,16 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
     resend: {
       "emails.send": resendSendEmail,
+      "emails.get": resendGetEmail,
+      "emails.list": resendListEmails,
+      "domains.list": resendListDomains,
     },
     googlemeet: {
       "meetings.create": gmeetCreateMeeting,
       "meetings.list": gmeetListMeetings,
+      "meetings.get": gmeetGetMeeting,
+      "meetings.update": gmeetUpdateMeeting,
+      "meetings.delete": gmeetDeleteMeeting,
     },
   },
   syncs: {
@@ -996,24 +1155,68 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
     greenhouse: {
       "jobs.list": listGreenhouseJobs,
+      "jobs.get": getGreenhouseJob,
+      "candidates.list": listGreenhouseCandidates,
+      "candidates.get": getGreenhouseCandidate,
+      "applications.list": listGreenhouseApplications,
+      "applications.get": getGreenhouseApplication,
+      "users.list": listGreenhouseUsers,
+      "interviews.list": listGreenhouseInterviews,
+      "job_interview_stages.list": listGreenhouseJobInterviewStages,
     },
     lever: {
       "jobs.list": listLeverJobs,
+      "opportunities.list": listLeverOpportunities,
+      "opportunities.get": getLeverOpportunity,
+      "opportunities.interviews.list": listLeverOpportunityInterviews,
+      "opportunities.feedback.list": listLeverOpportunityFeedback,
+      "stages.list": listLeverStages,
+      "users.list": listLeverUsers,
     },
     ashby: {
       "jobs.list": listAshbyJobs,
+      "candidates.list": listAshbyCandidates,
+      "applications.list": listAshbyApplications,
+      "candidates.get": getAshbyCandidate,
+      "applications.get": getAshbyApplication,
+      "candidates.search": searchAshbyCandidates,
+      "interviews.list": listAshbyInterviews,
     },
     workable: {
       "jobs.list": listWorkableJobs,
+      "jobs.get": getWorkableJob,
+      "candidates.list": listWorkableCandidates,
+      "candidates.get": getWorkableCandidate,
+      "stages.list": listWorkableStages,
+      "members.list": listWorkableMembers,
+      "events.list": listWorkableEvents,
     },
     smartrecruiters: {
       "jobs.list": listSmartRecruitersJobs,
+      "jobs.get": getSmartRecruitersJob,
+      "postings.list": listSmartRecruitersPostings,
+      "candidates.list": listSmartRecruitersCandidates,
+      "candidates.get": getSmartRecruitersCandidate,
+      "users.list": listSmartRecruitersUsers,
+      "interviews.list": listSmartRecruitersInterviews,
     },
     recruitee: {
       "jobs.list": listRecruiteeJobs,
+      "candidates.list": listRecruiteeCandidates,
+      "candidates.get": getRecruiteeCandidate,
+      "candidates.search": searchRecruiteeCandidates,
+      "offers.list": listRecruiteeOffers,
+      "pipeline_stages.list": listRecruiteePipelineStages,
+      "interview_events.list": listRecruiteeInterviewEvents,
     },
     "zoho-recruit": {
       "jobs.list": listZohoRecruitJobs,
+      "candidates.list": listZohoRecruitCandidates,
+      "candidates.get": getZohoRecruitCandidate,
+      "candidates.search": searchZohoRecruitCandidates,
+      "job_openings.list": listZohoRecruitJobOpenings,
+      "applications.list": listZohoRecruitApplications,
+      "interviews.list": listZohoRecruitInterviews,
     },
     typeform: {
       "forms.list": listTypeformForms,
@@ -1023,6 +1226,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "campaigns.list": listGoogleAdsCampaigns,
       "ad_groups.list": listGoogleAdsAdGroups,
       "ads.list": listGoogleAdsAds,
+      "keywords.list": listGoogleAdsKeywords,
+      "budgets.list": listGoogleAdsBudgets,
+      "customer_lists.list": listGoogleAdsCustomerLists,
+      "conversion_actions.list": listGoogleAdsConversionActions,
     },
     "meta-ads": {
       "campaigns.list": listMetaCampaigns,
@@ -1190,7 +1397,24 @@ export function createConnectorRegistry(input: {
           };
         }
       }
-      return { ok: true, output: runExecution(() => boundedOutput(handler(inputValue), operationSpec.maxResponseBytes), operationSpec.timeoutMs) };
+      return {
+        ok: true,
+        output: runExecution(
+          () => {
+            const primary = boundedOutput(handler(inputValue), operationSpec.maxResponseBytes);
+            return applyEffectPolicyReconcile(
+              connectorKey,
+              inputValue,
+              primary,
+              operationSpec,
+              operationSpecs,
+              input.actions,
+              input.syncs,
+            );
+          },
+          operationSpec.timeoutMs,
+        ),
+      };
     },
     executeSync(connectorKey: string, sync: string, inputValue: unknown): RegistryActionResult {
       if (!input.syncs?.[connectorKey]) {
@@ -1398,7 +1622,11 @@ function hasCredentialedHealthcheckInput(
   ));
 }
 
-type OperationSpec = OperationBudgetLike & { kind?: string };
+type OperationSpec = OperationBudgetLike & {
+  kind?: string;
+  effectPolicy?: string;
+  reconcile?: string;
+};
 
 function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations: unknown }>): Record<string, Record<string, OperationSpec>> {
   return Object.fromEntries(
@@ -1414,6 +1642,8 @@ function buildConnectorOperationSpecs(manifests: Array<{ key: string; operations
             timeoutMs: typeof spec.timeoutMs === "number" ? spec.timeoutMs : undefined,
             maxInputBytes: typeof spec.maxInputBytes === "number" ? spec.maxInputBytes : undefined,
             maxResponseBytes: typeof spec.maxResponseBytes === "number" ? spec.maxResponseBytes : undefined,
+            effectPolicy: typeof spec.effectPolicy === "string" ? spec.effectPolicy : undefined,
+            reconcile: typeof spec.reconcile === "string" ? spec.reconcile : undefined,
           }]];
         }),
       );
@@ -1466,6 +1696,86 @@ function buildConnectorNetworks(manifests: Array<{ key: string; network: unknown
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// Manifest effectPolicy Reconcile | Idempotent: after a successful mutating
+// action, observe post-write state via the declared reconcile handler.
+// Reconcile reuses the action input (id already known). Idempotent projects
+// id from the primary JSON (id | application.id) fail-closed, merges into
+// action input, then observes. Return observe output either way.
+function applyEffectPolicyReconcile(
+  connectorKey: string,
+  inputValue: unknown,
+  primary: unknown,
+  operationSpec: OperationSpec,
+  operationSpecs: Record<string, Record<string, OperationSpec>>,
+  actions: Record<string, Record<string, ActionHandler>>,
+  syncs: Record<string, Record<string, ActionHandler>> | undefined,
+): unknown {
+  const policy = operationSpec.effectPolicy;
+  if (policy !== "Reconcile" && policy !== "Idempotent") {
+    return primary;
+  }
+  const reconcileName = operationSpec.reconcile;
+  if (typeof reconcileName !== "string" || reconcileName.length === 0) {
+    throw {
+      ok: false,
+      code: "RECONCILE_NOT_DECLARED",
+      message: `${policy} effectPolicy requires a reconcile operation.`,
+    };
+  }
+  const reconcileHandler =
+    actions[connectorKey]?.[reconcileName]
+    ?? syncs?.[connectorKey]?.[reconcileName];
+  if (!reconcileHandler) {
+    throw {
+      ok: false,
+      code: "RECONCILE_HANDLER_MISSING",
+      message: "Reconcile operation has no registered handler.",
+    };
+  }
+  const reconcileSpec = operationSpecs[connectorKey]?.[reconcileName];
+  const runObserve = (resolvedPrimary: unknown) => {
+    let observeInput = inputValue;
+    if (policy === "Idempotent") {
+      const id = projectIdempotentId(resolvedPrimary);
+      observeInput = isRecord(inputValue) ? { ...inputValue, id } : { id };
+    }
+    return boundedOutput(
+      reconcileHandler(observeInput),
+      reconcileSpec?.maxResponseBytes ?? operationSpec.maxResponseBytes,
+    );
+  };
+  // Always settle primary first so Idempotent id-projection throws become
+  // promise rejections (same path as async connector handlers).
+  return Promise.resolve(primary).then((resolved) => runObserve(resolved));
+}
+
+/** Fail-closed id projection for Idempotent observe: primary.id else primary.application.id. */
+function projectIdempotentId(primary: unknown): string {
+  const asId = (value: unknown): string | null => {
+    if (typeof value === "number" && Number.isFinite(value)) return String(Math.trunc(value));
+    if (typeof value === "string" && value.length > 0) return value;
+    return null;
+  };
+  if (!isRecord(primary)) {
+    throw {
+      ok: false,
+      code: "IDEMPOTENT_ID_MISSING",
+      message: "Idempotent effectPolicy could not project an id from the primary response.",
+    };
+  }
+  const top = asId(primary.id);
+  if (top != null) return top;
+  if (isRecord(primary.application)) {
+    const nested = asId(primary.application.id);
+    if (nested != null) return nested;
+  }
+  throw {
+    ok: false,
+    code: "IDEMPOTENT_ID_MISSING",
+    message: "Idempotent effectPolicy could not project an id from the primary response.",
+  };
 }
 
 function unsupportedBudget(spec: OperationSpec | undefined): RegistryFailure | null {

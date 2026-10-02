@@ -29,9 +29,27 @@ fn curated_batch_manifests_preserve_pinned_read_only_contracts() {
         ));
         assert_eq!(manifest.runtime, "bun");
         assert!(!manifest.network.allowed_hosts.is_empty());
+        // First-party deepenings may keep open-connector provenance while adding
+        // writes (e.g. Intercom conversations.reply). Pure curated imports stay read-only.
+        let deepened = manifest
+            .operations
+            .values()
+            .any(|o| matches!(o.side_effect.as_str(), "write" | "destructive"));
         for (operation_key, operation) in &manifest.operations {
             operation_count += 1;
-            assert_eq!(operation.side_effect, "read");
+            if deepened {
+                assert!(
+                    matches!(
+                        operation.side_effect.as_str(),
+                        "read" | "write" | "destructive"
+                    ),
+                    "{}/{} sideEffect",
+                    manifest.key,
+                    operation_key
+                );
+            } else {
+                assert_eq!(operation.side_effect, "read");
+            }
             assert!(operation.timeout_ms > 0);
             assert!(operation.max_input_bytes > 0);
             assert!(operation.max_response_bytes > 0);

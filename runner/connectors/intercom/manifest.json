@@ -1,7 +1,7 @@
 {
   "key": "intercom",
   "name": "Intercom",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -30,7 +30,8 @@
   "models": [
     "administrator",
     "contact",
-    "company"
+    "company",
+    "conversation"
   ],
   "http": {
     "baseUrl": "https://api.intercom.io",
@@ -241,6 +242,181 @@
           "per_page": "{{perPage}}",
           "order": "{{order}}",
           "starting_after": "{{startingAfter}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Conversations",
+      "description": "List Intercom conversations with bounded cursor pagination (per_page, starting_after).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 150
+          },
+          "startingAfter": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conversations",
+        "query": {
+          "per_page": "{{perPage}}",
+          "starting_after": "{{startingAfter}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Conversation",
+      "description": "Retrieve a single Intercom conversation by id (includes conversation_parts).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom conversation id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/conversations/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conversations.reply": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Reply to Conversation",
+      "description": "Reply to an Intercom conversation as an admin (comment or note) via POST /conversations/{id}/reply.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "messageType",
+          "type",
+          "adminId",
+          "body"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom conversation id, or the literal \"last\"."
+          },
+          "messageType": {
+            "type": "string",
+            "enum": [
+              "comment",
+              "note"
+            ],
+            "description": "comment posts to the customer; note is internal."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "admin"
+            ],
+            "description": "Reply author type (P0: admin)."
+          },
+          "adminId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Admin id authoring the reply."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reply or note body."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/conversations/{{id}}/reply",
+        "body": {
+          "message_type": "{{messageType}}",
+          "type": "{{type}}",
+          "admin_id": "{{adminId}}",
+          "body": "{{body}}"
         },
         "success": [
           200

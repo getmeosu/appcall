@@ -192,7 +192,7 @@ fn reopen_rejects_malformed_running_record_without_rewriting_it() {
     connection
         .execute(
             "UPDATE engine_runs
-                SET state='running',wakeup=?1,record=?2
+                SET state='running',wakeup=?1,record=?2,recoverable=1
               WHERE id=?3",
             rusqlite::params![4_242_i64, &raw, "malformed"],
         )
@@ -1560,6 +1560,9 @@ impl Store for FailWakeStore {
     fn next_wakeup(&self) -> Result<Option<i64>> {
         self.inner.next_wakeup()
     }
+    fn list_run_summaries(&self, after_id: &str, limit: usize) -> Result<Vec<RunSummary>> {
+        self.inner.list_run_summaries(after_id, limit)
+    }
 }
 #[test]
 fn transient_wakeup_failure_retains_parked_dispatch_for_retry() {
@@ -1977,6 +1980,328 @@ fn sqlite_signed_revision_overflow_returns_limit_for_insert_and_commit() {
         store.commit(u64::MAX - 1, &max_successor, &[]),
         Err(Error::Limit)
     ));
+}
+
+#[test]
+fn fenced_reconcile_rejects_stale_attempt_and_epoch_without_mutation() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let unknown = attempt(&mut e, "r");
+    e.fail(&unknown, ActivityFailure::OutcomeUnknown).unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+
+    let status = e.status("r").unwrap();
+    let history = serde_json::to_value(e.history("r").unwrap()).unwrap();
+    let audit = e.reconciliation_audit("r").unwrap();
+
+    assert!(matches!(
+        e.reconcile_fenced(
+            "r",
+            &unknown.effect_id,
+            unknown.attempt + 1,
+            unknown.owner_epoch,
+            Some(PayloadRef::durable("late").unwrap()),
+        ),
+        Err(Error::Conflict)
+    ));
+    assert!(matches!(
+        e.reconcile_fenced(
+            "r",
+            &unknown.effect_id,
+            unknown.attempt,
+            unknown.owner_epoch + 1,
+            Some(PayloadRef::durable("late").unwrap()),
+        ),
+        Err(Error::Conflict)
+    ));
+    assert!(matches!(
+        e.reconcile_fenced(
+            "r",
+            &unknown.effect_id,
+            0,
+            unknown.owner_epoch,
+            Some(PayloadRef::durable("late").unwrap()),
+        ),
+        Err(Error::Invalid(_))
+    ));
+
+    assert_eq!(e.status("r").unwrap(), status);
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        history
+    );
+    assert_eq!(e.reconciliation_audit("r").unwrap(), audit);
+}
+
+#[test]
+fn fenced_reconcile_with_evidence_records_ref_not_body_and_survives_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let unknown = attempt(&mut e, "r");
+    e.fail(&unknown, ActivityFailure::OutcomeUnknown).unwrap();
+
+    let audit = e
+        .reconcile_fenced_with_evidence(
+            "r",
+            &unknown.effect_id,
+            unknown.attempt,
+            unknown.owner_epoch,
+            "ops/ticket-42",
+            Some(PayloadRef::durable("provider-observed").unwrap()),
+        )
+        .unwrap();
+    assert_eq!(audit.effect_id, unknown.effect_id);
+    assert_eq!(audit.attempt, unknown.attempt);
+    assert_eq!(audit.owner_epoch, unknown.owner_epoch);
+    assert_eq!(audit.evidence_ref, "ops/ticket-42");
+    assert!(audit.observed);
+    assert_eq!(e.status("r").unwrap(), RunState::Running);
+
+    let persisted = e.reconciliation_audit("r").unwrap();
+    assert_eq!(persisted.len(), 1);
+    assert_eq!(persisted[0], audit);
+    let audit_json = serde_json::to_value(&persisted[0]).unwrap();
+    assert_eq!(audit_json["evidence_ref"], "ops/ticket-42");
+    assert_eq!(audit_json["observed"], true);
+    assert!(audit_json.get("body").is_none());
+    assert!(audit_json.get("payload").is_none());
+    assert!(audit_json.get("observation").is_none());
+
+    drop(e);
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened.register_workflow("one", "v1", one).unwrap();
+    reopened.register_activity("lookup", "v1").unwrap();
+    assert_eq!(reopened.reconciliation_audit("r").unwrap(), persisted);
+    assert_eq!(reopened.status("r").unwrap(), RunState::Running);
+    assert!(matches!(
+        reopened.drive("r", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
+
+#[test]
+fn fenced_reconcile_blocks_delayed_provider_after_owner_epoch_change() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let old = attempt(&mut e, "r");
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::OutcomeUnknown)
+    ));
+
+    assert!(matches!(
+        e.reconcile_fenced(
+            "r",
+            &old.effect_id,
+            old.attempt,
+            old.owner_epoch + 1,
+            Some(PayloadRef::durable("forged-epoch").unwrap()),
+        ),
+        Err(Error::Conflict)
+    ));
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(e.reconciliation_audit("r").unwrap().is_empty());
+
+    let audit = e
+        .reconcile_fenced(
+            "r",
+            &old.effect_id,
+            old.attempt,
+            old.owner_epoch,
+            Some(PayloadRef::durable("verified").unwrap()),
+        )
+        .unwrap();
+    assert_eq!(audit.attempt, old.attempt);
+    assert_eq!(audit.owner_epoch, old.owner_epoch);
+    assert!(audit.observed);
+    assert_eq!(e.status("r").unwrap(), RunState::Running);
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
+
+#[test]
+fn buffered_signal_before_wait_survives_restart_and_enters_history() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("signal", "v1", |c| {
+        let got = c.signal("go")?;
+        Ok(got)
+    })
+    .unwrap();
+    e.start("r", "signal", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    // Temporal-class buffer: deliver before the workflow parks on the wait.
+    e.signal("r", "go", PayloadRef::durable("buffered").unwrap())
+        .unwrap();
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("signal", "v1", |c| {
+        let got = c.signal("go")?;
+        Ok(got)
+    })
+    .unwrap();
+    match e.drive("r", 0).unwrap() {
+        DriveOutcome::Completed(p) => assert_eq!(p.key(), "buffered"),
+        other => panic!("{other:?}"),
+    }
+    let events = e.history("r").unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].command, Command::Signal("go".into()));
+    assert_eq!(
+        events[0].value,
+        Some(CommandValue::Payload(
+            PayloadRef::durable("buffered").unwrap()
+        ))
+    );
+}
+
+#[test]
+fn signal_fifo_order_survives_restart_across_two_waits() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("dup", "v1", |c| {
+        let first = c.signal("go")?;
+        let second = c.signal("go")?;
+        assert_eq!(first.key(), "first");
+        assert_eq!(second.key(), "second");
+        Ok(second)
+    })
+    .unwrap();
+    e.start("r", "dup", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    e.signal("r", "go", PayloadRef::durable("first").unwrap())
+        .unwrap();
+    e.signal("r", "go", PayloadRef::durable("second").unwrap())
+        .unwrap();
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("dup", "v1", |c| {
+        let first = c.signal("go")?;
+        let second = c.signal("go")?;
+        assert_eq!(first.key(), "first");
+        assert_eq!(second.key(), "second");
+        Ok(second)
+    })
+    .unwrap();
+    match e.drive("r", 0).unwrap() {
+        DriveOutcome::Completed(p) => assert_eq!(p.key(), "second"),
+        other => panic!("{other:?}"),
+    }
+    let events = e.history("r").unwrap();
+    assert_eq!(events.len(), 2);
+    assert_eq!(
+        events[0].value,
+        Some(CommandValue::Payload(PayloadRef::durable("first").unwrap()))
+    );
+    assert_eq!(
+        events[1].value,
+        Some(CommandValue::Payload(
+            PayloadRef::durable("second").unwrap()
+        ))
+    );
+}
+
+#[test]
+fn unrelated_signal_does_not_complete_wait_across_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("signal", "v1", |c| {
+        let got = c.signal("go")?;
+        Ok(got)
+    })
+    .unwrap();
+    e.start("r", "signal", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    let parked = e.history("r").unwrap();
+    assert_eq!(parked.len(), 1);
+    assert_eq!(parked[0].command, Command::Signal("go".into()));
+    assert!(parked[0].value.is_none());
+
+    e.signal("r", "other", PayloadRef::durable("noise").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        serde_json::to_value(&parked).unwrap()
+    );
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("signal", "v1", |c| {
+        let got = c.signal("go")?;
+        Ok(got)
+    })
+    .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        serde_json::to_value(&parked).unwrap()
+    );
+    e.signal("r", "go", PayloadRef::durable("real").unwrap())
+        .unwrap();
+    match e.drive("r", 0).unwrap() {
+        DriveOutcome::Completed(p) => assert_eq!(p.key(), "real"),
+        other => panic!("{other:?}"),
+    }
+    let events = e.history("r").unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].command, Command::Signal("go".into()));
+    assert_eq!(
+        events[0].value,
+        Some(CommandValue::Payload(PayloadRef::durable("real").unwrap()))
+    );
+}
+
+#[test]
+fn signal_rejected_on_terminal_run_without_history_mutation() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("done", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.start("r", "done", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+    let history = serde_json::to_value(e.history("r").unwrap()).unwrap();
+    assert!(matches!(
+        e.signal("r", "go", PayloadRef::durable("late").unwrap()),
+        Err(Error::Conflict)
+    ));
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        history
+    );
 }
 
 #[test]

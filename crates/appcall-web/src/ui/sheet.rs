@@ -154,6 +154,7 @@ pub fn component_sheet() -> String {
             body: "Connect an account to run your first tool.",
             action_label: "Browse connectors",
             action_href: LocalPath::new("/app/connectors").unwrap(),
+            role: EmptyStateRole::Status,
         }
         .render(),
     );
@@ -183,6 +184,7 @@ pub fn component_sheet() -> String {
             body: long,
             action_label: long,
             action_href: LocalPath::new("/app/connectors").unwrap(),
+            role: EmptyStateRole::Status,
         }
         .render(),
     );

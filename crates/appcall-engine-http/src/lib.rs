@@ -204,8 +204,64 @@ impl<S: Store> HttpAdapter<S> {
                 self.engine.resume(&self.run_id(id))?;
                 Ok((202, json!({"id":id})))
             }
+            ("GET", ["", "workflows"]) => {
+                if !body.is_empty() {
+                    return Err(Error::Invalid("unexpected body"));
+                }
+                let workflows: Vec<_> = self
+                    .engine
+                    .list_workflows()
+                    .into_iter()
+                    .map(|(name, version)| json!({"name": name, "version": version}))
+                    .collect();
+                Ok((200, json!({"workflows": workflows})))
+            }
+            ("GET", ["", "workflow-runs"]) => {
+                if !body.is_empty() {
+                    return Err(Error::Invalid("unexpected body"));
+                }
+                self.list_runs_page(None)
+            }
+            ("GET", ["", "workflow-runs", "after", cursor]) => {
+                if !body.is_empty() {
+                    return Err(Error::Invalid("unexpected body"));
+                }
+                if cursor.is_empty() {
+                    return Err(Error::Invalid("empty cursor"));
+                }
+                validate(cursor)?;
+                self.list_runs_page(Some(cursor))
+            }
             _ => Err(Error::NotFound),
         }
+    }
+    fn list_runs_page(&self, after_unscoped: Option<&str>) -> Result<(u16, Value)> {
+        let after = match (&self.scope, after_unscoped) {
+            (Some(scope), Some(cursor)) => format!("{scope}/{cursor}"),
+            (Some(scope), None) => format!("{scope}/"),
+            (None, Some(cursor)) => cursor.to_owned(),
+            (None, None) => String::new(),
+        };
+        let limit = 50usize;
+        let mut runs = self.engine.list_run_summaries(&after, limit)?;
+        if let Some(scope) = &self.scope {
+            let prefix = format!("{scope}/");
+            runs.retain(|run| run.id.starts_with(&prefix));
+            for run in &mut runs {
+                run.id = run.id[prefix.len()..].to_owned();
+                if let Some(parent) = run.parent.as_mut() {
+                    if let Some(rest) = parent.strip_prefix(&prefix) {
+                        *parent = rest.to_owned();
+                    }
+                }
+            }
+        }
+        let next_cursor = if runs.len() == limit {
+            runs.last().map(|run| run.id.clone())
+        } else {
+            None
+        };
+        Ok((200, json!({"runs": runs, "next_cursor": next_cursor})))
     }
 }
 

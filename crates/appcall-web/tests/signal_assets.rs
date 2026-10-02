@@ -224,20 +224,20 @@ fn run_detail_styles_cover_panels_timeline_and_narrow_overflow() {
     let css = include_str!("../static/dashboard.css");
 
     for expected in [
-        "#run-detail {",
-        "#run-detail .run-detail-summary { display: grid;",
-        "#run-detail .run-detail-summary > div { min-width: 0;",
+        "#run-detail, #workflow-run-detail-page {",
+        "#run-detail .run-detail-summary, #workflow-run-detail-page .run-detail-summary { display: grid;",
+        "#run-detail .run-detail-summary > div, #workflow-run-detail-page .run-detail-summary > div { min-width: 0;",
         "#run-detail-policy { min-width: 0;",
         "#run-detail-events { min-width: 0;",
         ".run-detail-event-list::before",
         ".run-detail-event-list > li::before",
-        "#run-detail .runs-code { overflow-wrap: anywhere;",
-        "#run-detail .run-detail-event-detail { overflow-wrap: anywhere;",
+        "#run-detail .runs-code, #workflow-run-detail-page .runs-code { overflow-wrap: anywhere;",
+        "#run-detail .run-detail-event-detail, #workflow-run-detail-page .run-detail-event-detail { overflow-wrap: anywhere;",
         "#main-content > .ui-back-link[href=\"/app/syncs\"] { min-height: 44px;",
-        "#run-detail .run-detail-pagination .ui-button { min-height: 44px;",
+        "#run-detail .run-detail-pagination .ui-button, #workflow-run-detail-page .run-detail-pagination .ui-button { min-height: 44px;",
         "@media (max-width: 767px)",
-        "#run-detail { grid-template-columns: minmax(0, 1fr); gap: 12px;",
-        "#run-detail .run-detail-summary { grid-template-columns: minmax(0, 1fr);",
+        "#run-detail, #workflow-run-detail-page { grid-template-columns: minmax(0, 1fr); gap: 12px;",
+        "#run-detail .run-detail-summary, #workflow-run-detail-page .run-detail-summary { grid-template-columns: minmax(0, 1fr);",
         "#run-detail-policy dl { grid-template-columns: minmax(0, 1fr);",
     ] {
         assert!(

@@ -46,8 +46,8 @@ async fn runs_preview_fixed_scenarios_are_truthful_and_dto_shaped() {
     let unavailable_message = Error::Unavailable.to_string();
     for (name, expected_status, marker) in [
         ("runs", 200, "Operator controls unavailable"),
-        ("runs-empty", 200, "No durable runs to show."),
-        ("runs-unavailable", 200, "Runs status unavailable"),
+        ("runs-empty", 200, "No durable syncs to show."),
+        ("runs-unavailable", 200, "Syncs unavailable"),
         ("runs-malformed", 503, unavailable_message.as_str()),
     ] {
         let data = ScenarioData::new(Scenario::parse(name).unwrap());
@@ -80,7 +80,7 @@ async fn runs_preview_fixed_scenarios_are_truthful_and_dto_shaped() {
         if name == "runs" {
             assert!(response
                 .body
-                .contains("aria-label=\"Durable sync runs\" tabindex=\"0\""));
+                .contains("aria-label=\"Durable syncs\" tabindex=\"0\""));
         }
     }
 }
@@ -349,12 +349,18 @@ async fn empty_and_unavailable_collections_are_distinct() {
             .await;
         assert!(result.is_ok(), "{op:?}");
         assert_eq!(result.unwrap()[key], json!([]));
-        assert_eq!(
-            ScenarioData::new(Scenario::Unavailable)
-                .execute(dashboard_request(op))
-                .await,
-            Err(Error::Unavailable)
-        );
+        let unavailable = ScenarioData::new(Scenario::Unavailable)
+            .execute(dashboard_request(op))
+            .await;
+        if op == DashboardOperation::Connections {
+            // Soft unavailable: Connections EmptyState triad honesty.
+            assert_eq!(
+                unavailable,
+                Ok(json!({"synthetic": true, "status": "unavailable"}))
+            );
+        } else {
+            assert_eq!(unavailable, Err(Error::Unavailable));
+        }
     }
 }
 
@@ -370,10 +376,7 @@ async fn real_filters_produce_real_empty_copy() {
             "/app/connectors?category=unmatched",
             "No connectors match this category.",
         ),
-        (
-            "/app/calls?status=failed",
-            "No tool runs match these filters.",
-        ),
+        ("/app/calls?status=failed", "No calls match these filters."),
     ] {
         let request = Request {
             method: "GET",

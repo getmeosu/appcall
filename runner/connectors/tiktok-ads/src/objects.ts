@@ -144,16 +144,165 @@ export function parseAdsResponse(response: unknown): {
   return { ads, ...paging };
 }
 
+// --- Advertisers ---
+
+export type NormalizedAdvertiser = {
+  id: string;
+  provider: "tiktok-ads";
+  name: string;
+  status: string;
+  currency: string;
+  timezone: string;
+  company: string;
+  raw: Record<string, unknown>;
+};
+
+export function normalizeAdvertiser(data: Record<string, unknown>): NormalizedAdvertiser {
+  const id = coerceId(data.advertiser_id ?? data.id);
+  const name = prop(data, "advertiser_name") || prop(data, "name");
+  return {
+    id: `tt-advertiser:${id}`,
+    provider: "tiktok-ads",
+    name,
+    status: prop(data, "status"),
+    currency: prop(data, "currency"),
+    timezone: prop(data, "timezone") || prop(data, "display_timezone"),
+    company: prop(data, "company"),
+    raw: data,
+  };
+}
+
+export function parseAdvertisersResponse(response: unknown): {
+  advertisers: NormalizedAdvertiser[];
+  nextPage: number | null;
+  totalCount: number;
+} {
+  const wrapper = extractTikTokData(response);
+  if (!wrapper) return { advertisers: [], nextPage: null, totalCount: 0 };
+
+  const list = wrapper.list;
+  if (!Array.isArray(list)) return { advertisers: [], nextPage: null, totalCount: 0 };
+
+  const advertisers = list.filter(isRecord).map(normalizeAdvertiser);
+  const paging = extractPaging(wrapper);
+  return {
+    advertisers,
+    nextPage: paging.nextPage,
+    totalCount: paging.totalCount || advertisers.length,
+  };
+}
+
+// --- Pixels ---
+
+export type NormalizedPixel = {
+  id: string;
+  provider: "tiktok-ads";
+  name: string;
+  code: string;
+  status: string;
+  createdTime: string;
+  raw: Record<string, unknown>;
+};
+
+export function normalizePixel(data: Record<string, unknown>): NormalizedPixel {
+  const id = coerceId(data.pixel_id ?? data.id);
+  return {
+    id: `tt-pixel:${id}`,
+    provider: "tiktok-ads",
+    name: prop(data, "pixel_name") || prop(data, "name"),
+    code: prop(data, "pixel_code") || prop(data, "code"),
+    status: prop(data, "status") || prop(data, "operation_status"),
+    createdTime: prop(data, "create_time"),
+    raw: data,
+  };
+}
+
+export function parsePixelsResponse(response: unknown): {
+  pixels: NormalizedPixel[];
+  nextPage: number | null;
+  totalCount: number;
+} {
+  const wrapper = extractTikTokData(response);
+  if (!wrapper) return { pixels: [], nextPage: null, totalCount: 0 };
+
+  // pixel/list may return `list` or `pixels`
+  const list = Array.isArray(wrapper.list)
+    ? wrapper.list
+    : Array.isArray((wrapper as Record<string, unknown>).pixels)
+      ? ((wrapper as Record<string, unknown>).pixels as unknown[])
+      : null;
+  if (!list) return { pixels: [], nextPage: null, totalCount: 0 };
+
+  const pixels = list.filter(isRecord).map(normalizePixel);
+  const paging = extractPaging(wrapper);
+  return {
+    pixels,
+    nextPage: paging.nextPage,
+    totalCount: paging.totalCount || pixels.length,
+  };
+}
+
+// --- Analytics / integrated report ---
+
+export type NormalizedAnalyticsRow = {
+  id: string;
+  provider: "tiktok-ads";
+  dimensions: Record<string, unknown>;
+  metrics: Record<string, unknown>;
+  impressions: number;
+  clicks: number;
+  spend: number;
+  raw: Record<string, unknown>;
+};
+
+export function normalizeAnalyticsRow(data: Record<string, unknown>, index: number = 0): NormalizedAnalyticsRow {
+  const dimensions = isRecord(data.dimensions) ? data.dimensions : {};
+  const metrics = isRecord(data.metrics) ? data.metrics : {};
+
+  const dimKey =
+    coerceId(dimensions.campaign_id) ||
+    coerceId(dimensions.adgroup_id) ||
+    coerceId(dimensions.ad_id) ||
+    coerceId(dimensions.advertiser_id) ||
+    coerceId(dimensions.stat_time_day) ||
+    String(index);
+
+  return {
+    id: `tt-analytics:${dimKey}`,
+    provider: "tiktok-ads",
+    dimensions,
+    metrics,
+    impressions: propNum(metrics, "impressions") || propNum(data, "impressions"),
+    clicks: propNum(metrics, "clicks") || propNum(data, "clicks"),
+    spend: propNum(metrics, "spend") || propNum(data, "spend"),
+    raw: data,
+  };
+}
+
+export function parseAnalyticsResponse(response: unknown): { rows: NormalizedAnalyticsRow[] } {
+  const wrapper = extractTikTokData(response);
+  if (!wrapper) return { rows: [] };
+
+  const list = wrapper.list;
+  if (!Array.isArray(list)) return { rows: [] };
+
+  return {
+    rows: list.filter(isRecord).map((row, i) => normalizeAnalyticsRow(row, i)),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // TikTok API response shape: { code: 0, message: "OK", data: { list: [...], page_info: { ... } } }
 // ---------------------------------------------------------------------------
 
 type TikTokDataWrapper = {
-  list: unknown[];
+  list?: unknown[];
+  pixels?: unknown[];
   page_info?: Record<string, unknown>;
+  [key: string]: unknown;
 };
 
-function extractTikTokData(response: unknown): TikTokDataWrapper | null {
+export function extractTikTokData(response: unknown): TikTokDataWrapper | null {
   if (!isRecord(response)) return null;
 
   // Direct response could be the wrapper
@@ -162,7 +311,7 @@ function extractTikTokData(response: unknown): TikTokDataWrapper | null {
   }
 
   // Or the caller already unwrapped `data`
-  if (Array.isArray(response.list)) {
+  if (Array.isArray(response.list) || Array.isArray(response.pixels)) {
     return response as TikTokDataWrapper;
   }
 
@@ -187,7 +336,9 @@ function extractPaging(wrapper: TikTokDataWrapper): { nextPage: number | null; t
 
 export function prop(obj: Record<string, unknown>, field: string, fallback: string = ""): string {
   const val = obj[field];
-  return typeof val === "string" ? val : fallback;
+  if (typeof val === "string") return val;
+  if (typeof val === "number" && Number.isFinite(val)) return String(val);
+  return fallback;
 }
 
 export function propNum(obj: Record<string, unknown>, field: string, fallback: number = 0): number {
@@ -202,4 +353,10 @@ export function propNum(obj: Record<string, unknown>, field: string, fallback: n
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function coerceId(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "";
 }

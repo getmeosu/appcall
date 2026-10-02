@@ -489,6 +489,16 @@ pub enum SideEffect {
     Write,
     Destructive,
 }
+/// Manifest effect policy for mutating connector ops.
+/// `Reconcile` means the runner observes post-write state via `reconcile`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum EffectPolicy {
+    #[default]
+    None,
+    Idempotent,
+    Reconcile,
+}
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Operation {
@@ -502,6 +512,8 @@ pub struct Operation {
     pub output_schema: Option<Value>,
     pub sample: Option<Value>,
     pub side_effect: String,
+    pub effect_policy: EffectPolicy,
+    pub reconcile: String,
 }
 impl Operation {
     pub fn has_tool_schema(&self) -> bool {

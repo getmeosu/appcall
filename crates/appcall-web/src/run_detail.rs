@@ -16,12 +16,62 @@ const MAX_POLICY_TEXT_BYTES: usize = 128;
 ///
 /// The reader supplies only persisted observations.  This renderer deliberately
 /// does not derive a timeline from attempt counters. Operator confirmations
-/// reuse the Runs controls and require the trusted browser authorization DTO.
+/// reuse the Syncs controls and require the trusted browser authorization DTO.
+/// Host status unavailable/error/not_found become EmptyStates; missing status
+/// stays the legacy ok path during transition.
 pub(crate) fn standalone(value: &Value, run_id: &str) -> Result<String, Error> {
     if !valid_identifier(run_id) {
         return Err(Error::Invalid);
     }
+    let mut html = ui::back_link(
+        "Back to Syncs",
+        ui::LocalPath::new("/app/syncs").ok_or(Error::Invalid)?,
+    );
     let data = value.get("data").unwrap_or(value);
+    match detail_status(data) {
+        "unavailable" => {
+            html.push_str(&detail_shell(
+                run_id,
+                empty_alert(
+                    "Syncs unavailable",
+                    "Configure PostgreSQL and the Rust sync queue to inspect this sync. This page does not invent sync state or history.",
+                    "Start here",
+                    "/app/start",
+                )?,
+            ));
+            return Ok(html);
+        }
+        "error" => {
+            let reload = format!("/app/syncs/{run_id}");
+            html.push_str(&detail_shell(
+                run_id,
+                empty_alert(
+                    "Syncs unreachable",
+                    "The console is configured to read the sync queue, but the read failed. Nothing here is invented.",
+                    "Reload",
+                    &reload,
+                )?,
+            ));
+            return Ok(html);
+        }
+        "not_found" => {
+            // Omit the requested id from markup so missing and cross-scope
+            // not_found pages stay byte-identical (anti-enumeration).
+            html.push_str(&detail_shell(
+                "",
+                empty_state(
+                    "Sync not found",
+                    "The sync queue has no durable sync with this id for this project. This page does not invent sync state or history.",
+                    "Back to Syncs",
+                    "/app/syncs",
+                    ui::EmptyStateRole::Status,
+                )?,
+            ));
+            return Ok(html);
+        }
+        "ok" | "" => {}
+        _ => return Err(Error::Unavailable),
+    }
     let run = data
         .get("run")
         .and_then(Value::as_object)
@@ -43,10 +93,6 @@ pub(crate) fn standalone(value: &Value, run_id: &str) -> Result<String, Error> {
     }
 
     let account_id = bounded_text(run.get("accountId"), MAX_ID_BYTES).unwrap_or("");
-    let mut html = ui::back_link(
-        "Back to Runs",
-        ui::LocalPath::new("/app/syncs").ok_or(Error::Invalid)?,
-    );
     html.push_str(&render_run_header(run, account_id));
     html.push_str(&crate::pages::runs_feedback()?);
     let account_scope = history_account_scope(data);
@@ -67,7 +113,7 @@ pub(crate) fn standalone(value: &Value, run_id: &str) -> Result<String, Error> {
         )?);
     }
     if !controls.is_empty() {
-        html.push_str(&format!("<div class=\"run-detail-controls\" role=\"group\" aria-label=\"Run operator controls\">{controls}</div>"));
+        html.push_str(&format!("<div class=\"run-detail-controls\" role=\"group\" aria-label=\"Sync operator controls\">{controls}</div>"));
     } else if unavailable {
         html.push_str("<p class=\"run-detail-operator-notice\">Operator controls unavailable. A trusted operator grant is required.</p>");
     }
@@ -77,6 +123,39 @@ pub(crate) fn standalone(value: &Value, run_id: &str) -> Result<String, Error> {
     html.push_str(&render_pagination(data, run_id)?);
     html.push_str("</section>");
     Ok(html)
+}
+
+fn detail_status(value: &Value) -> &str {
+    value.get("status").and_then(Value::as_str).unwrap_or("")
+}
+
+fn detail_shell(run_id: &str, body: String) -> String {
+    format!(
+        "<div id=\"run-detail-page\" data-runs-page data-run-id=\"{}\">{}</div>",
+        escape(run_id),
+        body
+    )
+}
+
+fn empty_alert(title: &str, body: &str, action: &str, href: &str) -> Result<String, Error> {
+    empty_state(title, body, action, href, ui::EmptyStateRole::Alert)
+}
+
+fn empty_state(
+    title: &str,
+    body: &str,
+    action: &str,
+    href: &str,
+    role: ui::EmptyStateRole,
+) -> Result<String, Error> {
+    Ok(ui::EmptyState {
+        title,
+        body,
+        action_label: action,
+        action_href: ui::LocalPath::new(href).ok_or(Error::Invalid)?,
+        role,
+    }
+    .render())
 }
 
 fn valid_identifier(value: &str) -> bool {
@@ -149,8 +228,8 @@ fn health(value: Option<&Value>) -> (&'static str, ui::Tone) {
 fn render_run_header(run: &Map<String, Value>, account_id: &str) -> String {
     let (health_label, tone) = health(run.get("health"));
     format!(
-        "<section id=\"run-detail\" data-runs-page aria-labelledby=\"run-detail-heading\"><header class=\"runs-header\"><h2 id=\"run-detail-heading\">Run <code class=\"runs-code\">{}</code></h2><p>{}</p></header><p class=\"runs-secondary\">{} / {} · account {}</p>",
-        field(run, "id", "Run ID"),
+        "<section id=\"run-detail\" data-runs-page aria-labelledby=\"run-detail-heading\"><header class=\"runs-header\"><h2 id=\"run-detail-heading\">Sync <code class=\"runs-code\">{}</code></h2><p>{}</p></header><p class=\"runs-secondary\">{} / {} · account {}</p>",
+        field(run, "id", "Sync ID"),
         ui::state(tone, health_label),
         field(run, "connector", "Connector"),
         field(run, "tool", "Tool"),
@@ -427,7 +506,7 @@ fn render_pagination(data: &Value, run_id: &str) -> Result<String, Error> {
     }
     .render();
     Ok(format!(
-        "<nav class=\"run-detail-pagination\" aria-label=\"Run history pages\">{next}</nav>"
+        "<nav class=\"run-detail-pagination\" aria-label=\"Sync history pages\">{next}</nav>"
     ))
 }
 

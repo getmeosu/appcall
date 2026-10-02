@@ -1,10 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import { executeJobsListSync } from "../src/sync";
+import {
+  executeJobsListSync,
+  executeCandidatesListSync,
+  executeCandidatesGetSync,
+  executeCandidatesSearchSync,
+  executeOffersListSync,
+  executePipelineStagesListSync,
+  executeInterviewEventsListSync,
+} from "../src/sync";
+import candidatesFixture from "../fixtures/candidates_list.json";
+import candidateGetFixture from "../fixtures/candidate_get.json";
+import candidatesSearchFixture from "../fixtures/candidates_search.json";
+import offersFixture from "../fixtures/offers_list.json";
+import templatesListFixture from "../fixtures/pipeline_templates_list.json";
+import templateDetailFixture from "../fixtures/pipeline_template_detail.json";
+import offerDetailFixture from "../fixtures/offer_detail_stages.json";
+import interviewEventsFixture from "../fixtures/interview_events_list.json";
 
-// Every request is served by an injected fetch. The originals called the real
-// Recruitee API inside a try/catch that asserted nothing when no error was
-// thrown, so they reported success whether the connector worked, the network
-// was down, or the provider changed its response.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
   const calls: Request[] = [];
   const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
@@ -14,48 +26,334 @@ function stubFetch(body: string, init: { status?: number; headers?: Record<strin
   return { calls, impl };
 }
 
+function stubFetchRouter(
+  routes: Array<{ match: (url: URL) => boolean; body: string; status?: number }>,
+) {
+  const calls: Request[] = [];
+  const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
+    const req = new Request(input as string, requestInit);
+    calls.push(req);
+    const url = new URL(req.url);
+    const route = routes.find((r) => r.match(url));
+    if (!route) {
+      return new Response(JSON.stringify({ error: `unexpected ${url.pathname}` }), { status: 500 });
+    }
+    return new Response(route.body, { status: route.status ?? 200 });
+  }) as unknown as typeof fetch;
+  return { calls, impl };
+}
+
+const auth = { company: "acme", accessToken: "tok_secret_value" };
+
 describe("Recruitee jobs.list sync", () => {
-  test("requests the documented endpoint on the allowed host", async () => {
+  test("requests the careers endpoint on the tenant host", async () => {
     const { calls, impl } = stubFetch('{"offers":[{"id":1,"title":"Engineer"}]}');
 
-    await executeJobsListSync({ ...{ company: "acme", accessToken: "tok_secret_value" }, fetch: impl });
+    await executeJobsListSync({ ...auth, fetch: impl });
 
     expect(calls).toHaveLength(1);
     const url = new URL(calls[0].url);
-    expect(url.hostname).toBe('acme.recruitee.com');
-    expect(url.pathname).toBe('/api/offers');
+    expect(url.hostname).toBe("acme.recruitee.com");
+    expect(url.pathname).toBe("/api/offers");
     expect(calls[0].method).toBe("GET");
+    expect(calls[0].headers.get("authorization")).toBe("Bearer tok_secret_value");
   });
 
   test("classifies an upstream failure instead of throwing a bare Error", async () => {
     const { impl } = stubFetch(`{"error":"nope"}`, { status: 500 });
 
-    await expect(executeJobsListSync({ ...{ company: "acme", accessToken: "tok_secret_value" }, fetch: impl }))
-      .rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+    await expect(executeJobsListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
   });
 
   test("classifies a rate limit and carries retry-after", async () => {
     const { impl } = stubFetch("{}", { status: 429, headers: { "retry-after": "30" } });
 
-    await expect(executeJobsListSync({ ...{ company: "acme", accessToken: "tok_secret_value" }, fetch: impl }))
-      .rejects.toMatchObject({ code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 30 });
+    await expect(executeJobsListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_RATE_LIMITED",
+      retryAfterSeconds: 30,
+    });
   });
 
   test("refuses a redirect rather than following it off the allowed host", async () => {
     const { impl } = stubFetch("", { status: 302, headers: { location: "https://evil.example.net/" } });
 
-    await expect(executeJobsListSync({ ...{ company: "acme", accessToken: "tok_secret_value" }, fetch: impl }))
-      .rejects.toMatchObject({ code: "OUTBOUND_REDIRECT_BLOCKED" });
+    await expect(executeJobsListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
+      code: "OUTBOUND_REDIRECT_BLOCKED",
+    });
   });
 
   test("rejects a tenant value that would steer the request off-host", async () => {
     const { calls, impl } = stubFetch("{}");
 
-    await expect(executeJobsListSync({
-      ...{ company: "acme", accessToken: "tok_secret_value" },
-      company: "evil.example.net/",
-      fetch: impl,
-    })).rejects.toThrow();
+    await expect(
+      executeJobsListSync({ ...auth, company: "evil.example.net/", fetch: impl }),
+    ).rejects.toThrow();
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe("Recruitee candidates.list sync", () => {
+  test("GETs ATS /candidates on api.recruitee.com", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesFixture));
+
+    const result = await executeCandidatesListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.recruitee.com");
+    expect(url.pathname).toBe("/c/acme/candidates");
+    expect(result.candidates).toHaveLength(2);
+    expect(result.candidates[0].id).toBe("rc-candidate:28057517");
+  });
+
+  test("forwards limit/offset/offerId/query", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesFixture));
+
+    await executeCandidatesListSync({
+      ...auth,
+      limit: 10,
+      offset: 20,
+      offerId: "945",
+      query: "jane",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("offset")).toBe("20");
+    expect(url.searchParams.get("offer_id")).toBe("945");
+    expect(url.searchParams.get("query")).toBe("jane");
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 503 });
+    await expect(executeCandidatesListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
+  });
+});
+
+describe("Recruitee offers.list sync", () => {
+  test("GETs ATS /offers (not careers host)", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(offersFixture));
+
+    const result = await executeOffersListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.recruitee.com");
+    expect(url.pathname).toBe("/c/acme/offers");
+    expect(result.offers).toHaveLength(2);
+    expect(result.offers[0].id).toBe("rc-offer:945");
+    expect(result.total).toBe(2);
+  });
+
+  test("forwards scope and view_mode", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(offersFixture));
+
+    await executeOffersListSync({ ...auth, scope: "active", viewMode: "brief", fetch: impl });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("scope")).toBe("active");
+    expect(url.searchParams.get("view_mode")).toBe("brief");
+  });
+});
+
+describe("Recruitee pipeline_stages.list sync", () => {
+  test("reads stages from offer detail when offerId is set", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(offerDetailFixture));
+
+    const result = await executePipelineStagesListSync({
+      ...auth,
+      offerId: "945",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/c/acme/offers/945");
+    expect(result.stages).toHaveLength(2);
+    expect(result.stages[0].id).toBe("rc-stage:19794");
+    expect(result.stages[0].offerId).toBe("945");
+    expect(result.total).toBe(2);
+  });
+
+  test("reads stages from a pipeline template when pipelineTemplateId is set", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(templateDetailFixture));
+
+    const result = await executePipelineStagesListSync({
+      ...auth,
+      pipelineTemplateId: "2438",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/c/acme/pipeline_templates/2438");
+    expect(result.stages).toHaveLength(3);
+    expect(result.stages[2].name).toBe("Hired");
+  });
+
+  test("lists templates then fetches details when no filter is set", async () => {
+    const { calls, impl } = stubFetchRouter([
+      {
+        match: (u) => u.pathname === "/c/acme/pipeline_templates",
+        body: JSON.stringify(templatesListFixture),
+      },
+      {
+        match: (u) => u.pathname === "/c/acme/pipeline_templates/2438",
+        body: JSON.stringify(templateDetailFixture),
+      },
+      {
+        match: (u) => u.pathname === "/c/acme/pipeline_templates/2500",
+        body: JSON.stringify({
+          pipeline_template: {
+            id: 2500,
+            title: "Sales Pipeline",
+            stages: [
+              { id: 30001, name: "Applied", category: "apply", group: "applicants", position: -1 },
+              { id: 19794, name: "Applied", category: "apply", group: "applicants", position: -1 },
+            ],
+          },
+        }),
+      },
+    ]);
+
+    const result = await executePipelineStagesListSync({ ...auth, fetch: impl });
+
+    expect(calls.map((c) => new URL(c.url).pathname)).toEqual([
+      "/c/acme/pipeline_templates",
+      "/c/acme/pipeline_templates/2438",
+      "/c/acme/pipeline_templates/2500",
+    ]);
+    expect(result.stages).toHaveLength(4);
+    expect(result.total).toBe(4);
+  });
+});
+
+describe("Recruitee candidates.get sync", () => {
+  test("GETs ATS /candidates/{id}", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidateGetFixture));
+
+    const result = await executeCandidatesGetSync({ ...auth, id: "27746490", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.recruitee.com");
+    expect(url.pathname).toBe("/c/acme/candidates/27746490");
+    expect(result.candidate?.id).toBe("rc-candidate:27746490");
+    expect(result.candidate?.name).toBe("John Smith");
+  });
+
+  test("rejects unsafe id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeCandidatesGetSync({ ...auth, id: "../evil", fetch: impl }),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 404 });
+    await expect(
+      executeCandidatesGetSync({ ...auth, id: "1", fetch: impl }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Recruitee candidates.search sync", () => {
+  test("GETs ATS /search/new/candidates", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+
+    const result = await executeCandidatesSearchSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.recruitee.com");
+    expect(url.pathname).toBe("/c/acme/search/new/candidates");
+    expect(result.candidates).toHaveLength(2);
+    expect(result.total).toBe(2);
+    expect(result.candidates[0].placements[0].offerId).toBe("433778");
+  });
+
+  test("maps query into filters_json and forwards pagination", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+
+    await executeCandidatesSearchSync({
+      ...auth,
+      query: "Stephanie",
+      limit: 25,
+      page: 2,
+      sortBy: "created_at_desc",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("limit")).toBe("25");
+    expect(url.searchParams.get("page")).toBe("2");
+    expect(url.searchParams.get("sort_by")).toBe("created_at_desc");
+    expect(url.searchParams.get("filters_json")).toBe(
+      JSON.stringify([{ field: "all", query: "Stephanie" }]),
+    );
+  });
+
+  test("prefers explicit filtersJson over query", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+    const filtersJson = JSON.stringify([{ field: "source", in: ["manual"] }]);
+
+    await executeCandidatesSearchSync({
+      ...auth,
+      query: "ignored",
+      filtersJson,
+      fetch: impl,
+    });
+
+    expect(new URL(calls[0].url).searchParams.get("filters_json")).toBe(filtersJson);
+  });
+});
+
+describe("Recruitee interview_events.list sync", () => {
+  test("GETs ATS /interview/events", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewEventsFixture));
+
+    const result = await executeInterviewEventsListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.recruitee.com");
+    expect(url.pathname).toBe("/c/acme/interview/events");
+    expect(result.events).toHaveLength(2);
+    expect(result.events[0].id).toBe("rc-interview-event:114");
+    expect(result.upcoming).toBe(2);
+    expect(result.pastDue).toBe(0);
+  });
+
+  test("forwards candidate/date/admin filters", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewEventsFixture));
+
+    await executeInterviewEventsListSync({
+      ...auth,
+      candidateId: "406",
+      startDate: "2024-06-01",
+      endDate: "2024-07-31",
+      timezone: "Europe/Amsterdam",
+      scope: "all",
+      status: "upcoming",
+      adminIds: "2390",
+      limit: 10,
+      page: 1,
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("candidate_id")).toBe("406");
+    expect(url.searchParams.get("start_date")).toBe("2024-06-01");
+    expect(url.searchParams.get("end_date")).toBe("2024-07-31");
+    expect(url.searchParams.get("timezone")).toBe("Europe/Amsterdam");
+    expect(url.searchParams.get("scope")).toBe("all");
+    expect(url.searchParams.get("status")).toBe("upcoming");
+    expect(url.searchParams.get("admin_ids")).toBe("2390");
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("page")).toBe("1");
   });
 });

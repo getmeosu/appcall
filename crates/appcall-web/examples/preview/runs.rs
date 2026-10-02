@@ -15,7 +15,7 @@ const RUN_STATUSES: &[&str] = &[
 
 pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Value, Error> {
     if matches!(scenario, Scenario::RunsUnavailable | Scenario::Unavailable) {
-        return Ok(json!({"synthetic":true,"unavailable":true}));
+        return Ok(json!({"synthetic":true,"status":"unavailable"}));
     }
     if scenario == Scenario::RunsMalformed {
         return Ok(
@@ -31,7 +31,7 @@ pub fn runs_fixture(scenario: Scenario, request: &DashboardRequest) -> Result<Va
             | Scenario::RunHistory
             | Scenario::RunHistoryOperator
     ) {
-        return Ok(json!({"synthetic":true,"unavailable":true}));
+        return Ok(json!({"synthetic":true,"status":"unavailable"}));
     }
     let empty = matches!(scenario, Scenario::RunsEmpty | Scenario::Empty);
     let operator_controls_available = matches!(

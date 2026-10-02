@@ -8,6 +8,9 @@ fn browser_classifier_and_parser_do_not_create_an_api_auth_bypass() {
     assert!(public_path("POST", "/app/settings/team/u/remove"));
     assert!(public_path("GET", "/app/syncs"));
     assert!(public_path("POST", "/app/syncs/run_1/cancel"));
+    assert!(public_path("GET", "/app/workflows/runs/run_1"));
+    assert!(!public_path("GET", "/app/workflows/runs/run_1/extra"));
+    assert!(!public_path("POST", "/app/workflows/runs/run_1"));
     assert!(public_path("GET", "/app/action-claims"));
     assert!(public_path("POST", "/app/action-claims/reconcile"));
     assert!(public_path("POST", "/app/users/u/remove"));

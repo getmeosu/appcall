@@ -1,11 +1,31 @@
 {
   "key": "lever",
   "name": "Lever",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "runtime": "bun",
-  "categories": ["ats-recruitment"],
+  "categories": [
+    "ats-recruitment"
+  ],
   "auth": {
-    "type": "none"
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Lever API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "region",
+          "label": "Region (co or eu)",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
   },
   "network": {
     "allowedHosts": [
@@ -13,20 +33,97 @@
       "api.lever.eu"
     ]
   },
+  "http": {
+    "baseUrl": "https://api.lever.{{region}}/v1",
+    "auth": {
+      "in": "header",
+      "name": "Authorization",
+      "field": "apiKey",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": ""
+      }
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
+  },
   "operations": {
     "jobs.list": {
       "kind": "sync",
       "timeoutMs": 30000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880
+      "maxResponseBytes": 5242880,
+      "title": "List jobs",
+      "description": "List public job postings via GET /v0/postings/{site}."
+    },
+    "opportunities.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List opportunities",
+      "description": "List candidate opportunities via authenticated GET /v1/opportunities. Optional limit, offset, email, tag, stageId, postingId, and archived filters."
+    },
+    "opportunities.get": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get opportunity",
+      "description": "Fetch a single opportunity via authenticated GET /v1/opportunities/{id}."
+    },
+    "opportunities.interviews.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List opportunity interviews",
+      "description": "List interviews for an opportunity via authenticated GET /v1/opportunities/{id}/interviews. Optional limit and offset."
+    },
+    "opportunities.feedback.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List opportunity feedback",
+      "description": "List feedback forms for an opportunity via authenticated GET /v1/opportunities/{id}/feedback. Optional limit and offset."
+    },
+    "stages.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List stages",
+      "description": "List pipeline stages via authenticated GET /v1/stages. Optional limit and offset."
+    },
+    "users.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List account users via authenticated GET /v1/users. Optional limit, offset, email, and accessRole filters."
     },
     "healthcheck": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
       "title": "Healthcheck",
-      "description": "Verify connectivity and credentials for the Lever connector. Takes no input and returns the connector health status.",
+      "description": "Validate Lever credentials with GET /opportunities?limit=1.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -34,16 +131,37 @@
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
         "properties": {
-          "status": {
-            "type": "string",
-            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          "data": {
+            "type": "object"
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
     }
   },
   "models": [
-    "job"
+    "job",
+    "opportunity",
+    "stage",
+    "user",
+    "interview",
+    "feedback"
   ]
 }

@@ -396,11 +396,27 @@ pub fn state(tone: Tone, label: &str) -> String {
     };
     format!("<span class=\"ui-state ui-state-{tone}\"><span class=\"ui-state-rule\" aria-hidden=\"true\"></span>{}</span>",escape(label))
 }
+#[derive(Clone, Copy)]
+pub enum EmptyStateRole {
+    /// Quiet empty / filtered-empty surfaces.
+    Status,
+    /// Unavailable or failed reads.
+    Alert,
+}
+impl EmptyStateRole {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Status => "status",
+            Self::Alert => "alert",
+        }
+    }
+}
 pub struct EmptyState<'a> {
     pub title: &'a str,
     pub body: &'a str,
     pub action_label: &'a str,
     pub action_href: LocalPath<'a>,
+    pub role: EmptyStateRole,
 }
 impl EmptyState<'_> {
     pub fn render(&self) -> String {
@@ -409,10 +425,11 @@ impl EmptyState<'_> {
             ..Button::new(self.action_label)
         };
         format!(
-            "<section class=\"ui-empty-state\"><h3>{}</h3><p>{}</p>{}</section>",
+            "<section class=\"ui-empty-state\" role=\"{role}\" aria-live=\"polite\"><h3>{}</h3><p>{}</p>{}</section>",
             escape(self.title),
             escape(self.body),
-            button.render()
+            button.render(),
+            role = self.role.as_str(),
         )
     }
 }
