@@ -192,7 +192,7 @@ fn reopen_rejects_malformed_running_record_without_rewriting_it() {
     connection
         .execute(
             "UPDATE engine_runs
-                SET state='running',wakeup=?1,record=?2
+                SET state='running',wakeup=?1,record=?2,recoverable=1
               WHERE id=?3",
             rusqlite::params![4_242_i64, &raw, "malformed"],
         )

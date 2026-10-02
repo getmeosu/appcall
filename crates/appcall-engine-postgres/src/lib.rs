@@ -1,9 +1,8 @@
 //! Optional server backend. It is not linked into the default embedded build.
 use appcall_engine::*;
-use postgres::{fallible_iterator::FallibleIterator, types::ToSql, Client, Transaction};
+use postgres::{types::ToSql, Client, Transaction};
 use std::sync::{Mutex, MutexGuard};
 const OWNER_LOCK: i64 = 0x61707063616c6c;
-const RECOVERY_BATCH_SIZE: i64 = 64;
 /// A single host-configured session; TLS and credentials stay with its Client.
 /// Session advisory ownership is exclusive for this engine database. Use a
 /// dedicated database/schema with a stable search_path and direct sessions,
@@ -21,10 +20,28 @@ impl PostgresStore {
         if !owned {
             return Err(Error::Conflict);
         }
-        client.batch_execute("SET synchronous_commit=on; CREATE TABLE IF NOT EXISTS appcall_workflow_owner(id INTEGER PRIMARY KEY CHECK(id=1),epoch BIGINT NOT NULL);
+        client
+            .batch_execute(
+                "SET synchronous_commit=on; CREATE TABLE IF NOT EXISTS appcall_workflow_owner(id INTEGER PRIMARY KEY CHECK(id=1),epoch BIGINT NOT NULL);
             INSERT INTO appcall_workflow_owner VALUES(1,0) ON CONFLICT DO NOTHING;
-            CREATE TABLE IF NOT EXISTS appcall_workflow_runs(id TEXT PRIMARY KEY,revision BIGINT NOT NULL,state TEXT NOT NULL,wakeup BIGINT,record BYTEA NOT NULL CHECK(octet_length(record)<=1048576));
-            CREATE INDEX IF NOT EXISTS appcall_workflow_wakeup ON appcall_workflow_runs(state,wakeup);").map_err(safe)?;
+            CREATE TABLE IF NOT EXISTS appcall_workflow_runs(
+                id TEXT PRIMARY KEY,
+                revision BIGINT NOT NULL,
+                state TEXT NOT NULL,
+                wakeup BIGINT,
+                record BYTEA NOT NULL CHECK(octet_length(record)<=1048576),
+                recoverable BOOLEAN NOT NULL DEFAULT FALSE
+            );
+            CREATE INDEX IF NOT EXISTS appcall_workflow_wakeup ON appcall_workflow_runs(state,wakeup);",
+            )
+            .map_err(safe)?;
+        ensure_recoverable_column(&mut client)?;
+        client
+            .batch_execute(
+                "CREATE INDEX IF NOT EXISTS appcall_workflow_recoverable
+                    ON appcall_workflow_runs(state, recoverable) WHERE recoverable;",
+            )
+            .map_err(safe)?;
         let mut tx = client.transaction().map_err(safe)?;
         let epoch: i64 = tx
             .query_one(
@@ -77,52 +94,94 @@ fn requires_recovery(run: &RunRecord) -> bool {
             )
         })
 }
-fn recover_running(tx: &mut Transaction<'_>) -> Result<()> {
-    let mut cursor = String::new();
-    loop {
-        let (recovery_ids, next_cursor) = {
-            let params: [&(dyn ToSql + Sync); 2] =
-                [&cursor as &(dyn ToSql + Sync), &RECOVERY_BATCH_SIZE];
-            let mut rows = tx
-                .query_raw(
-                    "SELECT id,record FROM appcall_workflow_runs
-                     WHERE state='running' AND id>$1
-                     ORDER BY id LIMIT $2",
-                    params,
+fn recoverable_flag(run: &RunRecord) -> bool {
+    requires_recovery(run)
+}
+/// Add recoverable to pre-column schemas and backfill once from record blobs.
+fn ensure_recoverable_column(client: &mut Client) -> Result<()> {
+    let exists: bool = client
+        .query_one(
+            "SELECT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name='appcall_workflow_runs'
+                  AND column_name='recoverable'
+             )",
+            &[],
+        )
+        .map_err(safe)?
+        .get(0);
+    if exists {
+        return Ok(());
+    }
+    client
+        .batch_execute(
+            "ALTER TABLE appcall_workflow_runs
+                 ADD COLUMN recoverable BOOLEAN NOT NULL DEFAULT FALSE;",
+        )
+        .map_err(safe)?;
+    let rows = client
+        .query(
+            "SELECT id,record FROM appcall_workflow_runs WHERE state='running'",
+            &[],
+        )
+        .map_err(safe)?;
+    for row in rows {
+        let id: String = row.get(0);
+        let record: Vec<u8> = row.get(1);
+        if requires_recovery(&decode_record(&record)?) {
+            client
+                .execute(
+                    "UPDATE appcall_workflow_runs
+                     SET recoverable=TRUE, wakeup=0
+                     WHERE id=$1 AND state='running'",
+                    &[&id],
                 )
                 .map_err(safe)?;
-            let mut recovery_ids = Vec::with_capacity(RECOVERY_BATCH_SIZE as usize);
-            let mut next_cursor = None;
-            while let Some(row) = rows.next().map_err(safe)? {
-                let id: String = row.get(0);
-                let record: Vec<u8> = row.get(1);
-                next_cursor = Some(id.clone());
-                let recover = requires_recovery(&decode_record(&record)?);
-                if recover {
-                    recovery_ids.push(id);
-                }
-            }
-            (recovery_ids, next_cursor)
-        };
-        let Some(next_cursor) = next_cursor else {
-            break;
-        };
-        for id in recovery_ids {
-            tx.execute(
-                "UPDATE appcall_workflow_runs SET wakeup=0 WHERE id=$1 AND state='running'",
-                &[&id],
-            )
-            .map_err(safe)?;
         }
-        cursor = next_cursor;
+    }
+    Ok(())
+}
+/// Indexed visit of the recoverable subset (O(K)): validate blob, bump wakeup.
+/// Passive waits (recoverable=false) are not decoded on open.
+fn recover_running(tx: &mut Transaction<'_>) -> Result<()> {
+    let rows = tx
+        .query(
+            "SELECT id,record FROM appcall_workflow_runs
+             WHERE state='running' AND recoverable
+               AND wakeup IS DISTINCT FROM 0",
+            &[],
+        )
+        .map_err(safe)?;
+    let mut recovery_ids = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let id: String = row.get(0);
+        let record: Vec<u8> = row.get(1);
+        let _ = requires_recovery(&decode_record(&record)?);
+        recovery_ids.push(id);
+    }
+    for id in recovery_ids {
+        tx.execute(
+            "UPDATE appcall_workflow_runs SET wakeup=0 WHERE id=$1 AND state='running'",
+            &[&id],
+        )
+        .map_err(safe)?;
     }
     Ok(())
 }
 fn insert(tx: &mut Transaction<'_>, run: &RunRecord) -> Result<()> {
     let revision = i64::try_from(run.revision).map_err(|_| Error::Limit)?;
     tx.execute(
-        "INSERT INTO appcall_workflow_runs VALUES($1,$2,$3,$4,$5)",
-        &[&run.id, &revision, &state(run), &run.wakeup, &encoded(run)?],
+        "INSERT INTO appcall_workflow_runs(id,revision,state,wakeup,record,recoverable)
+         VALUES($1,$2,$3,$4,$5,$6)",
+        &[
+            &run.id as &(dyn ToSql + Sync),
+            &revision,
+            &state(run),
+            &run.wakeup,
+            &encoded(run)?,
+            &recoverable_flag(run),
+        ],
     )
     .map_err(safe)?;
     Ok(())
@@ -172,7 +231,22 @@ impl Store for PostgresStore {
         let mut client = self.client()?;
         let mut tx = client.transaction().map_err(safe)?;
         fence(&mut tx, self.epoch)?;
-        let count=tx.execute("UPDATE appcall_workflow_runs SET revision=$2,state=$3,wakeup=$4,record=$5 WHERE id=$1 AND revision=$6",&[&run.id,&revision,&state(run),&run.wakeup,&encoded(run)?,&expected]).map_err(safe)?;
+        let count = tx
+            .execute(
+                "UPDATE appcall_workflow_runs
+                 SET revision=$2,state=$3,wakeup=$4,record=$5,recoverable=$6
+                 WHERE id=$1 AND revision=$7",
+                &[
+                    &run.id as &(dyn ToSql + Sync),
+                    &revision,
+                    &state(run),
+                    &run.wakeup,
+                    &encoded(run)?,
+                    &recoverable_flag(run),
+                    &expected,
+                ],
+            )
+            .map_err(safe)?;
         if count != 1 {
             return Err(Error::Conflict);
         }
@@ -200,7 +274,18 @@ impl Store for PostgresStore {
         if limit == 0 || limit > 256 {
             return Err(Error::Limit);
         }
-        Ok(self.client()?.query("SELECT id FROM appcall_workflow_runs WHERE state='running' AND wakeup<=$1 ORDER BY wakeup,id LIMIT $2",&[&now_ms,&(limit as i64)]).map_err(safe)?.iter().map(|row|row.get(0)).collect())
+        Ok(self
+            .client()?
+            .query(
+                "SELECT id FROM appcall_workflow_runs
+                 WHERE state='running' AND wakeup<=$1
+                 ORDER BY wakeup,id LIMIT $2",
+                &[&now_ms, &(limit as i64)],
+            )
+            .map_err(safe)?
+            .iter()
+            .map(|row| row.get(0))
+            .collect())
     }
     fn next_wakeup(&self) -> Result<Option<i64>> {
         Ok(self

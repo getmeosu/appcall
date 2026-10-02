@@ -61,26 +61,42 @@ impl SqliteStore {
             .map_err(|_| Error::Unavailable)?;
         owner.try_lock_exclusive().map_err(|_| Error::Conflict)?;
         let connection = Connection::open(canonical)?;
-        connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA cache_size=-256; PRAGMA mmap_size=0; PRAGMA temp_store=FILE; PRAGMA wal_autocheckpoint=64;
+        connection.execute_batch(
+            "PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA cache_size=-256; PRAGMA mmap_size=0; PRAGMA temp_store=FILE; PRAGMA wal_autocheckpoint=64;
             CREATE TABLE IF NOT EXISTS engine_owner (id INTEGER PRIMARY KEY CHECK(id=1), epoch INTEGER NOT NULL);
             INSERT INTO engine_owner VALUES(1,0) ON CONFLICT DO NOTHING;
             UPDATE engine_owner SET epoch=epoch+1 WHERE id=1;
-            CREATE TABLE IF NOT EXISTS engine_runs (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, state TEXT NOT NULL, wakeup INTEGER, record BLOB NOT NULL);
-            CREATE INDEX IF NOT EXISTS engine_runs_wakeup ON engine_runs(state,wakeup);")?;
-        // A recoverable task can share a run's future timer wakeup. Inspect
-        // durable task state rather than using wakeup as a recovery filter so
-        // ready work is requeued promptly while passive waits stay asleep.
+            CREATE TABLE IF NOT EXISTS engine_runs (
+                id TEXT PRIMARY KEY,
+                revision INTEGER NOT NULL,
+                state TEXT NOT NULL,
+                wakeup INTEGER,
+                record BLOB NOT NULL,
+                recoverable INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS engine_runs_wakeup ON engine_runs(state,wakeup);",
+        )?;
+        ensure_recoverable_column(&connection)?;
+        connection.execute_batch(
+            "CREATE INDEX IF NOT EXISTS engine_runs_recoverable
+                ON engine_runs(state, recoverable) WHERE recoverable=1;",
+        )?;
+        // Recoverable is denormalized on insert/commit. Open only visits the
+        // indexed recoverable subset (O(K), not O(N) running), validates the
+        // blob, then bumps wakeup — passive waits are not decoded.
         let recovery_ids: Vec<String> = {
-            let mut statement =
-                connection.prepare("SELECT id,record FROM engine_runs WHERE state='running'")?;
+            let mut statement = connection.prepare(
+                "SELECT id,record FROM engine_runs
+                 WHERE state='running' AND recoverable=1
+                   AND IFNULL(wakeup, -1) != 0",
+            )?;
             let mut rows = statement.query([])?;
             let mut recovery_ids = Vec::new();
             while let Some(row) = rows.next()? {
                 let id: String = row.get(0)?;
                 let record: Vec<u8> = row.get(1)?;
-                if requires_recovery(&decode_record(&record)?) {
-                    recovery_ids.push(id);
-                }
+                let _ = requires_recovery(&decode_record(&record)?);
+                recovery_ids.push(id);
             }
             recovery_ids
         };
@@ -99,6 +115,49 @@ impl SqliteStore {
             epoch,
         })
     }
+}
+/// Add `recoverable` to pre-column databases and backfill once from record blobs.
+fn ensure_recoverable_column(connection: &Connection) -> Result<()> {
+    let mut stmt = connection.prepare("PRAGMA table_info(engine_runs)")?;
+    let mut has = false;
+    let mut rows = stmt.query([])?;
+    while let Some(row) = rows.next()? {
+        let name: String = row.get(1)?;
+        if name == "recoverable" {
+            has = true;
+            break;
+        }
+    }
+    drop(rows);
+    drop(stmt);
+    if has {
+        return Ok(());
+    }
+    connection.execute_batch(
+        "ALTER TABLE engine_runs ADD COLUMN recoverable INTEGER NOT NULL DEFAULT 0;",
+    )?;
+    // One-time upgrade backfill: decode running blobs, set flag + wakeup.
+    let recovery: Vec<(String, bool)> = {
+        let mut statement =
+            connection.prepare("SELECT id,record FROM engine_runs WHERE state='running'")?;
+        let mut rows = statement.query([])?;
+        let mut out = Vec::new();
+        while let Some(row) = rows.next()? {
+            let id: String = row.get(0)?;
+            let record: Vec<u8> = row.get(1)?;
+            out.push((id, requires_recovery(&decode_record(&record)?)));
+        }
+        out
+    };
+    for (id, recover) in recovery {
+        if recover {
+            connection.execute(
+                "UPDATE engine_runs SET recoverable=1, wakeup=0 WHERE id=?1 AND state='running'",
+                [id],
+            )?;
+        }
+    }
+    Ok(())
 }
 fn encoded(run: &RunRecord) -> Result<Vec<u8>> {
     let bytes = serde_json::to_vec(run).map_err(|_| Error::Invalid("record encoding"))?;
@@ -126,6 +185,9 @@ fn requires_recovery(run: &RunRecord) -> bool {
             )
         })
 }
+fn recoverable_flag(run: &RunRecord) -> i64 {
+    i64::from(requires_recovery(run))
+}
 impl Store for SqliteStore {
     fn owner_epoch(&self) -> u64 {
         self.epoch
@@ -144,8 +206,16 @@ impl Store for SqliteStore {
         let revision = i64::try_from(run.revision).map_err(|_| Error::Limit)?;
         self.connection
             .execute(
-                "INSERT INTO engine_runs VALUES (?1,?2,?3,?4,?5)",
-                params![run.id, revision, state(run), run.wakeup, encoded(run)?],
+                "INSERT INTO engine_runs(id,revision,state,wakeup,record,recoverable)
+                 VALUES (?1,?2,?3,?4,?5,?6)",
+                params![
+                    run.id,
+                    revision,
+                    state(run),
+                    run.wakeup,
+                    encoded(run)?,
+                    recoverable_flag(run)
+                ],
             )
             .map_err(|e| {
                 if e.sqlite_error_code() == Some(rusqlite::ErrorCode::ConstraintViolation) {
@@ -163,19 +233,33 @@ impl Store for SqliteStore {
         let revision = i64::try_from(run.revision).map_err(|_| Error::Limit)?;
         let expected = i64::try_from(expected).map_err(|_| Error::Limit)?;
         let tx = self.connection.transaction()?;
-        let n = tx.execute("UPDATE engine_runs SET revision=?2,state=?3,wakeup=?4,record=?5 WHERE id=?1 AND revision=?6", params![run.id,revision,state(run),run.wakeup,encoded(run)?,expected])?;
+        let n = tx.execute(
+            "UPDATE engine_runs SET revision=?2,state=?3,wakeup=?4,record=?5,recoverable=?6
+             WHERE id=?1 AND revision=?7",
+            params![
+                run.id,
+                revision,
+                state(run),
+                run.wakeup,
+                encoded(run)?,
+                recoverable_flag(run),
+                expected
+            ],
+        )?;
         if n != 1 {
             return Err(Error::Conflict);
         }
         for child in children {
             tx.execute(
-                "INSERT INTO engine_runs VALUES (?1,?2,?3,?4,?5)",
+                "INSERT INTO engine_runs(id,revision,state,wakeup,record,recoverable)
+                 VALUES (?1,?2,?3,?4,?5,?6)",
                 params![
                     child.id,
                     child.revision,
                     state(child),
                     child.wakeup,
-                    encoded(child)?
+                    encoded(child)?,
+                    recoverable_flag(child)
                 ],
             )
             .map_err(|error| {

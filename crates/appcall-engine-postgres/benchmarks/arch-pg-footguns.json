@@ -1,6 +1,6 @@
 {
   "suite": "arch-pg-footguns",
-  "note": "Code-inspected evidence; live WAL/TOAST and open-scan timings require APPCALL_ENGINE_POSTGRES_URL (see ignored contract tests). No multi-worker SKIP LOCKED.",
+  "note": "Code-inspected evidence; live WAL/TOAST timings require APPCALL_ENGINE_POSTGRES_URL. Open-scan visits only recoverable=true via index (O(K)), validates blob, bumps wakeup. Passive waits are not decoded. No multi-worker SKIP LOCKED.",
   "session_advisory_required": true,
   "txn_pooling_rejected": true,
   "evidence": {
@@ -9,7 +9,7 @@
     "record_cap_bytes": 1048576,
     "record_cap_enforced": "CREATE TABLE ... record BYTEA NOT NULL CHECK(octet_length(record)<=1048576) plus encoded() Limit",
     "blob_rewrite_vs_history_depth": "SKIPPED_NO_LIVE_PG — full-row BYTEA rewrite on every commit; cost grows with serde size of history (same 1MiB cap as SQLite)",
-    "open_scan_at_n_running": "SKIPPED_NO_LIVE_PG — recover_running pages running rows in RECOVERY_BATCH_SIZE=64 ordered by id; runnable() filters state=running AND wakeup<=now ORDER BY wakeup,id LIMIT",
+    "open_scan_at_n_running": "recover_running SELECTs id,record WHERE state=running AND recoverable (indexed); O(K) not O(N). Denormalized recoverable on insert/commit. Passive waits skipped.",
     "skip_locked_multi_worker": false
   }
 }
