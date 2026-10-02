@@ -1,7 +1,7 @@
 {
   "key": "new-relic",
   "name": "New Relic",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -29,7 +29,9 @@
   },
   "models": [
     "user",
-    "alert-policy"
+    "alert-policy",
+    "application",
+    "alert-condition"
   ],
   "http": {
     "baseUrl": "https://api.newrelic.com",
@@ -47,7 +49,11 @@
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error",
-        "message"
+        "message",
+        "errors.0.message"
+      ],
+      "bodyErrorPaths": [
+        "errors"
       ]
     }
   },
@@ -134,6 +140,169 @@
         "query": {
           "page": "{{page}}",
           "filter[name]": "{{name}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "enforceOutputSchema": true
+    },
+    "applications.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List New Relic APM applications.",
+      "description": "List New Relic APM applications via REST v2.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/applications.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "filter[name]": "{{name}}"
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "enforceOutputSchema": true
+    },
+    "nrql.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Execute a NRQL query via NerdGraph.",
+      "description": "Run a NRQL query against a New Relic account using NerdGraph POST /graphql.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "accountId",
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graphql",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "query": "query ($accountId: Int!, $query: Nrql!) { actor { account(id: $accountId) { nrql(query: $query) { results } } } }",
+          "variables": {
+            "accountId": "{{accountId}}",
+            "query": "{{query}}"
+          }
+        }
+      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "enforceOutputSchema": true
+    },
+    "alert-conditions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List New Relic alert conditions for a policy.",
+      "description": "List APM/browser/mobile alert conditions under an alert policy via REST v2.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "policyId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "policyId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/alerts_conditions.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "policy_id": "{{policyId}}",
+          "page": "{{page}}"
         }
       },
       "validationMode": "strict-generated",

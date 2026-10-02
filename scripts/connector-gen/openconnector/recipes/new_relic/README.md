@@ -1,3 +1,3 @@
 # New Relic recipe
 
-Read-only alert-policy REST listing using the documented Api-Key header. Live authentication is unverified.
+Read-only APM applications, NRQL (NerdGraph), and alert policy/condition listing using the documented Api-Key header on `api.newrelic.com`. Live authentication is unverified.
