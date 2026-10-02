@@ -165,4 +165,18 @@ describe("github S6 search-users-orgs", () => {
       }),
     ).rejects.toMatchObject({ code: "CONNECTOR_RATE_LIMITED" });
   });
+
+  test("maps 429 to rate limit on getAuthenticatedUser", async () => {
+    await expect(
+      getAuthenticatedUser({
+        accessToken: "ghp_test",
+        fetch: async () => new Response("{}", { status: 429, headers: { "retry-after": "30" } }),
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_RATE_LIMITED" });
+  });
+
+  test("rejects non-string users.repos.list filters", () => {
+    expect(() => validateListUserReposInput({ username: "octocat", type: 1 })).toThrow(/type must be a string/);
+    expect(() => validateListUserReposInput({ username: "octocat", sort: 1 })).toThrow(/sort must be a string/);
+  });
 });
