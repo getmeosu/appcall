@@ -2,14 +2,20 @@ import { describe, expect, test } from "bun:test";
 import {
   executeJobsListSync,
   executeCandidatesListSync,
+  executeCandidatesGetSync,
+  executeCandidatesSearchSync,
   executeOffersListSync,
   executePipelineStagesListSync,
+  executeInterviewEventsListSync,
 } from "../src/sync";
 import candidatesFixture from "../fixtures/candidates_list.json";
+import candidateGetFixture from "../fixtures/candidate_get.json";
+import candidatesSearchFixture from "../fixtures/candidates_search.json";
 import offersFixture from "../fixtures/offers_list.json";
 import templatesListFixture from "../fixtures/pipeline_templates_list.json";
 import templateDetailFixture from "../fixtures/pipeline_template_detail.json";
 import offerDetailFixture from "../fixtures/offer_detail_stages.json";
+import interviewEventsFixture from "../fixtures/interview_events_list.json";
 
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
   const calls: Request[] = [];
@@ -222,5 +228,132 @@ describe("Recruitee pipeline_stages.list sync", () => {
     ]);
     expect(result.stages).toHaveLength(4);
     expect(result.total).toBe(4);
+  });
+});
+
+describe("Recruitee candidates.get sync", () => {
+  test("GETs ATS /candidates/{id}", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidateGetFixture));
+
+    const result = await executeCandidatesGetSync({ ...auth, id: "27746490", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.recruitee.com");
+    expect(url.pathname).toBe("/c/acme/candidates/27746490");
+    expect(result.candidate?.id).toBe("rc-candidate:27746490");
+    expect(result.candidate?.name).toBe("John Smith");
+  });
+
+  test("rejects unsafe id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeCandidatesGetSync({ ...auth, id: "../evil", fetch: impl }),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 404 });
+    await expect(
+      executeCandidatesGetSync({ ...auth, id: "1", fetch: impl }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Recruitee candidates.search sync", () => {
+  test("GETs ATS /search/new/candidates", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+
+    const result = await executeCandidatesSearchSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.recruitee.com");
+    expect(url.pathname).toBe("/c/acme/search/new/candidates");
+    expect(result.candidates).toHaveLength(2);
+    expect(result.total).toBe(2);
+    expect(result.candidates[0].placements[0].offerId).toBe("433778");
+  });
+
+  test("maps query into filters_json and forwards pagination", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+
+    await executeCandidatesSearchSync({
+      ...auth,
+      query: "Stephanie",
+      limit: 25,
+      page: 2,
+      sortBy: "created_at_desc",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("limit")).toBe("25");
+    expect(url.searchParams.get("page")).toBe("2");
+    expect(url.searchParams.get("sort_by")).toBe("created_at_desc");
+    expect(url.searchParams.get("filters_json")).toBe(
+      JSON.stringify([{ field: "all", query: "Stephanie" }]),
+    );
+  });
+
+  test("prefers explicit filtersJson over query", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+    const filtersJson = JSON.stringify([{ field: "source", in: ["manual"] }]);
+
+    await executeCandidatesSearchSync({
+      ...auth,
+      query: "ignored",
+      filtersJson,
+      fetch: impl,
+    });
+
+    expect(new URL(calls[0].url).searchParams.get("filters_json")).toBe(filtersJson);
+  });
+});
+
+describe("Recruitee interview_events.list sync", () => {
+  test("GETs ATS /interview/events", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewEventsFixture));
+
+    const result = await executeInterviewEventsListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.recruitee.com");
+    expect(url.pathname).toBe("/c/acme/interview/events");
+    expect(result.events).toHaveLength(2);
+    expect(result.events[0].id).toBe("rc-interview-event:114");
+    expect(result.upcoming).toBe(2);
+    expect(result.pastDue).toBe(0);
+  });
+
+  test("forwards candidate/date/admin filters", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewEventsFixture));
+
+    await executeInterviewEventsListSync({
+      ...auth,
+      candidateId: "406",
+      startDate: "2024-06-01",
+      endDate: "2024-07-31",
+      timezone: "Europe/Amsterdam",
+      scope: "all",
+      status: "upcoming",
+      adminIds: "2390",
+      limit: 10,
+      page: 1,
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("candidate_id")).toBe("406");
+    expect(url.searchParams.get("start_date")).toBe("2024-06-01");
+    expect(url.searchParams.get("end_date")).toBe("2024-07-31");
+    expect(url.searchParams.get("timezone")).toBe("Europe/Amsterdam");
+    expect(url.searchParams.get("scope")).toBe("all");
+    expect(url.searchParams.get("status")).toBe("upcoming");
+    expect(url.searchParams.get("admin_ids")).toBe("2390");
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("page")).toBe("1");
   });
 });

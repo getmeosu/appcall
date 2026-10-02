@@ -140,6 +140,9 @@ interface RecruiteePlacement {
   id?: number | string;
   offer_id?: number | string | null;
   stage_id?: number | string | null;
+  /** Search hits nest offer/stage objects instead of flat *_id fields. */
+  offer?: { id?: number | string | null } | null;
+  stage?: { id?: number | string | null } | null;
 }
 
 interface RecruiteeCandidate {
@@ -170,8 +173,8 @@ export function normalizeCandidate(candidate: RecruiteeCandidate): NormalizedCan
         if (!id) return null;
         return {
           id,
-          offerId: asStringId(p.offer_id ?? null),
-          stageId: asStringId(p.stage_id ?? null),
+          offerId: asStringId(p.offer_id ?? p.offer?.id ?? null),
+          stageId: asStringId(p.stage_id ?? p.stage?.id ?? null),
         };
       })
       .filter((p): p is NonNullable<typeof p> => p != null),
@@ -343,4 +346,127 @@ export function dedupeStages(stages: NormalizedPipelineStage[]): NormalizedPipel
     out.push(stage);
   }
   return out;
+}
+
+export function parseCandidateGetResponse(raw: unknown): {
+  candidate: NormalizedCandidate | null;
+} {
+  const data = raw as { candidate?: RecruiteeCandidate | null };
+  if (!data.candidate || data.candidate.id == null) {
+    return { candidate: null };
+  }
+  return { candidate: normalizeCandidate(data.candidate) };
+}
+
+export function parseCandidatesSearchResponse(raw: unknown): {
+  candidates: NormalizedCandidate[];
+  total: number | null;
+} {
+  const data = raw as {
+    hits?: RecruiteeCandidate[];
+    candidates?: RecruiteeCandidate[];
+    total?: number;
+  };
+  const hits = Array.isArray(data.hits)
+    ? data.hits
+    : Array.isArray(data.candidates)
+      ? data.candidates
+      : [];
+  return {
+    candidates: hits.map(normalizeCandidate),
+    total: typeof data.total === "number" ? data.total : null,
+  };
+}
+
+export interface NormalizedInterviewEvent {
+  id: string;
+  provider: string;
+  kind: string | null;
+  candidateId: string | null;
+  offerId: string | null;
+  stageId: string | null;
+  startsAt: string | null;
+  durationMinutes: number | null;
+  location: string | null;
+  timezone: string | null;
+  adminIds: string[];
+  eventUrl: string | null;
+  scheduled: boolean | null;
+  note: string | null;
+  publicNote: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface RecruiteeInterviewEvent {
+  id: number | string;
+  kind?: string | null;
+  candidate_id?: number | string | null;
+  offer_id?: number | string | null;
+  stage_id?: number | string | null;
+  starts_at?: string | null;
+  duration?: number | null;
+  location?: string | null;
+  timezone?: string | null;
+  admin_ids?: unknown;
+  event_url?: string | null;
+  scheduled?: boolean | null;
+  note?: string | null;
+  public_note?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+function asStringIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  for (const item of value) {
+    const id = asStringId(item);
+    if (id) out.push(id);
+  }
+  return out;
+}
+
+export function normalizeInterviewEvent(event: RecruiteeInterviewEvent): NormalizedInterviewEvent {
+  return {
+    id: `rc-interview-event:${event.id}`,
+    provider: "recruitee",
+    kind: event.kind ?? null,
+    candidateId: asStringId(event.candidate_id ?? null),
+    offerId: asStringId(event.offer_id ?? null),
+    stageId: asStringId(event.stage_id ?? null),
+    startsAt: event.starts_at ?? null,
+    durationMinutes: typeof event.duration === "number" ? event.duration : null,
+    location: event.location ?? null,
+    timezone: event.timezone ?? null,
+    adminIds: asStringIdList(event.admin_ids),
+    eventUrl: event.event_url ?? null,
+    scheduled: typeof event.scheduled === "boolean" ? event.scheduled : null,
+    note: event.note ?? null,
+    publicNote: event.public_note ?? null,
+    createdAt: event.created_at ?? null,
+    updatedAt: event.updated_at ?? null,
+  };
+}
+
+export function parseInterviewEventsResponse(raw: unknown): {
+  events: NormalizedInterviewEvent[];
+  total: number;
+  pastDue: number | null;
+  upcoming: number | null;
+} {
+  const data = raw as {
+    interview_events?: RecruiteeInterviewEvent[];
+    meta?: { counters?: { past_due?: number; upcoming?: number } };
+  };
+  const events = Array.isArray(data.interview_events)
+    ? data.interview_events.map(normalizeInterviewEvent)
+    : [];
+  const counters = data.meta?.counters;
+  return {
+    events,
+    total: events.length,
+    pastDue: typeof counters?.past_due === "number" ? counters.past_due : null,
+    upcoming: typeof counters?.upcoming === "number" ? counters.upcoming : null,
+  };
 }

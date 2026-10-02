@@ -218,8 +218,11 @@ import { healthcheck as recruiteeHealthcheck } from "../../connectors/recruitee/
 import {
   executeJobsListSync as listRecruiteeJobs,
   executeCandidatesListSync as listRecruiteeCandidates,
+  executeCandidatesGetSync as getRecruiteeCandidate,
+  executeCandidatesSearchSync as searchRecruiteeCandidates,
   executeOffersListSync as listRecruiteeOffers,
   executePipelineStagesListSync as listRecruiteePipelineStages,
+  executeInterviewEventsListSync as listRecruiteeInterviewEvents,
 } from "../../connectors/recruitee/src/sync";
 import zohoRecruitManifest from "../../connectors/zoho-recruit/manifest.json";
 import { healthcheck as zohoRecruitHealthcheck } from "../../connectors/zoho-recruit/src/healthcheck";
@@ -1144,8 +1147,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     recruitee: {
       "jobs.list": listRecruiteeJobs,
       "candidates.list": listRecruiteeCandidates,
+      "candidates.get": getRecruiteeCandidate,
+      "candidates.search": searchRecruiteeCandidates,
       "offers.list": listRecruiteeOffers,
       "pipeline_stages.list": listRecruiteePipelineStages,
+      "interview_events.list": listRecruiteeInterviewEvents,
     },
     "zoho-recruit": {
       "jobs.list": listZohoRecruitJobs,

@@ -4,6 +4,8 @@ import {
   parseJobsResponse,
   normalizeCandidate,
   parseCandidatesResponse,
+  parseCandidateGetResponse,
+  parseCandidatesSearchResponse,
   normalizeOffer,
   parseOffersResponse,
   normalizePipelineStage,
@@ -11,13 +13,18 @@ import {
   parseStagesFromPipelineTemplateResponse,
   parsePipelineTemplatesList,
   dedupeStages,
+  normalizeInterviewEvent,
+  parseInterviewEventsResponse,
 } from "../src/objects";
 import jobsFixture from "../fixtures/jobs_list.json";
 import candidatesFixture from "../fixtures/candidates_list.json";
+import candidateGetFixture from "../fixtures/candidate_get.json";
+import candidatesSearchFixture from "../fixtures/candidates_search.json";
 import offersFixture from "../fixtures/offers_list.json";
 import offerDetailFixture from "../fixtures/offer_detail_stages.json";
 import templateDetailFixture from "../fixtures/pipeline_template_detail.json";
 import templatesListFixture from "../fixtures/pipeline_templates_list.json";
+import interviewEventsFixture from "../fixtures/interview_events_list.json";
 
 describe("Recruitee normalizeJob", () => {
   it("normalizes a full job correctly", () => {
@@ -185,5 +192,61 @@ describe("Recruitee pipeline stages", () => {
     const b = normalizePipelineStage({ id: 1, name: "A again" });
     const c = normalizePipelineStage({ id: 2, name: "B" });
     expect(dedupeStages([a, b, c])).toHaveLength(2);
+  });
+});
+
+describe("Recruitee parseCandidateGetResponse", () => {
+  it("parses wrapped candidate fixture", () => {
+    const result = parseCandidateGetResponse(candidateGetFixture);
+    expect(result.candidate?.id).toBe("rc-candidate:27746490");
+    expect(result.candidate?.name).toBe("John Smith");
+    expect(result.candidate?.placements).toEqual([
+      { id: "28978242", offerId: "487967", stageId: "4405724" },
+    ]);
+  });
+
+  it("returns null when candidate missing", () => {
+    expect(parseCandidateGetResponse({}).candidate).toBeNull();
+  });
+});
+
+describe("Recruitee parseCandidatesSearchResponse", () => {
+  it("parses hits and nested placement offer/stage ids", () => {
+    const result = parseCandidatesSearchResponse(candidatesSearchFixture);
+    expect(result.candidates).toHaveLength(2);
+    expect(result.total).toBe(2);
+    expect(result.candidates[0].id).toBe("rc-candidate:1711504");
+    expect(result.candidates[0].placements).toEqual([
+      { id: "2001897", offerId: "433778", stageId: "2216727" },
+    ]);
+    expect(result.candidates[1].placements[0].offerId).toBe("744511");
+  });
+
+  it("handles empty hits", () => {
+    expect(parseCandidatesSearchResponse({ hits: [], total: 0 }).candidates).toHaveLength(0);
+  });
+});
+
+describe("Recruitee interview events", () => {
+  it("normalizes an event", () => {
+    const e = normalizeInterviewEvent(interviewEventsFixture.interview_events[0] as never);
+    expect(e.id).toBe("rc-interview-event:114");
+    expect(e.provider).toBe("recruitee");
+    expect(e.kind).toBe("meeting");
+    expect(e.candidateId).toBe("406");
+    expect(e.offerId).toBe("455");
+    expect(e.stageId).toBe("11766");
+    expect(e.durationMinutes).toBe(30);
+    expect(e.adminIds).toEqual(["2390"]);
+    expect(e.location).toBe("Poznan");
+  });
+
+  it("parses fixture with counters", () => {
+    const result = parseInterviewEventsResponse(interviewEventsFixture);
+    expect(result.events).toHaveLength(2);
+    expect(result.total).toBe(2);
+    expect(result.pastDue).toBe(0);
+    expect(result.upcoming).toBe(2);
+    expect(result.events[1].kind).toBe("call");
   });
 });

@@ -6,8 +6,8 @@ describe("Recruitee manifest", () => {
     expect(manifest.key).toBe("recruitee");
   });
 
-  it("has version 0.2.0", () => {
-    expect(manifest.version).toBe("0.2.0");
+  it("has version 0.3.0", () => {
+    expect(manifest.version).toBe("0.3.0");
   });
 
   it("uses bun runtime", () => {
@@ -30,21 +30,33 @@ describe("Recruitee manifest", () => {
     ]);
   });
 
-  it("declares P0 list ops including careers jobs.list", () => {
+  it("declares P0+P1 ops including careers jobs.list", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
+      "candidates.get",
       "candidates.list",
+      "candidates.search",
       "healthcheck",
+      "interview_events.list",
       "jobs.list",
       "offers.list",
       "pipeline_stages.list",
     ]);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
     expect(manifest.operations["candidates.list"].kind).toBe("sync");
+    expect(manifest.operations["candidates.get"].kind).toBe("sync");
+    expect(manifest.operations["candidates.search"].kind).toBe("sync");
+    expect(manifest.operations["interview_events.list"].kind).toBe("sync");
     expect(manifest.operations["offers.list"].kind).toBe("sync");
     expect(manifest.operations["pipeline_stages.list"].kind).toBe("sync");
   });
 
-  it("declares job, candidate, offer, pipeline_stage models", () => {
-    expect(manifest.models).toEqual(["job", "candidate", "offer", "pipeline_stage"]);
+  it("declares job, candidate, offer, pipeline_stage, interview_event models", () => {
+    expect(manifest.models).toEqual([
+      "job",
+      "candidate",
+      "offer",
+      "pipeline_stage",
+      "interview_event",
+    ]);
   });
 });
