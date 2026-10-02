@@ -1,6 +1,6 @@
 use crate::session::{SessionBinding, SessionError, SessionRegistry, MAX_MCP_SESSIONS};
 use crate::*;
-use appcall_connectors::Registry;
+use appcall_connectors::{EffectPolicy, Registry};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
@@ -509,19 +509,25 @@ impl<L: ConnectionLister, E: ActionExecutor + 'static, U: UsageRecorder> Server<
                 };
                 // Keep provider input schemas stable; the authenticated connection
                 // target is a gateway-level selector carried in MCP metadata.
-                let mut tool = json!({
-                    "name":encode_tool_name(&key,operation),
-                    "inputSchema":op.input_schema,
-                    "annotations":annotations,
-                    "_meta":{
-                        "appcall":{
-                            "connectionIds":connection_ids,
-                            "connectionSelector":{
-                                "location":"tools/call.params.connectionId",
-                                "schema":{"type":"string","enum":connection_ids}
-                            }
-                        }
+                let mut appcall = json!({
+                    "connectionIds": connection_ids,
+                    "connectionSelector": {
+                        "location": "tools/call.params.connectionId",
+                        "schema": {"type": "string", "enum": connection_ids}
                     }
+                });
+                if op.effect_policy != EffectPolicy::None {
+                    appcall["effectPolicy"] = serde_json::to_value(op.effect_policy)
+                        .expect("EffectPolicy serializes as PascalCase string");
+                }
+                if !op.reconcile.is_empty() {
+                    appcall["reconcile"] = json!(op.reconcile);
+                }
+                let mut tool = json!({
+                    "name": encode_tool_name(&key, operation),
+                    "inputSchema": op.input_schema,
+                    "annotations": annotations,
+                    "_meta": { "appcall": appcall }
                 });
                 if !op.title.is_empty() {
                     tool["title"] = json!(op.title)
