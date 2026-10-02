@@ -1,7 +1,7 @@
 {
   "key": "bugsnag",
   "name": "Bugsnag",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -29,7 +29,9 @@
   },
   "models": [
     "user",
-    "organization"
+    "organization",
+    "project",
+    "error"
   ],
   "http": {
     "baseUrl": "https://api.bugsnag.com",
@@ -126,6 +128,171 @@
         "query": {
           "admin": "{{admin}}"
         },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Projects",
+      "description": "List Bugsnag projects for an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag organization id."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page (Bugsnag Link-header pagination)."
+          }
+        },
+        "required": [
+          "organization_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organization_id}}/projects",
+        "query": {
+          "per_page": "{{per_page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "errors.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Errors",
+      "description": "List error groups on a Bugsnag project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page (Bugsnag Link-header pagination)."
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/errors",
+        "query": {
+          "per_page": "{{per_page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "errors.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Error",
+      "description": "Retrieve one Bugsnag error group by project and error id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "error_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag error group id."
+          }
+        },
+        "required": [
+          "project_id",
+          "error_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/errors/{{error_id}}",
         "success": [
           200
         ]
