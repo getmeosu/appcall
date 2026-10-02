@@ -787,6 +787,99 @@ async fn tools_list_exposes_scoped_connection_ids_and_selector_schema() {
             "schema":{"type":"string","enum":["first","second"]}
         })
     );
+    let appcall = &tools[0]["_meta"]["appcall"];
+    assert!(
+        appcall.get("effectPolicy").is_none(),
+        "read tools omit effectPolicy"
+    );
+    assert!(
+        appcall.get("reconcile").is_none(),
+        "read tools omit reconcile"
+    );
+}
+
+#[tokio::test]
+async fn tools_list_exposes_effect_policy_and_reconcile_for_mutating_ops() {
+    let greenhouse = json!({
+        "key": "greenhouse",
+        "name": "Greenhouse",
+        "version": "1.0.0",
+        "runtime": "bun",
+        "models": ["application"],
+        "auth": {"type": "api_key"},
+        "network": {"allowedHosts": ["harvest.greenhouse.io"]},
+        "operations": {
+            "applications.get": {
+                "kind": "action",
+                "timeoutMs": 1000,
+                "maxInputBytes": 4096,
+                "maxResponseBytes": 4096,
+                "description": "Get application",
+                "inputSchema": {"type": "object"},
+                "outputSchema": {"type": "object"},
+                "sideEffect": "read"
+            },
+            "applications.move": {
+                "kind": "action",
+                "timeoutMs": 1000,
+                "maxInputBytes": 4096,
+                "maxResponseBytes": 4096,
+                "description": "Move application",
+                "inputSchema": {"type": "object"},
+                "outputSchema": {"type": "object"},
+                "sideEffect": "write",
+                "effectPolicy": "Reconcile",
+                "reconcile": "applications.get"
+            }
+        }
+    });
+    let registry = Registry::from_connectors([Connector::from_bytes(
+        &serde_json::to_vec(&greenhouse).unwrap(),
+    )
+    .unwrap()])
+    .unwrap();
+    let server = Server::new(
+        registry,
+        Connections(vec![connection_with(
+            "gh-1",
+            "p",
+            "brand",
+            "greenhouse",
+            "active",
+        )]),
+        Executor::default(),
+        (),
+    );
+    // Empty profile: greenhouse is outside sena_mvt allowlist.
+    let scope = Scope::new("p", "brand");
+    let tools = server.list_tools(&scope).await.unwrap();
+    let by_name: std::collections::BTreeMap<_, _> = tools
+        .iter()
+        .map(|tool| (tool["name"].as_str().unwrap().to_string(), tool))
+        .collect();
+
+    let move_tool = by_name
+        .get("greenhouse__applications__move")
+        .expect("applications.move listed");
+    assert_eq!(
+        move_tool["_meta"]["appcall"]["effectPolicy"],
+        json!("Reconcile")
+    );
+    assert_eq!(
+        move_tool["_meta"]["appcall"]["reconcile"],
+        json!("applications.get")
+    );
+    assert_eq!(
+        move_tool["_meta"]["appcall"]["connectionIds"],
+        json!(["gh-1"])
+    );
+
+    let get_tool = by_name
+        .get("greenhouse__applications__get")
+        .expect("applications.get listed");
+    let get_meta = &get_tool["_meta"]["appcall"];
+    assert!(get_meta.get("effectPolicy").is_none());
+    assert!(get_meta.get("reconcile").is_none());
 }
 
 #[tokio::test]
