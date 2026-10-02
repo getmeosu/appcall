@@ -39,7 +39,10 @@ fn curated_batch_manifests_preserve_pinned_read_only_contracts() {
             operation_count += 1;
             if deepened {
                 assert!(
-                    matches!(operation.side_effect.as_str(), "read" | "write" | "destructive"),
+                    matches!(
+                        operation.side_effect.as_str(),
+                        "read" | "write" | "destructive"
+                    ),
                     "{}/{} sideEffect",
                     manifest.key,
                     operation_key
