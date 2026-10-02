@@ -3,15 +3,61 @@
   "name": "Lever",
   "version": "0.1.0",
   "runtime": "bun",
-  "categories": ["ats-recruitment"],
+  "categories": [
+    "ats-recruitment"
+  ],
   "auth": {
-    "type": "none"
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Lever API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "region",
+          "label": "Region (co or eu)",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
   },
   "network": {
     "allowedHosts": [
       "api.lever.co",
       "api.lever.eu"
     ]
+  },
+  "http": {
+    "baseUrl": "https://api.lever.{{region}}/v1",
+    "auth": {
+      "in": "header",
+      "name": "Authorization",
+      "field": "apiKey",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": ""
+      }
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
   },
   "operations": {
     "jobs.list": {
@@ -22,11 +68,12 @@
     },
     "healthcheck": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
       "title": "Healthcheck",
-      "description": "Verify connectivity and credentials for the Lever connector. Takes no input and returns the connector health status.",
+      "description": "Validate Lever credentials with GET /opportunities?limit=1.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -34,13 +81,29 @@
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
         "properties": {
-          "status": {
-            "type": "string",
-            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          "data": {
+            "type": "object"
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/opportunities",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
     }
   },
   "models": [

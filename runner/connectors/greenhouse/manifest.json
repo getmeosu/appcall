@@ -3,14 +3,55 @@
   "name": "Greenhouse",
   "version": "0.1.0",
   "runtime": "bun",
-  "categories": ["ats-recruitment"],
+  "categories": [
+    "ats-recruitment"
+  ],
   "auth": {
-    "type": "none"
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Harvest API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
   },
   "network": {
     "allowedHosts": [
+      "harvest.greenhouse.io",
       "boards-api.greenhouse.io"
     ]
+  },
+  "http": {
+    "baseUrl": "https://harvest.greenhouse.io/v1",
+    "auth": {
+      "in": "header",
+      "name": "Authorization",
+      "field": "apiKey",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": ""
+      }
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
   },
   "operations": {
     "jobs.list": {
@@ -21,11 +62,12 @@
     },
     "healthcheck": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
       "title": "Healthcheck",
-      "description": "Verify connectivity and credentials for the Greenhouse connector. Takes no input and returns the connector health status.",
+      "description": "Validate Greenhouse Harvest credentials with GET /users?per_page=1.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -33,13 +75,32 @@
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
         "properties": {
-          "status": {
-            "type": "string",
-            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
           }
         }
-      }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "query": {
+          "per_page": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
     }
   },
   "models": [

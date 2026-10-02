@@ -14,14 +14,25 @@ describe("Greenhouse manifest", () => {
     expect(manifest.runtime).toBe("bun");
   });
 
-  it("has no auth (public API)", () => {
-    expect(manifest.auth.type).toBe("none");
+  it("declares api_key auth with setup fields", () => {
+    expect(manifest.auth.type).toBe("api_key");
+    expect(manifest.auth.setup.mode).toBe("api_key");
+    expect(manifest.auth.setup.fields.some((field: { key: string }) => field.key === "apiKey")).toBe(true);
   });
 
-  it("allows only greenhouse hosts", () => {
-    expect(manifest.network.allowedHosts).toEqual([
-      "boards-api.greenhouse.io",
-    ]);
+  it("allows expected hosts", () => {
+    expect(manifest.network.allowedHosts).toEqual(["harvest.greenhouse.io", "boards-api.greenhouse.io"]);
+  });
+
+  it("uses Harvest Basic auth and keeps boards host", () => {
+    expect(manifest.http.baseUrl).toBe("https://harvest.greenhouse.io/v1");
+    expect(manifest.http.auth.basic).toEqual({ username: "{{apiKey}}", password: "" });
+    expect(manifest.network.allowedHosts).toContain("boards-api.greenhouse.io");
+  });
+
+  it("declares authenticated healthcheck request", () => {
+    expect(manifest.operations.healthcheck.request).toBeTruthy();
+    expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
   it("declares job model", () => {

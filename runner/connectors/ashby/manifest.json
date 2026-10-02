@@ -3,14 +3,56 @@
   "name": "Ashby",
   "version": "0.1.0",
   "runtime": "bun",
-  "categories": ["ats-recruitment"],
+  "categories": [
+    "ats-recruitment"
+  ],
   "auth": {
-    "type": "none"
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Ashby API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
   },
   "network": {
     "allowedHosts": [
       "api.ashbyhq.com"
     ]
+  },
+  "http": {
+    "baseUrl": "https://api.ashbyhq.com",
+    "auth": {
+      "in": "header",
+      "name": "Authorization",
+      "field": "apiKey",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": ""
+      }
+    },
+    "headers": {
+      "Accept": "application/json; version=1",
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "errors.0.message"
+      ]
+    }
   },
   "operations": {
     "jobs.list": {
@@ -21,11 +63,12 @@
     },
     "healthcheck": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
       "title": "Healthcheck",
-      "description": "Verify connectivity and credentials for the Ashby connector. Takes no input and returns the connector health status.",
+      "description": "Validate Ashby credentials with POST /apiKey.info.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -33,13 +76,27 @@
       },
       "outputSchema": {
         "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
         "properties": {
-          "status": {
-            "type": "string",
-            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+          "data": {
+            "type": "object"
           }
         }
-      }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/apiKey.info",
+        "body": {},
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated"
     }
   },
   "models": [

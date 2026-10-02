@@ -14,14 +14,28 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.runtime).toBe("bun");
   });
 
-  it("has no auth (public API)", () => {
-    expect(manifest.auth.type).toBe("none");
+  it("declares api_key auth with setup fields", () => {
+    expect(manifest.auth.type).toBe("api_key");
+    expect(manifest.auth.setup.mode).toBe("api_key");
+    expect(manifest.auth.setup.fields.some((field: { key: string }) => field.key === "apiKey")).toBe(true);
   });
 
-  it("allows only smartrecruiters host", () => {
-    expect(manifest.network.allowedHosts).toEqual([
-      "api.smartrecruiters.com",
-    ]);
+  it("allows expected hosts", () => {
+    expect(manifest.network.allowedHosts).toEqual(["api.smartrecruiters.com"]);
+  });
+
+  it("uses X-SmartToken header auth", () => {
+    expect(manifest.http.auth).toEqual({
+      field: "apiKey",
+      in: "header",
+      name: "X-SmartToken",
+      value: "{{apiKey}}",
+    });
+  });
+
+  it("declares authenticated healthcheck request", () => {
+    expect(manifest.operations.healthcheck.request).toBeTruthy();
+    expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
   it("declares job model", () => {

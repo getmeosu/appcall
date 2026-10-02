@@ -172,19 +172,15 @@ import quickbooksManifest from "../../connectors/quickbooks/manifest.json";
 import { healthcheck as quickbooksHealthcheck } from "../../connectors/quickbooks/src/healthcheck";
 import { executeInvoicesListSync as listQBInvoices, executeCustomersListSync as listQBCustomers, executePaymentsListSync as listQBPayments } from "../../connectors/quickbooks/src/sync";
 import greenhouseManifest from "../../connectors/greenhouse/manifest.json";
-import { healthcheck as greenhouseHealthcheck } from "../../connectors/greenhouse/src/healthcheck";
 import { executeJobsListSync as listGreenhouseJobs } from "../../connectors/greenhouse/src/sync";
 import leverManifest from "../../connectors/lever/manifest.json";
-import { healthcheck as leverHealthcheck } from "../../connectors/lever/src/healthcheck";
 import { executeJobsListSync as listLeverJobs } from "../../connectors/lever/src/sync";
 import ashbyManifest from "../../connectors/ashby/manifest.json";
-import { healthcheck as ashbyHealthcheck } from "../../connectors/ashby/src/healthcheck";
 import { executeJobsListSync as listAshbyJobs } from "../../connectors/ashby/src/sync";
 import workableManifest from "../../connectors/workable/manifest.json";
 import { healthcheck as workableHealthcheck } from "../../connectors/workable/src/healthcheck";
 import { executeJobsListSync as listWorkableJobs } from "../../connectors/workable/src/sync";
 import smartrecruitersManifest from "../../connectors/smartrecruiters/manifest.json";
-import { healthcheck as smartrecruitersHealthcheck } from "../../connectors/smartrecruiters/src/healthcheck";
 import { executeJobsListSync as listSmartRecruitersJobs } from "../../connectors/smartrecruiters/src/sync";
 import recruiteeManifest from "../../connectors/recruitee/manifest.json";
 import { healthcheck as recruiteeHealthcheck } from "../../connectors/recruitee/src/healthcheck";
@@ -507,11 +503,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     shopify: shopifyHealthcheck,
     woocommerce: woocommerceHealthcheck,
     quickbooks: quickbooksHealthcheck,
-    greenhouse: greenhouseHealthcheck,
-    lever: leverHealthcheck,
-    ashby: ashbyHealthcheck,
     workable: workableHealthcheck,
-    smartrecruiters: smartrecruitersHealthcheck,
     recruitee: recruiteeHealthcheck,
     "zoho-recruit": zohoRecruitHealthcheck,
     typeform: typeformHealthcheck,
