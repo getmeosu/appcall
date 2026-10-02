@@ -6,8 +6,8 @@ describe("Zoho Recruit manifest", () => {
     expect(manifest.key).toBe("zoho-recruit");
   });
 
-  it("has version 0.1.0", () => {
-    expect(manifest.version).toBe("0.1.0");
+  it("has version 0.2.0", () => {
+    expect(manifest.version).toBe("0.2.0");
   });
 
   it("uses bun runtime", () => {
@@ -22,7 +22,15 @@ describe("Zoho Recruit manifest", () => {
     expect(manifest.network.allowedHosts).toEqual(["recruit.zoho.com"]);
   });
 
-  it("declares job model", () => {
-    expect(manifest.models).toContain("job");
+  it("declares P0 list syncs", () => {
+    expect(manifest.operations["jobs.list"].kind).toBe("sync");
+    expect(manifest.operations["candidates.list"].kind).toBe("sync");
+    expect(manifest.operations["job_openings.list"].kind).toBe("sync");
+    expect(manifest.operations["applications.list"].kind).toBe("sync");
+    expect(manifest.operations.healthcheck.kind).toBe("action");
+  });
+
+  it("declares job candidate job_opening application models", () => {
+    expect(manifest.models).toEqual(["job", "candidate", "job_opening", "application"]);
   });
 });
