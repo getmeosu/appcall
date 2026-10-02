@@ -1,6 +1,5 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubIssue, type GitHubIssue, type NormalizedIssue } from "./issues";
-import { normalizeGitHubPullRequest, type GitHubPullRequest, type NormalizedPullRequest } from "./pull_requests";
 
 export type SearchIssuesInput = {
   q: string;
@@ -10,14 +9,26 @@ export type SearchIssuesInput = {
   page?: number;
 };
 
+function optionalPage(value: unknown, field: string, max = 100): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > max) {
+    throw new Error(`${field} must be an integer between 1 and ${max}`);
+  }
+  return value;
+}
+
 export function validateSearchIssuesInput(input: unknown): SearchIssuesInput {
   if (!isRecord(input)) throw new Error("search issues input must be an object");
+  const order = typeof input.order === "string" ? input.order : undefined;
+  if (order !== undefined && order !== "asc" && order !== "desc") {
+    throw new Error("order must be asc or desc");
+  }
   return {
     q: requireString(input.q, "q"),
     sort: typeof input.sort === "string" ? input.sort : undefined,
-    order: typeof input.order === "string" ? input.order : undefined,
-    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
-    page: typeof input.page === "number" ? input.page : undefined,
+    order,
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
   };
 }
 
@@ -25,6 +36,43 @@ export type SearchPullRequestsInput = SearchIssuesInput;
 
 export function validateSearchPullRequestsInput(input: unknown): SearchPullRequestsInput {
   return validateSearchIssuesInput(input);
+}
+
+export type NormalizedSearchPullRequest = {
+  id: string;
+  provider: "github";
+  providerPullRequestId: number;
+  number: number;
+  title: string;
+  body: string;
+  state: string;
+  url: string;
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+  repositoryUrl: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeSearchPullRequest(item: Record<string, unknown>): NormalizedSearchPullRequest {
+  const user = isRecord(item.user) ? item.user : {};
+  return {
+    id: `gh-pr:${typeof item.id === "number" ? item.id : 0}`,
+    provider: "github",
+    providerPullRequestId: typeof item.id === "number" ? item.id : 0,
+    number: typeof item.number === "number" ? item.number : 0,
+    title: typeof item.title === "string" ? item.title : "",
+    body: typeof item.body === "string" ? item.body : "",
+    state: typeof item.state === "string" ? item.state : "",
+    url: typeof item.html_url === "string" ? item.html_url : "",
+    author: typeof user.login === "string" ? user.login : "",
+    createdAt: typeof item.created_at === "string" ? item.created_at : "",
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
+    repositoryUrl: typeof item.repository_url === "string" ? item.repository_url : "",
+    modelVersion: "2026-05-16",
+    raw: item,
+  };
 }
 
 export type SearchIssuesResult = {
@@ -36,18 +84,23 @@ export type SearchIssuesResult = {
 export type SearchPullRequestsResult = {
   totalCount: number;
   incompleteResults: boolean;
-  items: NormalizedPullRequest[];
+  items: NormalizedSearchPullRequest[];
 };
 
-function buildSearchQuery(q: string, forcePr: boolean): string {
-  if (!forcePr) return q;
-  if (/\bis:pr\b/i.test(q) || /\bis:pull-request\b/i.test(q)) return q;
-  return `${q} is:pr`;
+function buildSearchQuery(q: string, force: "issue" | "pr"): string {
+  if (force === "pr") {
+    if (/\bis:pr\b/i.test(q) || /\bis:pull-request\b/i.test(q)) return q;
+    return `${q} is:pr`;
+  }
+  if (/\bis:issue\b/i.test(q)) return q;
+  // Exclude PRs at the query layer so total_count matches returned items.
+  if (/\bis:pr\b/i.test(q)) return q;
+  return `${q} is:issue`;
 }
 
-function buildSearchPath(payload: SearchIssuesInput, forcePr: boolean): string {
+function buildSearchPath(payload: SearchIssuesInput, force: "issue" | "pr"): string {
   const params = new URLSearchParams();
-  params.set("q", buildSearchQuery(payload.q, forcePr));
+  params.set("q", buildSearchQuery(payload.q, force));
   if (payload.sort) params.set("sort", payload.sort);
   if (payload.order) params.set("order", payload.order);
   if (payload.perPage) params.set("per_page", String(payload.perPage));
@@ -61,13 +114,10 @@ export function createSearchClient(options: { accessToken: string; fetch?: typeo
   return {
     async searchIssues(input: unknown) {
       const payload = validateSearchIssuesInput(input);
-      const response = await client.fetchJSON(buildSearchPath(payload, false));
+      const response = await client.fetchJSON(buildSearchPath(payload, "issue"));
       if (response.status === 200 && isRecord(response.body)) {
         const itemsRaw = Array.isArray(response.body.items) ? response.body.items : [];
-        const issues = itemsRaw
-          .filter(isRecord)
-          .filter((item) => !isRecord(item.pull_request))
-          .map((item) => normalizeGitHubIssue(item as GitHubIssue));
+        const issues = itemsRaw.filter(isRecord).map((item) => normalizeGitHubIssue(item as GitHubIssue));
         return {
           ok: true as const,
           result: {
@@ -89,29 +139,10 @@ export function createSearchClient(options: { accessToken: string; fetch?: typeo
 
     async searchPullRequests(input: unknown) {
       const payload = validateSearchPullRequestsInput(input);
-      const response = await client.fetchJSON(buildSearchPath(payload, true));
+      const response = await client.fetchJSON(buildSearchPath(payload, "pr"));
       if (response.status === 200 && isRecord(response.body)) {
         const itemsRaw = Array.isArray(response.body.items) ? response.body.items : [];
-        const prs = itemsRaw.filter(isRecord).map((item) => {
-          // Search returns issue-shaped PR objects; normalize via PR helper with best-effort fields.
-          const asPr = {
-            id: item.id,
-            number: item.number,
-            title: item.title,
-            body: item.body,
-            state: item.state,
-            user: item.user,
-            html_url: item.html_url,
-            draft: item.draft,
-            created_at: item.created_at,
-            updated_at: item.updated_at,
-            closed_at: item.closed_at,
-            labels: item.labels,
-            repository_url: item.repository_url,
-            pull_request: item.pull_request,
-          } as GitHubPullRequest;
-          return normalizeGitHubPullRequest(asPr);
-        });
+        const prs = itemsRaw.filter(isRecord).map((item) => normalizeSearchPullRequest(item));
         return {
           ok: true as const,
           result: {

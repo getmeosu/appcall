@@ -229,8 +229,8 @@ export function validateListCommentsInput(input: unknown): ListCommentsInput {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
     issueNumber: requireNumber(input.issueNumber, "issueNumber"),
-    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
-    page: typeof input.page === "number" ? input.page : undefined,
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
   };
 }
 
@@ -268,11 +268,14 @@ export type AssigneesInput = { owner: string; repo: string; issueNumber: number;
 export function validateAssigneesInput(input: unknown): AssigneesInput {
   if (!isRecord(input)) throw new Error("assignees input must be an object");
   if (!Array.isArray(input.assignees) || input.assignees.length === 0) throw new Error("assignees must be a non-empty array");
+  if (!(input.assignees as unknown[]).every((a) => typeof a === "string" && a.length > 0)) {
+    throw new Error("assignees must be an array of non-empty strings");
+  }
   return {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
     issueNumber: requireNumber(input.issueNumber, "issueNumber"),
-    assignees: (input.assignees as unknown[]).filter((a): a is string => typeof a === "string"),
+    assignees: input.assignees as string[],
   };
 }
 
@@ -283,11 +286,14 @@ export type RemoveLabelsInput = { owner: string; repo: string; issueNumber: numb
 export function validateRemoveLabelsInput(input: unknown): RemoveLabelsInput {
   if (!isRecord(input)) throw new Error("remove labels input must be an object");
   if (!Array.isArray(input.labels) || input.labels.length === 0) throw new Error("labels must be a non-empty array");
+  if (!(input.labels as unknown[]).every((l) => typeof l === "string" && l.length > 0)) {
+    throw new Error("labels must be an array of non-empty strings");
+  }
   return {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
     issueNumber: requireNumber(input.issueNumber, "issueNumber"),
-    labels: (input.labels as unknown[]).filter((l): l is string => typeof l === "string"),
+    labels: input.labels as string[],
   };
 }
 
@@ -298,11 +304,14 @@ export type SetLabelsInput = { owner: string; repo: string; issueNumber: number;
 export function validateSetLabelsInput(input: unknown): SetLabelsInput {
   if (!isRecord(input)) throw new Error("set labels input must be an object");
   if (!Array.isArray(input.labels)) throw new Error("labels must be an array");
+  if (!(input.labels as unknown[]).every((l) => typeof l === "string")) {
+    throw new Error("labels must be an array of strings");
+  }
   return {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
     issueNumber: requireNumber(input.issueNumber, "issueNumber"),
-    labels: (input.labels as unknown[]).filter((l): l is string => typeof l === "string"),
+    labels: input.labels as string[],
   };
 }
 
@@ -345,8 +354,8 @@ export function validateListLabelsInput(input: unknown): ListLabelsInput {
   return {
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
-    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
-    page: typeof input.page === "number" ? input.page : undefined,
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
   };
 }
 
@@ -591,29 +600,40 @@ export function createIssuesClient(options: { accessToken: string; fetch?: typeo
 
     async removeLabels(input: unknown) {
       const payload = validateRemoveLabelsInput(input);
-      let lastBody: unknown = null;
-      for (const name of payload.labels) {
-        const response = await client.fetchJSON(
-          `/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/labels/${encodeURIComponent(name)}`,
-          { method: "DELETE" },
-        );
-        if (response.status === 200 || response.status === 204) {
-          lastBody = response.body;
-          continue;
-        }
-        if (response.status === 404) {
-          return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `Label or issue not found: ${name}` } };
-        }
-        if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
-          const rateLimit = parseGitHubRateLimit(response.status, response.headers);
-          return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
-        }
-        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the remove labels request." } };
+      const current = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/labels`);
+      if (current.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
       }
-      const labelsList = Array.isArray(lastBody)
-        ? (lastBody as Record<string, unknown>[]).map((l) => (typeof l.name === "string" ? l.name : ""))
-        : [];
-      return { ok: true as const, labels: labelsList };
+      if (current.status === 429 || (current.status === 403 && parseGitHubRateLimit(current.status, current.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(current.status, current.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      if (current.status !== 200 || !Array.isArray(current.body)) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list issue labels request." } };
+      }
+      const remove = new Set(payload.labels);
+      const remaining = (current.body as Record<string, unknown>[])
+        .map((l) => (typeof l.name === "string" ? l.name : ""))
+        .filter((name) => name.length > 0 && !remove.has(name));
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/labels`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(remaining),
+      });
+      if (response.status === 200) {
+        const labelsList = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).map((l) => (typeof l.name === "string" ? l.name : ""))
+          : remaining;
+        return { ok: true as const, labels: labelsList };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the remove labels request." } };
     },
 
     async setLabels(input: unknown) {
@@ -721,6 +741,14 @@ function requireString(value: unknown, field: string): string {
 
 function requireNumber(value: unknown, field: string): number {
   if (typeof value !== "number") throw new Error(`${field} must be a number`);
+  return value;
+}
+
+function optionalPage(value: unknown, field: string, max = 100): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > max) {
+    throw new Error(`${field} must be an integer between 1 and ${max}`);
+  }
   return value;
 }
 

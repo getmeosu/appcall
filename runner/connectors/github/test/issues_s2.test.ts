@@ -51,6 +51,7 @@ describe("github S2 issues-deepen-search", () => {
     expect(validateDeleteCommentInput({ owner: "acme", repo: "app", commentId: 1 }).commentId).toBe(1);
     expect(validateAssigneesInput({ owner: "acme", repo: "app", issueNumber: 50, assignees: ["bob"] }).assignees).toEqual(["bob"]);
     expect(() => validateAssigneesInput({ owner: "acme", repo: "app", issueNumber: 50, assignees: [] })).toThrow();
+    expect(() => validateAssigneesInput({ owner: "acme", repo: "app", issueNumber: 50, assignees: [123 as unknown as string] })).toThrow();
     expect(validateRemoveLabelsInput({ owner: "acme", repo: "app", issueNumber: 50, labels: ["bug"] }).labels).toEqual(["bug"]);
     expect(validateSetLabelsInput({ owner: "acme", repo: "app", issueNumber: 50, labels: ["bug"] }).labels).toEqual(["bug"]);
     expect(validateLockIssueInput({ owner: "acme", repo: "app", issueNumber: 50, lockReason: "resolved" }).lockReason).toBe("resolved");
@@ -152,24 +153,30 @@ describe("github S2 issues-deepen-search", () => {
     expect((result.issue as Record<string, unknown>).assignee).toBe("bob");
   });
 
-  test("removeIssueLabels deletes each label", async () => {
+  test("removeIssueLabels atomically sets remaining labels", async () => {
     const requests: Request[] = [];
     const result = await removeIssueLabels({
       accessToken: "ghp_test-token",
       owner: "acme",
       repo: "app",
       issueNumber: 50,
-      labels: ["bug", "docs"],
+      labels: ["bug"],
       fetch: async (input, init) => {
-        requests.push(new Request(input, init));
-        return new Response(JSON.stringify(labelsFixture), { status: 200 });
+        const req = new Request(input, init);
+        requests.push(req);
+        if (req.method === "GET") {
+          return new Response(JSON.stringify(labelsFixture), { status: 200 });
+        }
+        return new Response(JSON.stringify([{ id: 11, name: "enhancement", color: "a2eeef" }]), { status: 200 });
       },
     });
     expect(requests).toHaveLength(2);
-    expect(requests[0].method).toBe("DELETE");
-    expect(requests[0].url).toContain("/labels/bug");
-    expect(requests[1].url).toContain("/labels/docs");
-    expect(result.labels).toEqual(["bug", "enhancement"]);
+    expect(requests[0].method).toBe("GET");
+    expect(requests[0].url).toContain("/issues/50/labels");
+    expect(requests[1].method).toBe("PUT");
+    const body = JSON.parse(await requests[1].text());
+    expect(body).toEqual(["enhancement"]);
+    expect(result.labels).toEqual(["enhancement"]);
   });
 
   test("setIssueLabels puts full label list", async () => {
@@ -239,25 +246,20 @@ describe("github S2 issues-deepen-search", () => {
     expect((result.labels as unknown[]).length).toBe(3);
   });
 
-  test("searchIssues filters out PRs", async () => {
-    const mixed = {
-      total_count: 2,
-      incomplete_results: false,
-      items: [...searchIssuesFixture.items, ...searchPrsFixture.items],
-    };
+  test("searchIssues appends is:issue and returns issue items", async () => {
     const requests: Request[] = [];
     const result = await searchIssues({
       accessToken: "ghp_test-token",
       q: "repo:acme/app",
       fetch: async (input, init) => {
         requests.push(new Request(input, init));
-        return new Response(JSON.stringify(mixed), { status: 200 });
+        return new Response(JSON.stringify(searchIssuesFixture), { status: 200 });
       },
     });
     expect(requests[0].url).toContain("/search/issues?");
-    expect(decodeURIComponent(requests[0].url)).toContain("q=repo:acme/app");
+    expect(decodeURIComponent(requests[0].url)).toContain("is:issue");
     expect((result.items as unknown[]).length).toBe(1);
-    expect(result.totalCount).toBe(2);
+    expect(result.totalCount).toBe(1);
   });
 
   test("searchPullRequests appends is:pr", async () => {
