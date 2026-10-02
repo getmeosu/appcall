@@ -91,10 +91,13 @@ fn history_bytes(client: &mut Client, id: &str) -> i64 {
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; writes blob-rewrite evidence"]
 fn measure_blob_rewrite_vs_history_depth() {
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").expect("APPCALL_ENGINE_POSTGRES_URL");
-    let phase = std::env::var("APPCALL_BLOB_REWRITE_PHASE").unwrap_or_else(|_| "before".into());
+    let Ok(phase) = std::env::var("APPCALL_BLOB_REWRITE_PHASE") else {
+        // cargo test -- --ignored runs without a regenerate request.
+        return;
+    };
     assert!(
         phase == "before" || phase == "after",
-        "APPCALL_BLOB_REWRITE_PHASE must be before|after"
+        "APPCALL_BLOB_REWRITE_PHASE must be before|after, got {phase}"
     );
     let schema = format!(
         "engine_blob_rw_{}_{}",
