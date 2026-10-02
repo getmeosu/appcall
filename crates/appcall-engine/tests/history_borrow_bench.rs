@@ -52,7 +52,7 @@ fn measure_clone_vs_borrow(depth: usize, iters: usize) -> (u128, u128, u128, u12
 
 fn measure_redrive_at_depth(depth: usize, redrives: usize) -> (u128, u128, usize) {
     // depth events total: (depth-1) resolved timers + 1 open signal (fits cap 1024).
-    assert!(depth >= 1 && depth <= 1024);
+    assert!((1..=1024).contains(&depth));
     let timers = depth - 1;
     let dir = tempfile::tempdir().unwrap();
     let db = dir.path().join("engine.db");
