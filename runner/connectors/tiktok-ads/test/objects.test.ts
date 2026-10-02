@@ -6,11 +6,19 @@ import {
   parseAdGroupsResponse,
   normalizeAd,
   parseAdsResponse,
+  normalizeAdvertiser,
+  parseAdvertisersResponse,
+  normalizePixel,
+  parsePixelsResponse,
+  parseAnalyticsResponse,
 } from "../src/objects";
 import campaignsFixture from "../fixtures/campaigns.json";
 import campaignsPagedFixture from "../fixtures/campaigns_paged.json";
 import adGroupsFixture from "../fixtures/ad_groups.json";
 import adsFixture from "../fixtures/ads.json";
+import advertisersFixture from "../fixtures/advertisers_list.json";
+import pixelsFixture from "../fixtures/pixels_list.json";
+import analyticsFixture from "../fixtures/analytics_report.json";
 
 // ---------------------------------------------------------------------------
 // Campaigns
@@ -195,5 +203,52 @@ describe("parseAdsResponse", () => {
     const result = parseAdsResponse(null);
     expect(result.ads).toHaveLength(0);
     expect(result.nextPage).toBeNull();
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Advertisers / Pixels / Analytics
+// ---------------------------------------------------------------------------
+
+describe("normalizeAdvertiser", () => {
+  it("maps advertiser fields", () => {
+    const a = normalizeAdvertiser(advertisersFixture.data.list[0] as any);
+    expect(a.id).toBe("tt-advertiser:6987654321098765432");
+    expect(a.name).toBe("Acme Commerce US");
+    expect(a.currency).toBe("USD");
+  });
+});
+
+describe("parseAdvertisersResponse", () => {
+  it("parses advertisers list", () => {
+    const result = parseAdvertisersResponse(advertisersFixture);
+    expect(result.advertisers).toHaveLength(2);
+  });
+});
+
+describe("normalizePixel", () => {
+  it("maps pixel fields", () => {
+    const px = normalizePixel(pixelsFixture.data.list[0] as any);
+    expect(px.id).toBe("tt-pixel:7001122334455667788");
+    expect(px.name).toBe("Acme Web Pixel");
+    expect(px.code).toBe("CABCDEFG");
+  });
+});
+
+describe("parsePixelsResponse", () => {
+  it("parses pixels list", () => {
+    const result = parsePixelsResponse(pixelsFixture);
+    expect(result.pixels).toHaveLength(2);
+    expect(result.totalCount).toBe(2);
+  });
+});
+
+describe("parseAnalyticsResponse", () => {
+  it("parses integrated report rows", () => {
+    const result = parseAnalyticsResponse(analyticsFixture);
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0].impressions).toBe(54000);
+    expect(result.rows[0].spend).toBe(1250.5);
   });
 });

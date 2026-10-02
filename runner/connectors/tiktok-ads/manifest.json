@@ -1,7 +1,7 @@
 {
   "key": "tiktok-ads",
   "name": "TikTok Ads",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["ads"],
   "auth": {
@@ -39,6 +39,251 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880
     },
+    "analytics.report.get": {
+      "kind": "action",
+      "timeoutMs": 60000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "title": "Get Analytics Report",
+      "description": "Fetch a synchronous TikTok Ads integrated report via /report/integrated/get/. Requires advertiserId, dataLevel, startDate, and endDate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "advertiserId": {
+            "type": "string",
+            "description": "TikTok advertiser (ad account) ID."
+          },
+          "reportType": {
+            "type": "string",
+            "description": "Report type, e.g. BASIC, AUDIENCE, CATALOG (default BASIC)."
+          },
+          "dataLevel": {
+            "type": "string",
+            "description": "Data level, e.g. AUCTION_CAMPAIGN, AUCTION_ADGROUP, AUCTION_AD, AUCTION_ADVERTISER."
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Inclusive start date (YYYY-MM-DD)."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Inclusive end date (YYYY-MM-DD)."
+          },
+          "dimensions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional dimension keys, e.g. campaign_id, stat_time_day."
+          },
+          "metrics": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional metric keys, e.g. spend, impressions, clicks."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number (default 1)."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Page size (default 10)."
+          },
+          "queryLifetime": {
+            "type": "boolean",
+            "description": "When true, query lifetime stats instead of date range."
+          }
+        },
+        "required": ["advertiserId", "dataLevel", "startDate", "endDate"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "reportType": { "type": "string" },
+          "dataLevel": { "type": "string" },
+          "rows": { "type": "array" },
+          "rowCount": { "type": "number" }
+        }
+      }
+    },
+    "advertisers.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Advertisers",
+      "description": "List advertisers authorized for the Access-Token via /oauth2/advertiser/get/, or fetch details for known IDs via /advertiser/info/. Does not require a single advertiserId scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "advertiserIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional advertiser IDs; when set, calls /advertiser/info/ instead of oauth advertiser get."
+          },
+          "appId": {
+            "type": "string",
+            "description": "Optional TikTok app_id (official oauth2/advertiser/get docs list this as required)."
+          },
+          "appSecret": {
+            "type": "string",
+            "description": "Optional TikTok app secret (official oauth2/advertiser/get docs list this as required)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "advertisers": { "type": "array" },
+          "nextPage": { "type": ["number", "null"] },
+          "totalCount": { "type": "number" }
+        }
+      }
+    },
+    "campaigns.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Campaign",
+      "description": "Fetch a single TikTok Ads campaign by advertiserId and campaignId via /campaign/get/ with campaign_ids filtering.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "advertiserId": {
+            "type": "string",
+            "description": "TikTok advertiser (ad account) ID."
+          },
+          "campaignId": {
+            "type": "string",
+            "description": "Campaign ID to fetch."
+          }
+        },
+        "required": ["advertiserId", "campaignId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "campaign": { "type": ["object", "null"] }
+        }
+      }
+    },
+    "ad_groups.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Ad Group",
+      "description": "Fetch a single TikTok Ads ad group by advertiserId and adGroupId via /adgroup/get/ with adgroup_ids filtering.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "advertiserId": {
+            "type": "string",
+            "description": "TikTok advertiser (ad account) ID."
+          },
+          "adGroupId": {
+            "type": "string",
+            "description": "Ad group ID to fetch."
+          }
+        },
+        "required": ["advertiserId", "adGroupId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "adGroup": { "type": ["object", "null"] }
+        }
+      }
+    },
+    "ads.get": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Ad",
+      "description": "Fetch a single TikTok Ads ad by advertiserId and adId via /ad/get/ with ad_ids filtering.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "advertiserId": {
+            "type": "string",
+            "description": "TikTok advertiser (ad account) ID."
+          },
+          "adId": {
+            "type": "string",
+            "description": "Ad ID to fetch."
+          }
+        },
+        "required": ["advertiserId", "adId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "ad": { "type": ["object", "null"] }
+        }
+      }
+    },
+    "pixels.list": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Pixels",
+      "description": "List TikTok pixels for an advertiser via /pixel/list/.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "advertiserId": {
+            "type": "string",
+            "description": "TikTok advertiser (ad account) ID."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number (default 1)."
+          },
+          "pageSize": {
+            "type": "number",
+            "description": "Page size."
+          },
+          "pixelId": {
+            "type": "string",
+            "description": "Optional pixel ID filter."
+          }
+        },
+        "required": ["advertiserId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "pixels": { "type": "array" },
+          "nextPage": { "type": ["number", "null"] },
+          "totalCount": { "type": "number" }
+        }
+      }
+    },
     "healthcheck": {
       "kind": "action",
       "timeoutMs": 5000,
@@ -65,6 +310,9 @@
   "models": [
     "campaign",
     "ad_group",
-    "ad"
+    "ad",
+    "advertiser",
+    "pixel",
+    "analytics_result"
   ]
 }

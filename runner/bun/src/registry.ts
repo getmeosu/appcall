@@ -250,6 +250,14 @@ import {
 import { executeCampaignsListSync as listLinkedInAdsCampaigns, executeAdAccountsListSync as listLinkedInAdsAccounts, executeCreativeAssetsListSync as listLinkedInAdsCreatives } from "../../connectors/linkedin-ads/src/sync";
 import tiktokAdsManifest from "../../connectors/tiktok-ads/manifest.json";
 import { healthcheck as tiktokAdsHealthcheck } from "../../connectors/tiktok-ads/src/healthcheck";
+import {
+  getAnalyticsReport as tiktokAdsGetAnalyticsReport,
+  listAdvertisers as tiktokAdsListAdvertisers,
+  getCampaign as tiktokAdsGetCampaign,
+  getAdGroup as tiktokAdsGetAdGroup,
+  getAd as tiktokAdsGetAd,
+  listPixels as tiktokAdsListPixels,
+} from "../../connectors/tiktok-ads/src/actions";
 import { executeCampaignsListSync as listTikTokCampaigns, executeAdGroupsListSync as listTikTokAdGroups, executeAdsListSync as listTikTokAds } from "../../connectors/tiktok-ads/src/sync";
 import xeroManifest from "../../connectors/xero/manifest.json";
 import { healthcheck as xeroHealthcheck } from "../../connectors/xero/src/healthcheck";
@@ -811,6 +819,14 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "campaign_groups.list": linkedinAdsListCampaignGroups,
       "creatives.list": linkedinAdsListCreatives,
       "analytics.report.get": linkedinAdsGetAnalyticsReport,
+    },
+    "tiktok-ads": {
+      "analytics.report.get": tiktokAdsGetAnalyticsReport,
+      "advertisers.list": tiktokAdsListAdvertisers,
+      "campaigns.get": tiktokAdsGetCampaign,
+      "ad_groups.get": tiktokAdsGetAdGroup,
+      "ads.get": tiktokAdsGetAd,
+      "pixels.list": tiktokAdsListPixels,
     },
     shopify: {
       "products.get": shopifyGetProduct,
