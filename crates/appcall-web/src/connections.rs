@@ -251,10 +251,49 @@ fn connection_row(value: &Value) -> Result<String, Error> {
     ))
 }
 
+fn surface_status(value: &Value) -> Result<Option<&'static str>, Error> {
+    if value.get("unavailable").and_then(Value::as_bool) == Some(true) {
+        return Ok(Some("unavailable"));
+    }
+    match value.get("status").and_then(Value::as_str) {
+        Some("unavailable") => Ok(Some("unavailable")),
+        Some("error") => Ok(Some("error")),
+        Some("ok") | None => Ok(None),
+        Some(_) => Err(Error::Unavailable),
+    }
+}
+
+fn filtered(value: &Value) -> bool {
+    value.get("hasFilters").and_then(Value::as_bool) == Some(true)
+        || value.get("filtered").and_then(Value::as_bool) == Some(true)
+}
+
+fn empty_state(
+    title: &str,
+    body: &str,
+    action_label: &str,
+    action_href: &str,
+    role: ui::EmptyStateRole,
+) -> String {
+    ui::EmptyState {
+        title,
+        body,
+        action_label,
+        action_href: ui::LocalPath::new(action_href).expect("static local empty-state link"),
+        role,
+    }
+    .render()
+}
+
 pub(crate) fn render(value: &Value) -> Result<String, Error> {
-    let items = rows(value)?;
+    let surface = surface_status(value)?;
+    let items = match surface {
+        Some("unavailable") | Some("error") => None,
+        _ => Some(rows(value)?),
+    };
+    let empty_list = items.is_some_and(|rows| rows.is_empty());
     let browse = ui::Button {
-        variant: if items.is_empty() {
+        variant: if empty_list || surface.is_some() {
             ui::ButtonVariant::Secondary
         } else {
             ui::ButtonVariant::Primary
@@ -275,24 +314,49 @@ pub(crate) fn render(value: &Value) -> Result<String, Error> {
         .render()
         .replacen("<h1>", "<h1 id=\"connections-heading\">", 1)
     );
-    if items.is_empty() {
-        html.push_str(
-            &ui::EmptyState {
-                title: "No connections to show.",
-                body: "Browse connectors to configure a connection.",
-                action_label: "Browse connectors",
-                action_href: ui::LocalPath::new("/app/connectors")
-                    .expect("static local empty-state link"),
-                role: ui::EmptyStateRole::Status,
+    match surface {
+        Some("unavailable") => html.push_str(&empty_state(
+            "Connections unavailable",
+            "The console could not load saved connections. This page does not invent accounts or statuses.",
+            "Reload",
+            "/app/connections",
+            ui::EmptyStateRole::Alert,
+        )),
+        Some("error") => html.push_str(&empty_state(
+            "Connections unreachable",
+            "The console is configured to list connections, but the read failed. Nothing here is invented.",
+            "Reload",
+            "/app/connections",
+            ui::EmptyStateRole::Alert,
+        )),
+        _ => {
+            let items = items.expect("ok surface requires rows");
+            if items.is_empty() {
+                if filtered(value) {
+                    html.push_str(&empty_state(
+                        "No connections match these filters.",
+                        "Clear the filters to view saved connections.",
+                        "Clear filters",
+                        "/app/connections",
+                        ui::EmptyStateRole::Status,
+                    ));
+                } else {
+                    html.push_str(&empty_state(
+                        "No connections to show.",
+                        "Browse connectors to configure a connection.",
+                        "Browse connectors",
+                        "/app/connectors",
+                        ui::EmptyStateRole::Status,
+                    ));
+                }
+            } else {
+                html.push_str("<section class=\"connections-table-shell\" aria-labelledby=\"connections-list-heading\"><h3 id=\"connections-list-heading\" class=\"sr-only\">Saved connections</h3><table class=\"connections-table\"><caption class=\"sr-only\">Saved connections</caption><thead><tr><th scope=\"col\">Account</th><th scope=\"col\">Auth</th><th scope=\"col\">Status</th><th scope=\"col\">Last provider check</th><th scope=\"col\">Actions</th></tr></thead><tbody>");
+                for item in items {
+                    html.push_str(&connection_row(item)?);
+                }
+                html.push_str("</tbody></table></section>");
             }
-            .render(),
-        );
-    } else {
-        html.push_str("<section class=\"connections-table-shell\" aria-labelledby=\"connections-list-heading\"><h3 id=\"connections-list-heading\" class=\"sr-only\">Saved connections</h3><table class=\"connections-table\"><caption class=\"sr-only\">Saved connections</caption><thead><tr><th scope=\"col\">Account</th><th scope=\"col\">Auth</th><th scope=\"col\">Status</th><th scope=\"col\">Last provider check</th><th scope=\"col\">Actions</th></tr></thead><tbody>");
-        for item in items {
-            html.push_str(&connection_row(item)?);
         }
-        html.push_str("</tbody></table></section>");
     }
     html.push_str("</section>");
     Ok(html)
@@ -392,5 +456,55 @@ mod tests {
     fn empty_connections_offer_one_primary_next_step() {
         let html = render(&json!({"connections": []})).unwrap();
         assert_eq!(html.matches("ui-button-primary").count(), 1);
+    }
+
+    #[test]
+    fn connections_triad_empty_states_stay_distinct() {
+        let unavailable = render(&json!({"status": "unavailable"})).unwrap();
+        assert!(unavailable.contains("id=\"connections-page\""));
+        assert!(unavailable.contains("Connections unavailable"));
+        assert!(unavailable.contains("does not invent accounts or statuses"));
+        assert!(unavailable.contains("role=\"alert\""));
+        assert!(unavailable.contains("href=\"/app/connections\""));
+        assert!(!unavailable.contains("No connections to show."));
+        assert!(!unavailable.contains("connections-table"));
+
+        let unavailable_flag = render(&json!({"unavailable": true})).unwrap();
+        assert!(unavailable_flag.contains("Connections unavailable"));
+        assert!(unavailable_flag.contains("role=\"alert\""));
+
+        let error = render(&json!({"status": "error"})).unwrap();
+        assert!(error.contains("Connections unreachable"));
+        assert!(error.contains("role=\"alert\""));
+        assert!(error.contains("href=\"/app/connections\""));
+        assert!(!error.contains("No connections to show."));
+
+        let empty = render(&json!({"connections": []})).unwrap();
+        assert!(empty.contains("No connections to show."));
+        assert!(empty.contains("role=\"status\""));
+        assert!(empty.contains("href=\"/app/connectors\""));
+        assert!(!empty.contains("Connections unavailable"));
+        assert!(!empty.contains("match these filters"));
+
+        let filtered = render(&json!({"connections": [], "hasFilters": true})).unwrap();
+        assert!(filtered.contains("No connections match these filters."));
+        assert!(filtered.contains("role=\"status\""));
+        assert!(filtered.contains("href=\"/app/connections\""));
+        assert!(!filtered.contains("No connections to show."));
+        assert!(!filtered.contains("Connections unavailable"));
+
+        let filtered_alias = render(&json!({"connections": [], "filtered": true})).unwrap();
+        assert!(filtered_alias.contains("No connections match these filters."));
+
+        assert_eq!(
+            render(&json!({})),
+            Err(Error::Unavailable),
+            "missing list without unavailable marker stays fail-closed"
+        );
+        assert_eq!(
+            render(&json!({"status": "mystery"})),
+            Err(Error::Unavailable),
+            "unknown status stays fail-closed"
+        );
     }
 }

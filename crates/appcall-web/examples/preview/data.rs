@@ -335,10 +335,10 @@ fn collection(scenario: Scenario, r: &DashboardRequest) -> Option<Result<Value, 
         Op::Certification => "certifications",
         _ => return None,
     };
-    if scenario == Scenario::Unavailable {
-        return Some(Err(Error::Unavailable));
-    }
     if r.operation == Op::Connections {
+        if scenario == Scenario::Unavailable {
+            return Some(Ok(json!({"synthetic":true,"status":"unavailable"})));
+        }
         if scenario == Scenario::Connections {
             return Some(Ok(
                 json!({"synthetic":true,"connections":connections_fixture()}),
@@ -349,6 +349,9 @@ fn collection(scenario: Scenario, r: &DashboardRequest) -> Option<Result<Value, 
                 "id":"synthetic/invalid-id","connector":"connector-0","status":"active"
             }]})));
         }
+    }
+    if scenario == Scenario::Unavailable {
+        return Some(Err(Error::Unavailable));
     }
     if scenario == Scenario::Empty
         || scenario == Scenario::EventsStream && r.operation == Op::Events

@@ -142,7 +142,12 @@ async fn connections_preview_malformed_empty_and_unavailable_stay_distinct() {
     assert_eq!(page(&malformed, "/app/connections", &[]).await.status, 503);
     let empty = page(&data("empty"), "/app/connections", &[]).await;
     assert_eq!(empty.status, 200);
-    assert!(empty.body.contains("No connections"));
+    assert!(empty.body.contains("No connections to show."));
+    assert!(empty.body.contains("role=\"status\""));
+    assert!(!empty.body.contains("Connections unavailable"));
     let unavailable = page(&data("unavailable"), "/app/connections", &[]).await;
-    assert_eq!(unavailable.status, 503);
+    assert_eq!(unavailable.status, 200);
+    assert!(unavailable.body.contains("Connections unavailable"));
+    assert!(unavailable.body.contains("role=\"alert\""));
+    assert!(!unavailable.body.contains("No connections to show."));
 }
