@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.4.0", () => {
-    expect(manifest.version).toBe("0.4.0");
+  it("has version 0.5.0", () => {
+    expect(manifest.version).toBe("0.5.0");
   });
 
   it("uses bun runtime", () => {
@@ -35,11 +35,13 @@ describe("Ashby manifest", () => {
 
   it("declares P0+P1 reads plus write ops", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
+      "applications.create",
       "applications.get",
       "applications.hire",
       "applications.list",
       "applications.move",
       "applications.reject",
+      "candidates.create",
       "candidates.get",
       "candidates.list",
       "candidates.search",
@@ -71,6 +73,32 @@ describe("Ashby manifest", () => {
       expect(op.effectPolicy).toBe("Reconcile");
       expect(op.reconcile).toBe("applications.get");
     }
+  });
+
+  it("wires candidates.create EffectPolicy Idempotent to candidates.get", () => {
+    const create = manifest.operations["candidates.create"] as {
+      kind: string;
+      sideEffect: string;
+      effectPolicy: string;
+      reconcile: string;
+    };
+    expect(create.kind).toBe("action");
+    expect(create.sideEffect).toBe("write");
+    expect(create.effectPolicy).toBe("Idempotent");
+    expect(create.reconcile).toBe("candidates.get");
+  });
+
+  it("wires applications.create EffectPolicy Idempotent to applications.get", () => {
+    const create = manifest.operations["applications.create"] as {
+      kind: string;
+      sideEffect: string;
+      effectPolicy: string;
+      reconcile: string;
+    };
+    expect(create.kind).toBe("action");
+    expect(create.sideEffect).toBe("write");
+    expect(create.effectPolicy).toBe("Idempotent");
+    expect(create.reconcile).toBe("applications.get");
   });
 
   it("declares interviews.schedule|cancel as write actions", () => {

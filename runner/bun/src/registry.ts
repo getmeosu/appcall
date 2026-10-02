@@ -207,6 +207,8 @@ import {
   executeApplicationsGetSync as getAshbyApplication,
   executeCandidatesSearchSync as searchAshbyCandidates,
   executeInterviewsListSync as listAshbyInterviews,
+  executeCandidatesCreateSync as createAshbyCandidate,
+  executeApplicationsCreateSync as createAshbyApplication,
   executeApplicationsMoveSync as moveAshbyApplication,
   executeApplicationsRejectSync as rejectAshbyApplication,
   executeApplicationsHireSync as hireAshbyApplication,
@@ -949,6 +951,8 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "opportunities.archive": archiveLeverOpportunity,
     },
     ashby: {
+      "candidates.create": createAshbyCandidate,
+      "applications.create": createAshbyApplication,
       "applications.move": moveAshbyApplication,
       "applications.reject": rejectAshbyApplication,
       "applications.hire": hireAshbyApplication,

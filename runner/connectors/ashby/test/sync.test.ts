@@ -7,6 +7,8 @@ import {
   executeApplicationsGetSync,
   executeCandidatesSearchSync,
   executeInterviewsListSync,
+  executeCandidatesCreateSync,
+  executeApplicationsCreateSync,
   executeApplicationsMoveSync,
   executeApplicationsRejectSync,
   executeApplicationsHireSync,
@@ -17,6 +19,8 @@ import candidatesFixture from "../fixtures/candidates_list.json";
 import applicationsFixture from "../fixtures/applications_list.json";
 import candidateInfoFixture from "../fixtures/candidate_info.json";
 import applicationInfoFixture from "../fixtures/application_info.json";
+import candidateCreatedFixture from "../fixtures/candidate_created.json";
+import applicationCreatedFixture from "../fixtures/application_created.json";
 import applicationChangeStageFixture from "../fixtures/application_change_stage.json";
 import candidatesSearchFixture from "../fixtures/candidates_search.json";
 import interviewsFixture from "../fixtures/interviews_list.json";
@@ -434,6 +438,185 @@ describe("Ashby interviews.list sync", () => {
     const { calls, impl } = stubFetch("{}");
     await expect(executeInterviewsListSync({ apiKey: "", fetch: impl })).rejects.toThrow(/apiKey/);
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe("Ashby candidates.create (POST only; runner owns Idempotent)", () => {
+  test("POSTs /candidate.create and returns unwrapped results with id", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidateCreatedFixture));
+
+    const result = await executeCandidatesCreateSync({
+      ...auth,
+      name: "Adam Hart",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/candidate.create");
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].headers.get("authorization")).toBe("Basic Zml4dHVyZWtleTo=");
+    expect(calls[0].headers.get("accept")).toBe("application/json; version=1");
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({ name: "Adam Hart" });
+    expect(result.id).toBe("e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
+    expect(result.name).toBe("Adam Hart");
+  });
+
+  test("maps websiteUrl to Ashby website and forwards optionals", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidateCreatedFixture));
+
+    await executeCandidatesCreateSync({
+      ...auth,
+      name: "Adam Hart",
+      email: "adam.hart@example.com",
+      phoneNumber: "+1-555-0100",
+      linkedInUrl: "https://linkedin.com/in/adamhart",
+      githubUrl: "https://github.com/adamhart",
+      websiteUrl: "https://adamhart.example",
+      sourceId: "src-1",
+      creditedToUserId: "user-1",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({
+      name: "Adam Hart",
+      email: "adam.hart@example.com",
+      phoneNumber: "+1-555-0100",
+      linkedInUrl: "https://linkedin.com/in/adamhart",
+      githubUrl: "https://github.com/adamhart",
+      website: "https://adamhart.example",
+      sourceId: "src-1",
+      creditedToUserId: "user-1",
+    });
+    expect(posted.websiteUrl).toBeUndefined();
+  });
+
+  test("rejects missing name before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeCandidatesCreateSync({
+        ...auth,
+        name: "",
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/name/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors on create", async () => {
+    const { impl } = stubFetch("{}", { status: 422 });
+    await expect(
+      executeCandidatesCreateSync({
+        ...auth,
+        name: "Adam Hart",
+        fetch: impl,
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Ashby applications.create (POST only; runner owns Idempotent)", () => {
+  test("POSTs /application.create and returns unwrapped results with id", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(applicationCreatedFixture));
+
+    const result = await executeApplicationsCreateSync({
+      ...auth,
+      candidateId: "84bfbed7-ed0a-496d-bb18-11b73369f666",
+      jobId: "4071538b-3cac-4fbf-ac76-f78ed250ffdd",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/application.create");
+    expect(calls[0].method).toBe("POST");
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({
+      candidateId: "84bfbed7-ed0a-496d-bb18-11b73369f666",
+      jobId: "4071538b-3cac-4fbf-ac76-f78ed250ffdd",
+    });
+    expect(result.id).toBe("e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
+  });
+
+  test("forwards optional sourceId/creditedToUserId/interviewStageId", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(applicationCreatedFixture));
+
+    await executeApplicationsCreateSync({
+      ...auth,
+      candidateId: "84bfbed7-ed0a-496d-bb18-11b73369f666",
+      jobId: "4071538b-3cac-4fbf-ac76-f78ed250ffdd",
+      sourceId: "src-1",
+      creditedToUserId: "user-1",
+      interviewStageId: "FirstPreInterviewScreen",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({
+      candidateId: "84bfbed7-ed0a-496d-bb18-11b73369f666",
+      jobId: "4071538b-3cac-4fbf-ac76-f78ed250ffdd",
+      sourceId: "src-1",
+      creditedToUserId: "user-1",
+      interviewStageId: "FirstPreInterviewScreen",
+    });
+  });
+
+  test("rejects missing candidateId before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeApplicationsCreateSync({
+        ...auth,
+        candidateId: "",
+        jobId: "4071538b-3cac-4fbf-ac76-f78ed250ffdd",
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/candidateId/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("rejects missing jobId before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeApplicationsCreateSync({
+        ...auth,
+        candidateId: "84bfbed7-ed0a-496d-bb18-11b73369f666",
+        jobId: "",
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/jobId/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors on create", async () => {
+    const { impl } = stubFetch("{}", { status: 422 });
+    await expect(
+      executeApplicationsCreateSync({
+        ...auth,
+        candidateId: "84bfbed7-ed0a-496d-bb18-11b73369f666",
+        jobId: "4071538b-3cac-4fbf-ac76-f78ed250ffdd",
+        fetch: impl,
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Ashby applications.get accepts Idempotent id alias", () => {
+  test("POSTs /application.info with id when applicationId omitted", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(applicationInfoFixture));
+
+    const result = await executeApplicationsGetSync({
+      ...auth,
+      id: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/application.info");
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({ applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e" });
+    expect(result.application?.id).toBe("ash-application:e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
   });
 });
 
