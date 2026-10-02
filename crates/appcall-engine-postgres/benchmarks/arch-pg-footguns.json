@@ -1,0 +1,15 @@
+{
+  "suite": "arch-pg-footguns",
+  "note": "Code-inspected evidence; live WAL/TOAST and open-scan timings require APPCALL_ENGINE_POSTGRES_URL (see ignored contract tests). No multi-worker SKIP LOCKED.",
+  "session_advisory_required": true,
+  "txn_pooling_rejected": true,
+  "evidence": {
+    "advisory_lock": "PostgresStore::from_client uses pg_try_advisory_lock(OWNER_LOCK); Conflict if not owned",
+    "session_not_txn_pool": "lib.rs docs: dedicated database/schema with direct sessions, never a transaction-pooling proxy",
+    "record_cap_bytes": 1048576,
+    "record_cap_enforced": "CREATE TABLE ... record BYTEA NOT NULL CHECK(octet_length(record)<=1048576) plus encoded() Limit",
+    "blob_rewrite_vs_history_depth": "SKIPPED_NO_LIVE_PG — full-row BYTEA rewrite on every commit; cost grows with serde size of history (same 1MiB cap as SQLite)",
+    "open_scan_at_n_running": "SKIPPED_NO_LIVE_PG — recover_running pages running rows in RECOVERY_BATCH_SIZE=64 ordered by id; runnable() filters state=running AND wakeup<=now ORDER BY wakeup,id LIMIT",
+    "skip_locked_multi_worker": false
+  }
+}

@@ -140,3 +140,62 @@ fn chrono_like_stamp() -> String {
     // Approximate YYYY-MM-DD without chrono dep: use unix day ordinal label.
     format!("unix-day-{days}")
 }
+
+#[test]
+fn noop_waiting_redrive_rss_and_latency_under_budget() {
+    // Evidence that no-op Waiting re-drives stay cheap after skipping serde commits.
+    let redrives = 256usize;
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("engine.db");
+    let baseline = rss_kib();
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("wait", "v1", |c| {
+        c.signal("go")?;
+        Ok(c.input().clone())
+    })
+    .unwrap();
+    e.start("r", "wait", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+
+    let mut latencies_us = Vec::with_capacity(redrives);
+    for _ in 0..redrives {
+        let started = Instant::now();
+        assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+        latencies_us.push(started.elapsed().as_micros());
+    }
+    let after_work = rss_kib();
+    drop(e);
+
+    latencies_us.sort_unstable();
+    let p50 = percentile_us(&latencies_us, 0.50);
+    let p99 = percentile_us(&latencies_us, 0.99);
+    let incremental = after_work.saturating_sub(baseline);
+
+    let report = serde_json::json!({
+        "suite": "noop_waiting_redrive_rss_and_latency",
+        "redrives": redrives,
+        "baseline_rss_kib": baseline,
+        "after_work_rss_kib": after_work,
+        "incremental_rss_kib": incremental,
+        "noop_waiting_p50_us": p50,
+        "noop_waiting_p99_us": p99,
+        "budget_incremental_rss_kib": 8_192,
+        "budget_p99_us": 5_000,
+    });
+    let out = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("benchmarks")
+        .join(format!("{}-noop-waiting.json", chrono_like_stamp()));
+    std::fs::create_dir_all(out.parent().unwrap()).unwrap();
+    std::fs::write(&out, serde_json::to_vec_pretty(&report).unwrap()).unwrap();
+
+    assert!(
+        incremental <= 8_192,
+        "incremental RSS {incremental} KiB exceeds 8 MiB soft budget; wrote {out:?}"
+    );
+    assert!(
+        p99 <= 5_000,
+        "noop Waiting p99 {p99} us exceeds 5ms soft budget; wrote {out:?}"
+    );
+}

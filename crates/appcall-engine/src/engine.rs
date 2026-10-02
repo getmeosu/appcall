@@ -339,6 +339,10 @@ impl<S: Store> Engine<S> {
         if let Some(outcome) = self.advance_retries(&mut r, now_ms)? {
             return Ok(outcome);
         }
+        // Tracks whether this drive appended history. Used to skip no-op Waiting
+        // saves that would otherwise serde-commit an unchanged record (and pay
+        // history.clone cost) on every re-drive while parked on a wait.
+        let mut wrote_history = false;
         for _ in 0..128 {
             let mut ctx = Context {
                 input: r.input.clone(),
@@ -403,6 +407,7 @@ impl<S: Store> Engine<S> {
                     command,
                     value: None,
                 });
+                wrote_history = true;
             }
             let index = r
                 .history
@@ -411,6 +416,9 @@ impl<S: Store> Engine<S> {
                 .ok_or(Error::Conflict)?;
             let command = r.history[index].command.clone();
             let mut children = vec![];
+            // Capture wakeup before evaluate mutates it so a pure re-drive that
+            // recomputes the same wait wakeup can skip the final Waiting save.
+            let wakeup_before_evaluate = r.wakeup;
             let value = self.evaluate(&mut r, index, &command, now_ms, &mut children)?;
             merge_retry_wakeup(&mut r);
             if let Some(value) = value {
@@ -506,7 +514,13 @@ impl<S: Store> Engine<S> {
                     .insert(dispatch_key(&attempt), attempt.clone());
                 return Ok(DriveOutcome::Activity(attempt));
             }
-            self.save(&mut r, &children)?;
+            // Skip no-op Waiting saves: re-driving a parked wait used to always
+            // serde-commit (revision++, full record rewrite) even when history,
+            // children, and wakeup were unchanged — the history.clone-per-drive
+            // footgun on the hot path.
+            if wrote_history || !children.is_empty() || r.wakeup != wakeup_before_evaluate {
+                self.save(&mut r, &children)?;
+            }
             return Ok(DriveOutcome::Waiting);
         }
         r.wakeup = Some(0);
