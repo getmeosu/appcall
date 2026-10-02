@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.2.0", () => {
-    expect(manifest.version).toBe("0.2.0");
+  it("has version 0.3.0", () => {
+    expect(manifest.version).toBe("0.3.0");
   });
 
   it("uses bun runtime", () => {
@@ -33,21 +33,27 @@ describe("Ashby manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares P0 ops including jobs.list", () => {
+  it("declares P0+P1 ops including jobs.list", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
+      "applications.get",
       "applications.list",
       "candidates.get",
       "candidates.list",
+      "candidates.search",
       "healthcheck",
+      "interviews.list",
       "jobs.list",
     ]);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
     expect(manifest.operations["candidates.list"].kind).toBe("sync");
     expect(manifest.operations["applications.list"].kind).toBe("sync");
     expect(manifest.operations["candidates.get"].kind).toBe("sync");
+    expect(manifest.operations["applications.get"].kind).toBe("sync");
+    expect(manifest.operations["candidates.search"].kind).toBe("sync");
+    expect(manifest.operations["interviews.list"].kind).toBe("sync");
   });
 
-  it("declares job, candidate, application models", () => {
-    expect(manifest.models).toEqual(["job", "candidate", "application"]);
+  it("declares job, candidate, application, interview models", () => {
+    expect(manifest.models).toEqual(["job", "candidate", "application", "interview"]);
   });
 });

@@ -194,6 +194,9 @@ import {
   executeCandidatesListSync as listAshbyCandidates,
   executeApplicationsListSync as listAshbyApplications,
   executeCandidatesGetSync as getAshbyCandidate,
+  executeApplicationsGetSync as getAshbyApplication,
+  executeCandidatesSearchSync as searchAshbyCandidates,
+  executeInterviewsListSync as listAshbyInterviews,
 } from "../../connectors/ashby/src/sync";
 import workableManifest from "../../connectors/workable/manifest.json";
 import { healthcheck as workableHealthcheck } from "../../connectors/workable/src/healthcheck";
@@ -1122,6 +1125,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "candidates.list": listAshbyCandidates,
       "applications.list": listAshbyApplications,
       "candidates.get": getAshbyCandidate,
+      "applications.get": getAshbyApplication,
+      "candidates.search": searchAshbyCandidates,
+      "interviews.list": listAshbyInterviews,
     },
     workable: {
       "jobs.list": listWorkableJobs,

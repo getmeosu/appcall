@@ -7,11 +7,17 @@ import {
   parseCandidateInfoResponse,
   normalizeApplication,
   parseApplicationsResponse,
+  parseApplicationInfoResponse,
+  normalizeInterview,
+  parseInterviewsResponse,
 } from "../src/objects";
 import jobsFixture from "../fixtures/jobs_list.json";
 import candidatesFixture from "../fixtures/candidates_list.json";
 import applicationsFixture from "../fixtures/applications_list.json";
 import candidateInfoFixture from "../fixtures/candidate_info.json";
+import applicationInfoFixture from "../fixtures/application_info.json";
+import candidatesSearchFixture from "../fixtures/candidates_search.json";
+import interviewsFixture from "../fixtures/interviews_list.json";
 
 describe("Ashby normalizeJob", () => {
   it("normalizes a full job correctly", () => {
@@ -209,5 +215,72 @@ describe("Ashby parseApplicationsResponse", () => {
   it("handles missing results", () => {
     const result = parseApplicationsResponse({});
     expect(result.applications).toHaveLength(0);
+  });
+});
+
+describe("Ashby parseApplicationInfoResponse", () => {
+  it("parses fixture info response", () => {
+    const result = parseApplicationInfoResponse(applicationInfoFixture);
+    expect(result.application).not.toBeNull();
+    expect(result.application!.id).toBe("ash-application:e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
+    expect(result.application!.candidateName).toBe("Michael Bluth");
+    expect(result.application!.jobTitle).toBe("First Designer");
+  });
+
+  it("returns null when results missing", () => {
+    expect(parseApplicationInfoResponse({}).application).toBeNull();
+    expect(parseApplicationInfoResponse({ results: [] }).application).toBeNull();
+  });
+});
+
+describe("Ashby candidates.search parse via parseCandidatesResponse", () => {
+  it("parses search fixture (array results, no cursor)", () => {
+    const result = parseCandidatesResponse(candidatesSearchFixture);
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].id).toBe("ash-candidate:e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
+    expect(result.candidates[0].name).toBe("Adam Hart");
+    expect(result.moreDataAvailable).toBe(false);
+    expect(result.nextCursor).toBeNull();
+  });
+});
+
+describe("Ashby normalizeInterview", () => {
+  it("normalizes a full interview from fixture", () => {
+    const interview = normalizeInterview(interviewsFixture.results[0] as never);
+    expect(interview.id).toBe("ash-interview:e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
+    expect(interview.provider).toBe("ashby");
+    expect(interview.title).toBe("Technical Interview");
+    expect(interview.externalTitle).toBe("Technical Interview");
+    expect(interview.isArchived).toBe(false);
+    expect(interview.isDebrief).toBe(false);
+    expect(interview.isFeedbackRequired).toBe(true);
+    expect(interview.isFeedbackRequested).toBe(true);
+    expect(interview.instructionsPlain).toBe("Use the scorecard to evaluate the candidate.");
+    expect(interview.jobId).toBe("2cb69137-763a-4d6f-8f17-bbc3564ecb2e");
+    expect(interview.feedbackFormDefinitionId).toBe("07189c2e-cacd-489d-8946-165acacc386f");
+  });
+
+  it("handles archived shared interview", () => {
+    const interview = normalizeInterview(interviewsFixture.results[1] as never);
+    expect(interview.isArchived).toBe(true);
+    expect(interview.externalTitle).toBeNull();
+    expect(interview.jobId).toBeNull();
+    expect(interview.isFeedbackRequired).toBe(false);
+  });
+});
+
+describe("Ashby parseInterviewsResponse", () => {
+  it("parses fixture response", () => {
+    const result = parseInterviewsResponse(interviewsFixture);
+    expect(result.interviews).toHaveLength(2);
+    expect(result.moreDataAvailable).toBe(true);
+    expect(result.nextCursor).toBe("cursor-int-2");
+    expect(result.syncToken).toBe("sync-interviews-1");
+  });
+
+  it("handles missing results", () => {
+    const result = parseInterviewsResponse({});
+    expect(result.interviews).toHaveLength(0);
+    expect(result.moreDataAvailable).toBe(false);
   });
 });

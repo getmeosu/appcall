@@ -4,10 +4,16 @@ import {
   executeCandidatesListSync,
   executeApplicationsListSync,
   executeCandidatesGetSync,
+  executeApplicationsGetSync,
+  executeCandidatesSearchSync,
+  executeInterviewsListSync,
 } from "../src/sync";
 import candidatesFixture from "../fixtures/candidates_list.json";
 import applicationsFixture from "../fixtures/applications_list.json";
 import candidateInfoFixture from "../fixtures/candidate_info.json";
+import applicationInfoFixture from "../fixtures/application_info.json";
+import candidatesSearchFixture from "../fixtures/candidates_search.json";
+import interviewsFixture from "../fixtures/interviews_list.json";
 
 // Every request is served by an injected fetch. No real network.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
@@ -231,5 +237,177 @@ describe("Ashby candidates.get sync", () => {
     await expect(
       executeCandidatesGetSync({ ...auth, id: "missing", fetch: impl }),
     ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Ashby applications.get sync", () => {
+  test("POSTs /application.info with applicationId", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(applicationInfoFixture));
+
+    const result = await executeApplicationsGetSync({
+      ...auth,
+      applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.ashbyhq.com");
+    expect(url.pathname).toBe("/application.info");
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].headers.get("authorization")).toBe(
+      `Basic ${Buffer.from("fixturekey:", "utf8").toString("base64")}`,
+    );
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({ applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e" });
+    expect(result.application!.id).toBe("ash-application:e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
+    expect(result.application!.candidateName).toBe("Michael Bluth");
+  });
+
+  test("accepts submittedFormInstanceId instead of applicationId", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(applicationInfoFixture));
+
+    await executeApplicationsGetSync({
+      ...auth,
+      submittedFormInstanceId: "form-inst-1",
+      fetch: impl,
+    });
+
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({ submittedFormInstanceId: "form-inst-1" });
+  });
+
+  test("prefers applicationId when both identifiers provided", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(applicationInfoFixture));
+
+    await executeApplicationsGetSync({
+      ...auth,
+      applicationId: "app-1",
+      submittedFormInstanceId: "form-1",
+      fetch: impl,
+    });
+
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({ applicationId: "app-1" });
+  });
+
+  test("requires applicationId or submittedFormInstanceId", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(executeApplicationsGetSync({ ...auth, fetch: impl })).rejects.toThrow(
+      /applicationId or submittedFormInstanceId/,
+    );
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 404 });
+    await expect(
+      executeApplicationsGetSync({ ...auth, applicationId: "missing", fetch: impl }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Ashby candidates.search sync", () => {
+  test("POSTs /candidate.search with email", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+
+    const result = await executeCandidatesSearchSync({
+      ...auth,
+      email: "adam.hart@example.com",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/candidate.search");
+    expect(calls[0].method).toBe("POST");
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({ email: "adam.hart@example.com" });
+    expect(result.candidates).toHaveLength(1);
+    expect(result.candidates[0].name).toBe("Adam Hart");
+    expect(result.moreDataAvailable).toBe(false);
+  });
+
+  test("forwards email and name (AND) in JSON body", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+
+    await executeCandidatesSearchSync({
+      ...auth,
+      email: "adam.hart@example.com",
+      name: "Adam Hart",
+      fetch: impl,
+    });
+
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({ email: "adam.hart@example.com", name: "Adam Hart" });
+  });
+
+  test("requires email or name", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(executeCandidatesSearchSync({ ...auth, fetch: impl })).rejects.toThrow(
+      /email or name/,
+    );
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 500 });
+    await expect(
+      executeCandidatesSearchSync({ ...auth, name: "Ada", fetch: impl }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Ashby interviews.list sync", () => {
+  test("POSTs /interview.list with Basic auth", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
+
+    const result = await executeInterviewsListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.ashbyhq.com");
+    expect(url.pathname).toBe("/interview.list");
+    expect(calls[0].method).toBe("POST");
+    expect(calls[0].headers.get("authorization")).toBe(
+      `Basic ${Buffer.from("fixturekey:", "utf8").toString("base64")}`,
+    );
+    expect(result.interviews).toHaveLength(2);
+    expect(result.interviews[0].id).toBe("ash-interview:e9ed20fd-d45f-4aad-8a00-a19bfba0083e");
+    expect(result.moreDataAvailable).toBe(true);
+    expect(result.nextCursor).toBe("cursor-int-2");
+    expect(result.syncToken).toBe("sync-interviews-1");
+  });
+
+  test("forwards limit/cursor/syncToken in JSON body", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
+
+    await executeInterviewsListSync({
+      ...auth,
+      limit: 50,
+      cursor: "cur_i",
+      syncToken: "tok_i",
+      fetch: impl,
+    });
+
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({
+      limit: 50,
+      cursor: "cur_i",
+      syncToken: "tok_i",
+    });
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 503 });
+    await expect(executeInterviewsListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
+  });
+
+  test("rejects missing apiKey before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(executeInterviewsListSync({ apiKey: "", fetch: impl })).rejects.toThrow(/apiKey/);
+    expect(calls).toHaveLength(0);
   });
 });

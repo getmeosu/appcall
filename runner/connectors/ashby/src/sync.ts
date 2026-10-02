@@ -1,10 +1,13 @@
 /**
- * Ashby list/get syncs.
+ * Ashby list/get/search syncs.
  *
  * jobs.list          → public GET /posting-api/job-board/{board}/jobs
  * candidates.list    → authenticated POST /candidate.list
  * applications.list  → authenticated POST /application.list
  * candidates.get     → authenticated POST /candidate.info
+ * applications.get   → authenticated POST /application.info
+ * candidates.search  → authenticated POST /candidate.search
+ * interviews.list    → authenticated POST /interview.list
  */
 
 import { createClient, createAuthClient } from "./http";
@@ -13,9 +16,12 @@ import {
   parseCandidatesResponse,
   parseCandidateInfoResponse,
   parseApplicationsResponse,
+  parseApplicationInfoResponse,
+  parseInterviewsResponse,
   type NormalizedJob,
   type NormalizedCandidate,
   type NormalizedApplication,
+  type NormalizedInterview,
 } from "./objects";
 
 export interface ExecuteJobsListSyncInput {
@@ -168,4 +174,121 @@ export async function executeCandidatesGetSync(
     }),
   );
   return parseCandidateInfoResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// applications.get — POST /application.info
+// ---------------------------------------------------------------------------
+
+export interface ExecuteApplicationsGetSyncInput extends AshbyAuthInput {
+  /** Ashby application UUID. Required unless submittedFormInstanceId is set. */
+  applicationId?: string;
+  /** Submitted form instance id (from applicationForm.submit). Alternative to applicationId. */
+  submittedFormInstanceId?: string;
+}
+
+export interface ExecuteApplicationsGetSyncOutput {
+  application: NormalizedApplication | null;
+}
+
+export async function executeApplicationsGetSync(
+  input: ExecuteApplicationsGetSyncInput,
+): Promise<ExecuteApplicationsGetSyncOutput> {
+  const hasAppId = typeof input.applicationId === "string" && input.applicationId.length > 0;
+  const hasFormId =
+    typeof input.submittedFormInstanceId === "string" && input.submittedFormInstanceId.length > 0;
+  if (!hasAppId && !hasFormId) {
+    throw new Error("applicationId or submittedFormInstanceId is required");
+  }
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "applications.get",
+  });
+  // Official Ashby precedence: when both are provided, lookup uses applicationId.
+  const raw = await client.postJSON(
+    "/application.info",
+    compactBody({
+      applicationId: hasAppId ? input.applicationId : undefined,
+      submittedFormInstanceId: hasFormId && !hasAppId ? input.submittedFormInstanceId : undefined,
+    }),
+  );
+  return parseApplicationInfoResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// candidates.search — POST /candidate.search
+// ---------------------------------------------------------------------------
+
+export interface ExecuteCandidatesSearchSyncInput extends AshbyAuthInput {
+  /** Candidate email (AND-combined with name when both set). */
+  email?: string;
+  /** Candidate name (AND-combined with email when both set). */
+  name?: string;
+}
+
+export interface ExecuteCandidatesSearchSyncOutput {
+  candidates: NormalizedCandidate[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeCandidatesSearchSync(
+  input: ExecuteCandidatesSearchSyncInput,
+): Promise<ExecuteCandidatesSearchSyncOutput> {
+  const hasEmail = typeof input.email === "string" && input.email.length > 0;
+  const hasName = typeof input.name === "string" && input.name.length > 0;
+  if (!hasEmail && !hasName) {
+    throw new Error("email or name is required");
+  }
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "candidates.search",
+  });
+  const raw = await client.postJSON(
+    "/candidate.search",
+    compactBody({
+      email: hasEmail ? input.email : undefined,
+      name: hasName ? input.name : undefined,
+    }),
+  );
+  return parseCandidatesResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// interviews.list — POST /interview.list
+// ---------------------------------------------------------------------------
+
+export interface ExecuteInterviewsListSyncInput extends AshbyAuthInput {
+  limit?: number;
+  cursor?: string;
+  syncToken?: string;
+}
+
+export interface ExecuteInterviewsListSyncOutput {
+  interviews: NormalizedInterview[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeInterviewsListSync(
+  input: ExecuteInterviewsListSyncInput,
+): Promise<ExecuteInterviewsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "interviews.list",
+  });
+  const raw = await client.postJSON(
+    "/interview.list",
+    compactBody({
+      limit: input.limit,
+      cursor: input.cursor,
+      syncToken: input.syncToken,
+    }),
+  );
+  return parseInterviewsResponse(raw);
 }

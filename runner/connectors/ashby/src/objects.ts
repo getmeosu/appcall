@@ -2,9 +2,9 @@
  * Ashby object normalization.
  *
  * jobs.list uses the public posting-api shape ({ jobs: [...] }).
- * Authenticated list/info ops use Ashby's envelope:
+ * Authenticated list/info/search ops use Ashby's envelope:
  *   { success, results, moreDataAvailable?, nextCursor?, syncToken? }
- * where `results` is an array for *.list and a single object for *.info.
+ * where `results` is an array for *.list/*.search and a single object for *.info.
  */
 
 export interface NormalizedJob {
@@ -43,6 +43,20 @@ export interface NormalizedApplication {
   archivedAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+export interface NormalizedInterview {
+  id: string;
+  provider: string;
+  title: string;
+  externalTitle: string | null;
+  isArchived: boolean;
+  isDebrief: boolean | null;
+  isFeedbackRequired: boolean | null;
+  isFeedbackRequested: boolean | null;
+  instructionsPlain: string | null;
+  jobId: string | null;
+  feedbackFormDefinitionId: string | null;
 }
 
 interface AshbyJob {
@@ -244,6 +258,65 @@ export function parseApplicationsResponse(raw: unknown): {
   const items = Array.isArray(data.results) ? (data.results as AshbyApplication[]) : [];
   return {
     applications: items.map(normalizeApplication),
+    moreDataAvailable: data.moreDataAvailable === true,
+    nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
+  };
+}
+
+export function parseApplicationInfoResponse(raw: unknown): {
+  application: NormalizedApplication | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const result = data.results;
+  if (result == null || typeof result !== "object" || Array.isArray(result)) {
+    return { application: null };
+  }
+  return { application: normalizeApplication(result as AshbyApplication) };
+}
+
+interface AshbyInterview {
+  id: string;
+  title?: string | null;
+  externalTitle?: string | null;
+  isArchived?: boolean | null;
+  isDebrief?: boolean | null;
+  isFeedbackRequired?: boolean | null;
+  isFeedbackRequested?: boolean | null;
+  instructionsPlain?: string | null;
+  jobId?: string | null;
+  feedbackFormDefinitionId?: string | null;
+}
+
+export function normalizeInterview(interview: AshbyInterview): NormalizedInterview {
+  const id = asStringId(interview.id) ?? "";
+  return {
+    id: `ash-interview:${id}`,
+    provider: "ashby",
+    title: interview.title ?? "",
+    externalTitle: interview.externalTitle ?? null,
+    isArchived: interview.isArchived === true,
+    isDebrief: typeof interview.isDebrief === "boolean" ? interview.isDebrief : null,
+    isFeedbackRequired:
+      typeof interview.isFeedbackRequired === "boolean" ? interview.isFeedbackRequired : null,
+    isFeedbackRequested:
+      typeof interview.isFeedbackRequested === "boolean" ? interview.isFeedbackRequested : null,
+    instructionsPlain: interview.instructionsPlain ?? null,
+    jobId: asStringId(interview.jobId ?? null),
+    feedbackFormDefinitionId: asStringId(interview.feedbackFormDefinitionId ?? null),
+  };
+}
+
+export function parseInterviewsResponse(raw: unknown): {
+  interviews: NormalizedInterview[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const items = Array.isArray(data.results) ? (data.results as AshbyInterview[]) : [];
+  return {
+    interviews: items.map(normalizeInterview),
     moreDataAvailable: data.moreDataAvailable === true,
     nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
     syncToken: typeof data.syncToken === "string" ? data.syncToken : null,

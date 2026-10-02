@@ -4,9 +4,9 @@
  * Two surfaces:
  * - Public posting-api job board (`createClient`) — jobs.list against
  *   /posting-api/job-board/{boardName}
- * - Authenticated API (`createAuthClient`) — candidates/applications against
+ * - Authenticated API (`createAuthClient`) — candidates/applications/interviews against
  *   https://api.ashbyhq.com with HTTP Basic (apiKey as username, empty password).
- *   Matches the manifest http.auth.basic scheme. Ashby list/info endpoints are
+ *   Matches the manifest http.auth.basic scheme. Ashby list/info/search endpoints are
  *   all POST + JSON body.
  *
  * Both route through the shared outbound stack for allowlist, redirect blocking,
