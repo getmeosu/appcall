@@ -124,6 +124,10 @@ import {
   listOrgs as ghListOrgs,
   listOrgMembers as ghListOrgMembers,
   listOrgRepos as ghListOrgRepos,
+  listCheckRunsForRef as ghListCheckRunsForRef, getCheckRun as ghGetCheckRun, listCheckSuitesForRef as ghListCheckSuitesForRef,
+  getCommitStatus as ghGetCommitStatus, listCommitStatuses as ghListCommitStatuses, createCommitStatus as ghCreateCommitStatus,
+  getCommit as ghGetCommit, compareRepos as ghCompareRepos, updatePullRequestBranch as ghUpdatePullRequestBranch,
+  listBranches as ghListBranches,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -831,6 +835,16 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "actions.jobs.logs.get": ghGetWorkflowJobLogs,
       "actions.artifacts.list": ghListArtifacts,
       "actions.artifacts.get": ghGetArtifact,
+      "checks.runs.list_for_ref": ghListCheckRunsForRef,
+      "checks.runs.get": ghGetCheckRun,
+      "checks.suites.list_for_ref": ghListCheckSuitesForRef,
+      "commits.status.get": ghGetCommitStatus,
+      "commits.statuses.list": ghListCommitStatuses,
+      "commits.statuses.create": ghCreateCommitStatus,
+      "commits.get": ghGetCommit,
+      "repos.compare": ghCompareRepos,
+      "pull_requests.update_branch": ghUpdatePullRequestBranch,
+      "branches.list": ghListBranches,
       "search.users": ghSearchUsers,
       "users.get": ghGetAuthenticatedUser,
       "users.get_by_username": ghGetUserByUsername,

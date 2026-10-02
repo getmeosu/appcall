@@ -51,6 +51,7 @@ import {
   validateListPullRequestCommitsInput,
   validateCheckMergedInput,
   validateDraftStateInput,
+  validateUpdatePullRequestBranchInput,
 } from "./pull_requests";
 import {
   createWorkflowsClient,
@@ -67,10 +68,12 @@ import {
   validateListArtifactsInput,
   validateGetArtifactInput,
 } from "./workflows";
-import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput } from "./repos";
-import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput } from "./branches";
+import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput } from "./repos";
+import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput, validateListBranchesInput } from "./branches";
 import { createReleasesClient, validateCreateReleaseInput } from "./releases";
 import { createGistsClient, validateCreateGistInput } from "./gists";
+import { createChecksClient, validateListCheckRunsForRefInput, validateGetCheckRunInput, validateListCheckSuitesForRefInput } from "./checks";
+import { createCommitsClient, validateGetCommitStatusInput, validateListCommitStatusesInput, validateCreateCommitStatusInput, validateGetCommitInput } from "./commits";
 import { createGitHubClient } from "./http";
 
 // ─── Existing actions ─────────────────────────────────────────────────────────
@@ -1114,6 +1117,186 @@ export function listOrgRepos(input: unknown): Record<string, unknown> | Promise<
     });
   }
   return { connector: "github", action: "orgs.repos.list", source: "connector", validated: validateListOrgReposInput(input) };
+}
+
+// ─── S4: checks.runs.list_for_ref ─────────────────────────────────────────────
+
+export function listCheckRunsForRef(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createChecksClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "checks.runs.list_for_ref" }),
+    }).listRunsForRef(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "checks.runs.list_for_ref", source: "connector", totalCount: result.totalCount, checkRuns: result.checkRuns };
+    });
+  }
+  return { connector: "github", action: "checks.runs.list_for_ref", source: "connector", validated: validateListCheckRunsForRefInput(input) };
+}
+
+// ─── S4: checks.runs.get ──────────────────────────────────────────────────────
+
+export function getCheckRun(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createChecksClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "checks.runs.get" }),
+    }).getRun(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "checks.runs.get", source: "connector", checkRun: result.checkRun };
+    });
+  }
+  return { connector: "github", action: "checks.runs.get", source: "connector", validated: validateGetCheckRunInput(input) };
+}
+
+// ─── S4: checks.suites.list_for_ref ───────────────────────────────────────────
+
+export function listCheckSuitesForRef(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createChecksClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "checks.suites.list_for_ref" }),
+    }).listSuitesForRef(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "checks.suites.list_for_ref", source: "connector", totalCount: result.totalCount, checkSuites: result.checkSuites };
+    });
+  }
+  return { connector: "github", action: "checks.suites.list_for_ref", source: "connector", validated: validateListCheckSuitesForRefInput(input) };
+}
+
+// ─── S4: commits.status.get ───────────────────────────────────────────────────
+
+export function getCommitStatus(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createCommitsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "commits.status.get" }),
+    }).getStatus(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "commits.status.get", source: "connector", status: result.status };
+    });
+  }
+  return { connector: "github", action: "commits.status.get", source: "connector", validated: validateGetCommitStatusInput(input) };
+}
+
+// ─── S4: commits.statuses.list ────────────────────────────────────────────────
+
+export function listCommitStatuses(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createCommitsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "commits.statuses.list" }),
+    }).listStatuses(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "commits.statuses.list", source: "connector", statuses: result.statuses };
+    });
+  }
+  return { connector: "github", action: "commits.statuses.list", source: "connector", validated: validateListCommitStatusesInput(input) };
+}
+
+// ─── S4: commits.statuses.create ──────────────────────────────────────────────
+
+export function createCommitStatus(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createCommitsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "commits.statuses.create" }),
+    }).createStatus(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "commits.statuses.create", source: "connector", status: result.status };
+    });
+  }
+  return { connector: "github", action: "commits.statuses.create", source: "connector", validated: validateCreateCommitStatusInput(input) };
+}
+
+// ─── S4: commits.get ──────────────────────────────────────────────────────────
+
+export function getCommit(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createCommitsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "commits.get" }),
+    }).get(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "commits.get", source: "connector", commit: result.commit };
+    });
+  }
+  return { connector: "github", action: "commits.get", source: "connector", validated: validateGetCommitInput(input) };
+}
+
+// ─── S4: repos.compare ────────────────────────────────────────────────────────
+
+export function compareRepos(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createReposClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "repos.compare" }),
+    }).compare(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "repos.compare", source: "connector", comparison: result.comparison };
+    });
+  }
+  return { connector: "github", action: "repos.compare", source: "connector", validated: validateCompareCommitsInput(input) };
+}
+
+// ─── S4: pull_requests.update_branch ──────────────────────────────────────────
+
+export function updatePullRequestBranch(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "pull_requests.update_branch" }),
+    }).updateBranch(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "pull_requests.update_branch", source: "connector", update: result.update };
+    });
+  }
+  return { connector: "github", action: "pull_requests.update_branch", source: "connector", validated: validateUpdatePullRequestBranchInput(input) };
+}
+
+// ─── S4: branches.list ────────────────────────────────────────────────────────
+
+export function listBranches(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createBranchesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "branches.list" }),
+    }).list(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "branches.list", source: "connector", branches: result.branches };
+    });
+  }
+  return { connector: "github", action: "branches.list", source: "connector", validated: validateListBranchesInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
