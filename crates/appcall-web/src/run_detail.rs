@@ -55,8 +55,10 @@ pub(crate) fn standalone(value: &Value, run_id: &str) -> Result<String, Error> {
             return Ok(html);
         }
         "not_found" => {
+            // Omit the requested id from markup so missing and cross-scope
+            // not_found pages stay byte-identical (anti-enumeration).
             html.push_str(&detail_shell(
-                run_id,
+                "",
                 empty_state(
                     "Sync not found",
                     "The sync queue has no durable sync with this id for this project. This page does not invent sync state or history.",

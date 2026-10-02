@@ -452,4 +452,21 @@ fn not_found_uses_empty_state_with_back_to_syncs() {
     assert!(html.contains("href=\"/app/syncs\""));
     assert!(!html.contains("role=\"alert\""));
     assert!(!html.contains("ui-state-ok"));
+    assert!(!html.contains("missing-run"));
+    assert!(html.contains("data-run-id=\"\""));
+}
+
+#[test]
+fn not_found_pages_are_indistinguishable_across_requested_ids() {
+    let a = super::standalone(
+        &json!({"status":"not_found"}),
+        "application-browser-missing-run",
+    )
+    .unwrap();
+    let b = super::standalone(
+        &json!({"status":"not_found"}),
+        "application-browser-foreign-account-run",
+    )
+    .unwrap();
+    assert_eq!(a, b);
 }
