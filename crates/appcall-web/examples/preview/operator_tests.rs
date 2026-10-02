@@ -153,9 +153,11 @@ async fn run_history_operator_preview_renders_granted_controls_for_pending_retry
         );
     }
     assert_eq!(page.body.matches("data-confirm-submit").count(), 3);
-    assert!(page.body.contains("Run synthetic-history-run now?"));
-    assert!(page.body.contains("Reset synthetic-history-run attempts?"));
-    assert!(page.body.contains("Cancel synthetic-history-run?"));
+    assert!(page.body.contains("Queue sync synthetic-history-run now?"));
+    assert!(page
+        .body
+        .contains("Reset sync synthetic-history-run attempts?"));
+    assert!(page.body.contains("Cancel sync synthetic-history-run?"));
 
     let mut detail_request = crate::tests::dashboard_request(DashboardOperation::RunDetail);
     detail_request.resource = Some("synthetic-history-run".into());

@@ -349,12 +349,18 @@ async fn empty_and_unavailable_collections_are_distinct() {
             .await;
         assert!(result.is_ok(), "{op:?}");
         assert_eq!(result.unwrap()[key], json!([]));
-        assert_eq!(
-            ScenarioData::new(Scenario::Unavailable)
-                .execute(dashboard_request(op))
-                .await,
-            Err(Error::Unavailable)
-        );
+        let unavailable = ScenarioData::new(Scenario::Unavailable)
+            .execute(dashboard_request(op))
+            .await;
+        if op == DashboardOperation::Connections {
+            // Soft unavailable: Connections EmptyState triad honesty.
+            assert_eq!(
+                unavailable,
+                Ok(json!({"synthetic": true, "status": "unavailable"}))
+            );
+        } else {
+            assert_eq!(unavailable, Err(Error::Unavailable));
+        }
     }
 }
 
