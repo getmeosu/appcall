@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
-type Workflow = Arc<dyn Fn(&mut Context) -> WorkflowResult + Send + Sync>;
+type Workflow = Arc<dyn for<'a> Fn(&mut Context<'a>) -> WorkflowResult + Send + Sync>;
 pub(crate) type Activity = Arc<
     dyn Fn(&ActivityAttempt, &[u8]) -> std::result::Result<PayloadRef, ActivityFailure>
         + Send
@@ -75,7 +75,7 @@ impl<S: Store> Engine<S> {
         &mut self,
         name: &str,
         version: &str,
-        workflow: impl Fn(&mut Context) -> WorkflowResult + Send + Sync + 'static,
+        workflow: impl for<'a> Fn(&mut Context<'a>) -> WorkflowResult + Send + Sync + 'static,
     ) -> Result<()> {
         validate(name)?;
         validate(version)?;
@@ -349,32 +349,38 @@ impl<S: Store> Engine<S> {
             return Ok(outcome);
         }
         // Tracks whether this drive appended history. Used to skip no-op Waiting
-        // saves that would otherwise serde-commit an unchanged record (and pay
-        // history.clone cost) on every re-drive while parked on a wait.
+        // saves that would otherwise serde-commit an unchanged record on every
+        // re-drive while parked on a wait.
         let mut wrote_history = false;
         for _ in 0..128 {
-            let mut ctx = Context {
-                input: r.input.clone(),
-                history: r.history.clone(),
-                cursor: 0,
-                pending: None,
-                blocked: false,
-                faulted: false,
-            };
-            let result = match catch_unwind(AssertUnwindSafe(|| workflow(&mut ctx))) {
-                Ok(result) => result,
+            // Scope the history borrow so Context drops before we push/fill
+            // events on `r` — kills history.clone() on every evaluate.
+            let eval = catch_unwind(AssertUnwindSafe(|| {
+                let mut ctx = Context {
+                    input: r.input.clone(),
+                    history: &r.history,
+                    cursor: 0,
+                    pending: None,
+                    blocked: false,
+                    faulted: false,
+                };
+                let result = workflow(&mut ctx);
+                (result, ctx.cursor, ctx.pending, ctx.faulted)
+            }));
+            let (result, cursor, pending, faulted) = match eval {
+                Ok(v) => v,
                 Err(_) => {
                     self.reject_run(id, RunFailure::InvalidCommand)?;
                     return Ok(DriveOutcome::Suspended(RunState::Failed));
                 }
             };
-            if ctx.faulted {
+            if faulted {
                 return self.suspend(&mut r, RunState::Nondeterminism);
             }
             match result {
                 Ok(output) => {
-                    if ctx.cursor != r.history.len()
-                        || ctx.pending.is_some()
+                    if cursor != r.history.len()
+                        || pending.is_some()
                         || r.history.iter().any(|e| e.value.is_none())
                     {
                         return self.suspend(&mut r, RunState::Nondeterminism);
@@ -400,7 +406,7 @@ impl<S: Store> Engine<S> {
                     return self.suspend(&mut r, RunState::Nondeterminism)
                 }
                 Err(WorkflowError::Blocked)
-                    if ctx.pending.is_none()
+                    if pending.is_none()
                         && !r.history.iter().any(|event| event.value.is_none()) =>
                 {
                     self.reject_malformed_run(id)?;
@@ -408,7 +414,7 @@ impl<S: Store> Engine<S> {
                 }
                 Err(WorkflowError::Blocked) => {}
             }
-            if let Some(command) = ctx.pending {
+            if let Some(command) = pending {
                 if r.history.len() >= 1024 {
                     return Err(Error::Limit);
                 }
@@ -525,8 +531,7 @@ impl<S: Store> Engine<S> {
             }
             // Skip no-op Waiting saves: re-driving a parked wait used to always
             // serde-commit (revision++, full record rewrite) even when history,
-            // children, and wakeup were unchanged — the history.clone-per-drive
-            // footgun on the hot path.
+            // children, and wakeup were unchanged.
             if wrote_history || !children.is_empty() || r.wakeup != wakeup_before_evaluate {
                 self.save(&mut r, &children)?;
             }
