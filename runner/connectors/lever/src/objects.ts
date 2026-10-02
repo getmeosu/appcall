@@ -6,6 +6,7 @@
  * opportunities.get uses the singular envelope: { data: opportunity }.
  * Nested reads (interviews/feedback) use the same collection envelope under
  * /opportunities/{id}/...
+ * archive_reasons.list uses the collection envelope: { data, next, hasNext }.
  */
 
 export interface NormalizedJob {
@@ -444,6 +445,50 @@ export function parseFeedbackResponse(raw: unknown): {
   const items = Array.isArray(data.data) ? data.data : [];
   return {
     feedback: items.map(normalizeFeedback),
+    next: typeof data.next === "string" ? data.next : null,
+    hasNext: data.hasNext === true,
+  };
+}
+
+export interface NormalizedArchiveReason {
+  id: string;
+  provider: string;
+  text: string;
+  status: string | null;
+  type: string | null;
+}
+
+interface LeverArchiveReason {
+  id: string;
+  text?: string | null;
+  status?: string | null;
+  type?: string | null;
+}
+
+export function normalizeArchiveReason(reason: LeverArchiveReason): NormalizedArchiveReason {
+  const id = asStringId(reason.id) ?? "";
+  return {
+    id: `lev-archive-reason:${id}`,
+    provider: "lever",
+    text: reason.text ?? "",
+    status: reason.status ?? null,
+    type: reason.type ?? null,
+  };
+}
+
+export function parseArchiveReasonsResponse(raw: unknown): {
+  archiveReasons: NormalizedArchiveReason[];
+  next: string | null;
+  hasNext: boolean;
+} {
+  const data = raw as {
+    data?: LeverArchiveReason[];
+    next?: string | null;
+    hasNext?: boolean;
+  };
+  const items = Array.isArray(data.data) ? data.data : [];
+  return {
+    archiveReasons: items.map(normalizeArchiveReason),
     next: typeof data.next === "string" ? data.next : null,
     hasNext: data.hasNext === true,
   };

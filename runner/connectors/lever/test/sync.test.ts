@@ -5,6 +5,9 @@ import {
   executeOpportunitiesGetSync,
   executeOpportunitiesInterviewsListSync,
   executeOpportunitiesFeedbackListSync,
+  executeOpportunitiesUpdateStageSync,
+  executeOpportunitiesArchiveSync,
+  executeArchiveReasonsListSync,
   executeStagesListSync,
   executeUsersListSync,
 } from "../src/sync";
@@ -12,6 +15,7 @@ import opportunitiesFixture from "../fixtures/opportunities_list.json";
 import opportunitiesGetFixture from "../fixtures/opportunities_get.json";
 import interviewsFixture from "../fixtures/opportunities_interviews_list.json";
 import feedbackFixture from "../fixtures/opportunities_feedback_list.json";
+import archiveReasonsFixture from "../fixtures/archive_reasons_list.json";
 import stagesFixture from "../fixtures/stages_list.json";
 import usersFixture from "../fixtures/users_list.json";
 
@@ -364,5 +368,160 @@ describe("Lever opportunities.feedback.list sync", () => {
         fetch: impl,
       }),
     ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Lever opportunities.update_stage (Reconcile; PUT-only)", () => {
+  test("PUTs /v1/opportunities/{id}/stage with body.stage — opportunity null", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(opportunitiesGetFixture));
+
+    const result = await executeOpportunitiesUpdateStageSync({
+      ...auth,
+      id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      stageId: "applicant-new",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.lever.co");
+    expect(url.pathname).toBe(
+      "/v1/opportunities/3410c8b9-5c31-4bab-b7e9-9f710206d647/stage",
+    );
+    expect(calls[0].method).toBe("PUT");
+    const body = JSON.parse(await calls[0].text());
+    // Official Lever field name is `stage` (not stageId).
+    expect(body).toEqual({ stage: "applicant-new" });
+    expect(result.opportunity).toBeNull();
+  });
+
+  test("forwards optional performAs as perform_as query", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(opportunitiesGetFixture));
+
+    await executeOpportunitiesUpdateStageSync({
+      ...auth,
+      id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      stageId: "offer",
+      performAs: "8d49b010-cc6a-4f40-ace5-e86061c677ed",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("perform_as")).toBe(
+      "8d49b010-cc6a-4f40-ace5-e86061c677ed",
+    );
+  });
+
+  test("rejects missing stageId before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeOpportunitiesUpdateStageSync({
+        ...auth,
+        id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+        stageId: "",
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/stageId/);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("Lever opportunities.archive (Reconcile; PUT-only)", () => {
+  test("PUTs /v1/opportunities/{id}/archived with body.reason — opportunity null", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(opportunitiesGetFixture));
+
+    const result = await executeOpportunitiesArchiveSync({
+      ...auth,
+      id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      reason: "63dd55b2-a99f-4e7b-985f-22c7bf80ab42",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe(
+      "/v1/opportunities/3410c8b9-5c31-4bab-b7e9-9f710206d647/archived",
+    );
+    expect(calls[0].method).toBe("PUT");
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({ reason: "63dd55b2-a99f-4e7b-985f-22c7bf80ab42" });
+    expect(result.opportunity).toBeNull();
+  });
+
+  test("sends reason null to unarchive", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(opportunitiesGetFixture));
+
+    await executeOpportunitiesArchiveSync({
+      ...auth,
+      id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      reason: null,
+      fetch: impl,
+    });
+
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({ reason: null });
+  });
+
+  test("forwards cleanInterviews and requisitionId", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(opportunitiesGetFixture));
+
+    await executeOpportunitiesArchiveSync({
+      ...auth,
+      id: "3410c8b9-5c31-4bab-b7e9-9f710206d647",
+      reason: "16308515-dc77-4aa7-b3af-96161b2b4e9b",
+      cleanInterviews: true,
+      requisitionId: "64e9c86b-03e9-42a5-871c-591d77f45609",
+      fetch: impl,
+    });
+
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({
+      reason: "16308515-dc77-4aa7-b3af-96161b2b4e9b",
+      cleanInterviews: true,
+      requisitionId: "64e9c86b-03e9-42a5-871c-591d77f45609",
+    });
+  });
+});
+
+describe("Lever archive_reasons.list sync", () => {
+  test("GETs /v1/archive_reasons with Basic auth", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(archiveReasonsFixture));
+
+    const result = await executeArchiveReasonsListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("api.lever.co");
+    expect(url.pathname).toBe("/v1/archive_reasons");
+    expect(result.archiveReasons).toHaveLength(2);
+    expect(result.archiveReasons[0].id).toBe(
+      "lev-archive-reason:63dd55b2-a99f-4e7b-985f-22c7bf80ab42",
+    );
+    expect(result.archiveReasons[0].text).toBe("Underqualified");
+    expect(result.archiveReasons[1].type).toBe("hired");
+  });
+
+  test("forwards type/limit/offset", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(archiveReasonsFixture));
+
+    await executeArchiveReasonsListSync({
+      ...auth,
+      type: "hired",
+      limit: 10,
+      offset: "tok",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("type")).toBe("hired");
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("offset")).toBe("tok");
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 403 });
+    await expect(executeArchiveReasonsListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
   });
 });
