@@ -44,7 +44,7 @@ pub(crate) fn standalone(value: &Value, run_id: &str) -> Result<String, Error> {
 
     let account_id = bounded_text(run.get("accountId"), MAX_ID_BYTES).unwrap_or("");
     let mut html = ui::back_link(
-        "Back to Runs",
+        "Back to Syncs",
         ui::LocalPath::new("/app/syncs").ok_or(Error::Invalid)?,
     );
     html.push_str(&render_run_header(run, account_id));

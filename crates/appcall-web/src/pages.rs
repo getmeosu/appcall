@@ -345,7 +345,7 @@ pub(crate) fn runs_feedback() -> Result<String, Error> {
     )?
     .replacen("<a ", "<a id=\"runs-reload\" ", 1);
     Ok(format!(
-        "<p id=\"runs-live-status\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-busy=\"false\"></p><div id=\"runs-recovery\" class=\"runs-card runs-recovery\" hidden><p id=\"runs-recovery-message\">Run control outcome is unknown. Reload Syncs status before trying again.</p>{reload}</div>"
+        "<p id=\"runs-live-status\" class=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-busy=\"false\"></p><div id=\"runs-recovery\" class=\"runs-card runs-recovery\" hidden><p id=\"runs-recovery-message\">Sync control outcome is unknown. Reload Syncs status before trying again.</p>{reload}</div>"
     ))
 }
 fn runs_header() -> String {

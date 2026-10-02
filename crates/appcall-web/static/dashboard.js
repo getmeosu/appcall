@@ -182,7 +182,7 @@ if (brandingName && brandingLogo && brandingColor) {
     pending = true;
     page.setAttribute('aria-busy', 'false');
     if (status) {
-      status.textContent = 'Run control outcome is unknown. Reload Runs status before trying again.';
+      status.textContent = 'Sync control outcome is unknown. Reload Syncs status before trying again.';
       status.setAttribute('aria-busy', 'false');
     }
     showRecovery();
