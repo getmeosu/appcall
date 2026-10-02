@@ -181,7 +181,12 @@ import {
   executeUsersListSync as listLeverUsers,
 } from "../../connectors/lever/src/sync";
 import ashbyManifest from "../../connectors/ashby/manifest.json";
-import { executeJobsListSync as listAshbyJobs } from "../../connectors/ashby/src/sync";
+import {
+  executeJobsListSync as listAshbyJobs,
+  executeCandidatesListSync as listAshbyCandidates,
+  executeApplicationsListSync as listAshbyApplications,
+  executeCandidatesGetSync as getAshbyCandidate,
+} from "../../connectors/ashby/src/sync";
 import workableManifest from "../../connectors/workable/manifest.json";
 import { healthcheck as workableHealthcheck } from "../../connectors/workable/src/healthcheck";
 import {
@@ -1095,6 +1100,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
     ashby: {
       "jobs.list": listAshbyJobs,
+      "candidates.list": listAshbyCandidates,
+      "applications.list": listAshbyApplications,
+      "candidates.get": getAshbyCandidate,
     },
     workable: {
       "jobs.list": listWorkableJobs,
