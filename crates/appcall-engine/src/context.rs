@@ -8,15 +8,17 @@ pub enum WorkflowError {
 pub type WorkflowResult = std::result::Result<PayloadRef, WorkflowError>;
 /// Workflow code runs again from its entry point for each drive. Only context
 /// commands may produce effects, observe time, or consume external information.
-pub struct Context {
+pub struct Context<'a> {
     pub(crate) input: PayloadRef,
-    pub(crate) history: Vec<HistoryEvent>,
+    /// Borrowed run history for deterministic replay. Engine appends only after
+    /// this borrow ends — no clone on the drive/evaluate hot path.
+    pub(crate) history: &'a [HistoryEvent],
     pub(crate) cursor: usize,
     pub(crate) pending: Option<Command>,
     pub(crate) blocked: bool,
     pub(crate) faulted: bool,
 }
-impl Context {
+impl<'a> Context<'a> {
     pub fn input(&self) -> &PayloadRef {
         &self.input
     }
