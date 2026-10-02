@@ -102,7 +102,10 @@ fn missing_audit_is_unavailable_not_empty() {
         "run-1",
     )
     .unwrap();
-    assert!(html.contains("Reconciliation history unavailable") || html.contains("aria-label=\"Reconciliation history unavailable\""));
+    assert!(
+        html.contains("Reconciliation history unavailable")
+            || html.contains("aria-label=\"Reconciliation history unavailable\"")
+    );
     assert!(!html.contains("No reconciliation events recorded"));
 }
 

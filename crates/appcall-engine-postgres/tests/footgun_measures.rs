@@ -50,7 +50,10 @@ fn session_advisory_and_txn_pooling_ban_are_load_bearing_in_source() {
         "blob-rewrite-after.json",
     ] {
         let artifact = dir.join(name);
-        assert!(artifact.is_file(), "missing PG footgun evidence at {artifact:?}");
+        assert!(
+            artifact.is_file(),
+            "missing PG footgun evidence at {artifact:?}"
+        );
     }
     let body = std::fs::read_to_string(dir.join("arch-pg-footguns.json")).unwrap();
     assert!(body.contains("txn_pooling_rejected"));

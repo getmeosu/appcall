@@ -1982,7 +1982,6 @@ fn sqlite_signed_revision_overflow_returns_limit_for_insert_and_commit() {
     ));
 }
 
-
 #[test]
 fn fenced_reconcile_rejects_stale_attempt_and_epoch_without_mutation() {
     let d = tempfile::tempdir().unwrap();
@@ -2141,7 +2140,6 @@ fn fenced_reconcile_blocks_delayed_provider_after_owner_epoch_change() {
         DriveOutcome::Completed(_)
     ));
 }
-
 
 #[test]
 fn buffered_signal_before_wait_survives_restart_and_enters_history() {

@@ -175,7 +175,8 @@ fn sqlite_history_replay_evidence_and_caps_remain() {
 #[test]
 #[ignore = "set APPCALL_HISTORY_REPLAY_PHASE=before|after to regenerate evidence"]
 fn measure_sqlite_history_replay_load() {
-    let phase = std::env::var("APPCALL_HISTORY_REPLAY_PHASE").expect("APPCALL_HISTORY_REPLAY_PHASE");
+    let phase =
+        std::env::var("APPCALL_HISTORY_REPLAY_PHASE").expect("APPCALL_HISTORY_REPLAY_PHASE");
     assert!(phase == "before" || phase == "after");
 
     let depths: &[usize] = &[1, 16, 64, 256, 512, 1024];
@@ -221,7 +222,10 @@ fn measure_sqlite_history_replay_load() {
             (record_len(&probe, id), history_bytes(&probe, id))
         };
         if phase == "before" {
-            assert_eq!(hist_bytes, 0, "pre-seal blob path must leave history table empty");
+            assert_eq!(
+                hist_bytes, 0,
+                "pre-seal blob path must leave history table empty"
+            );
         }
 
         times.sort_by(|a, b| a.partial_cmp(b).unwrap());

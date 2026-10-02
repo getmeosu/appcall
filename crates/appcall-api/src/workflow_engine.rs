@@ -28,10 +28,7 @@ impl WorkflowEngineClient {
     }
 
     pub fn from_map(env: &BTreeMap<String, String>) -> Result<Option<Self>, WorkflowEngineError> {
-        let url = env
-            .get(URL_ENV)
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty());
+        let url = env.get(URL_ENV).map(|s| s.trim()).filter(|s| !s.is_empty());
         let token = env
             .get(TOKEN_ENV)
             .map(|s| s.trim())
@@ -44,7 +41,8 @@ impl WorkflowEngineClient {
     }
 
     pub fn new(base_url: &str, bearer_token: &str) -> Result<Self, WorkflowEngineError> {
-        let mut base = reqwest::Url::parse(base_url).map_err(|_| WorkflowEngineError::Configuration)?;
+        let mut base =
+            reqwest::Url::parse(base_url).map_err(|_| WorkflowEngineError::Configuration)?;
         if !matches!(base.scheme(), "http" | "https")
             || !base.username().is_empty()
             || base.password().is_some()
@@ -180,8 +178,8 @@ mod tests {
 
     #[tokio::test]
     async fn get_run_rejects_untrusted_identifiers_without_transport() {
-        let client = WorkflowEngineClient::new("http://127.0.0.1:9/", &"a".repeat(32))
-            .expect("client");
+        let client =
+            WorkflowEngineClient::new("http://127.0.0.1:9/", &"a".repeat(32)).expect("client");
         for bad in ["", ".", "..", "a/b", "a b", "a?b", "a#b", &"x".repeat(257)] {
             assert_eq!(
                 client.get_run(bad).await,
@@ -191,4 +189,3 @@ mod tests {
         }
     }
 }
-

@@ -414,8 +414,12 @@ mod tests {
 
     #[test]
     fn calls_triad_empty_states_and_page_id() {
-        let unavailable =
-            render(&json!({"status": "unavailable"}), &Filters::default(), false).unwrap();
+        let unavailable = render(
+            &json!({"status": "unavailable"}),
+            &Filters::default(),
+            false,
+        )
+        .unwrap();
         assert!(unavailable.contains("id=\"logs-page\""));
         assert!(unavailable.contains("Calls unavailable"));
         assert!(unavailable.contains("does not invent call rows or statuses"));
@@ -445,8 +449,12 @@ mod tests {
         assert!(!empty.contains("Calls unavailable"));
         assert!(!empty.contains("match these filters"));
 
-        let filtered =
-            render(&json!({"logs": [], "hasFilters": true}), &Filters::default(), false).unwrap();
+        let filtered = render(
+            &json!({"logs": [], "hasFilters": true}),
+            &Filters::default(),
+            false,
+        )
+        .unwrap();
         assert!(filtered.contains("No calls match these filters."));
         assert!(filtered.contains("role=\"status\""));
         assert!(filtered.contains("href=\"/app/calls\""));

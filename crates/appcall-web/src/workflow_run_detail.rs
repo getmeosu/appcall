@@ -64,8 +64,8 @@ pub(crate) fn standalone(value: &Value, run_id: &str) -> Result<String, Error> {
             if dto_id != run_id || !valid_identifier(dto_id) {
                 return Err(Error::Unavailable);
             }
-            let state_label = bounded_text(data.get("state"), MAX_TEXT_BYTES)
-                .ok_or(Error::Unavailable)?;
+            let state_label =
+                bounded_text(data.get("state"), MAX_TEXT_BYTES).ok_or(Error::Unavailable)?;
             let mut body = String::new();
             body.push_str(&render_header(dto_id, state_label)?);
             body.push_str(&render_summary(data, state_label)?);
@@ -183,10 +183,7 @@ fn render_history(data: &Value) -> Result<String, Error> {
     );
     match data.get("reconciliation_audit") {
         None => {
-            html.push_str(&format!(
-                "<p>{}</p>",
-                unavailable("Reconciliation history")
-            ));
+            html.push_str(&format!("<p>{}</p>", unavailable("Reconciliation history")));
         }
         Some(Value::Array(events)) if events.is_empty() => {
             html.push_str("<div id=\"workflow-run-detail-history-empty\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"><p>No reconciliation events recorded.</p></div>");
@@ -199,10 +196,7 @@ fn render_history(data: &Value) -> Result<String, Error> {
             html.push_str("</ol>");
         }
         Some(_) => {
-            html.push_str(&format!(
-                "<p>{}</p>",
-                unavailable("Reconciliation history")
-            ));
+            html.push_str(&format!("<p>{}</p>", unavailable("Reconciliation history")));
         }
     }
     html.push_str("</section>");

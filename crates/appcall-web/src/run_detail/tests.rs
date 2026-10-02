@@ -421,7 +421,6 @@ fn run_detail_rejects_invalid_resource_id_before_rendering() {
     ));
 }
 
-
 #[test]
 fn unavailable_and_error_never_look_like_success() {
     let unavailable = super::standalone(&json!({"status":"unavailable"}), "run-42").unwrap();

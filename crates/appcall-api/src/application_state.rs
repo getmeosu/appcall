@@ -104,9 +104,8 @@ impl ApplicationSharedState {
             None
         };
         let workflow_engine =
-            appcall_api::workflow_engine::WorkflowEngineClient::from_map(environment).map_err(
-                |_| "invalid workflow engine console configuration",
-            )?;
+            appcall_api::workflow_engine::WorkflowEngineClient::from_map(environment)
+                .map_err(|_| "invalid workflow engine console configuration")?;
         Ok(Arc::new(Self {
             mcp_usage: Arc::new(appcall_mcp::MemoryUsage::default()),
             circuit: appcall_actions::Circuit::default(),

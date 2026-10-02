@@ -613,7 +613,14 @@ impl CredentialResolver for EmptyCredentials {
 #[tokio::test]
 async fn real_manifest_controls_credential_requirement_with_legacy_stored_auth_type() {
     // csv remains auth=none (no credentials). ATS connectors and slack require credentials.
-    for connector in ["ashby", "greenhouse", "lever", "smartrecruiters", "csv", "slack"] {
+    for connector in [
+        "ashby",
+        "greenhouse",
+        "lever",
+        "smartrecruiters",
+        "csv",
+        "slack",
+    ] {
         let registry = appcall_connectors::Registry::load(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../runner/connectors"
@@ -643,7 +650,11 @@ async fn real_manifest_controls_credential_requirement_with_legacy_stored_auth_t
         if connector == "csv" {
             assert!(result.is_ok(), "{connector}: {result:?}");
         } else {
-            assert_eq!(result.unwrap_err().code, "MISSING_CREDENTIAL", "{connector}");
+            assert_eq!(
+                result.unwrap_err().code,
+                "MISSING_CREDENTIAL",
+                "{connector}"
+            );
         }
     }
 }

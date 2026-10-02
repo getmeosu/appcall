@@ -822,8 +822,13 @@ fn postgres_recovery_bumps_recoverable_subset_without_blob_scan() {
     })
     .unwrap();
     // One in-flight + many Ready (null wakeup, recoverable=true) + many passive waits.
-    e.start("inflight", "one", "v1", PayloadRef::durable("input").unwrap())
-        .unwrap();
+    e.start(
+        "inflight",
+        "one",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
     assert!(matches!(
         e.drive("inflight", 0).unwrap(),
         DriveOutcome::Activity(_)
@@ -847,7 +852,10 @@ fn postgres_recovery_bumps_recoverable_subset_without_blob_scan() {
         )
         .unwrap()
         .get(0);
-    assert!(flagged >= 80, "recoverable denormalized on commit; got {flagged}");
+    assert!(
+        flagged >= 80,
+        "recoverable denormalized on commit; got {flagged}"
+    );
     drop(e);
 
     let e = Engine::with_store(PostgresStore::from_client(connect()).unwrap());

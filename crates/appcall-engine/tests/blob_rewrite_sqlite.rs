@@ -105,7 +105,10 @@ fn sqlite_sealed_history_is_load_bearing_in_source_and_evidence() {
         "blob-rewrite-sqlite-after.json",
     ] {
         let path = dir.join(name);
-        assert!(path.is_file(), "missing sqlite blob-rewrite evidence at {path:?}");
+        assert!(
+            path.is_file(),
+            "missing sqlite blob-rewrite evidence at {path:?}"
+        );
     }
     let before: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(dir.join("blob-rewrite-sqlite-before.json")).unwrap(),

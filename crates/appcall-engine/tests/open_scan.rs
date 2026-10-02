@@ -25,11 +25,9 @@ fn seed_passive_running_raw(db: &std::path::Path, n: usize) {
     }
     let conn = rusqlite::Connection::open(db).unwrap();
     let template: Vec<u8> = conn
-        .query_row(
-            "SELECT record FROM engine_runs WHERE id='seed0'",
-            [],
-            |r| r.get(0),
-        )
+        .query_row("SELECT record FROM engine_runs WHERE id='seed0'", [], |r| {
+            r.get(0)
+        })
         .unwrap();
     let mut tmpl: serde_json::Value = serde_json::from_slice(&template).unwrap();
     let tx = conn.unchecked_transaction().unwrap();
@@ -95,22 +93,13 @@ fn open_scan_after_is_sublinear_for_passive_waits() {
             "open_max_ms": max_ms,
         }));
     }
-    let after_10k = points
-        .iter()
-        .find(|p| p["n_running"] == 10_000)
-        .unwrap()["open_median_ms"]
+    let after_10k = points.iter().find(|p| p["n_running"] == 10_000).unwrap()["open_median_ms"]
         .as_f64()
         .unwrap();
-    let after_1k = points
-        .iter()
-        .find(|p| p["n_running"] == 1000)
-        .unwrap()["open_median_ms"]
+    let after_1k = points.iter().find(|p| p["n_running"] == 1000).unwrap()["open_median_ms"]
         .as_f64()
         .unwrap();
-    let after_100 = points
-        .iter()
-        .find(|p| p["n_running"] == 100)
-        .unwrap()["open_median_ms"]
+    let after_100 = points.iter().find(|p| p["n_running"] == 100).unwrap()["open_median_ms"]
         .as_f64()
         .unwrap();
 
@@ -227,10 +216,20 @@ fn pre_column_sqlite_db_backfills_recoverable_on_open() {
         })
         .unwrap();
         e.register_activity("lookup", "v1").unwrap();
-        e.start("ready-a", "ready-one", "v1", PayloadRef::durable("input").unwrap())
-            .unwrap();
-        e.start("ready-b", "ready-one", "v1", PayloadRef::durable("input").unwrap())
-            .unwrap();
+        e.start(
+            "ready-a",
+            "ready-one",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
+        e.start(
+            "ready-b",
+            "ready-one",
+            "v1",
+            PayloadRef::durable("input").unwrap(),
+        )
+        .unwrap();
         assert!(matches!(
             e.drive("ready-a", 0).unwrap(),
             DriveOutcome::Activity(_)

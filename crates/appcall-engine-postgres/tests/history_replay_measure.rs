@@ -103,7 +103,8 @@ fn engine_benchmarks_dir() -> std::path::PathBuf {
 #[ignore = "requires APPCALL_ENGINE_POSTGRES_URL; writes history-replay evidence"]
 fn measure_postgres_history_replay_load() {
     let url = std::env::var("APPCALL_ENGINE_POSTGRES_URL").expect("APPCALL_ENGINE_POSTGRES_URL");
-    let phase = std::env::var("APPCALL_HISTORY_REPLAY_PHASE").expect("APPCALL_HISTORY_REPLAY_PHASE");
+    let phase =
+        std::env::var("APPCALL_HISTORY_REPLAY_PHASE").expect("APPCALL_HISTORY_REPLAY_PHASE");
     assert!(
         phase == "before" || phase == "after",
         "APPCALL_HISTORY_REPLAY_PHASE must be before|after"

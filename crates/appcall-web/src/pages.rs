@@ -61,7 +61,13 @@ fn evidence_label(item: &Value) -> String {
         fixture
     )
 }
-fn empty(title: &str, body: &str, action: &str, href: &str, role: crate::ui::EmptyStateRole) -> String {
+fn empty(
+    title: &str,
+    body: &str,
+    action: &str,
+    href: &str,
+    role: crate::ui::EmptyStateRole,
+) -> String {
     crate::ui::EmptyState {
         title,
         body,
@@ -1012,7 +1018,9 @@ fn workflow_runs_page(v: &Value) -> Result<String, Error> {
         }
         _ => return Err(Error::Unavailable),
     };
-    Ok(format!("<div id=\"workflow-runs-page\">{header}{body}</div>"))
+    Ok(format!(
+        "<div id=\"workflow-runs-page\">{header}{body}</div>"
+    ))
 }
 #[cfg(test)]
 #[path = "pages/operator_tests.rs"]
@@ -2387,7 +2395,6 @@ mod rendering_contract_tests {
         assert_eq!(title(Op::WorkflowRuns), "Runs");
         assert_eq!(title(Op::WorkflowRunDetail), "Runs");
         assert_eq!(title(Op::Runs), "Syncs");
-
     }
 
     #[test]

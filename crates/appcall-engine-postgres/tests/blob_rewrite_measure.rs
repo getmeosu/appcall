@@ -201,5 +201,8 @@ fn measure_blob_rewrite_vs_history_depth() {
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join(format!("blob-rewrite-{phase}.json"));
     std::fs::write(&path, serde_json::to_string_pretty(&out).unwrap()).unwrap();
-    eprintln!("wrote {path:?}\n{}", serde_json::to_string_pretty(&out).unwrap());
+    eprintln!(
+        "wrote {path:?}\n{}",
+        serde_json::to_string_pretty(&out).unwrap()
+    );
 }

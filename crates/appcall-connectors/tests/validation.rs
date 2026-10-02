@@ -315,7 +315,10 @@ fn effect_policy_reconcile_requires_read_ish_target() {
     // Missing reconcile target.
     let mut missing = ok.clone();
     missing["operations"]["write"]["reconcile"] = json!("nope");
-    assert_eq!(parse(&missing).unwrap_err().code(), ErrorCode::InvalidManifest);
+    assert_eq!(
+        parse(&missing).unwrap_err().code(),
+        ErrorCode::InvalidManifest
+    );
 
     // Reconcile must not point at another write action.
     let mut write_target = ok.clone();
@@ -337,13 +340,19 @@ fn effect_policy_reconcile_requires_read_ish_target() {
     // Reconcile without a target name is invalid.
     let mut empty = ok.clone();
     empty["operations"]["write"]["reconcile"] = json!("");
-    assert_eq!(parse(&empty).unwrap_err().code(), ErrorCode::InvalidManifest);
+    assert_eq!(
+        parse(&empty).unwrap_err().code(),
+        ErrorCode::InvalidManifest
+    );
 
     // effectPolicy None must not carry a reconcile name.
     let mut stray = ok.clone();
     stray["operations"]["write"]["effectPolicy"] = json!("None");
     stray["operations"]["write"]["reconcile"] = json!("observe");
-    assert_eq!(parse(&stray).unwrap_err().code(), ErrorCode::InvalidManifest);
+    assert_eq!(
+        parse(&stray).unwrap_err().code(),
+        ErrorCode::InvalidManifest
+    );
 
     // Explicit read action is an allowed reconcile target.
     let mut read_action = ok.clone();

@@ -113,7 +113,9 @@ impl MemoryDashboard {
                 }
                 Ok(item)
             }
-            Op::Workflows | Op::WorkflowRuns | Op::WorkflowRunDetail => Ok(serde_json::json!({"status":"unavailable"})),
+            Op::Workflows | Op::WorkflowRuns | Op::WorkflowRunDetail => {
+                Ok(serde_json::json!({"status":"unavailable"}))
+            }
             Op::Overview => {
                 let connections = self
                     .core
@@ -181,7 +183,7 @@ impl MemoryDashboard {
                     Err(error) => Err(web_error(error)),
                 };
                 crate::browser_host::connections_list_response(listed)
-            },
+            }
             Op::TestConnection => Ok(crate::browser_host::connection_value(
                 &self
                     .core

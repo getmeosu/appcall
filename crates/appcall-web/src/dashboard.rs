@@ -308,7 +308,8 @@ impl DashboardRenderer<'_> {
         }
         let segments: Vec<_> = r.path.trim_start_matches('/').split('/').collect();
         let resource = if matches!(operation, DashboardOperation::WorkflowRunDetail) {
-            (segments.len() >= 4 && segments.get(2) == Some(&"runs")).then(|| segments[3].to_owned())
+            (segments.len() >= 4 && segments.get(2) == Some(&"runs"))
+                .then(|| segments[3].to_owned())
         } else if segments.len() >= 3
             && !matches!(
                 operation,
@@ -727,7 +728,10 @@ impl DashboardRenderer<'_> {
                 "Check the connection's current status before running another tool.",
                 false,
             ),
-            (Runs, "run-now", _) => ("Sync queued now. Refreshing the current queue state.", false),
+            (Runs, "run-now", _) => (
+                "Sync queued now. Refreshing the current queue state.",
+                false,
+            ),
             (Runs, "reset", _) => (
                 "Attempts reset and the sync was queued from its saved checkpoint.",
                 false,
@@ -870,9 +874,7 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
         ("POST", "/app/action-claims/reconcile") => ReconcileActionClaim,
         ("GET", "/app/settings/white-labeling") => Branding,
         ("POST", "/app/settings/white-labeling") => SaveBranding,
-        ("GET", "/app/docs" | "/app/support" | "/app/start") => {
-            return Some(None)
-        }
+        ("GET", "/app/docs" | "/app/support" | "/app/start") => return Some(None),
         ("GET", "/app/workflows") => Workflows,
         ("GET", "/app/workflows/runs") => WorkflowRuns,
         _ => {
@@ -1336,10 +1338,7 @@ mod workflow_route_tests {
             resolve("GET", "/app/workflows/runs"),
             Some(Some(DashboardOperation::WorkflowRuns))
         );
-        assert_ne!(
-            resolve("GET", "/app/workflows"),
-            Some(None)
-        );
+        assert_ne!(resolve("GET", "/app/workflows"), Some(None));
         assert_eq!(
             resolve("GET", "/app/syncs"),
             Some(Some(DashboardOperation::Runs))

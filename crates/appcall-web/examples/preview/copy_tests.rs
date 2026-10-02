@@ -370,10 +370,7 @@ async fn real_filters_produce_real_empty_copy() {
             "/app/connectors?category=unmatched",
             "No connectors match this category.",
         ),
-        (
-            "/app/calls?status=failed",
-            "No calls match these filters.",
-        ),
+        ("/app/calls?status=failed", "No calls match these filters."),
     ] {
         let request = Request {
             method: "GET",

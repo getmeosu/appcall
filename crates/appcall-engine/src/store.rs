@@ -218,9 +218,8 @@ fn sealed_count(tx: &Transaction<'_>, id: &str) -> Result<usize> {
     usize::try_from(n).map_err(|_| Error::Limit)
 }
 fn load_sealed(connection: &Connection, id: &str) -> Result<Vec<HistoryEvent>> {
-    let mut stmt = connection.prepare(
-        "SELECT seq,event FROM engine_history WHERE run_id=?1 ORDER BY seq",
-    )?;
+    let mut stmt =
+        connection.prepare("SELECT seq,event FROM engine_history WHERE run_id=?1 ORDER BY seq")?;
     let mut rows = stmt.query([id])?;
     let mut out = Vec::new();
     let mut expected = 0usize;
