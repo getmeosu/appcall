@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 
 describe("google-ads connector manifest", () => {
-  test("manifest declares key, runtime, auth, and version 0.2.0", () => {
+  test("manifest declares key, runtime, auth, and version 0.3.0", () => {
     expect(manifest.key).toBe("google-ads");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toContain("https://www.googleapis.com/auth/adwords");
   });
@@ -33,14 +33,19 @@ describe("google-ads connector manifest", () => {
       "campaigns.get",
       "campaigns.getByName",
       "campaigns.mutate",
+      "ad_groups.get",
       "ad_groups.mutate",
+      "ads.get",
       "ads.mutate",
+      "keywords.get",
       "keywords.mutate",
+      "budgets.get",
       "budgets.mutate",
       "gaql.search",
       "gaql.searchStream",
       "customer_lists.create",
       "customer_lists.mutateMembers",
+      "conversion_actions.get",
       "conversion_actions.mutate",
       "labels.mutate",
       "reports.get",
@@ -48,6 +53,42 @@ describe("google-ads connector manifest", () => {
     for (const op of actions) {
       expect(manifest.operations[op as keyof typeof manifest.operations].kind).toBe("action");
     }
+  });
+
+  test("wires mutate EffectPolicy Reconcile to companion gets", () => {
+    const wiring: Array<[string, string]> = [
+      ["campaigns.mutate", "campaigns.get"],
+      ["ad_groups.mutate", "ad_groups.get"],
+      ["ads.mutate", "ads.get"],
+      ["keywords.mutate", "keywords.get"],
+      ["budgets.mutate", "budgets.get"],
+      ["conversion_actions.mutate", "conversion_actions.get"],
+    ];
+    for (const [mutate, get] of wiring) {
+      const op = manifest.operations[mutate as keyof typeof manifest.operations] as {
+        kind: string;
+        sideEffect: string;
+        effectPolicy: string;
+        reconcile: string;
+      };
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Reconcile");
+      expect(op.reconcile).toBe(get);
+      expect(manifest.operations[get as keyof typeof manifest.operations].kind).toBe("action");
+    }
+  });
+
+  test("skips Reconcile on customer_lists.mutateMembers and defers labels", () => {
+    const members = manifest.operations["customer_lists.mutateMembers"] as Record<string, unknown>;
+    expect(members.sideEffect).toBe("write");
+    expect(members.effectPolicy).toBeUndefined();
+    expect(members.reconcile).toBeUndefined();
+
+    const labels = manifest.operations["labels.mutate"] as Record<string, unknown>;
+    expect(labels.sideEffect).toBe("write");
+    expect(labels.effectPolicy).toBeUndefined();
+    expect(labels.reconcile).toBeUndefined();
   });
 
   test("manifest expands beyond the thin 4-op stub", () => {

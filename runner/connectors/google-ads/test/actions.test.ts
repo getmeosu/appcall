@@ -4,6 +4,11 @@ import {
   listSubAccounts,
   getCampaign,
   getCampaignByName,
+  getAdGroup,
+  getAd,
+  getKeyword,
+  getBudget,
+  getConversionAction,
   mutateCampaigns,
   mutateAdGroups,
   mutateAds,
@@ -20,6 +25,11 @@ import {
 import accessibleCustomers from "../fixtures/accessible_customers.json";
 import subAccounts from "../fixtures/sub_accounts.json";
 import campaignGet from "../fixtures/campaign_get.json";
+import adGroupGet from "../fixtures/ad_group_get.json";
+import adGet from "../fixtures/ad_get.json";
+import keywordGet from "../fixtures/keyword_get.json";
+import budgetGet from "../fixtures/budget_get.json";
+import conversionActionGet from "../fixtures/conversion_action_get.json";
 import mutateCampaignsFixture from "../fixtures/mutate_campaigns.json";
 import mutateAdGroupsFixture from "../fixtures/mutate_ad_groups.json";
 import mutateAdsFixture from "../fixtures/mutate_ads.json";
@@ -108,6 +118,84 @@ describe("campaigns.get / getByName", () => {
   it("fetches by name live", async () => {
     const result = await getCampaignByName({ ...liveAuth, name: "Summer Sale 2024", fetch: createMockFetch(200, campaignGet) }) as any;
     expect(result.campaigns).toHaveLength(1);
+  });
+
+  it("extracts campaignId from mutate-shaped operations for Reconcile", () => {
+    const result = getCampaign({
+      customerId: "1",
+      operations: [{ update: { resourceName: "customers/1/campaigns/999" } }],
+    }) as any;
+    expect(result.validated.campaignId).toBe("999");
+  });
+});
+
+describe("companion gets (EffectPolicy Reconcile targets)", () => {
+  it("validates and fetches ad_groups.get", async () => {
+    const dry = getAdGroup({ customerId: "1", adGroupId: "7777777777" }) as any;
+    expect(dry.action).toBe("ad_groups.get");
+    expect(dry.validated.adGroupId).toBe("7777777777");
+    const live = await getAdGroup({
+      ...liveAuth,
+      adGroupId: "7777777777",
+      fetch: createMockFetch(200, adGroupGet),
+    }) as any;
+    expect(live.adGroup.id).toBe("gads-adgroup:7777777777");
+  });
+
+  it("validates and fetches ads.get", async () => {
+    const dry = getAd({ customerId: "1", adId: "1010101010" }) as any;
+    expect(dry.action).toBe("ads.get");
+    expect(dry.validated.adId).toBe("1010101010");
+    const live = await getAd({
+      ...liveAuth,
+      adId: "1010101010",
+      fetch: createMockFetch(200, adGet),
+    }) as any;
+    expect(live.ad.id).toBe("gads-ad:1010101010");
+  });
+
+  it("extracts adId from compound adGroupAds resourceName", () => {
+    const result = getAd({
+      customerId: "1",
+      resourceName: "customers/1/adGroupAds/7777777777~1010101010",
+    }) as any;
+    expect(result.validated.adId).toBe("1010101010");
+  });
+
+  it("validates and fetches keywords.get", async () => {
+    const dry = getKeyword({ customerId: "1", criterionId: "111" }) as any;
+    expect(dry.action).toBe("keywords.get");
+    expect(dry.validated.criterionId).toBe("111");
+    const live = await getKeyword({
+      ...liveAuth,
+      criterionId: "111",
+      fetch: createMockFetch(200, keywordGet),
+    }) as any;
+    expect(live.keyword.id).toBe("gads-keyword:111");
+  });
+
+  it("validates and fetches budgets.get", async () => {
+    const dry = getBudget({ customerId: "1", budgetId: "2222222222" }) as any;
+    expect(dry.action).toBe("budgets.get");
+    expect(dry.validated.budgetId).toBe("2222222222");
+    const live = await getBudget({
+      ...liveAuth,
+      budgetId: "2222222222",
+      fetch: createMockFetch(200, budgetGet),
+    }) as any;
+    expect(live.budget.id).toBe("gads-budget:2222222222");
+  });
+
+  it("validates and fetches conversion_actions.get", async () => {
+    const dry = getConversionAction({ customerId: "1", conversionActionId: "777" }) as any;
+    expect(dry.action).toBe("conversion_actions.get");
+    expect(dry.validated.conversionActionId).toBe("777");
+    const live = await getConversionAction({
+      ...liveAuth,
+      conversionActionId: "777",
+      fetch: createMockFetch(200, conversionActionGet),
+    }) as any;
+    expect(live.conversionAction.id).toBe("gads-conversion:777");
   });
 });
 

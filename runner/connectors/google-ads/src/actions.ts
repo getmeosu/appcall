@@ -9,10 +9,20 @@ import {
 } from "./http";
 import {
   normalizeCampaign,
+  normalizeAdGroup,
+  normalizeAd,
+  normalizeKeyword,
+  normalizeBudget,
+  normalizeConversionAction,
   normalizeAccessibleCustomer,
   normalizeCustomerClient,
   normalizeUserList,
   parseCampaignsResponse,
+  parseAdGroupsResponse,
+  parseAdsResponse,
+  parseKeywordsResponse,
+  parseBudgetsResponse,
+  parseConversionActionsResponse,
   parseAccessibleCustomersResponse,
   parseCustomerClientsResponse,
   parseUserListsResponse,
@@ -213,6 +223,52 @@ function validateListSubAccountsInput(input: unknown): ListSubAccountsInput {
   };
 }
 
+
+// ---------------------------------------------------------------------------
+// Reconcile ID extraction — runner passes mutate input to the get op.
+// Accept explicit IDs, resourceName, resourceNames[0], or operations update/remove.
+// ---------------------------------------------------------------------------
+
+function trailingResourceId(resourceName: string): string {
+  const trailing = extractIdFromResourceName(resourceName);
+  // adGroupAds / adGroupCriteria use adGroupId~entityId
+  const tilde = trailing.lastIndexOf("~");
+  return tilde >= 0 ? trailing.slice(tilde + 1) : trailing;
+}
+
+function extractIdFromMutateShapedInput(
+  input: Record<string, unknown>,
+  explicitKeys: string[],
+): string | undefined {
+  for (const key of explicitKeys) {
+    const value = input[key];
+    if (typeof value === "string" && value.length > 0) {
+      return value.includes("/") ? trailingResourceId(value) : value;
+    }
+  }
+  if (typeof input.resourceName === "string" && input.resourceName.length > 0) {
+    return trailingResourceId(input.resourceName);
+  }
+  if (Array.isArray(input.resourceNames)) {
+    const first = input.resourceNames[0];
+    if (typeof first === "string" && first.length > 0) return trailingResourceId(first);
+  }
+  if (Array.isArray(input.operations) && input.operations.length > 0) {
+    const op = input.operations[0];
+    if (isRecord(op)) {
+      if (typeof op.remove === "string" && op.remove.length > 0) {
+        return trailingResourceId(op.remove);
+      }
+      const update = op.update;
+      if (isRecord(update)) {
+        const rn = update.resourceName ?? update.resource_name;
+        if (typeof rn === "string" && rn.length > 0) return trailingResourceId(rn);
+      }
+    }
+  }
+  return undefined;
+}
+
 // ---------------------------------------------------------------------------
 // campaigns.get
 // ---------------------------------------------------------------------------
@@ -246,9 +302,10 @@ export function getCampaign(input: unknown): ActionResult {
 
 function validateCampaignsGetInput(input: unknown): CampaignsGetInput {
   if (!isRecord(input)) throw new Error("campaigns.get input must be an object");
+  const campaignId = extractIdFromMutateShapedInput(input, ["campaignId", "id"]);
   return {
     customerId: requireString(input.customerId, "customerId"),
-    campaignId: requireString(input.campaignId ?? input.id, "campaignId"),
+    campaignId: requireString(campaignId, "campaignId"),
   };
 }
 
@@ -292,6 +349,218 @@ function validateCampaignsGetByNameInput(input: unknown): CampaignsGetByNameInpu
   return {
     customerId: requireString(input.customerId, "customerId"),
     name: requireString(input.name, "name"),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// ad_groups.get
+// ---------------------------------------------------------------------------
+
+export type AdGroupsGetInput = { customerId: string; adGroupId: string };
+
+export function getAdGroup(input: unknown): ActionResult {
+  const validated = validateAdGroupsGetInput(input);
+  if (hasLiveAuth(input, true)) {
+    const customerId = sanitizeCustomerId(validated.customerId);
+    const query =
+      `SELECT ad_group.id, ad_group.name, ad_group.status, ad_group.resource_name, ` +
+      `ad_group.type, ad_group.campaign, ad_group.cpc_bid_micros ` +
+      `FROM ad_group WHERE ad_group.id = ${escapeGaqlLiteral(validated.adGroupId)}`;
+    return createGoogleAdsClient(clientOpts(input, "ad_groups.get"))
+      .fetchJSON(customerPath(customerId, "/googleAds:search"), {
+        method: "POST",
+        body: JSON.stringify({ query }),
+      })
+      .then((result) => {
+        if (result.status === 200) {
+          const parsed = parseAdGroupsResponse(result.body);
+          const adGroup = parsed.adGroups[0] ? normalizeAdGroup(parsed.adGroups[0]) : null;
+          return { connector: "google-ads", action: "ad_groups.get", source: "connector", adGroup };
+        }
+        throw handleError(result);
+      });
+  }
+  return { connector: "google-ads", action: "ad_groups.get", source: "connector", validated };
+}
+
+function validateAdGroupsGetInput(input: unknown): AdGroupsGetInput {
+  if (!isRecord(input)) throw new Error("ad_groups.get input must be an object");
+  const adGroupId = extractIdFromMutateShapedInput(input, ["adGroupId", "id"]);
+  return {
+    customerId: requireString(input.customerId, "customerId"),
+    adGroupId: requireString(adGroupId, "adGroupId"),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// ads.get
+// ---------------------------------------------------------------------------
+
+export type AdsGetInput = { customerId: string; adId: string };
+
+export function getAd(input: unknown): ActionResult {
+  const validated = validateAdsGetInput(input);
+  if (hasLiveAuth(input, true)) {
+    const customerId = sanitizeCustomerId(validated.customerId);
+    // Fixture/normalize shape uses `ad`; query by ad.id for thin get.
+    const query =
+      `SELECT ad.id, ad.name, ad.status, ad.resource_name, ad.type, ad.ad_group, ` +
+      `ad.headline, ad.description, ad.final_urls ` +
+      `FROM ad WHERE ad.id = ${escapeGaqlLiteral(validated.adId)}`;
+    return createGoogleAdsClient(clientOpts(input, "ads.get"))
+      .fetchJSON(customerPath(customerId, "/googleAds:search"), {
+        method: "POST",
+        body: JSON.stringify({ query }),
+      })
+      .then((result) => {
+        if (result.status === 200) {
+          const parsed = parseAdsResponse(result.body);
+          const ad = parsed.ads[0] ? normalizeAd(parsed.ads[0]) : null;
+          return { connector: "google-ads", action: "ads.get", source: "connector", ad };
+        }
+        throw handleError(result);
+      });
+  }
+  return { connector: "google-ads", action: "ads.get", source: "connector", validated };
+}
+
+function validateAdsGetInput(input: unknown): AdsGetInput {
+  if (!isRecord(input)) throw new Error("ads.get input must be an object");
+  const adId = extractIdFromMutateShapedInput(input, ["adId", "id"]);
+  return {
+    customerId: requireString(input.customerId, "customerId"),
+    adId: requireString(adId, "adId"),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// keywords.get
+// ---------------------------------------------------------------------------
+
+export type KeywordsGetInput = { customerId: string; criterionId: string };
+
+export function getKeyword(input: unknown): ActionResult {
+  const validated = validateKeywordsGetInput(input);
+  if (hasLiveAuth(input, true)) {
+    const customerId = sanitizeCustomerId(validated.customerId);
+    const query =
+      `SELECT ad_group_criterion.criterion_id, ad_group_criterion.status, ad_group_criterion.resource_name, ` +
+      `ad_group_criterion.type, ad_group_criterion.ad_group, ad_group_criterion.keyword.text, ` +
+      `ad_group_criterion.keyword.match_type, ad_group_criterion.cpc_bid_micros, ad_group_criterion.negative ` +
+      `FROM ad_group_criterion WHERE ad_group_criterion.type = 'KEYWORD' ` +
+      `AND ad_group_criterion.criterion_id = ${escapeGaqlLiteral(validated.criterionId)}`;
+    return createGoogleAdsClient(clientOpts(input, "keywords.get"))
+      .fetchJSON(customerPath(customerId, "/googleAds:search"), {
+        method: "POST",
+        body: JSON.stringify({ query }),
+      })
+      .then((result) => {
+        if (result.status === 200) {
+          const parsed = parseKeywordsResponse(result.body);
+          const keyword = parsed.keywords[0] ? normalizeKeyword(parsed.keywords[0]) : null;
+          return { connector: "google-ads", action: "keywords.get", source: "connector", keyword };
+        }
+        throw handleError(result);
+      });
+  }
+  return { connector: "google-ads", action: "keywords.get", source: "connector", validated };
+}
+
+function validateKeywordsGetInput(input: unknown): KeywordsGetInput {
+  if (!isRecord(input)) throw new Error("keywords.get input must be an object");
+  const criterionId = extractIdFromMutateShapedInput(input, ["criterionId", "keywordId", "id"]);
+  return {
+    customerId: requireString(input.customerId, "customerId"),
+    criterionId: requireString(criterionId, "criterionId"),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// budgets.get
+// ---------------------------------------------------------------------------
+
+export type BudgetsGetInput = { customerId: string; budgetId: string };
+
+export function getBudget(input: unknown): ActionResult {
+  const validated = validateBudgetsGetInput(input);
+  if (hasLiveAuth(input, true)) {
+    const customerId = sanitizeCustomerId(validated.customerId);
+    const query =
+      `SELECT campaign_budget.id, campaign_budget.name, campaign_budget.status, campaign_budget.resource_name, ` +
+      `campaign_budget.amount_micros, campaign_budget.delivery_method, campaign_budget.period, ` +
+      `campaign_budget.explicitly_shared ` +
+      `FROM campaign_budget WHERE campaign_budget.id = ${escapeGaqlLiteral(validated.budgetId)}`;
+    return createGoogleAdsClient(clientOpts(input, "budgets.get"))
+      .fetchJSON(customerPath(customerId, "/googleAds:search"), {
+        method: "POST",
+        body: JSON.stringify({ query }),
+      })
+      .then((result) => {
+        if (result.status === 200) {
+          const parsed = parseBudgetsResponse(result.body);
+          const budget = parsed.budgets[0] ? normalizeBudget(parsed.budgets[0]) : null;
+          return { connector: "google-ads", action: "budgets.get", source: "connector", budget };
+        }
+        throw handleError(result);
+      });
+  }
+  return { connector: "google-ads", action: "budgets.get", source: "connector", validated };
+}
+
+function validateBudgetsGetInput(input: unknown): BudgetsGetInput {
+  if (!isRecord(input)) throw new Error("budgets.get input must be an object");
+  const budgetId = extractIdFromMutateShapedInput(input, ["budgetId", "id"]);
+  return {
+    customerId: requireString(input.customerId, "customerId"),
+    budgetId: requireString(budgetId, "budgetId"),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// conversion_actions.get
+// ---------------------------------------------------------------------------
+
+export type ConversionActionsGetInput = { customerId: string; conversionActionId: string };
+
+export function getConversionAction(input: unknown): ActionResult {
+  const validated = validateConversionActionsGetInput(input);
+  if (hasLiveAuth(input, true)) {
+    const customerId = sanitizeCustomerId(validated.customerId);
+    const query =
+      `SELECT conversion_action.id, conversion_action.name, conversion_action.status, ` +
+      `conversion_action.resource_name, conversion_action.type, conversion_action.category, ` +
+      `conversion_action.primary_for_goal ` +
+      `FROM conversion_action WHERE conversion_action.id = ${escapeGaqlLiteral(validated.conversionActionId)}`;
+    return createGoogleAdsClient(clientOpts(input, "conversion_actions.get"))
+      .fetchJSON(customerPath(customerId, "/googleAds:search"), {
+        method: "POST",
+        body: JSON.stringify({ query }),
+      })
+      .then((result) => {
+        if (result.status === 200) {
+          const parsed = parseConversionActionsResponse(result.body);
+          const conversionAction = parsed.conversionActions[0]
+            ? normalizeConversionAction(parsed.conversionActions[0])
+            : null;
+          return {
+            connector: "google-ads",
+            action: "conversion_actions.get",
+            source: "connector",
+            conversionAction,
+          };
+        }
+        throw handleError(result);
+      });
+  }
+  return { connector: "google-ads", action: "conversion_actions.get", source: "connector", validated };
+}
+
+function validateConversionActionsGetInput(input: unknown): ConversionActionsGetInput {
+  if (!isRecord(input)) throw new Error("conversion_actions.get input must be an object");
+  const conversionActionId = extractIdFromMutateShapedInput(input, ["conversionActionId", "id"]);
+  return {
+    customerId: requireString(input.customerId, "customerId"),
+    conversionActionId: requireString(conversionActionId, "conversionActionId"),
   };
 }
 
