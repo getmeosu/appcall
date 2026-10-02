@@ -1,11 +1,13 @@
 import { createResendClient, parseResendRateLimit, isRecord } from "./http";
-import { parseDomainsListResponse } from "./objects";
+import { normalizeDomain, parseDomainsListResponse } from "./objects";
 
 export type DomainsListInput = {
   limit?: number;
   after?: string;
   before?: string;
 };
+
+export type DomainsGetInput = { id: string };
 
 function requireOptionalLimit(value: unknown): number | undefined {
   if (value === undefined || value === null) return undefined;
@@ -21,6 +23,11 @@ function optionalCursor(value: unknown, field: string): string | undefined {
   return value;
 }
 
+function requireString(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
+  return value;
+}
+
 export function validateDomainsListInput(input: unknown): DomainsListInput {
   if (!isRecord(input)) throw new Error("input must be an object");
   const limit = requireOptionalLimit(input.limit);
@@ -28,6 +35,11 @@ export function validateDomainsListInput(input: unknown): DomainsListInput {
   const before = optionalCursor(input.before, "before");
   if (after && before) throw new Error("after and before cannot both be set");
   return { limit, after, before };
+}
+
+export function validateDomainsGetInput(input: unknown): DomainsGetInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { id: requireString(input.id, "id") };
 }
 
 function buildQuery(payload: DomainsListInput): string {
@@ -72,5 +84,31 @@ export function listDomains(input: unknown): Record<string, unknown> | Promise<R
     action: "domains.list",
     source: "connector",
     validated: validateDomainsListInput(input ?? {}),
+  };
+}
+
+export function getDomain(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const payload = validateDomainsGetInput(input);
+    const fetchFn = typeof input.fetch === "function" ? (input.fetch as typeof fetch) : undefined;
+    return createResendClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "domains.get" })
+      .fetchJSON(`/domains/${encodeURIComponent(payload.id)}`, { method: "GET" })
+      .then((result) => {
+        if (result.status >= 200 && result.status < 300 && isRecord(result.body)) {
+          return {
+            connector: "resend",
+            action: "domains.get",
+            source: "provider",
+            domain: normalizeDomain(result.body),
+          };
+        }
+        fail(result.status, result.headers, "Resend rejected the domains.get request.");
+      });
+  }
+  return {
+    connector: "resend",
+    action: "domains.get",
+    source: "connector",
+    validated: validateDomainsGetInput(input),
   };
 }

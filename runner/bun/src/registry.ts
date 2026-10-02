@@ -451,7 +451,8 @@ import {
 import resendManifest from "../../connectors/resend/manifest.json";
 import { healthcheck as resendHealthcheck } from "../../connectors/resend/src/healthcheck";
 import { sendEmail as resendSendEmail, getEmail as resendGetEmail, listEmails as resendListEmails } from "../../connectors/resend/src/emails";
-import { listDomains as resendListDomains } from "../../connectors/resend/src/domains";
+import { listDomains as resendListDomains, getDomain as resendGetDomain } from "../../connectors/resend/src/domains";
+import { listContacts as resendListContacts } from "../../connectors/resend/src/contacts";
 
 import googlemeetManifest from "../../connectors/googlemeet/manifest.json";
 import { healthcheck as googlemeetHealthcheck } from "../../connectors/googlemeet/src/healthcheck";
@@ -1088,6 +1089,8 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "emails.get": resendGetEmail,
       "emails.list": resendListEmails,
       "domains.list": resendListDomains,
+      "domains.get": resendGetDomain,
+      "contacts.list": resendListContacts,
     },
     googlemeet: {
       "meetings.create": gmeetCreateMeeting,

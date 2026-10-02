@@ -7,11 +7,14 @@ import {
   validateEmailGetInput,
   validateEmailListInput,
 } from "../src/emails";
-import { listDomains, validateDomainsListInput } from "../src/domains";
-import { normalizeEmail, normalizeDomain, parseEmailsListResponse, parseDomainsListResponse } from "../src/objects";
+import { listDomains, getDomain, validateDomainsListInput, validateDomainsGetInput } from "../src/domains";
+import { listContacts, validateContactsListInput } from "../src/contacts";
+import { normalizeEmail, normalizeDomain, normalizeContact, parseEmailsListResponse, parseDomainsListResponse, parseContactsListResponse } from "../src/objects";
 import emailGetFixture from "../fixtures/email_get.json";
 import emailsListFixture from "../fixtures/emails_list.json";
 import domainsListFixture from "../fixtures/domains_list.json";
+import domainsGetFixture from "../fixtures/domains_get.json";
+import contactsListFixture from "../fixtures/contacts_list.json";
 
 describe("sendEmail (validated-echo, no apiKey)", () => {
   it("returns the validated payload without apiKey", () => {
@@ -310,6 +313,123 @@ describe("listDomains", () => {
   });
 });
 
+
+describe("getDomain", () => {
+  it("validated-echo requires id", () => {
+    const result = getDomain({ id: "d91cd9bd-1176-453e-8fc1-35364d380206" }) as Record<string, unknown>;
+    expect(result.action).toBe("domains.get");
+    expect(result.source).toBe("connector");
+    expect((result.validated as { id: string }).id).toBe("d91cd9bd-1176-453e-8fc1-35364d380206");
+  });
+
+  it("throws when id missing", () => {
+    expect(() => validateDomainsGetInput({})).toThrow("id is required");
+  });
+
+  it("GETs /domains/{id} with Bearer and returns normalized domain with DNS records", async () => {
+    let captured: { url: string; init?: RequestInit } | undefined;
+    const result = await getDomain({
+      apiKey: "re_test",
+      id: "d91cd9bd-1176-453e-8fc1-35364d380206",
+      fetch: async (input, init) => {
+        captured = { url: String(input), init };
+        return Response.json(domainsGetFixture, { status: 200 });
+      },
+    }) as Record<string, any>;
+
+    expect(captured?.url).toBe("https://api.resend.com/domains/d91cd9bd-1176-453e-8fc1-35364d380206");
+    expect(captured?.init?.method).toBe("GET");
+    const headers = captured?.init?.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer re_test");
+    expect(result.source).toBe("provider");
+    expect(result.domain.id).toBe("d91cd9bd-1176-453e-8fc1-35364d380206");
+    expect(result.domain.name).toBe("example.com");
+    expect(result.domain.status).toBe("not_started");
+    expect(result.domain.trackingSubdomain).toBe("links");
+    expect(result.domain.records).toHaveLength(4);
+    expect(result.domain.records[0].type).toBe("MX");
+    expect(result.domain.records[0].priority).toBe(10);
+  });
+
+  it("maps 404 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    await expect(
+      getDomain({
+        apiKey: "re_test",
+        id: "missing",
+        fetch: async () => new Response("not found", { status: 404 }),
+      }),
+    ).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  it("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    await expect(
+      getDomain({
+        apiKey: "re_test",
+        id: "x",
+        fetch: async () => new Response("rl", { status: 429, headers: { "retry-after": "9" } }),
+      }),
+    ).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 9 });
+  });
+});
+
+describe("listContacts", () => {
+  it("validated-echo without apiKey", () => {
+    const result = listContacts({ limit: 10 }) as Record<string, unknown>;
+    expect(result.action).toBe("contacts.list");
+    expect(result.source).toBe("connector");
+    expect((result.validated as { limit: number }).limit).toBe(10);
+  });
+
+  it("rejects after+before together", () => {
+    expect(() => validateContactsListInput({ after: "a", before: "b" })).toThrow("after and before cannot both be set");
+  });
+
+  it("rejects invalid limit", () => {
+    expect(() => validateContactsListInput({ limit: 0 })).toThrow("limit must be between 1 and 100");
+    expect(() => validateContactsListInput({ limit: 101 })).toThrow("limit must be between 1 and 100");
+  });
+
+  it("GETs /contacts with query and returns normalized list", async () => {
+    let capturedUrl = "";
+    const result = await listContacts({
+      apiKey: "re_test",
+      limit: 50,
+      after: "prev-id",
+      fetch: async (input) => {
+        capturedUrl = String(input);
+        return Response.json(contactsListFixture, { status: 200 });
+      },
+    }) as Record<string, any>;
+
+    expect(capturedUrl).toBe("https://api.resend.com/contacts?limit=50&after=prev-id");
+    expect(result.source).toBe("provider");
+    expect(result.hasMore).toBe(false);
+    expect(result.contacts).toHaveLength(2);
+    expect(result.contacts[0].email).toBe("steve.wozniak@gmail.com");
+    expect(result.contacts[0].firstName).toBe("Steve");
+    expect(result.contacts[1].unsubscribed).toBe(true);
+    expect(result.contacts[1].lastName).toBeNull();
+  });
+
+  it("maps 500 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    await expect(
+      listContacts({
+        apiKey: "re_test",
+        fetch: async () => new Response("boom", { status: 500 }),
+      }),
+    ).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  it("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    await expect(
+      listContacts({
+        apiKey: "re_test",
+        fetch: async () => new Response("rl", { status: 429, headers: { "retry-after": "4" } }),
+      }),
+    ).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 4 });
+  });
+});
+
 describe("objects normalizers", () => {
   it("normalizeEmail maps snake_case fields", () => {
     const email = normalizeEmail(emailGetFixture as Record<string, unknown>);
@@ -329,7 +449,25 @@ describe("objects normalizers", () => {
     const domain = normalizeDomain((domainsListFixture as any).data[0]);
     expect(domain.name).toBe("example.com");
     expect(domain.region).toBe("us-east-1");
+    expect(domain.records).toEqual([]);
     const parsed = parseDomainsListResponse(domainsListFixture);
     expect(parsed.domains[0].id).toBe(domain.id);
+  });
+
+  it("normalizeDomain from get includes DNS records", () => {
+    const domain = normalizeDomain(domainsGetFixture as Record<string, unknown>);
+    expect(domain.trackingSubdomain).toBe("links");
+    expect(domain.records).toHaveLength(4);
+    expect(domain.records[2].record).toBe("DKIM");
+  });
+
+  it("normalizeContact + parseContactsListResponse", () => {
+    const contact = normalizeContact((contactsListFixture as any).data[0]);
+    expect(contact.email).toBe("steve.wozniak@gmail.com");
+    expect(contact.firstName).toBe("Steve");
+    expect(contact.unsubscribed).toBe(false);
+    const parsed = parseContactsListResponse(contactsListFixture);
+    expect(parsed.contacts).toHaveLength(2);
+    expect(parsed.hasMore).toBe(false);
   });
 });

@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("resend manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("resend");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -30,8 +30,10 @@ describe("resend manifest", () => {
     expect(ops).toContain("emails.get");
     expect(ops).toContain("emails.list");
     expect(ops).toContain("domains.list");
+    expect(ops).toContain("domains.get");
+    expect(ops).toContain("contacts.list");
     expect(ops).toContain("healthcheck");
-    expect(ops.length).toBe(5);
+    expect(ops.length).toBe(7);
   });
 
   it("operations are all actions", () => {
@@ -39,6 +41,8 @@ describe("resend manifest", () => {
     expect(manifest.operations["emails.get"].kind).toBe("action");
     expect(manifest.operations["emails.list"].kind).toBe("action");
     expect(manifest.operations["domains.list"].kind).toBe("action");
+    expect(manifest.operations["domains.get"].kind).toBe("action");
+    expect(manifest.operations["contacts.list"].kind).toBe("action");
     expect(manifest.operations["healthcheck"].kind).toBe("action");
   });
 
@@ -50,8 +54,17 @@ describe("resend manifest", () => {
     expect(manifest.operations["emails.get"].inputSchema.required).toEqual(["id"]);
   });
 
+  it("domains.get requires id", () => {
+    expect(manifest.operations["domains.get"].inputSchema.required).toEqual(["id"]);
+  });
+
+  it("read ops use sideEffect read", () => {
+    expect(manifest.operations["domains.get"].sideEffect).toBe("read");
+    expect(manifest.operations["contacts.list"].sideEffect).toBe("read");
+  });
+
   it("has correct models", () => {
-    expect(manifest.models).toEqual(["email", "domain"]);
+    expect(manifest.models).toEqual(["email", "domain", "contact"]);
   });
 
   it("operations have timeout constraints", () => {
@@ -60,5 +73,7 @@ describe("resend manifest", () => {
     expect(manifest.operations["emails.get"].timeoutMs).toBe(15000);
     expect(manifest.operations["emails.list"].timeoutMs).toBe(15000);
     expect(manifest.operations["domains.list"].timeoutMs).toBe(15000);
+    expect(manifest.operations["domains.get"].timeoutMs).toBe(15000);
+    expect(manifest.operations["contacts.list"].timeoutMs).toBe(15000);
   });
 });
