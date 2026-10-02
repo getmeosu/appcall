@@ -6,8 +6,8 @@ describe("Lever manifest", () => {
     expect(manifest.key).toBe("lever");
   });
 
-  it("has version 0.1.0", () => {
-    expect(manifest.version).toBe("0.1.0");
+  it("has version 0.2.0", () => {
+    expect(manifest.version).toBe("0.2.0");
   });
 
   it("uses bun runtime", () => {
@@ -35,7 +35,21 @@ describe("Lever manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares job model", () => {
-    expect(manifest.models).toContain("job");
+  it("declares P0 list ops including jobs.list", () => {
+    expect(Object.keys(manifest.operations).sort()).toEqual([
+      "healthcheck",
+      "jobs.list",
+      "opportunities.list",
+      "stages.list",
+      "users.list",
+    ]);
+    expect(manifest.operations["jobs.list"].kind).toBe("sync");
+    expect(manifest.operations["opportunities.list"].kind).toBe("sync");
+    expect(manifest.operations["stages.list"].kind).toBe("sync");
+    expect(manifest.operations["users.list"].kind).toBe("sync");
+  });
+
+  it("declares job, opportunity, stage, user models", () => {
+    expect(manifest.models).toEqual(["job", "opportunity", "stage", "user"]);
   });
 });
