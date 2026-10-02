@@ -297,8 +297,8 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.12.0 after S10 on S11 tip", () => {
-    expect(manifest.version).toBe("0.12.0");
+  test("manifest version is 0.13.0 after S12 on S10 tip", () => {
+    expect(manifest.version).toBe("0.13.0");
   });
 
   test("manifest declares S8 labels milestones collab ops", () => {
@@ -418,7 +418,23 @@ describe("github connector manifest", () => {
     expect(comment.sideEffect).toBe("write");
     expect(comment.effectPolicy).toBe("Reconcile");
     expect(comment.reconcile).toBe("commits.get");
-    expect(Object.keys(manifest.operations).length).toBeGreaterThanOrEqual(122);
+    expect(Object.keys(manifest.operations).length).toBe(138);
+  });
+
+  test("manifest declares S12 refs search user reads", () => {
+    for (const key of [
+      "git.refs.get",
+      "search.code",
+      "search.commits",
+      "search.repositories",
+      "search.orgs",
+      "users.get_authenticated",
+    ] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("read");
+      expect(op.effectPolicy).toBeUndefined();
+    }
   });
 
   test("manifest declares S10 notifications-orgs-social ops", () => {
@@ -437,7 +453,7 @@ describe("github connector manifest", () => {
       expect(manifest.operations[key].kind).toBe("action");
     }
     expect(manifest.operations["orgs.members.list"].kind).toBe("action");
-    expect(Object.keys(manifest.operations).length).toBe(132);
+    expect(Object.keys(manifest.operations).length).toBeGreaterThanOrEqual(132);
   });
 
   test("S10 write ops wire EffectPolicy Reconcile", () => {
