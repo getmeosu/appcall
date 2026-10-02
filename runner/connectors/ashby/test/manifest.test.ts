@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.3.0", () => {
-    expect(manifest.version).toBe("0.3.0");
+  it("has version 0.4.0", () => {
+    expect(manifest.version).toBe("0.4.0");
   });
 
   it("uses bun runtime", () => {
@@ -33,15 +33,20 @@ describe("Ashby manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares P0+P1 ops including jobs.list", () => {
+  it("declares P0+P1 reads plus write ops", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
       "applications.get",
+      "applications.hire",
       "applications.list",
+      "applications.move",
+      "applications.reject",
       "candidates.get",
       "candidates.list",
       "candidates.search",
       "healthcheck",
+      "interviews.cancel",
       "interviews.list",
+      "interviews.schedule",
       "jobs.list",
     ]);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
@@ -53,7 +58,36 @@ describe("Ashby manifest", () => {
     expect(manifest.operations["interviews.list"].kind).toBe("sync");
   });
 
-  it("declares job, candidate, application, interview models", () => {
-    expect(manifest.models).toEqual(["job", "candidate", "application", "interview"]);
+  it("wires applications.move|reject|hire EffectPolicy Reconcile to applications.get", () => {
+    for (const key of ["applications.move", "applications.reject", "applications.hire"] as const) {
+      const op = manifest.operations[key] as {
+        kind: string;
+        sideEffect: string;
+        effectPolicy: string;
+        reconcile: string;
+      };
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Reconcile");
+      expect(op.reconcile).toBe("applications.get");
+    }
+  });
+
+  it("declares interviews.schedule|cancel as write actions", () => {
+    for (const key of ["interviews.schedule", "interviews.cancel"] as const) {
+      const op = manifest.operations[key] as { kind: string; sideEffect: string };
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("write");
+    }
+  });
+
+  it("declares job, candidate, application, interview, interview_schedule models", () => {
+    expect(manifest.models).toEqual([
+      "job",
+      "candidate",
+      "application",
+      "interview",
+      "interview_schedule",
+    ]);
   });
 });

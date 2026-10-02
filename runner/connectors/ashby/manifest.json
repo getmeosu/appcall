@@ -1,7 +1,7 @@
 {
   "key": "ashby",
   "name": "Ashby",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -147,12 +147,351 @@
       "responseFormat": "json",
       "enforceOutputSchema": true,
       "validationMode": "strict-generated"
+    },
+    "applications.move": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Move application",
+      "description": "Move an application to another interview stage via authenticated POST /application.changeStage. EffectPolicy Reconcile observes the post-move application via applications.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "interviewStageId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "interviewStageId": {
+            "type": "string",
+            "description": "Destination interview stage UUID."
+          },
+          "archiveReasonId": {
+            "type": "string",
+            "description": "Archive reason UUID; required when moving to an Archived stage."
+          },
+          "archiveEmail": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "communicationTemplateId"
+            ],
+            "properties": {
+              "communicationTemplateId": {
+                "type": "string"
+              },
+              "sendAt": {
+                "type": "string",
+                "description": "Optional ISO-8601 send time for the archive email."
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized application after EffectPolicy Reconcile via applications.get."
+          }
+        }
+      }
+    },
+    "applications.reject": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Reject application",
+      "description": "Reject (archive) an application via authenticated POST /application.changeStage to an Archived stage with archiveReasonId. EffectPolicy Reconcile observes the post-reject application via applications.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "interviewStageId",
+          "archiveReasonId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "interviewStageId": {
+            "type": "string",
+            "description": "Destination interview stage UUID."
+          },
+          "archiveReasonId": {
+            "type": "string",
+            "description": "Archive reason UUID; required when moving to an Archived stage."
+          },
+          "archiveEmail": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "communicationTemplateId"
+            ],
+            "properties": {
+              "communicationTemplateId": {
+                "type": "string"
+              },
+              "sendAt": {
+                "type": "string",
+                "description": "Optional ISO-8601 send time for the archive email."
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized application after EffectPolicy Reconcile via applications.get."
+          }
+        }
+      }
+    },
+    "applications.hire": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Hire application",
+      "description": "Hire a candidate by moving the application to a Hired interview stage via authenticated POST /application.changeStage. EffectPolicy Reconcile observes the post-hire application via applications.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "interviewStageId"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "interviewStageId": {
+            "type": "string",
+            "description": "Destination interview stage UUID."
+          },
+          "archiveReasonId": {
+            "type": "string",
+            "description": "Archive reason UUID; required when moving to an Archived stage."
+          },
+          "archiveEmail": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "communicationTemplateId"
+            ],
+            "properties": {
+              "communicationTemplateId": {
+                "type": "string"
+              },
+              "sendAt": {
+                "type": "string",
+                "description": "Optional ISO-8601 send time for the archive email."
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized application after EffectPolicy Reconcile via applications.get."
+          }
+        }
+      }
+    },
+    "interviews.schedule": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Schedule interview",
+      "description": "Create an interview schedule via authenticated POST /interviewSchedule.create. Requires applicationId and interviewEvents (startTime, endTime, interviewers).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applicationId",
+          "interviewEvents"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "Ashby application UUID."
+          },
+          "interviewEvents": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "startTime",
+                "endTime",
+                "interviewers"
+              ],
+              "properties": {
+                "startTime": {
+                  "type": "string",
+                  "description": "Event start time (ISO-8601)."
+                },
+                "endTime": {
+                  "type": "string",
+                  "description": "Event end time (ISO-8601)."
+                },
+                "interviewers": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "email"
+                    ],
+                    "properties": {
+                      "email": {
+                        "type": "string"
+                      },
+                      "feedbackRequired": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "interviewId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Optional interview definition UUID."
+                },
+                "extraData": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "interviewSchedule"
+        ],
+        "properties": {
+          "interviewSchedule": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized interview schedule returned by Ashby."
+          }
+        }
+      }
+    },
+    "interviews.cancel": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Cancel interview schedule",
+      "description": "Cancel an interview schedule via authenticated POST /interviewSchedule.cancel. Maps interviewScheduleId to Ashby request body id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "interviewScheduleId"
+        ],
+        "properties": {
+          "interviewScheduleId": {
+            "type": "string",
+            "description": "Interview schedule UUID (sent to Ashby as body.id)."
+          },
+          "allowReschedule": {
+            "type": "boolean",
+            "description": "Whether the cancelled schedule may be rescheduled (default false)."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "interviewSchedule"
+        ],
+        "properties": {
+          "interviewSchedule": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized interview schedule returned by Ashby."
+          }
+        }
+      }
     }
   },
   "models": [
     "job",
     "candidate",
     "application",
-    "interview"
+    "interview",
+    "interview_schedule"
   ]
 }

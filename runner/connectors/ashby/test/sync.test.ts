@@ -7,13 +7,24 @@ import {
   executeApplicationsGetSync,
   executeCandidatesSearchSync,
   executeInterviewsListSync,
+  executeApplicationsMoveSync,
+  executeApplicationsRejectSync,
+  executeApplicationsHireSync,
+  executeInterviewsScheduleSync,
+  executeInterviewsCancelSync,
 } from "../src/sync";
 import candidatesFixture from "../fixtures/candidates_list.json";
 import applicationsFixture from "../fixtures/applications_list.json";
 import candidateInfoFixture from "../fixtures/candidate_info.json";
 import applicationInfoFixture from "../fixtures/application_info.json";
+import applicationMovedFixture from "../fixtures/application_moved.json";
+import applicationRejectedFixture from "../fixtures/application_rejected.json";
+import applicationHiredFixture from "../fixtures/application_hired.json";
+import applicationChangeStageFixture from "../fixtures/application_change_stage.json";
 import candidatesSearchFixture from "../fixtures/candidates_search.json";
 import interviewsFixture from "../fixtures/interviews_list.json";
+import interviewScheduleCreateFixture from "../fixtures/interview_schedule_create.json";
+import interviewScheduleCancelFixture from "../fixtures/interview_schedule_cancel.json";
 
 // Every request is served by an injected fetch. No real network.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
@@ -21,6 +32,23 @@ function stubFetch(body: string, init: { status?: number; headers?: Record<strin
   const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
     calls.push(new Request(input as string, requestInit));
     return new Response(body, { status: init.status ?? 200, headers: init.headers });
+  }) as unknown as typeof fetch;
+  return { calls, impl };
+}
+
+function stubSequence(
+  responses: Array<{ body: string; status?: number; headers?: Record<string, string> }>,
+) {
+  const calls: Request[] = [];
+  let i = 0;
+  const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
+    calls.push(new Request(input as string, requestInit));
+    const next = responses[Math.min(i, responses.length - 1)];
+    i += 1;
+    return new Response(next.body, {
+      status: next.status ?? 200,
+      headers: next.headers,
+    });
   }) as unknown as typeof fetch;
   return { calls, impl };
 }
@@ -408,6 +436,209 @@ describe("Ashby interviews.list sync", () => {
   test("rejects missing apiKey before fetch", async () => {
     const { calls, impl } = stubFetch("{}");
     await expect(executeInterviewsListSync({ apiKey: "", fetch: impl })).rejects.toThrow(/apiKey/);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("Ashby applications.move (EffectPolicy Reconcile)", () => {
+  test("POSTs /application.changeStage then reconciles via applications.get", async () => {
+    const { calls, impl } = stubSequence([
+      { body: JSON.stringify(applicationChangeStageFixture) },
+      { body: JSON.stringify(applicationMovedFixture) },
+    ]);
+
+    const result = await executeApplicationsMoveSync({
+      ...auth,
+      applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+      interviewStageId: "a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(new URL(calls[0].url).pathname).toBe("/application.changeStage");
+    expect(calls[0].method).toBe("POST");
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({
+      applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+      interviewStageId: "a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5",
+    });
+
+    expect(new URL(calls[1].url).pathname).toBe("/application.info");
+    const getBody = JSON.parse(await calls[1].clone().text());
+    expect(getBody).toEqual({ applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e" });
+
+    expect(result.application?.id).toBe(
+      "ash-application:e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+    );
+    expect(result.application?.stageId).toBe("a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5");
+    expect(result.application?.stageTitle).toBe("Phone Screen");
+  });
+
+  test("rejects missing interviewStageId before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeApplicationsMoveSync({
+        ...auth,
+        applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+        interviewStageId: "",
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/interviewStageId/);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors on changeStage", async () => {
+    const { impl } = stubFetch("{}", { status: 422 });
+    await expect(
+      executeApplicationsMoveSync({
+        ...auth,
+        applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+        interviewStageId: "a1a1a1a1-b2b2-4c3c-8d4d-e5e5e5e5e5e5",
+        fetch: impl,
+      }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Ashby applications.reject (EffectPolicy Reconcile)", () => {
+  test("POSTs changeStage with archiveReasonId then reconciles", async () => {
+    const { calls, impl } = stubSequence([
+      { body: JSON.stringify(applicationChangeStageFixture) },
+      { body: JSON.stringify(applicationRejectedFixture) },
+    ]);
+
+    const result = await executeApplicationsRejectSync({
+      ...auth,
+      applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+      interviewStageId: "cccccccc-dddd-4eee-8fff-000000000001",
+      archiveReasonId: "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(2);
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({
+      applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+      interviewStageId: "cccccccc-dddd-4eee-8fff-000000000001",
+      archiveReasonId: "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff",
+    });
+    expect(result.application?.status).toBe("Archived");
+    expect(result.application?.stageTitle).toBe("Archived");
+  });
+
+  test("requires archiveReasonId before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeApplicationsRejectSync({
+        ...auth,
+        applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+        interviewStageId: "cccccccc-dddd-4eee-8fff-000000000001",
+        archiveReasonId: "",
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/archiveReasonId/);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("Ashby applications.hire (EffectPolicy Reconcile)", () => {
+  test("POSTs changeStage then reconciles hired application", async () => {
+    const { calls, impl } = stubSequence([
+      { body: JSON.stringify(applicationChangeStageFixture) },
+      { body: JSON.stringify(applicationHiredFixture) },
+    ]);
+
+    const result = await executeApplicationsHireSync({
+      ...auth,
+      applicationId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+      interviewStageId: "dddddddd-eeee-4fff-8000-111111111111",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(new URL(calls[0].url).pathname).toBe("/application.changeStage");
+    expect(result.application?.status).toBe("Hired");
+    expect(result.application?.stageTitle).toBe("Hired");
+  });
+});
+
+describe("Ashby interviews.schedule", () => {
+  test("POSTs /interviewSchedule.create and normalizes schedule", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewScheduleCreateFixture));
+
+    const result = await executeInterviewsScheduleSync({
+      ...auth,
+      applicationId: "7211e226-7802-41fd-8d55-2720fe9d534f",
+      interviewEvents: [
+        {
+          startTime: "2024-05-01T15:00:00.000Z",
+          endTime: "2024-05-01T16:00:00.000Z",
+          interviewers: [{ email: "test@ashbyhq.com", feedbackRequired: true }],
+          interviewId: "46648e83-f28f-43c4-a2a0-58e0599cff41",
+        },
+      ],
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/interviewSchedule.create");
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted.applicationId).toBe("7211e226-7802-41fd-8d55-2720fe9d534f");
+    expect(posted.interviewEvents).toHaveLength(1);
+    expect(posted.interviewEvents[0].interviewers[0].email).toBe("test@ashbyhq.com");
+
+    expect(result.interviewSchedule?.id).toBe(
+      "ash-interview-schedule:e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+    );
+    expect(result.interviewSchedule?.status).toBe("Scheduled");
+    expect(result.interviewSchedule?.events).toHaveLength(1);
+    expect(result.interviewSchedule?.events[0].interviewerEmails).toEqual(["test@ashbyhq.com"]);
+  });
+
+  test("rejects empty interviewEvents before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeInterviewsScheduleSync({
+        ...auth,
+        applicationId: "7211e226-7802-41fd-8d55-2720fe9d534f",
+        interviewEvents: [],
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/interviewEvents/);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("Ashby interviews.cancel", () => {
+  test("POSTs /interviewSchedule.cancel with id mapped from interviewScheduleId", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewScheduleCancelFixture));
+
+    const result = await executeInterviewsCancelSync({
+      ...auth,
+      interviewScheduleId: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+      allowReschedule: false,
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0].url).pathname).toBe("/interviewSchedule.cancel");
+    const posted = JSON.parse(await calls[0].clone().text());
+    expect(posted).toEqual({
+      id: "e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+      allowReschedule: false,
+    });
+    expect(result.interviewSchedule?.status).toBe("Cancelled");
+  });
+
+  test("rejects missing interviewScheduleId before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeInterviewsCancelSync({
+        ...auth,
+        interviewScheduleId: "",
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/interviewScheduleId/);
     expect(calls).toHaveLength(0);
   });
 });

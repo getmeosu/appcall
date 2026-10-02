@@ -1,13 +1,21 @@
 /**
- * Ashby list/get/search syncs.
+ * Ashby list/get/search/write syncs.
  *
- * jobs.list          → public GET /posting-api/job-board/{board}/jobs
- * candidates.list    → authenticated POST /candidate.list
- * applications.list  → authenticated POST /application.list
- * candidates.get     → authenticated POST /candidate.info
- * applications.get   → authenticated POST /application.info
- * candidates.search  → authenticated POST /candidate.search
- * interviews.list    → authenticated POST /interview.list
+ * jobs.list               → public GET /posting-api/job-board/{board}/jobs
+ * candidates.list         → authenticated POST /candidate.list
+ * applications.list       → authenticated POST /application.list
+ * candidates.get          → authenticated POST /candidate.info
+ * applications.get        → authenticated POST /application.info
+ * candidates.search       → authenticated POST /candidate.search
+ * interviews.list         → authenticated POST /interview.list
+ * applications.move       → POST /application.changeStage then
+ *                           EffectPolicy Reconcile via applications.get
+ * applications.reject     → POST /application.changeStage (Archived + archiveReasonId)
+ *                           then EffectPolicy Reconcile via applications.get
+ * applications.hire       → POST /application.changeStage (Hired stage)
+ *                           then EffectPolicy Reconcile via applications.get
+ * interviews.schedule     → authenticated POST /interviewSchedule.create
+ * interviews.cancel       → authenticated POST /interviewSchedule.cancel
  */
 
 import { createClient, createAuthClient } from "./http";
@@ -18,10 +26,12 @@ import {
   parseApplicationsResponse,
   parseApplicationInfoResponse,
   parseInterviewsResponse,
+  parseInterviewScheduleInfoResponse,
   type NormalizedJob,
   type NormalizedCandidate,
   type NormalizedApplication,
   type NormalizedInterview,
+  type NormalizedInterviewSchedule,
 } from "./objects";
 
 export interface ExecuteJobsListSyncInput {
@@ -291,4 +301,192 @@ export async function executeInterviewsListSync(
     }),
   );
   return parseInterviewsResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// applications.move / reject / hire — POST /application.changeStage
+// EffectPolicy Reconcile → applications.get
+// ---------------------------------------------------------------------------
+
+function requireNonEmptyString(value: unknown, field: string): string {
+  if (typeof value === "string" && value.length > 0) return value;
+  throw new Error(`${field} is required`);
+}
+
+export interface ExecuteApplicationsChangeStageSyncInput extends AshbyAuthInput {
+  /** Ashby application UUID. */
+  applicationId: string;
+  /** Destination interview stage UUID. */
+  interviewStageId: string;
+  /** Required when moving to an Archived stage (applications.reject). */
+  archiveReasonId?: string;
+  /** Optional archive email template when rejecting. */
+  archiveEmail?: {
+    communicationTemplateId: string;
+    sendAt?: string;
+  };
+}
+
+export type ExecuteApplicationsMoveSyncInput = ExecuteApplicationsChangeStageSyncInput;
+export type ExecuteApplicationsRejectSyncInput = ExecuteApplicationsChangeStageSyncInput & {
+  archiveReasonId: string;
+};
+export type ExecuteApplicationsHireSyncInput = ExecuteApplicationsChangeStageSyncInput;
+
+export interface ExecuteApplicationsChangeStageSyncOutput {
+  application: NormalizedApplication | null;
+}
+
+async function executeApplicationsChangeStageThenReconcile(
+  input: ExecuteApplicationsChangeStageSyncInput,
+  operation: string,
+  opts: { requireArchiveReason?: boolean } = {},
+): Promise<ExecuteApplicationsChangeStageSyncOutput> {
+  const applicationId = requireNonEmptyString(input.applicationId, "applicationId");
+  const interviewStageId = requireNonEmptyString(input.interviewStageId, "interviewStageId");
+  if (opts.requireArchiveReason) {
+    requireNonEmptyString(input.archiveReasonId, "archiveReasonId");
+  }
+
+  const body = compactBody({
+    applicationId,
+    interviewStageId,
+    archiveReasonId: input.archiveReasonId,
+    archiveEmail: input.archiveEmail,
+  });
+
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation,
+  });
+  await client.postJSON("/application.changeStage", body);
+
+  // EffectPolicy::Reconcile — observe post-mutate state via applications.get.
+  return executeApplicationsGetSync({
+    apiKey: input.apiKey,
+    applicationId,
+    fetch: input.fetch,
+  });
+}
+
+export async function executeApplicationsMoveSync(
+  input: ExecuteApplicationsMoveSyncInput,
+): Promise<ExecuteApplicationsChangeStageSyncOutput> {
+  return executeApplicationsChangeStageThenReconcile(input, "applications.move");
+}
+
+export async function executeApplicationsRejectSync(
+  input: ExecuteApplicationsRejectSyncInput,
+): Promise<ExecuteApplicationsChangeStageSyncOutput> {
+  return executeApplicationsChangeStageThenReconcile(input, "applications.reject", {
+    requireArchiveReason: true,
+  });
+}
+
+export async function executeApplicationsHireSync(
+  input: ExecuteApplicationsHireSyncInput,
+): Promise<ExecuteApplicationsChangeStageSyncOutput> {
+  return executeApplicationsChangeStageThenReconcile(input, "applications.hire");
+}
+
+// ---------------------------------------------------------------------------
+// interviews.schedule — POST /interviewSchedule.create
+// ---------------------------------------------------------------------------
+
+export interface InterviewScheduleEventInput {
+  startTime: string;
+  endTime: string;
+  interviewers: Array<{ email: string; feedbackRequired?: boolean | null }>;
+  interviewId?: string | null;
+  extraData?: Record<string, string> | null;
+}
+
+export interface ExecuteInterviewsScheduleSyncInput extends AshbyAuthInput {
+  applicationId: string;
+  interviewEvents: InterviewScheduleEventInput[];
+}
+
+export interface ExecuteInterviewsScheduleSyncOutput {
+  interviewSchedule: NormalizedInterviewSchedule | null;
+}
+
+export async function executeInterviewsScheduleSync(
+  input: ExecuteInterviewsScheduleSyncInput,
+): Promise<ExecuteInterviewsScheduleSyncOutput> {
+  const applicationId = requireNonEmptyString(input.applicationId, "applicationId");
+  if (!Array.isArray(input.interviewEvents) || input.interviewEvents.length === 0) {
+    throw new Error("interviewEvents is required");
+  }
+  const interviewEvents: Record<string, unknown>[] = [];
+  for (const event of input.interviewEvents) {
+    const startTime = requireNonEmptyString(event?.startTime, "interviewEvents.startTime");
+    const endTime = requireNonEmptyString(event?.endTime, "interviewEvents.endTime");
+    if (!Array.isArray(event?.interviewers) || event.interviewers.length === 0) {
+      throw new Error("interviewEvents.interviewers is required");
+    }
+    const interviewers: Record<string, unknown>[] = [];
+    for (const interviewer of event.interviewers) {
+      const email = requireNonEmptyString(interviewer?.email, "interviewEvents.interviewers.email");
+      interviewers.push(
+        compactBody({
+          email,
+          feedbackRequired: interviewer.feedbackRequired,
+        }),
+      );
+    }
+    interviewEvents.push(
+      compactBody({
+        startTime,
+        endTime,
+        interviewers,
+        interviewId: event.interviewId,
+        extraData: event.extraData,
+      }),
+    );
+  }
+
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "interviews.schedule",
+  });
+  const raw = await client.postJSON(
+    "/interviewSchedule.create",
+    { applicationId, interviewEvents },
+  );
+  return parseInterviewScheduleInfoResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// interviews.cancel — POST /interviewSchedule.cancel
+// ---------------------------------------------------------------------------
+
+export interface ExecuteInterviewsCancelSyncInput extends AshbyAuthInput {
+  /** Ashby interview schedule UUID (maps to request body `id`). */
+  interviewScheduleId: string;
+  allowReschedule?: boolean | null;
+}
+
+export interface ExecuteInterviewsCancelSyncOutput {
+  interviewSchedule: NormalizedInterviewSchedule | null;
+}
+
+export async function executeInterviewsCancelSync(
+  input: ExecuteInterviewsCancelSyncInput,
+): Promise<ExecuteInterviewsCancelSyncOutput> {
+  const id = requireNonEmptyString(input.interviewScheduleId, "interviewScheduleId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "interviews.cancel",
+  });
+  const raw = await client.postJSON(
+    "/interviewSchedule.cancel",
+    compactBody({
+      id,
+      allowReschedule: input.allowReschedule,
+    }),
+  );
+  return parseInterviewScheduleInfoResponse(raw);
 }

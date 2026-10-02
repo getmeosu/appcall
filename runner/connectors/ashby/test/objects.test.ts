@@ -10,6 +10,8 @@ import {
   parseApplicationInfoResponse,
   normalizeInterview,
   parseInterviewsResponse,
+  normalizeInterviewSchedule,
+  parseInterviewScheduleInfoResponse,
 } from "../src/objects";
 import jobsFixture from "../fixtures/jobs_list.json";
 import candidatesFixture from "../fixtures/candidates_list.json";
@@ -18,6 +20,7 @@ import candidateInfoFixture from "../fixtures/candidate_info.json";
 import applicationInfoFixture from "../fixtures/application_info.json";
 import candidatesSearchFixture from "../fixtures/candidates_search.json";
 import interviewsFixture from "../fixtures/interviews_list.json";
+import interviewScheduleCreateFixture from "../fixtures/interview_schedule_create.json";
 
 describe("Ashby normalizeJob", () => {
   it("normalizes a full job correctly", () => {
@@ -282,5 +285,29 @@ describe("Ashby parseInterviewsResponse", () => {
     const result = parseInterviewsResponse({});
     expect(result.interviews).toHaveLength(0);
     expect(result.moreDataAvailable).toBe(false);
+  });
+});
+
+describe("Ashby normalizeInterviewSchedule", () => {
+  it("parses create/cancel envelope results", () => {
+    const { interviewSchedule } = parseInterviewScheduleInfoResponse(interviewScheduleCreateFixture);
+    expect(interviewSchedule?.id).toBe(
+      "ash-interview-schedule:e9ed20fd-d45f-4aad-8a00-a19bfba0083e",
+    );
+    expect(interviewSchedule?.status).toBe("Scheduled");
+    expect(interviewSchedule?.applicationId).toBe("7211e226-7802-41fd-8d55-2720fe9d534f");
+    expect(interviewSchedule?.events[0]?.interviewerEmails).toEqual(["test@ashbyhq.com"]);
+  });
+
+  it("normalizes empty events", () => {
+    const schedule = normalizeInterviewSchedule({
+      id: "sched-1",
+      status: "Cancelled",
+      applicationId: "app-1",
+      interviewStageId: "stage-1",
+      interviewEvents: [],
+    });
+    expect(schedule.id).toBe("ash-interview-schedule:sched-1");
+    expect(schedule.events).toEqual([]);
   });
 });

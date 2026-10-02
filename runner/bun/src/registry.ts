@@ -203,6 +203,11 @@ import {
   executeApplicationsGetSync as getAshbyApplication,
   executeCandidatesSearchSync as searchAshbyCandidates,
   executeInterviewsListSync as listAshbyInterviews,
+  executeApplicationsMoveSync as moveAshbyApplication,
+  executeApplicationsRejectSync as rejectAshbyApplication,
+  executeApplicationsHireSync as hireAshbyApplication,
+  executeInterviewsScheduleSync as scheduleAshbyInterview,
+  executeInterviewsCancelSync as cancelAshbyInterview,
 } from "../../connectors/ashby/src/sync";
 import workableManifest from "../../connectors/workable/manifest.json";
 import { healthcheck as workableHealthcheck } from "../../connectors/workable/src/healthcheck";
@@ -1155,6 +1160,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "applications.get": getAshbyApplication,
       "candidates.search": searchAshbyCandidates,
       "interviews.list": listAshbyInterviews,
+      "applications.move": moveAshbyApplication,
+      "applications.reject": rejectAshbyApplication,
+      "applications.hire": hireAshbyApplication,
+      "interviews.schedule": scheduleAshbyInterview,
+      "interviews.cancel": cancelAshbyInterview,
     },
     workable: {
       "jobs.list": listWorkableJobs,

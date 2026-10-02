@@ -4,7 +4,7 @@
  * jobs.list uses the public posting-api shape ({ jobs: [...] }).
  * Authenticated list/info/search ops use Ashby's envelope:
  *   { success, results, moreDataAvailable?, nextCursor?, syncToken? }
- * where `results` is an array for *.list/*.search and a single object for *.info.
+ * where `results` is an array for *.list/*.search and a single object for *.info / mutate responses.
  */
 
 export interface NormalizedJob {
@@ -57,6 +57,25 @@ export interface NormalizedInterview {
   instructionsPlain: string | null;
   jobId: string | null;
   feedbackFormDefinitionId: string | null;
+}
+
+export interface NormalizedInterviewScheduleEvent {
+  id: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  interviewId: string | null;
+  interviewerEmails: string[];
+}
+
+export interface NormalizedInterviewSchedule {
+  id: string;
+  provider: string;
+  status: string | null;
+  applicationId: string | null;
+  interviewStageId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  events: NormalizedInterviewScheduleEvent[];
 }
 
 interface AshbyJob {
@@ -321,4 +340,72 @@ export function parseInterviewsResponse(raw: unknown): {
     nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
     syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
   };
+}
+
+interface AshbyInterviewScheduleEvent {
+  id?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  interviewId?: string | null;
+  interviewers?: Array<{ email?: string | null } | null> | null;
+}
+
+interface AshbyInterviewSchedule {
+  id: string;
+  status?: string | null;
+  applicationId?: string | null;
+  interviewStageId?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  interviewEvents?: AshbyInterviewScheduleEvent[] | null;
+}
+
+function normalizeInterviewScheduleEvent(
+  event: AshbyInterviewScheduleEvent,
+): NormalizedInterviewScheduleEvent {
+  const emails: string[] = [];
+  if (Array.isArray(event.interviewers)) {
+    for (const interviewer of event.interviewers) {
+      if (interviewer == null || typeof interviewer !== "object") continue;
+      const email = interviewer.email;
+      if (typeof email === "string" && email.length > 0) emails.push(email);
+    }
+  }
+  return {
+    id: asStringId(event.id ?? null),
+    startTime: asIso(event.startTime),
+    endTime: asIso(event.endTime),
+    interviewId: asStringId(event.interviewId ?? null),
+    interviewerEmails: emails,
+  };
+}
+
+export function normalizeInterviewSchedule(
+  schedule: AshbyInterviewSchedule,
+): NormalizedInterviewSchedule {
+  const id = asStringId(schedule.id) ?? "";
+  const events = Array.isArray(schedule.interviewEvents)
+    ? schedule.interviewEvents.map(normalizeInterviewScheduleEvent)
+    : [];
+  return {
+    id: `ash-interview-schedule:${id}`,
+    provider: "ashby",
+    status: schedule.status ?? null,
+    applicationId: asStringId(schedule.applicationId ?? null),
+    interviewStageId: asStringId(schedule.interviewStageId ?? null),
+    createdAt: asIso(schedule.createdAt),
+    updatedAt: asIso(schedule.updatedAt),
+    events,
+  };
+}
+
+export function parseInterviewScheduleInfoResponse(raw: unknown): {
+  interviewSchedule: NormalizedInterviewSchedule | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const result = data.results;
+  if (result == null || typeof result !== "object" || Array.isArray(result)) {
+    return { interviewSchedule: null };
+  }
+  return { interviewSchedule: normalizeInterviewSchedule(result as AshbyInterviewSchedule) };
 }
