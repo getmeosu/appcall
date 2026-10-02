@@ -128,6 +128,18 @@ import {
   getCommitStatus as ghGetCommitStatus, listCommitStatuses as ghListCommitStatuses, createCommitStatus as ghCreateCommitStatus,
   getCommit as ghGetCommit, compareRepos as ghCompareRepos, updatePullRequestBranch as ghUpdatePullRequestBranch,
   listBranches as ghListBranches,
+  getLabel as ghGetLabel,
+  createLabel as ghCreateLabel,
+  updateLabel as ghUpdateLabel,
+  deleteLabel as ghDeleteLabel,
+  listMilestones as ghListMilestones,
+  getMilestone as ghGetMilestone,
+  createMilestone as ghCreateMilestone,
+  updateMilestone as ghUpdateMilestone,
+  listCollaborators as ghListCollaborators,
+  addCollaborator as ghAddCollaborator,
+  removeCollaborator as ghRemoveCollaborator,
+  checkCollaborator as ghCheckCollaborator,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
