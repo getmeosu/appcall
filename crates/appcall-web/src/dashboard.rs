@@ -483,19 +483,35 @@ impl DashboardRenderer<'_> {
             } else {
                 &mut value
             };
-            if target.is_array() {
-                let key = match operation {
-                    DashboardOperation::Catalog => "connectors",
-                    DashboardOperation::Logs => "logs",
-                    DashboardOperation::Runs => "runs",
-                    _ => unreachable!(),
-                };
-                *target = serde_json::json!({key:target.clone()});
+            let logs_surface = if operation == DashboardOperation::Logs {
+                if target.get("unavailable").and_then(Value::as_bool) == Some(true) {
+                    Some("unavailable")
+                } else {
+                    target.get("status").and_then(Value::as_str)
+                }
+            } else {
+                None
+            };
+            // Calls unavailable/error carry status only. Stamp hasFilters for the
+            // request, but never wrap or invent a logs array on those surfaces.
+            if matches!(logs_surface, Some("unavailable") | Some("error")) {
+                let map = target.as_object_mut().ok_or(Error::Unavailable)?;
+                map.insert("hasFilters".into(), Value::Bool(has_filters));
+            } else {
+                if target.is_array() {
+                    let key = match operation {
+                        DashboardOperation::Catalog => "connectors",
+                        DashboardOperation::Logs => "logs",
+                        DashboardOperation::Runs => "runs",
+                        _ => unreachable!(),
+                    };
+                    *target = serde_json::json!({key:target.clone()});
+                }
+                let map = target.as_object_mut().ok_or(Error::Unavailable)?;
+                // This presentation flag is derived only from the current request,
+                // overwriting any provider-supplied value without echoing query text.
+                map.insert("hasFilters".into(), Value::Bool(has_filters));
             }
-            let map = target.as_object_mut().ok_or(Error::Unavailable)?;
-            // This presentation flag is derived only from the current request,
-            // overwriting any provider-supplied value without echoing query text.
-            map.insert("hasFilters".into(), Value::Bool(has_filters));
         }
         if operation == DashboardOperation::Runs {
             let target = if value.get("data").is_some() {
