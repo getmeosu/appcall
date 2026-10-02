@@ -6,7 +6,7 @@ describe("Greenhouse manifest", () => {
     expect(manifest.key).toBe("greenhouse");
   });
 
-  it("has version 0.4.0", () => {
+  it("has version 0.5.0", () => {
     expect(manifest.version).toBe("0.5.0");
   });
 
@@ -36,6 +36,7 @@ describe("Greenhouse manifest", () => {
     expect(manifest.operations["applications.list"]).toBeTruthy();
     expect(manifest.operations["applications.get"]).toBeTruthy();
     expect(manifest.operations["applications.move"]).toBeTruthy();
+    expect(manifest.operations["applications.create"]).toBeTruthy();
     expect(manifest.operations["users.list"]).toBeTruthy();
     expect(manifest.operations["jobs.list"]).toBeTruthy();
     expect(manifest.operations["jobs.get"]).toBeTruthy();
@@ -56,7 +57,7 @@ describe("Greenhouse manifest", () => {
     expect(move.reconcile).toBe("applications.get");
   });
 
-  
+
   it("wires applications.create EffectPolicy Idempotent to applications.get", () => {
     const create = manifest.operations["applications.create"] as {
       kind: string;
@@ -70,7 +71,7 @@ describe("Greenhouse manifest", () => {
     expect(create.reconcile).toBe("applications.get");
   });
 
-it("does not declare scorecards.list", () => {
+  it("does not declare scorecards.list", () => {
     expect((manifest.operations as Record<string, unknown>)["scorecards.list"]).toBeUndefined();
   });
 
