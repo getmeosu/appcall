@@ -31,7 +31,10 @@
     "edition": "Contentful global CMA",
     "operations": [
       "healthcheck",
-      "spaces.list"
+      "spaces.list",
+      "environments.list",
+      "entries.list",
+      "content_types.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -113,12 +116,54 @@
       "adaptations": [
         "Preserve raw provider JSON under data."
       ]
+    },
+    "environments.list": {
+      "upstreamActionId": "list_environments",
+      "sourceRefs": [
+        "handlers",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://www.contentful.com/developers/docs/references/content-management-api/#/reference/environments"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Declarative GET /spaces/{spaceId}/environments."
+      ]
+    },
+    "entries.list": {
+      "upstreamActionId": "list_entries",
+      "sourceRefs": [
+        "handlers",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://www.contentful.com/developers/docs/references/content-management-api/#/reference/entries"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Declarative GET /spaces/{spaceId}/environments/{environmentId}/entries with optional limit, skip, order, content_type."
+      ]
+    },
+    "content_types.list": {
+      "upstreamActionId": "list_content_types",
+      "sourceRefs": [
+        "handlers",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://www.contentful.com/developers/docs/references/content-management-api/#/reference/content-types"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Declarative GET /spaces/{spaceId}/environments/{environmentId}/content_types with optional limit, skip."
+      ]
     }
   },
   "manifest": {
     "key": "contentful",
     "name": "Contentful",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -146,7 +191,9 @@
     },
     "models": [
       "user",
-      "space"
+      "space",
+      "environment",
+      "contentType"
     ],
     "http": {
       "baseUrl": "https://api.contentful.com",
@@ -252,6 +299,193 @@
             "limit": "{{limit}}",
             "skip": "{{skip}}",
             "order": "{{order}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "environments.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "environments.list",
+        "description": "Read Contentful data.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/spaces/{{spaceId}}/environments",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "entries.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "entries.list",
+        "description": "Read Contentful data.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "order": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contentType": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/spaces/{{spaceId}}/environments/{{environmentId}}/entries",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "skip": "{{skip}}",
+            "order": "{{order}}",
+            "content_type": "{{contentType}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "content_types.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "content_types.list",
+        "description": "Read Contentful data.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "spaceId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "environmentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "skip": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "spaceId",
+            "environmentId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "array"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/spaces/{{spaceId}}/environments/{{environmentId}}/content_types",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "skip": "{{skip}}"
           }
         },
         "enforceOutputSchema": true,
