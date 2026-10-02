@@ -1979,6 +1979,166 @@ fn sqlite_signed_revision_overflow_returns_limit_for_insert_and_commit() {
     ));
 }
 
+
+#[test]
+fn fenced_reconcile_rejects_stale_attempt_and_epoch_without_mutation() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let unknown = attempt(&mut e, "r");
+    e.fail(&unknown, ActivityFailure::OutcomeUnknown).unwrap();
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+
+    let status = e.status("r").unwrap();
+    let history = serde_json::to_value(e.history("r").unwrap()).unwrap();
+    let audit = e.reconciliation_audit("r").unwrap();
+
+    assert!(matches!(
+        e.reconcile_fenced(
+            "r",
+            &unknown.effect_id,
+            unknown.attempt + 1,
+            unknown.owner_epoch,
+            Some(PayloadRef::durable("late").unwrap()),
+        ),
+        Err(Error::Conflict)
+    ));
+    assert!(matches!(
+        e.reconcile_fenced(
+            "r",
+            &unknown.effect_id,
+            unknown.attempt,
+            unknown.owner_epoch + 1,
+            Some(PayloadRef::durable("late").unwrap()),
+        ),
+        Err(Error::Conflict)
+    ));
+    assert!(matches!(
+        e.reconcile_fenced(
+            "r",
+            &unknown.effect_id,
+            0,
+            unknown.owner_epoch,
+            Some(PayloadRef::durable("late").unwrap()),
+        ),
+        Err(Error::Invalid(_))
+    ));
+
+    assert_eq!(e.status("r").unwrap(), status);
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        history
+    );
+    assert_eq!(e.reconciliation_audit("r").unwrap(), audit);
+}
+
+#[test]
+fn fenced_reconcile_with_evidence_records_ref_not_body_and_survives_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let unknown = attempt(&mut e, "r");
+    e.fail(&unknown, ActivityFailure::OutcomeUnknown).unwrap();
+
+    let audit = e
+        .reconcile_fenced_with_evidence(
+            "r",
+            &unknown.effect_id,
+            unknown.attempt,
+            unknown.owner_epoch,
+            "ops/ticket-42",
+            Some(PayloadRef::durable("provider-observed").unwrap()),
+        )
+        .unwrap();
+    assert_eq!(audit.effect_id, unknown.effect_id);
+    assert_eq!(audit.attempt, unknown.attempt);
+    assert_eq!(audit.owner_epoch, unknown.owner_epoch);
+    assert_eq!(audit.evidence_ref, "ops/ticket-42");
+    assert!(audit.observed);
+    assert_eq!(e.status("r").unwrap(), RunState::Running);
+
+    let persisted = e.reconciliation_audit("r").unwrap();
+    assert_eq!(persisted.len(), 1);
+    assert_eq!(persisted[0], audit);
+    let audit_json = serde_json::to_value(&persisted[0]).unwrap();
+    assert_eq!(audit_json["evidence_ref"], "ops/ticket-42");
+    assert_eq!(audit_json["observed"], true);
+    assert!(audit_json.get("body").is_none());
+    assert!(audit_json.get("payload").is_none());
+    assert!(audit_json.get("observation").is_none());
+
+    drop(e);
+    let mut reopened = Engine::open(&db).unwrap();
+    reopened.register_workflow("one", "v1", one).unwrap();
+    reopened.register_activity("lookup", "v1").unwrap();
+    assert_eq!(reopened.reconciliation_audit("r").unwrap(), persisted);
+    assert_eq!(reopened.status("r").unwrap(), RunState::Running);
+    assert!(matches!(
+        reopened.drive("r", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
+
+#[test]
+fn fenced_reconcile_blocks_delayed_provider_after_owner_epoch_change() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    e.start("r", "one", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    let old = attempt(&mut e, "r");
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("one", "v1", one).unwrap();
+    e.register_activity("lookup", "v1").unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Suspended(RunState::OutcomeUnknown)
+    ));
+
+    assert!(matches!(
+        e.reconcile_fenced(
+            "r",
+            &old.effect_id,
+            old.attempt,
+            old.owner_epoch + 1,
+            Some(PayloadRef::durable("forged-epoch").unwrap()),
+        ),
+        Err(Error::Conflict)
+    ));
+    assert_eq!(e.status("r").unwrap(), RunState::OutcomeUnknown);
+    assert!(e.reconciliation_audit("r").unwrap().is_empty());
+
+    let audit = e
+        .reconcile_fenced(
+            "r",
+            &old.effect_id,
+            old.attempt,
+            old.owner_epoch,
+            Some(PayloadRef::durable("verified").unwrap()),
+        )
+        .unwrap();
+    assert_eq!(audit.attempt, old.attempt);
+    assert_eq!(audit.owner_epoch, old.owner_epoch);
+    assert!(audit.observed);
+    assert_eq!(e.status("r").unwrap(), RunState::Running);
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+}
+
 #[test]
 fn retry_policy_durable_serde_rejects_malformed_policies() {
     let malformed = [
