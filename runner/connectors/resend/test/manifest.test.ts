@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("resend manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("resend");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -27,12 +27,18 @@ describe("resend manifest", () => {
   it("has the expected operations", () => {
     const ops = Object.keys(manifest.operations);
     expect(ops).toContain("emails.send");
+    expect(ops).toContain("emails.get");
+    expect(ops).toContain("emails.list");
+    expect(ops).toContain("domains.list");
     expect(ops).toContain("healthcheck");
-    expect(ops.length).toBe(2);
+    expect(ops.length).toBe(5);
   });
 
   it("operations are all actions", () => {
     expect(manifest.operations["emails.send"].kind).toBe("action");
+    expect(manifest.operations["emails.get"].kind).toBe("action");
+    expect(manifest.operations["emails.list"].kind).toBe("action");
+    expect(manifest.operations["domains.list"].kind).toBe("action");
     expect(manifest.operations["healthcheck"].kind).toBe("action");
   });
 
@@ -40,12 +46,19 @@ describe("resend manifest", () => {
     expect(manifest.operations["emails.send"].inputSchema.required).toEqual(["from", "to", "subject"]);
   });
 
+  it("emails.get requires id", () => {
+    expect(manifest.operations["emails.get"].inputSchema.required).toEqual(["id"]);
+  });
+
   it("has correct models", () => {
-    expect(manifest.models).toEqual(["email"]);
+    expect(manifest.models).toEqual(["email", "domain"]);
   });
 
   it("operations have timeout constraints", () => {
     expect(manifest.operations["healthcheck"].timeoutMs).toBe(5000);
     expect(manifest.operations["emails.send"].timeoutMs).toBe(15000);
+    expect(manifest.operations["emails.get"].timeoutMs).toBe(15000);
+    expect(manifest.operations["emails.list"].timeoutMs).toBe(15000);
+    expect(manifest.operations["domains.list"].timeoutMs).toBe(15000);
   });
 });

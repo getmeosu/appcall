@@ -1,7 +1,7 @@
 {
   "key": "resend",
   "name": "Resend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["email-marketing"],
   "auth": {
@@ -45,6 +45,7 @@
       "maxResponseBytes": 65536,
       "title": "Send Email",
       "description": "Send a transactional email via the Resend API (POST /emails). Supports plain text and/or HTML bodies and optional reply-to, cc, and bcc addresses.",
+      "sideEffect": "write",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -97,6 +98,109 @@
         }
       }
     },
+    "emails.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Email",
+      "description": "Retrieve a sent email by ID via GET /emails/{id}, including last_event delivery status.",
+      "sideEffect": "read",
+      "sample": { "id": "4ef9a417-02e9-4d39-ad75-9611e0fcc33c" },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Resend email ID returned by emails.send."
+          }
+        },
+        "required": ["id"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "email": { "type": "object", "description": "Normalized sent email including lastEvent." }
+        }
+      }
+    },
+    "emails.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Emails",
+      "description": "List sent emails via GET /emails with optional cursor pagination (limit, after, before).",
+      "sideEffect": "read",
+      "sample": { "limit": 20 },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Optional page size (1-100). Default 20 on the provider."
+          },
+          "after": {
+            "type": "string",
+            "description": "Optional cursor: return the page after this email ID."
+          },
+          "before": {
+            "type": "string",
+            "description": "Optional cursor: return the page before this email ID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "emails": { "type": "array", "description": "Normalized sent emails." },
+          "hasMore": { "type": "boolean" }
+        }
+      }
+    },
+    "domains.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Domains",
+      "description": "List sending domains via GET /domains with optional cursor pagination (limit, after, before).",
+      "sideEffect": "read",
+      "sample": { "limit": 20 },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Optional page size (1-100)."
+          },
+          "after": {
+            "type": "string",
+            "description": "Optional cursor: return the page after this domain ID."
+          },
+          "before": {
+            "type": "string",
+            "description": "Optional cursor: return the page before this domain ID."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "domains": { "type": "array", "description": "Normalized sending domains." },
+          "hasMore": { "type": "boolean" }
+        }
+      }
+    },
     "healthcheck": {
       "kind": "action",
       "timeoutMs": 5000,
@@ -104,6 +208,7 @@
       "maxResponseBytes": 65536,
       "title": "Healthcheck",
       "description": "Verify connectivity and credentials for the Resend connector. Takes no input and returns the connector health status.",
+      "sideEffect": "read",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -120,5 +225,5 @@
       }
     }
   },
-  "models": ["email"]
+  "models": ["email", "domain"]
 }
