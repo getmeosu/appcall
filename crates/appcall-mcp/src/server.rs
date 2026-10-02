@@ -516,12 +516,15 @@ impl<L: ConnectionLister, E: ActionExecutor + 'static, U: UsageRecorder> Server<
                         "schema": {"type": "string", "enum": connection_ids}
                     }
                 });
-                if op.effect_policy != EffectPolicy::None {
-                    appcall["effectPolicy"] = serde_json::to_value(op.effect_policy)
-                        .expect("EffectPolicy serializes as PascalCase string");
-                }
-                if !op.reconcile.is_empty() {
-                    appcall["reconcile"] = json!(op.reconcile);
+                // Reads omit effect meta even if a non-None policy slips past validation.
+                if !op.is_read_only() {
+                    if op.effect_policy != EffectPolicy::None {
+                        appcall["effectPolicy"] = serde_json::to_value(op.effect_policy)
+                            .expect("EffectPolicy serializes as PascalCase string");
+                    }
+                    if !op.reconcile.is_empty() {
+                        appcall["reconcile"] = json!(op.reconcile);
+                    }
                 }
                 let mut tool = json!({
                     "name": encode_tool_name(&key, operation),
