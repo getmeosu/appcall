@@ -2,13 +2,19 @@ import { describe, expect, test } from "bun:test";
 import {
   executeJobsListSync,
   executeCandidatesListSync,
+  executeCandidatesGetSync,
+  executeCandidatesSearchSync,
   executeJobOpeningsListSync,
   executeApplicationsListSync,
+  executeInterviewsListSync,
 } from "../src/sync";
 import jobsFixture from "../fixtures/jobs_list.json";
 import candidatesFixture from "../fixtures/candidates_list.json";
+import candidateGetFixture from "../fixtures/candidate_get.json";
+import candidatesSearchFixture from "../fixtures/candidates_search.json";
 import jobOpeningsFixture from "../fixtures/job_openings_list.json";
 import applicationsFixture from "../fixtures/applications_list.json";
+import interviewsFixture from "../fixtures/interviews_list.json";
 
 // Every request is served by an injected fetch. No real network.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
@@ -133,5 +139,116 @@ describe("zoho-recruit applications.list sync", () => {
     expect(result.items[0].id).toBe("zr-application:4000000040001");
     expect(result.items[0].candidateId).toBe("4000000020001");
     expect(result.items[0].jobOpeningName).toBe("Senior Accountant");
+  });
+});
+
+describe("zoho-recruit candidates.get sync", () => {
+  test("GETs /recruit/v2/Candidates/{id}", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidateGetFixture));
+
+    const result = await executeCandidatesGetSync({ ...auth, id: "4000000020001", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("recruit.zoho.com");
+    expect(url.pathname).toBe("/recruit/v2/Candidates/4000000020001");
+    expect(calls[0].headers.get("authorization")).toBe("Zoho-oauthtoken zoho_tok_secret_value");
+    expect(result.operation).toBe("candidates.get");
+    expect(result.candidate?.id).toBe("zr-candidate:4000000020001");
+    expect(result.candidate?.name).toBe("Christina Palaskas");
+  });
+
+  test("forwards fields and rejects unsafe id", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidateGetFixture));
+
+    await executeCandidatesGetSync({ ...auth, id: "4000000020001", fields: "id,Email", fetch: impl });
+    expect(new URL(calls[0].url).searchParams.get("fields")).toBe("id,Email");
+
+    await expect(
+      executeCandidatesGetSync({ ...auth, id: "../escape", fetch: impl }),
+    ).rejects.toThrow(/may only contain/);
+  });
+});
+
+describe("zoho-recruit candidates.search sync", () => {
+  test("GETs /recruit/v2/Candidates/search", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+
+    const result = await executeCandidatesSearchSync({
+      ...auth,
+      criteria: "(Last_Name:contains:Palaskas)",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("recruit.zoho.com");
+    expect(url.pathname).toBe("/recruit/v2/Candidates/search");
+    expect(url.searchParams.get("criteria")).toBe("(Last_Name:contains:Palaskas)");
+    expect(result.operation).toBe("candidates.search");
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].id).toBe("zr-candidate:4000000020001");
+  });
+
+  test("forwards email/phone/word/page/perPage/fields", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidatesSearchFixture));
+
+    await executeCandidatesSearchSync({
+      ...auth,
+      email: "c.palaskas@example.com",
+      phone: "555-0100",
+      word: "Christina",
+      page: 2,
+      perPage: 25,
+      fields: "id,Email",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("email")).toBe("c.palaskas@example.com");
+    expect(url.searchParams.get("phone")).toBe("555-0100");
+    expect(url.searchParams.get("word")).toBe("Christina");
+    expect(url.searchParams.get("page")).toBe("2");
+    expect(url.searchParams.get("per_page")).toBe("25");
+    expect(url.searchParams.get("fields")).toBe("id,Email");
+  });
+});
+
+describe("zoho-recruit interviews.list sync", () => {
+  test("GETs /recruit/v2/Interviews", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
+
+    const result = await executeInterviewsListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("recruit.zoho.com");
+    expect(url.pathname).toBe("/recruit/v2/Interviews");
+    expect(result.operation).toBe("interviews.list");
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0].id).toBe("zr-interview:4000000050001");
+    expect(result.items[0].candidateId).toBe("4000000020001");
+    expect(result.items[0].interviewerNames).toEqual(["Jane Smith", "Alex Rivera"]);
+  });
+
+  test("forwards page/perPage/fields/sortBy/sortOrder", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
+
+    await executeInterviewsListSync({
+      ...auth,
+      page: 1,
+      perPage: 50,
+      fields: "id,Interview_Name",
+      sortBy: "Start_DateTime",
+      sortOrder: "desc",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("page")).toBe("1");
+    expect(url.searchParams.get("per_page")).toBe("50");
+    expect(url.searchParams.get("fields")).toBe("id,Interview_Name");
+    expect(url.searchParams.get("sort_by")).toBe("Start_DateTime");
+    expect(url.searchParams.get("sort_order")).toBe("desc");
   });
 });

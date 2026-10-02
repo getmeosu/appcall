@@ -1,7 +1,8 @@
 /**
  * Zoho Recruit object normalization.
  *
- * List responses share `{ data: [...], info: { count, page, more_records } }`.
+ * List/search responses share `{ data: [...], info: { count, page, more_records } }`.
+ * GET-by-id returns `{ data: [record] }` (same envelope, usually one item).
  * The legacy jobs.list fixture used `has_more`; parsers accept both.
  */
 
@@ -296,6 +297,122 @@ export function parseApplicationsResponse(raw: unknown): {
   const applications = Array.isArray(data.data) ? data.data : [];
   return {
     applications: applications.map(normalizeApplication),
+    ...parseListMeta(data.info),
+  };
+}
+
+
+export interface NormalizedInterview {
+  id: string;
+  provider: string;
+  name: string;
+  status: string | null;
+  candidateId: string | null;
+  candidateName: string | null;
+  jobOpeningId: string | null;
+  jobOpeningName: string | null;
+  interviewerIds: string[];
+  interviewerNames: string[];
+  startsAt: string | null;
+  endsAt: string | null;
+  location: string | null;
+  createdAt: string | null;
+  modifiedAt: string | null;
+}
+
+interface ZohoInterview {
+  id: string;
+  Interview_Name?: string | null;
+  Interview_Status?: string | null;
+  Status?: string | null;
+  Candidate_Name?: ZohoNamedRef | string | null;
+  Posting_Title?: ZohoNamedRef | string | null;
+  Job_Opening_Name?: ZohoNamedRef | string | null;
+  Interviewer?: ZohoNamedRef | ZohoNamedRef[] | string | null;
+  Start_DateTime?: string | null;
+  End_DateTime?: string | null;
+  Location?: string | null;
+  Created_Time?: string | null;
+  Modified_Time?: string | null;
+}
+
+function interviewers(value: ZohoInterview["Interviewer"]): {
+  ids: string[];
+  names: string[];
+} {
+  const ids: string[] = [];
+  const names: string[] = [];
+  const rows: Array<ZohoNamedRef | string | null | undefined> = Array.isArray(value)
+    ? value
+    : value != null
+      ? [value]
+      : [];
+  for (const row of rows) {
+    const id = refId(row);
+    const name = refName(row);
+    if (id) ids.push(id);
+    if (name) names.push(name);
+  }
+  return { ids, names };
+}
+
+/** GET /Candidates/{id} returns `{ data: [candidate] }`. */
+export function parseCandidateGetResponse(raw: unknown): {
+  candidate: NormalizedCandidate | null;
+} {
+  if (!raw || typeof raw !== "object") return { candidate: null };
+  const data = raw as { data?: ZohoCandidate[] | ZohoCandidate };
+  const record = Array.isArray(data.data) ? data.data[0] : data.data;
+  if (!record || typeof record !== "object" || typeof record.id !== "string" || record.id.length === 0) {
+    return { candidate: null };
+  }
+  return { candidate: normalizeCandidate(record) };
+}
+
+/** GET /Candidates/search shares the list envelope. */
+export function parseCandidatesSearchResponse(raw: unknown): {
+  candidates: NormalizedCandidate[];
+  total: number | null;
+  hasMore: boolean;
+  page: number | null;
+} {
+  return parseCandidatesResponse(raw);
+}
+
+export function normalizeInterview(interview: ZohoInterview): NormalizedInterview {
+  const people = interviewers(interview.Interviewer);
+  return {
+    id: `zr-interview:${interview.id}`,
+    provider: "zoho-recruit",
+    name: interview.Interview_Name ?? "",
+    status: interview.Interview_Status ?? interview.Status ?? null,
+    candidateId: refId(interview.Candidate_Name),
+    candidateName: refName(interview.Candidate_Name),
+    jobOpeningId: refId(interview.Posting_Title) ?? refId(interview.Job_Opening_Name),
+    jobOpeningName: refName(interview.Posting_Title) ?? refName(interview.Job_Opening_Name),
+    interviewerIds: people.ids,
+    interviewerNames: people.names,
+    startsAt: interview.Start_DateTime ?? null,
+    endsAt: interview.End_DateTime ?? null,
+    location: interview.Location ?? null,
+    createdAt: interview.Created_Time ?? null,
+    modifiedAt: interview.Modified_Time ?? null,
+  };
+}
+
+export function parseInterviewsResponse(raw: unknown): {
+  interviews: NormalizedInterview[];
+  total: number | null;
+  hasMore: boolean;
+  page: number | null;
+} {
+  if (!raw || typeof raw !== "object") {
+    return { interviews: [], total: null, hasMore: false, page: null };
+  }
+  const data = raw as { data?: ZohoInterview[]; info?: ZohoListInfo };
+  const interviews = Array.isArray(data.data) ? data.data : [];
+  return {
+    interviews: interviews.map(normalizeInterview),
     ...parseListMeta(data.info),
   };
 }

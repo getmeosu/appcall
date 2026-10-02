@@ -4,15 +4,22 @@ import {
   parseJobsResponse,
   normalizeCandidate,
   parseCandidatesResponse,
+  parseCandidateGetResponse,
+  parseCandidatesSearchResponse,
   normalizeJobOpening,
   parseJobOpeningsResponse,
   normalizeApplication,
   parseApplicationsResponse,
+  normalizeInterview,
+  parseInterviewsResponse,
 } from "../src/objects";
 import jobsFixture from "../fixtures/jobs_list.json";
 import candidatesFixture from "../fixtures/candidates_list.json";
+import candidateGetFixture from "../fixtures/candidate_get.json";
+import candidatesSearchFixture from "../fixtures/candidates_search.json";
 import jobOpeningsFixture from "../fixtures/job_openings_list.json";
 import applicationsFixture from "../fixtures/applications_list.json";
+import interviewsFixture from "../fixtures/interviews_list.json";
 
 describe("Zoho Recruit normalizeJob", () => {
   it("normalizes a full job correctly", () => {
@@ -210,5 +217,87 @@ describe("Zoho Recruit parseApplicationsResponse", () => {
     expect(result.applications).toHaveLength(2);
     expect(result.total).toBe(2);
     expect(result.applications[0].id).toBe("zr-application:4000000040001");
+  });
+});
+
+describe("Zoho Recruit parseCandidateGetResponse", () => {
+  it("parses get fixture", () => {
+    const result = parseCandidateGetResponse(candidateGetFixture);
+    expect(result.candidate).not.toBeNull();
+    expect(result.candidate!.id).toBe("zr-candidate:4000000020001");
+    expect(result.candidate!.email).toBe("c.palaskas@example.com");
+  });
+
+  it("returns null for empty data", () => {
+    expect(parseCandidateGetResponse({ data: [] }).candidate).toBeNull();
+    expect(parseCandidateGetResponse(null).candidate).toBeNull();
+  });
+});
+
+describe("Zoho Recruit parseCandidatesSearchResponse", () => {
+  it("parses search fixture", () => {
+    const result = parseCandidatesSearchResponse(candidatesSearchFixture);
+    expect(result.candidates).toHaveLength(1);
+    expect(result.total).toBe(1);
+    expect(result.candidates[0].id).toBe("zr-candidate:4000000020001");
+  });
+});
+
+describe("Zoho Recruit normalizeInterview", () => {
+  it("normalizes a full interview with interviewer array", () => {
+    const i = normalizeInterview({
+      id: "4000000050001",
+      Interview_Name: "Technical Interview",
+      Interview_Status: "Scheduled",
+      Candidate_Name: { name: "Christina Palaskas", id: "4000000020001" },
+      Posting_Title: { name: "Senior Accountant", id: "4000000030001" },
+      Interviewer: [
+        { name: "Jane Smith", id: "4000000000001" },
+        { name: "Alex Rivera", id: "4000000000002" },
+      ],
+      Start_DateTime: "2026-02-10T10:00:00-08:00",
+      End_DateTime: "2026-02-10T11:00:00-08:00",
+      Location: "Zoom",
+      Created_Time: "2026-02-01T09:00:00Z",
+      Modified_Time: "2026-02-02T09:00:00Z",
+    });
+
+    expect(i.id).toBe("zr-interview:4000000050001");
+    expect(i.provider).toBe("zoho-recruit");
+    expect(i.name).toBe("Technical Interview");
+    expect(i.status).toBe("Scheduled");
+    expect(i.candidateId).toBe("4000000020001");
+    expect(i.jobOpeningName).toBe("Senior Accountant");
+    expect(i.interviewerIds).toEqual(["4000000000001", "4000000000002"]);
+    expect(i.interviewerNames).toEqual(["Jane Smith", "Alex Rivera"]);
+    expect(i.startsAt).toBe("2026-02-10T10:00:00-08:00");
+    expect(i.location).toBe("Zoom");
+  });
+
+  it("handles single interviewer object and Job_Opening_Name fallback", () => {
+    const i = normalizeInterview({
+      id: "9",
+      Interview_Name: "Culture Fit",
+      Interviewer: { name: "Jane Smith", id: "4000000000001" },
+      Job_Opening_Name: { name: "Technical Lead", id: "4000000012345" },
+    });
+    expect(i.interviewerIds).toEqual(["4000000000001"]);
+    expect(i.jobOpeningId).toBe("4000000012345");
+    expect(i.jobOpeningName).toBe("Technical Lead");
+  });
+});
+
+describe("Zoho Recruit parseInterviewsResponse", () => {
+  it("parses fixture", () => {
+    const result = parseInterviewsResponse(interviewsFixture);
+    expect(result.interviews).toHaveLength(2);
+    expect(result.total).toBe(2);
+    expect(result.interviews[0].id).toBe("zr-interview:4000000050001");
+    expect(result.interviews[1].interviewerIds).toEqual(["4000000000001"]);
+  });
+
+  it("handles null input", () => {
+    const result = parseInterviewsResponse(null);
+    expect(result.interviews).toHaveLength(0);
   });
 });

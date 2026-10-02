@@ -1,22 +1,30 @@
 /**
- * Zoho Recruit list syncs.
+ * Zoho Recruit list/get/search syncs.
  *
  * jobs.list          → GET /Job_Openings  (legacy NormalizedJob)
  * candidates.list    → GET /Candidates
+ * candidates.get     → GET /Candidates/{id}
+ * candidates.search  → GET /Candidates/search
  * job_openings.list  → GET /Job_Openings  (NormalizedJobOpening)
  * applications.list  → GET /Applications
+ * interviews.list    → GET /Interviews
  */
 
 import { createClient } from "./http";
+import { assertSafePathSegment } from "../../_shared/jobboard";
 import {
   parseJobsResponse,
   parseCandidatesResponse,
+  parseCandidateGetResponse,
+  parseCandidatesSearchResponse,
   parseJobOpeningsResponse,
   parseApplicationsResponse,
+  parseInterviewsResponse,
   type NormalizedJob,
   type NormalizedCandidate,
   type NormalizedJobOpening,
   type NormalizedApplication,
+  type NormalizedInterview,
 } from "./objects";
 
 export interface ZohoRecruitAuthInput {
@@ -222,6 +230,152 @@ export async function executeApplicationsListSync(
     provider: "zoho-recruit",
     operation: "applications.list",
     items: parsed.applications,
+    total: parsed.total,
+    hasMore: parsed.hasMore,
+    page: parsed.page,
+  };
+}
+
+
+// ---------------------------------------------------------------------------
+// candidates.get — GET /Candidates/{id}
+// ---------------------------------------------------------------------------
+
+export interface ExecuteCandidatesGetSyncInput extends ZohoRecruitAuthInput {
+  /** Zoho Recruit candidate record id. */
+  id: string;
+  fields?: string;
+}
+
+export interface ExecuteCandidatesGetSyncOutput {
+  provider: "zoho-recruit";
+  operation: "candidates.get";
+  candidate: NormalizedCandidate | null;
+}
+
+export async function executeCandidatesGetSync(
+  input: ExecuteCandidatesGetSyncInput,
+): Promise<ExecuteCandidatesGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createClient({
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "candidates.get",
+  });
+  const path =
+    `/Candidates/${id}` +
+    buildQuery({
+      fields: input.fields,
+    });
+  const raw = await client.getJSON(path);
+  const parsed = parseCandidateGetResponse(raw);
+  return {
+    provider: "zoho-recruit",
+    operation: "candidates.get",
+    candidate: parsed.candidate,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// candidates.search — GET /Candidates/search
+// ---------------------------------------------------------------------------
+
+export interface ExecuteCandidatesSearchSyncInput extends ZohoRecruitAuthInput {
+  /** Zoho criteria string, e.g. `(Last_Name:contains:Smith)`. */
+  criteria?: string;
+  email?: string;
+  phone?: string;
+  /** Global word search (Zoho `word` param). */
+  word?: string;
+  page?: number;
+  perPage?: number;
+  fields?: string;
+}
+
+export interface ExecuteCandidatesSearchSyncOutput {
+  provider: "zoho-recruit";
+  operation: "candidates.search";
+  items: NormalizedCandidate[];
+  total: number | null;
+  hasMore: boolean;
+  page: number | null;
+}
+
+export async function executeCandidatesSearchSync(
+  input: ExecuteCandidatesSearchSyncInput,
+): Promise<ExecuteCandidatesSearchSyncOutput> {
+  const client = createClient({
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "candidates.search",
+  });
+  const path =
+    "/Candidates/search" +
+    buildQuery({
+      criteria: input.criteria,
+      email: input.email,
+      phone: input.phone,
+      word: input.word,
+      page: input.page != null ? String(input.page) : undefined,
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+      fields: input.fields,
+    });
+  const raw = await client.getJSON(path);
+  const parsed = parseCandidatesSearchResponse(raw);
+  return {
+    provider: "zoho-recruit",
+    operation: "candidates.search",
+    items: parsed.candidates,
+    total: parsed.total,
+    hasMore: parsed.hasMore,
+    page: parsed.page,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// interviews.list — GET /Interviews
+// ---------------------------------------------------------------------------
+
+export interface ExecuteInterviewsListSyncInput extends ZohoRecruitAuthInput {
+  page?: number;
+  perPage?: number;
+  fields?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+export interface ExecuteInterviewsListSyncOutput {
+  provider: "zoho-recruit";
+  operation: "interviews.list";
+  items: NormalizedInterview[];
+  total: number | null;
+  hasMore: boolean;
+  page: number | null;
+}
+
+export async function executeInterviewsListSync(
+  input: ExecuteInterviewsListSyncInput,
+): Promise<ExecuteInterviewsListSyncOutput> {
+  const client = createClient({
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "interviews.list",
+  });
+  const path =
+    "/Interviews" +
+    buildQuery({
+      page: input.page != null ? String(input.page) : undefined,
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+      fields: input.fields,
+      sort_by: input.sortBy,
+      sort_order: input.sortOrder,
+    });
+  const raw = await client.getJSON(path);
+  const parsed = parseInterviewsResponse(raw);
+  return {
+    provider: "zoho-recruit",
+    operation: "interviews.list",
+    items: parsed.interviews,
     total: parsed.total,
     hasMore: parsed.hasMore,
     page: parsed.page,

@@ -235,8 +235,11 @@ import { healthcheck as zohoRecruitHealthcheck } from "../../connectors/zoho-rec
 import {
   executeJobsListSync as listZohoRecruitJobs,
   executeCandidatesListSync as listZohoRecruitCandidates,
+  executeCandidatesGetSync as getZohoRecruitCandidate,
+  executeCandidatesSearchSync as searchZohoRecruitCandidates,
   executeJobOpeningsListSync as listZohoRecruitJobOpenings,
   executeApplicationsListSync as listZohoRecruitApplications,
+  executeInterviewsListSync as listZohoRecruitInterviews,
 } from "../../connectors/zoho-recruit/src/sync";
 import typeformManifest from "../../connectors/typeform/manifest.json";
 import { healthcheck as typeformHealthcheck } from "../../connectors/typeform/src/healthcheck";
@@ -1168,8 +1171,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     "zoho-recruit": {
       "jobs.list": listZohoRecruitJobs,
       "candidates.list": listZohoRecruitCandidates,
+      "candidates.get": getZohoRecruitCandidate,
+      "candidates.search": searchZohoRecruitCandidates,
       "job_openings.list": listZohoRecruitJobOpenings,
       "applications.list": listZohoRecruitApplications,
+      "interviews.list": listZohoRecruitInterviews,
     },
     typeform: {
       "forms.list": listTypeformForms,
