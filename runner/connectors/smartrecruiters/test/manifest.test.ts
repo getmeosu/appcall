@@ -6,8 +6,8 @@ describe("SmartRecruiters manifest", () => {
     expect(manifest.key).toBe("smartrecruiters");
   });
 
-  it("has version 0.1.0", () => {
-    expect(manifest.version).toBe("0.1.0");
+  it("has version 0.2.0", () => {
+    expect(manifest.version).toBe("0.2.0");
   });
 
   it("uses bun runtime", () => {
@@ -33,12 +33,20 @@ describe("SmartRecruiters manifest", () => {
     });
   });
 
+  it("declares P0 authenticated ops", () => {
+    expect(manifest.operations["jobs.list"]).toBeTruthy();
+    expect(manifest.operations["candidates.list"]).toBeTruthy();
+    expect(manifest.operations["candidates.get"]).toBeTruthy();
+    expect(manifest.operations["users.list"]).toBeTruthy();
+  });
+
   it("declares authenticated healthcheck request", () => {
     expect(manifest.operations.healthcheck.request).toBeTruthy();
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares job model", () => {
-    expect(manifest.models).toContain("job");
+  it("declares job/candidate/user models", () => {
+    expect(manifest.models).toEqual(["job", "candidate", "user"]);
   });
 });
+
