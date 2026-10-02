@@ -150,6 +150,14 @@ import {
   addCollaborator as ghAddCollaborator,
   removeCollaborator as ghRemoveCollaborator,
   checkCollaborator as ghCheckCollaborator,
+  listDiscussionCategories as ghListDiscussionCategories,
+  listDiscussions as ghListDiscussions,
+  getDiscussion as ghGetDiscussion,
+  createDiscussion as ghCreateDiscussion,
+  updateDiscussion as ghUpdateDiscussion,
+  listDiscussionComments as ghListDiscussionComments,
+  createDiscussionComment as ghCreateDiscussionComment,
+  updateDiscussionComment as ghUpdateDiscussionComment,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -897,6 +905,14 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "repos.collaborators.add": ghAddCollaborator,
       "repos.collaborators.remove": ghRemoveCollaborator,
       "repos.collaborators.check": ghCheckCollaborator,
+      "discussions.categories.list": ghListDiscussionCategories,
+      "discussions.list": ghListDiscussions,
+      "discussions.get": ghGetDiscussion,
+      "discussions.create": ghCreateDiscussion,
+      "discussions.update": ghUpdateDiscussion,
+      "discussions.comments.list": ghListDiscussionComments,
+      "discussions.comments.create": ghCreateDiscussionComment,
+      "discussions.comments.update": ghUpdateDiscussionComment,
     },
     salesforce: {
       "contacts.create": createContact,

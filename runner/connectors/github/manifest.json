@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -5528,6 +5528,525 @@
           }
         }
       }
+    },
+    "discussions.categories.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Discussion Categories",
+      "description": "List discussion categories for a repository via the GitHub GraphQL API (repository.discussionCategories).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "first": {
+            "type": "number",
+            "description": "Page size (1-100). Defaults to 20."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pageInfo": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "discussions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Discussions",
+      "description": "List discussions in a repository via the GitHub GraphQL API (repository.discussions).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "first": {
+            "type": "number",
+            "description": "Page size (1-100). Defaults to 20."
+          },
+          "after": {
+            "type": "string",
+            "description": "GraphQL pagination cursor."
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Discussion category GraphQL node id."
+          },
+          "answered": {
+            "type": "boolean",
+            "description": "When set, filter to answered or unanswered discussions."
+          },
+          "orderField": {
+            "type": "string",
+            "description": "Sort field: CREATED_AT or UPDATED_AT. Defaults to UPDATED_AT."
+          },
+          "orderDirection": {
+            "type": "string",
+            "description": "Sort direction: ASC or DESC. Defaults to DESC."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "discussions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pageInfo": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "discussions.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Discussion",
+      "description": "Get one discussion via the GitHub GraphQL API. Looks up by discussionNumber, discussionId, or exact title (so discussions.create Reconcile can observe without a number).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "discussionNumber": {
+            "type": "number",
+            "description": "Discussion number in the repository."
+          },
+          "discussionId": {
+            "type": "string",
+            "description": "Discussion GraphQL node id. Used when the number is not known."
+          },
+          "title": {
+            "type": "string",
+            "description": "Discussion title."
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Discussion category GraphQL node id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "discussionNumber"
+            ]
+          },
+          {
+            "required": [
+              "discussionId"
+            ]
+          },
+          {
+            "required": [
+              "title"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "found": {
+            "type": "boolean"
+          },
+          "discussion": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "discussions.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "discussions.get",
+      "title": "Create Discussion",
+      "description": "Create a discussion via the GitHub GraphQL createDiscussion mutation. EffectPolicy Reconcile observes via discussions.get (title + categoryId). Primary action result is returned; EffectPolicy Reconcile observes via discussions.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Discussion category GraphQL node id."
+          },
+          "title": {
+            "type": "string",
+            "description": "Discussion title."
+          },
+          "body": {
+            "type": "string",
+            "description": "Discussion or comment body (Markdown)."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "categoryId",
+          "title",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "discussion": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "discussions.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "discussions.get",
+      "title": "Update Discussion",
+      "description": "Update a discussion via the GitHub GraphQL updateDiscussion mutation. EffectPolicy Reconcile observes via discussions.get. Primary action result is returned; EffectPolicy Reconcile observes via discussions.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "discussionNumber": {
+            "type": "number",
+            "description": "Discussion number in the repository."
+          },
+          "discussionId": {
+            "type": "string",
+            "description": "Discussion GraphQL node id. Used when the number is not known."
+          },
+          "title": {
+            "type": "string",
+            "description": "Discussion title."
+          },
+          "body": {
+            "type": "string",
+            "description": "Discussion or comment body (Markdown)."
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Discussion category GraphQL node id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "required": [
+                  "discussionNumber"
+                ]
+              },
+              {
+                "required": [
+                  "discussionId"
+                ]
+              }
+            ]
+          },
+          {
+            "anyOf": [
+              {
+                "required": [
+                  "title"
+                ]
+              },
+              {
+                "required": [
+                  "body"
+                ]
+              },
+              {
+                "required": [
+                  "categoryId"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "discussion": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "discussions.comments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Discussion Comments",
+      "description": "List comments on a discussion via the GitHub GraphQL API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "discussionNumber": {
+            "type": "number",
+            "description": "Discussion number in the repository."
+          },
+          "discussionId": {
+            "type": "string",
+            "description": "Discussion GraphQL node id. Used when the number is not known."
+          },
+          "first": {
+            "type": "number",
+            "description": "Page size (1-100). Defaults to 20."
+          },
+          "after": {
+            "type": "string",
+            "description": "GraphQL pagination cursor."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "discussionNumber"
+            ]
+          },
+          {
+            "required": [
+              "discussionId"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pageInfo": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "discussions.comments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "discussions.comments.list",
+      "title": "Create Discussion Comment",
+      "description": "Add a discussion comment via the GitHub GraphQL addDiscussionComment mutation. EffectPolicy Reconcile observes via discussions.comments.list. Primary action result is returned; EffectPolicy Reconcile observes via discussions.comments.list for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "discussionNumber": {
+            "type": "number",
+            "description": "Discussion number in the repository."
+          },
+          "discussionId": {
+            "type": "string",
+            "description": "Discussion GraphQL node id. Used when the number is not known."
+          },
+          "body": {
+            "type": "string",
+            "description": "Discussion or comment body (Markdown)."
+          },
+          "replyToId": {
+            "type": "string",
+            "description": "Optional parent comment GraphQL node id when replying."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "body"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "discussionNumber"
+            ]
+          },
+          {
+            "required": [
+              "discussionId"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "discussions.comments.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "discussions.comments.list",
+      "title": "Update Discussion Comment",
+      "description": "Update a discussion comment via the GitHub GraphQL updateDiscussionComment mutation. EffectPolicy Reconcile observes via discussions.comments.list. Primary action result is returned; EffectPolicy Reconcile observes via discussions.comments.list for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "discussionNumber": {
+            "type": "number",
+            "description": "Discussion number in the repository."
+          },
+          "discussionId": {
+            "type": "string",
+            "description": "Discussion GraphQL node id. Used when the number is not known."
+          },
+          "commentId": {
+            "type": "string",
+            "description": "Comment GraphQL node id."
+          },
+          "body": {
+            "type": "string",
+            "description": "Discussion or comment body (Markdown)."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "commentId",
+          "body"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "discussionNumber"
+            ]
+          },
+          {
+            "required": [
+              "discussionId"
+            ]
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      }
     }
   },
   "models": [
@@ -5552,6 +6071,9 @@
     "check_suite",
     "commit_status",
     "tag",
-    "release_asset"
+    "release_asset",
+    "discussion",
+    "discussion_category",
+    "discussion_comment"
   ]
 }
