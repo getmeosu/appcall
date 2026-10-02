@@ -11,6 +11,7 @@ export interface NormalizedJob {
   location: string | null;
   department: string | null;
   type: string | null;
+  shortcode: string | null;
 }
 
 export interface NormalizedCandidate {
@@ -49,6 +50,31 @@ export interface NormalizedMember {
   active: boolean | null;
 }
 
+export interface NormalizedEventMember {
+  id: string;
+  name: string;
+  status: string | null;
+}
+
+export interface NormalizedEvent {
+  id: string;
+  provider: string;
+  title: string;
+  description: string | null;
+  type: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  cancelled: boolean | null;
+  jobShortcode: string | null;
+  jobTitle: string | null;
+  candidateId: string | null;
+  candidateName: string | null;
+  members: NormalizedEventMember[];
+  conferenceType: string | null;
+  conferenceUrl: string | null;
+  conferenceId: string | null;
+}
+
 interface WorkableLocation {
   city?: string;
   region?: string;
@@ -64,6 +90,8 @@ interface WorkableJob {
   department?: { name?: string } | string | null;
   type?: string | null;
   employmentType?: string | null;
+  employment_type?: string | null;
+  shortcode?: string | null;
 }
 
 function formatLocation(location: WorkableLocation | null | undefined): string | null {
@@ -103,7 +131,8 @@ export function normalizeJob(job: WorkableJob): NormalizedJob {
     url: job.url ?? null,
     location: formatLocation(job.location),
     department: departmentName(job.department),
-    type: job.type ?? job.employmentType ?? null,
+    type: job.type ?? job.employmentType ?? job.employment_type ?? null,
+    shortcode: job.shortcode ?? null,
   };
 }
 
@@ -115,6 +144,17 @@ export function parseJobsResponse(raw: unknown): NormalizedJob[] {
   const data = raw as WorkableJobsResponse;
   const jobs = Array.isArray(data.jobs) ? data.jobs : [];
   return jobs.map(normalizeJob);
+}
+
+/** SPI GET /jobs/{shortcode} returns the job object at the top level. */
+export function parseJobGetResponse(raw: unknown): { job: NormalizedJob | null } {
+  if (!raw || typeof raw !== "object") return { job: null };
+  const data = raw as WorkableJob & { job?: WorkableJob | null };
+  const job = data.job ?? data;
+  if (!job || job.id == null || String(job.id).length === 0) {
+    return { job: null };
+  }
+  return { job: normalizeJob(job) };
 }
 
 interface WorkableCandidate {
@@ -165,6 +205,17 @@ export function parseCandidatesResponse(raw: unknown): {
     candidates: candidates.map(normalizeCandidate),
     next: data.paging?.next ?? null,
   };
+}
+
+/** SPI GET /candidates/{id} returns `{ candidate: {...} }`. */
+export function parseCandidateGetResponse(raw: unknown): {
+  candidate: NormalizedCandidate | null;
+} {
+  const data = raw as { candidate?: WorkableCandidate | null };
+  if (!data.candidate || data.candidate.id == null) {
+    return { candidate: null };
+  }
+  return { candidate: normalizeCandidate(data.candidate) };
 }
 
 interface WorkableStage {
@@ -223,4 +274,70 @@ export function parseMembersResponse(raw: unknown): { members: NormalizedMember[
   const data = raw as { members?: WorkableMember[] };
   const members = Array.isArray(data.members) ? data.members : [];
   return { members: members.map(normalizeMember) };
+}
+
+interface WorkableEventMember {
+  id?: string | number;
+  name?: string | null;
+  status?: string | null;
+}
+
+interface WorkableEvent {
+  id: string | number;
+  title?: string | null;
+  description?: string | null;
+  type?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  cancelled?: boolean | null;
+  job?: { shortcode?: string | null; title?: string | null; id?: string | null } | null;
+  candidate?: { id?: string | number | null; name?: string | null } | null;
+  members?: WorkableEventMember[] | null;
+  conference?: {
+    type?: string | null;
+    url?: string | null;
+    id?: string | number | null;
+  } | null;
+}
+
+export function normalizeEvent(event: WorkableEvent): NormalizedEvent {
+  const id = asStringId(event.id) ?? "";
+  const members = Array.isArray(event.members)
+    ? event.members
+        .map((m) => {
+          const memberId = asStringId(m.id);
+          if (!memberId) return null;
+          return {
+            id: memberId,
+            name: m.name ?? "",
+            status: m.status ?? null,
+          };
+        })
+        .filter((m): m is NormalizedEventMember => m != null)
+    : [];
+
+  return {
+    id: `wk-event:${id}`,
+    provider: "workable",
+    title: event.title ?? "",
+    description: event.description ?? null,
+    type: event.type ?? null,
+    startsAt: event.starts_at ?? null,
+    endsAt: event.ends_at ?? null,
+    cancelled: typeof event.cancelled === "boolean" ? event.cancelled : null,
+    jobShortcode: event.job?.shortcode ?? null,
+    jobTitle: event.job?.title ?? null,
+    candidateId: asStringId(event.candidate?.id ?? null),
+    candidateName: event.candidate?.name ?? null,
+    members,
+    conferenceType: event.conference?.type ?? null,
+    conferenceUrl: event.conference?.url ?? null,
+    conferenceId: asStringId(event.conference?.id ?? null),
+  };
+}
+
+export function parseEventsResponse(raw: unknown): { events: NormalizedEvent[] } {
+  const data = raw as { events?: WorkableEvent[] };
+  const events = Array.isArray(data.events) ? data.events : [];
+  return { events: events.map(normalizeEvent) };
 }

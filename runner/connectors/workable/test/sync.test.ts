@@ -1,13 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import {
   executeJobsListSync,
+  executeJobsGetSync,
   executeCandidatesListSync,
+  executeCandidatesGetSync,
   executeStagesListSync,
   executeMembersListSync,
+  executeEventsListSync,
 } from "../src/sync";
 import candidatesFixture from "../fixtures/candidates_list.json";
+import candidateGetFixture from "../fixtures/candidate_get.json";
+import jobGetFixture from "../fixtures/job_get.json";
 import stagesFixture from "../fixtures/stages_list.json";
 import membersFixture from "../fixtures/members_list.json";
+import eventsFixture from "../fixtures/events_list.json";
 
 // Every request is served by an injected fetch. No real network.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
@@ -186,6 +192,123 @@ describe("Workable members.list sync", () => {
   test("classifies upstream errors", async () => {
     const { impl } = stubFetch("{}", { status: 401 });
     await expect(executeMembersListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
+  });
+});
+
+
+describe("Workable candidates.get sync", () => {
+  test("GETs /spi/v3/candidates/{id} on the account host", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidateGetFixture));
+
+    const result = await executeCandidatesGetSync({ ...auth, id: "108d1748", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("acme.workable.com");
+    expect(url.pathname).toBe("/spi/v3/candidates/108d1748");
+    expect(result.candidate?.id).toBe("wk-candidate:108d1748");
+    expect(result.candidate?.name).toBe("Cindy Sawyers");
+  });
+
+  test("rejects unsafe id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeCandidatesGetSync({ ...auth, id: "../evil", fetch: impl }),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 404 });
+    await expect(
+      executeCandidatesGetSync({ ...auth, id: "1", fetch: impl }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Workable jobs.get sync", () => {
+  test("GETs /spi/v3/jobs/{shortcode} on the account host", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(jobGetFixture));
+
+    const result = await executeJobsGetSync({ ...auth, shortcode: "GROOV005", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("acme.workable.com");
+    expect(url.pathname).toBe("/spi/v3/jobs/GROOV005");
+    expect(result.job?.id).toBe("wk-job:167636b1");
+    expect(result.job?.shortcode).toBe("GROOV005");
+  });
+
+  test("rejects unsafe shortcode before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeJobsGetSync({ ...auth, shortcode: "a/b", fetch: impl }),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 404 });
+    await expect(
+      executeJobsGetSync({ ...auth, shortcode: "MISSING", fetch: impl }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Workable events.list sync", () => {
+  test("GETs /spi/v3/events on the account host", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(eventsFixture));
+
+    const result = await executeEventsListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("acme.workable.com");
+    expect(url.pathname).toBe("/spi/v3/events");
+    expect(result.events).toHaveLength(2);
+    expect(result.events[0].id).toBe("wk-event:4770c5c");
+    expect(result.events[1].conferenceType).toBe("zoom_meeting");
+  });
+
+  test("forwards type/limit/sinceId/maxId/dates/candidate/shortcode/member/context/includeCancelled", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(eventsFixture));
+
+    await executeEventsListSync({
+      ...auth,
+      type: "interview",
+      limit: 20,
+      sinceId: "aaa",
+      maxId: "zzz",
+      startDate: "2017-01-01T00:00:00Z",
+      endDate: "2017-02-01T00:00:00Z",
+      candidateId: "3189bacb",
+      shortcode: "GROOV001",
+      memberId: "3f8918be",
+      context: "all",
+      includeCancelled: true,
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("type")).toBe("interview");
+    expect(url.searchParams.get("limit")).toBe("20");
+    expect(url.searchParams.get("since_id")).toBe("aaa");
+    expect(url.searchParams.get("max_id")).toBe("zzz");
+    expect(url.searchParams.get("start_date")).toBe("2017-01-01T00:00:00Z");
+    expect(url.searchParams.get("end_date")).toBe("2017-02-01T00:00:00Z");
+    expect(url.searchParams.get("candidate_id")).toBe("3189bacb");
+    expect(url.searchParams.get("shortcode")).toBe("GROOV001");
+    expect(url.searchParams.get("member_id")).toBe("3f8918be");
+    expect(url.searchParams.get("context")).toBe("all");
+    expect(url.searchParams.get("include_cancelled")).toBe("true");
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 503 });
+    await expect(executeEventsListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
       code: "CONNECTOR_UPSTREAM_ERROR",
     });
   });

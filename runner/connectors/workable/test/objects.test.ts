@@ -2,17 +2,24 @@ import { describe, expect, it } from "bun:test";
 import {
   normalizeJob,
   parseJobsResponse,
+  parseJobGetResponse,
   normalizeCandidate,
   parseCandidatesResponse,
+  parseCandidateGetResponse,
   normalizeStage,
   parseStagesResponse,
   normalizeMember,
   parseMembersResponse,
+  normalizeEvent,
+  parseEventsResponse,
 } from "../src/objects";
 import jobsFixture from "../fixtures/jobs_list.json";
+import jobGetFixture from "../fixtures/job_get.json";
 import candidatesFixture from "../fixtures/candidates_list.json";
+import candidateGetFixture from "../fixtures/candidate_get.json";
 import stagesFixture from "../fixtures/stages_list.json";
 import membersFixture from "../fixtures/members_list.json";
+import eventsFixture from "../fixtures/events_list.json";
 
 describe("Workable normalizeJob", () => {
   it("normalizes a full job correctly", () => {
@@ -246,5 +253,76 @@ describe("Workable parseMembersResponse", () => {
   it("handles empty / missing", () => {
     expect(parseMembersResponse({ members: [] }).members).toHaveLength(0);
     expect(parseMembersResponse({}).members).toHaveLength(0);
+  });
+});
+
+
+describe("Workable parseJobGetResponse", () => {
+  it("parses top-level job fixture", () => {
+    const result = parseJobGetResponse(jobGetFixture);
+    expect(result.job?.id).toBe("wk-job:167636b1");
+    expect(result.job?.shortcode).toBe("GROOV005");
+    expect(result.job?.department).toBe("Administration");
+    expect(result.job?.type).toBe("Full-time");
+    expect(result.job?.location).toBe("Chicago, Illinois, United States");
+  });
+
+  it("returns null for missing id", () => {
+    expect(parseJobGetResponse({}).job).toBeNull();
+    expect(parseJobGetResponse({ title: "x" }).job).toBeNull();
+  });
+});
+
+describe("Workable parseCandidateGetResponse", () => {
+  it("parses wrapped candidate fixture", () => {
+    const result = parseCandidateGetResponse(candidateGetFixture);
+    expect(result.candidate?.id).toBe("wk-candidate:108d1748");
+    expect(result.candidate?.name).toBe("Cindy Sawyers");
+    expect(result.candidate?.jobShortcode).toBe("GROOV005");
+    expect(result.candidate?.email).toBe("cindy_sawyers@gmail.com");
+  });
+
+  it("returns null for missing candidate", () => {
+    expect(parseCandidateGetResponse({}).candidate).toBeNull();
+    expect(parseCandidateGetResponse({ candidate: null }).candidate).toBeNull();
+  });
+});
+
+describe("Workable normalizeEvent", () => {
+  it("normalizes a full event with conference", () => {
+    const e = normalizeEvent({
+      id: "47fdddd",
+      title: "Interview with",
+      description: null,
+      type: "InterviewEvent",
+      starts_at: "2017-01-17T22:00:00.000Z",
+      ends_at: "2017-01-17T22:30:00.000Z",
+      cancelled: false,
+      job: { shortcode: "GROOV001", title: "Operations Manager" },
+      candidate: { id: "2b50e243", name: "Wayne Walsh" },
+      members: [{ id: "3f8918be", name: "Natalie Sung", status: "accepted" }],
+      conference: { type: "zoom_meeting", id: 1100001, url: "https://zoom.us/j/1100001" },
+    });
+    expect(e.id).toBe("wk-event:47fdddd");
+    expect(e.provider).toBe("workable");
+    expect(e.jobShortcode).toBe("GROOV001");
+    expect(e.candidateId).toBe("2b50e243");
+    expect(e.members).toHaveLength(1);
+    expect(e.conferenceType).toBe("zoom_meeting");
+    expect(e.conferenceId).toBe("1100001");
+  });
+});
+
+describe("Workable parseEventsResponse", () => {
+  it("parses fixture", () => {
+    const result = parseEventsResponse(eventsFixture);
+    expect(result.events).toHaveLength(2);
+    expect(result.events[0].id).toBe("wk-event:4770c5c");
+    expect(result.events[1].conferenceUrl).toBe("https://zoom.us/j/1100001");
+  });
+
+  it("handles empty / missing", () => {
+    expect(parseEventsResponse({ events: [] }).events).toHaveLength(0);
+    expect(parseEventsResponse({}).events).toHaveLength(0);
   });
 });

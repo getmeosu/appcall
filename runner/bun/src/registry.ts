@@ -202,9 +202,12 @@ import workableManifest from "../../connectors/workable/manifest.json";
 import { healthcheck as workableHealthcheck } from "../../connectors/workable/src/healthcheck";
 import {
   executeJobsListSync as listWorkableJobs,
+  executeJobsGetSync as getWorkableJob,
   executeCandidatesListSync as listWorkableCandidates,
+  executeCandidatesGetSync as getWorkableCandidate,
   executeStagesListSync as listWorkableStages,
   executeMembersListSync as listWorkableMembers,
+  executeEventsListSync as listWorkableEvents,
 } from "../../connectors/workable/src/sync";
 import smartrecruitersManifest from "../../connectors/smartrecruiters/manifest.json";
 import {
@@ -1134,9 +1137,12 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
     workable: {
       "jobs.list": listWorkableJobs,
+      "jobs.get": getWorkableJob,
       "candidates.list": listWorkableCandidates,
+      "candidates.get": getWorkableCandidate,
       "stages.list": listWorkableStages,
       "members.list": listWorkableMembers,
+      "events.list": listWorkableEvents,
     },
     smartrecruiters: {
       "jobs.list": listSmartRecruitersJobs,

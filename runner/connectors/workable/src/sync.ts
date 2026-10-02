@@ -1,22 +1,30 @@
 /**
- * Workable list syncs.
+ * Workable list/get syncs.
  *
  * jobs.list       → SPI GET /jobs
+ * jobs.get        → SPI GET /jobs/{shortcode}
  * candidates.list → SPI GET /candidates
+ * candidates.get  → SPI GET /candidates/{id}
  * stages.list     → SPI GET /stages
  * members.list    → SPI GET /members
+ * events.list     → SPI GET /events
  */
 
 import { createClient } from "./http";
+import { assertSafePathSegment } from "../../_shared/jobboard";
 import {
   parseJobsResponse,
+  parseJobGetResponse,
   parseCandidatesResponse,
+  parseCandidateGetResponse,
   parseStagesResponse,
   parseMembersResponse,
+  parseEventsResponse,
   type NormalizedJob,
   type NormalizedCandidate,
   type NormalizedStage,
   type NormalizedMember,
+  type NormalizedEvent,
 } from "./objects";
 
 export interface WorkableAuthInput {
@@ -56,6 +64,33 @@ export async function executeJobsListSync(
   });
   const raw = await client.getJSON("/jobs");
   return { jobs: parseJobsResponse(raw) };
+}
+
+// ---------------------------------------------------------------------------
+// jobs.get — SPI /jobs/{shortcode}
+// ---------------------------------------------------------------------------
+
+export interface ExecuteJobsGetSyncInput extends WorkableAuthInput {
+  /** Workable job shortcode (path param). */
+  shortcode: string;
+}
+
+export interface ExecuteJobsGetSyncOutput {
+  job: NormalizedJob | null;
+}
+
+export async function executeJobsGetSync(
+  input: ExecuteJobsGetSyncInput,
+): Promise<ExecuteJobsGetSyncOutput> {
+  const shortcode = assertSafePathSegment(input.shortcode, "shortcode");
+  const client = createClient({
+    account: input.account,
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "jobs.get",
+  });
+  const raw = await client.getJSON(`/jobs/${shortcode}`);
+  return parseJobGetResponse(raw);
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +136,33 @@ export async function executeCandidatesListSync(
     });
   const raw = await client.getJSON(path);
   return parseCandidatesResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// candidates.get — SPI /candidates/{id}
+// ---------------------------------------------------------------------------
+
+export interface ExecuteCandidatesGetSyncInput extends WorkableAuthInput {
+  /** Workable candidate id. */
+  id: string;
+}
+
+export interface ExecuteCandidatesGetSyncOutput {
+  candidate: NormalizedCandidate | null;
+}
+
+export async function executeCandidatesGetSync(
+  input: ExecuteCandidatesGetSyncInput,
+): Promise<ExecuteCandidatesGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createClient({
+    account: input.account,
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "candidates.get",
+  });
+  const raw = await client.getJSON(`/candidates/${id}`);
+  return parseCandidateGetResponse(raw);
 }
 
 // ---------------------------------------------------------------------------
@@ -168,4 +230,55 @@ export async function executeMembersListSync(
     });
   const raw = await client.getJSON(path);
   return parseMembersResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// events.list — SPI /events
+// ---------------------------------------------------------------------------
+
+export interface ExecuteEventsListSyncInput extends WorkableAuthInput {
+  type?: string;
+  limit?: number;
+  sinceId?: string;
+  maxId?: string;
+  startDate?: string;
+  endDate?: string;
+  candidateId?: string;
+  shortcode?: string;
+  memberId?: string;
+  context?: string;
+  includeCancelled?: boolean;
+}
+
+export interface ExecuteEventsListSyncOutput {
+  events: NormalizedEvent[];
+}
+
+export async function executeEventsListSync(
+  input: ExecuteEventsListSyncInput,
+): Promise<ExecuteEventsListSyncOutput> {
+  const client = createClient({
+    account: input.account,
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "events.list",
+  });
+  const path =
+    "/events" +
+    buildQuery({
+      type: input.type,
+      limit: input.limit != null ? String(input.limit) : undefined,
+      since_id: input.sinceId,
+      max_id: input.maxId,
+      start_date: input.startDate,
+      end_date: input.endDate,
+      candidate_id: input.candidateId,
+      shortcode: input.shortcode,
+      member_id: input.memberId,
+      context: input.context,
+      include_cancelled:
+        input.includeCancelled == null ? undefined : input.includeCancelled ? "true" : "false",
+    });
+  const raw = await client.getJSON(path);
+  return parseEventsResponse(raw);
 }
