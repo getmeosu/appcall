@@ -3,10 +3,15 @@ import {
   executeHealthcheckSync,
   executeAdminsListSync,
   executeContactsListSync,
+  executeContactsGetSync,
   executeCompaniesListSync,
   executeConversationsListSync,
   executeConversationsGetSync,
+  executeConversationsSearchSync,
   executeConversationsReplySync,
+  executeConversationsCloseSync,
+  executeConversationsAssignSync,
+  executeConversationsTagSync,
 } from "../src/sync";
 import adminsFixture from "../fixtures/admins_list.json";
 import contactsFixture from "../fixtures/contacts_list.json";
@@ -14,6 +19,10 @@ import companiesFixture from "../fixtures/companies_list.json";
 import conversationsFixture from "../fixtures/conversations_list.json";
 import conversationGetFixture from "../fixtures/conversation_get.json";
 import conversationReplyFixture from "../fixtures/conversation_reply.json";
+import conversationReplyPrimaryFixture from "../fixtures/conversation_reply_primary.json";
+import tagAttachedFixture from "../fixtures/tag_attached.json";
+import contactGetFixture from "../fixtures/contact_get.json";
+import conversationsSearchFixture from "../fixtures/conversations_search.json";
 
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
   const calls: Request[] = [];
@@ -226,8 +235,8 @@ describe("Intercom conversations.get sync", () => {
 });
 
 describe("Intercom conversations.reply sync", () => {
-  test("POSTs /conversations/{id}/reply with admin comment body", async () => {
-    const { calls, impl } = stubFetch(JSON.stringify(conversationReplyFixture));
+  test("POSTs /conversations/{id}/reply and returns raw Conversation with top-level id", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(conversationReplyPrimaryFixture));
 
     const result = await executeConversationsReplySync({
       ...auth,
@@ -254,12 +263,13 @@ describe("Intercom conversations.reply sync", () => {
       admin_id: "991",
       body: "Thanks — updated your plan.",
     });
-    expect(result.conversation?.id).toBe("intercom-conversation:147");
-    expect(result.conversation?.partCount).toBe(2);
+    // Idempotent: raw primary with top-level id (no normalize / no in-handler GET)
+    expect(result.id).toBe("147");
+    expect((result as { conversation?: unknown }).conversation).toBeUndefined();
   });
 
   test("allows id=last as a safe path segment", async () => {
-    const { calls, impl } = stubFetch(JSON.stringify(conversationReplyFixture));
+    const { calls, impl } = stubFetch(JSON.stringify(conversationReplyPrimaryFixture));
     await executeConversationsReplySync({
       ...auth,
       id: "last",
@@ -335,5 +345,149 @@ describe("Intercom conversations.reply sync", () => {
         fetch: impl,
       }),
     ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Intercom conversations.close (Reconcile; POST-only)", () => {
+  test("POSTs /conversations/{id}/parts message_type close — conversation null", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(conversationGetFixture));
+
+    const result = await executeConversationsCloseSync({
+      ...auth,
+      id: "147",
+      adminId: "991",
+      body: "Closing — resolved.",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/conversations/147/parts");
+    expect(calls[0].method).toBe("POST");
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({
+      message_type: "close",
+      type: "admin",
+      admin_id: "991",
+      body: "Closing — resolved.",
+    });
+    expect(result.conversation).toBeNull();
+  });
+
+  test("rejects missing adminId before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeConversationsCloseSync({ ...auth, id: "147", adminId: "", fetch: impl }),
+    ).rejects.toThrow(/adminId/);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("Intercom conversations.assign (Reconcile; POST-only)", () => {
+  test("POSTs parts with message_type assignment + assignee_id", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(conversationGetFixture));
+
+    const result = await executeConversationsAssignSync({
+      ...auth,
+      id: "147",
+      adminId: "991",
+      assigneeId: "530165",
+      body: "Reassigning",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/conversations/147/parts");
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({
+      message_type: "assignment",
+      type: "admin",
+      admin_id: "991",
+      assignee_id: "530165",
+      body: "Reassigning",
+    });
+    expect(result.conversation).toBeNull();
+  });
+});
+
+describe("Intercom conversations.tag (Reconcile; discard Tag)", () => {
+  test("POSTs /conversations/{id}/tags — conversation null even if tag returned", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(tagAttachedFixture));
+
+    const result = await executeConversationsTagSync({
+      ...auth,
+      id: "147",
+      tagId: "7522907",
+      adminId: "991",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/conversations/147/tags");
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({ id: "7522907", admin_id: "991" });
+    expect(result.conversation).toBeNull();
+  });
+});
+
+describe("Intercom contacts.get sync", () => {
+  test("GETs /contacts/{id}", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(contactGetFixture));
+
+    const result = await executeContactsGetSync({ ...auth, id: "contact-1", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/contacts/contact-1");
+    expect(calls[0].method).toBe("GET");
+    expect(result.contact?.id).toBe("intercom-contact:contact-1");
+    expect(result.contact?.email).toBe("ada@example.com");
+  });
+
+  test("rejects unsafe id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(executeContactsGetSync({ ...auth, id: "../evil", fetch: impl })).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("Intercom conversations.search sync", () => {
+  test("POSTs /conversations/search with query + pagination", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(conversationsSearchFixture));
+
+    const result = await executeConversationsSearchSync({
+      ...auth,
+      query: { field: "state", operator: "=", value: "open" },
+      perPage: 20,
+      startingAfter: "cursor-1",
+      fetch: impl,
+    });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/conversations/search");
+    expect(calls[0].method).toBe("POST");
+    const body = JSON.parse(await calls[0].text());
+    expect(body).toEqual({
+      query: { field: "state", operator: "=", value: "open" },
+      pagination: { per_page: 20, starting_after: "cursor-1" },
+    });
+    expect(result.conversations).toHaveLength(1);
+    expect(result.conversations[0].id).toBe("intercom-conversation:147");
+    expect(result.total).toBe(1);
+  });
+
+  test("rejects missing query before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeConversationsSearchSync({
+        ...auth,
+        query: null as unknown as Record<string, unknown>,
+        fetch: impl,
+      }),
+    ).rejects.toThrow(/query/);
+    expect(calls).toHaveLength(0);
   });
 });

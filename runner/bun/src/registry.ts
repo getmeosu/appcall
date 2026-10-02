@@ -210,6 +210,20 @@ import {
   executeInterviewsScheduleSync as scheduleAshbyInterview,
   executeInterviewsCancelSync as cancelAshbyInterview,
 } from "../../connectors/ashby/src/sync";
+import intercomManifest from "../../connectors/intercom/manifest.json";
+import {
+  executeAdminsListSync as listIntercomAdmins,
+  executeContactsListSync as listIntercomContacts,
+  executeContactsGetSync as getIntercomContact,
+  executeCompaniesListSync as listIntercomCompanies,
+  executeConversationsListSync as listIntercomConversations,
+  executeConversationsGetSync as getIntercomConversation,
+  executeConversationsSearchSync as searchIntercomConversations,
+  executeConversationsReplySync as replyIntercomConversation,
+  executeConversationsCloseSync as closeIntercomConversation,
+  executeConversationsAssignSync as assignIntercomConversation,
+  executeConversationsTagSync as tagIntercomConversation,
+} from "../../connectors/intercom/src/sync";
 import workableManifest from "../../connectors/workable/manifest.json";
 import { healthcheck as workableHealthcheck } from "../../connectors/workable/src/healthcheck";
 import {
@@ -548,7 +562,7 @@ const fakeConnector = {
 // statically imported manifest, which is how a hand-written connector migrates
 // one operation at a time. A registered handler always wins over a compiled one.
 export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeConnectors({
-  manifests: [fakeConnector, slackManifest, telegramManifest, whatsappManifest, notionManifest, googleWorkspaceManifest, microsoft365Manifest, githubManifest, salesforceManifest, hubspotManifest, linkedinManifest, jiraManifest, mailchimpManifest, brevoManifest, sendgridManifest, klaviyoManifest, shopifyManifest, woocommerceManifest, quickbooksManifest, greenhouseManifest, leverManifest, ashbyManifest, workableManifest, smartrecruitersManifest, recruiteeManifest, zohoRecruitManifest, typeformManifest, calendlyManifest, googleAdsManifest, metaAdsManifest, linkedinAdsManifest, tiktokAdsManifest, xeroManifest, zohoBooksManifest, httpRequestManifest, csvManifest, webhookManifest, smtpEmailManifest, automationWebhookManifest, calComManifest, lushaManifest, apolloManifest, apifyManifest, zoomManifest, saleshandyManifest, unipileManifest, rb2bManifest, caldavManifest, resendManifest, googlemeetManifest],
+  manifests: [fakeConnector, slackManifest, telegramManifest, whatsappManifest, notionManifest, googleWorkspaceManifest, microsoft365Manifest, githubManifest, salesforceManifest, hubspotManifest, linkedinManifest, jiraManifest, mailchimpManifest, brevoManifest, sendgridManifest, klaviyoManifest, shopifyManifest, woocommerceManifest, quickbooksManifest, greenhouseManifest, leverManifest, ashbyManifest, intercomManifest, workableManifest, smartrecruitersManifest, recruiteeManifest, zohoRecruitManifest, typeformManifest, calendlyManifest, googleAdsManifest, metaAdsManifest, linkedinAdsManifest, tiktokAdsManifest, xeroManifest, zohoBooksManifest, httpRequestManifest, csvManifest, webhookManifest, smtpEmailManifest, automationWebhookManifest, calComManifest, lushaManifest, apolloManifest, apifyManifest, zoomManifest, saleshandyManifest, unipileManifest, rb2bManifest, caldavManifest, resendManifest, googlemeetManifest],
   healthchecks: {
     fake: () => ({ connector: "fake", status: "ok" }),
     notion: notionHealthcheck,
@@ -934,6 +948,12 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "interviews.schedule": scheduleAshbyInterview,
       "interviews.cancel": cancelAshbyInterview,
     },
+    intercom: {
+      "conversations.reply": replyIntercomConversation,
+      "conversations.close": closeIntercomConversation,
+      "conversations.assign": assignIntercomConversation,
+      "conversations.tag": tagIntercomConversation,
+    },
     "cal-com": {
       "me.get": calComGetMe,
       "event_types.list": calComListEventTypes,
@@ -1181,6 +1201,15 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "applications.get": getAshbyApplication,
       "candidates.search": searchAshbyCandidates,
       "interviews.list": listAshbyInterviews,
+    },
+    intercom: {
+      "admins.list": listIntercomAdmins,
+      "contacts.list": listIntercomContacts,
+      "contacts.get": getIntercomContact,
+      "companies.list": listIntercomCompanies,
+      "conversations.list": listIntercomConversations,
+      "conversations.get": getIntercomConversation,
+      "conversations.search": searchIntercomConversations,
     },
     workable: {
       "jobs.list": listWorkableJobs,
