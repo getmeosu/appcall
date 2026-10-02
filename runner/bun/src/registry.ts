@@ -116,6 +116,14 @@ import {
   getWorkflowJobLogs as ghGetWorkflowJobLogs,
   listArtifacts as ghListArtifacts,
   getArtifact as ghGetArtifact,
+  searchUsers as ghSearchUsers,
+  getAuthenticatedUser as ghGetAuthenticatedUser,
+  getUserByUsername as ghGetUserByUsername,
+  listUserRepos as ghListUserRepos,
+  getOrg as ghGetOrg,
+  listOrgs as ghListOrgs,
+  listOrgMembers as ghListOrgMembers,
+  listOrgRepos as ghListOrgRepos,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -823,6 +831,14 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "actions.jobs.logs.get": ghGetWorkflowJobLogs,
       "actions.artifacts.list": ghListArtifacts,
       "actions.artifacts.get": ghGetArtifact,
+      "search.users": ghSearchUsers,
+      "users.get": ghGetAuthenticatedUser,
+      "users.get_by_username": ghGetUserByUsername,
+      "users.repos.list": ghListUserRepos,
+      "orgs.get": ghGetOrg,
+      "orgs.list": ghListOrgs,
+      "orgs.members.list": ghListOrgMembers,
+      "orgs.repos.list": ghListOrgRepos,
     },
     salesforce: {
       "contacts.create": createContact,

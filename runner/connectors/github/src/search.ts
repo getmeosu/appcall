@@ -1,5 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
 import { normalizeGitHubIssue, type GitHubIssue, type NormalizedIssue } from "./issues";
+import { normalizeGitHubUser, type GitHubUser, type NormalizedUser } from "./users";
 
 export type SearchIssuesInput = {
   q: string;
@@ -108,6 +109,46 @@ function buildSearchPath(payload: SearchIssuesInput, force: "issue" | "pr"): str
   return `/search/issues?${params.toString()}`;
 }
 
+
+export type SearchUsersInput = {
+  q: string;
+  sort?: string;
+  order?: string;
+  perPage?: number;
+  page?: number;
+};
+
+export function validateSearchUsersInput(input: unknown): SearchUsersInput {
+  if (!isRecord(input)) throw new Error("search users input must be an object");
+  const order = typeof input.order === "string" ? input.order : undefined;
+  if (order !== undefined && order !== "asc" && order !== "desc") {
+    throw new Error("order must be asc or desc");
+  }
+  return {
+    q: requireString(input.q, "q"),
+    sort: typeof input.sort === "string" ? input.sort : undefined,
+    order,
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
+  };
+}
+
+export type SearchUsersResult = {
+  totalCount: number;
+  incompleteResults: boolean;
+  items: ReturnType<typeof normalizeGitHubUser>[];
+};
+
+function buildUsersSearchPath(payload: SearchUsersInput): string {
+  const params = new URLSearchParams();
+  params.set("q", payload.q);
+  if (payload.sort) params.set("sort", payload.sort);
+  if (payload.order) params.set("order", payload.order);
+  if (payload.perPage) params.set("per_page", String(payload.perPage));
+  if (payload.page) params.set("page", String(payload.page));
+  return `/search/users?${params.toString()}`;
+}
+
 export function createSearchClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "search.issues" });
 
@@ -160,6 +201,31 @@ export function createSearchClient(options: { accessToken: string; fetch?: typeo
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the search pull requests request." } };
+    },
+
+    async searchUsers(input: unknown) {
+      const payload = validateSearchUsersInput(input);
+      const response = await client.fetchJSON(buildUsersSearchPath(payload));
+      if (response.status === 200 && isRecord(response.body)) {
+        const itemsRaw = Array.isArray(response.body.items) ? response.body.items : [];
+        const users = itemsRaw.filter(isRecord).map((item) => normalizeGitHubUser(item as GitHubUser));
+        return {
+          ok: true as const,
+          result: {
+            totalCount: typeof response.body.total_count === "number" ? response.body.total_count : users.length,
+            incompleteResults: response.body.incomplete_results === true,
+            items: users,
+          } satisfies SearchUsersResult,
+        };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Invalid search query." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the search users request." } };
     },
   };
 }
