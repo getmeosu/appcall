@@ -357,9 +357,6 @@ fn runs_header() -> String {
     .render()
         .replacen("<header ", "<header id=\"runs-heading\" ", 1)
 }
-fn runs_card(body: &str) -> String {
-    format!("<div class=\"runs-card\">{body}</div>")
-}
 fn runs_stat(label: &str, value: &str) -> String {
     format!(
         "<div class=\"runs-card runs-stat\"><p class=\"runs-stat-label\">{}</p><p class=\"runs-stat-value\">{}</p></div>",
