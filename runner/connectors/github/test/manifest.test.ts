@@ -58,6 +58,8 @@ describe("github connector manifest", () => {
     expect(manifest.models).toContain("workflow_run");
     expect(manifest.models).toContain("workflow_job");
     expect(manifest.models).toContain("artifact");
+    expect(manifest.models).toContain("user");
+    expect(manifest.models).toContain("organization");
   });
 
   test("manifest has timeout and size limits on all operations", () => {
@@ -88,7 +90,8 @@ describe("github connector manifest", () => {
     const actionOps = Object.entries(manifest.operations).filter(
       ([, spec]) => (spec as Record<string, unknown>).kind === "action"
     );
-    expect(actionOps.length).toBeGreaterThanOrEqual(50);
+    expect(actionOps.length).toBeGreaterThanOrEqual(58);
+    expect(actionOps.length).toBeGreaterThanOrEqual(58);
   });
 
 
@@ -203,7 +206,23 @@ describe("github connector manifest", () => {
     expect(dispatch.reconcile).toBe("actions.workflows.get");
   });
 
-  test("manifest version is 0.4.0 after S3 on S1+S2", () => {
-    expect(manifest.version).toBe("0.4.0");
+  test("manifest declares S6 search-users-orgs ops", () => {
+    for (const key of [
+      "search.users",
+      "users.get",
+      "users.get_by_username",
+      "users.repos.list",
+      "orgs.get",
+      "orgs.list",
+      "orgs.members.list",
+      "orgs.repos.list",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+      expect((manifest.operations[key] as Record<string, unknown>).sideEffect).toBe("read");
+    }
+  });
+
+  test("manifest version is 0.5.0 after S3+S6", () => {
+    expect(manifest.version).toBe("0.5.0");
   });
 });
