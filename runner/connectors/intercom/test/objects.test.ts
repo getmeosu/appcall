@@ -4,6 +4,7 @@ import {
   parseAdminsResponse,
   normalizeContact,
   parseContactsResponse,
+  parseContactGetResponse,
   normalizeCompany,
   parseCompaniesResponse,
   normalizeConversation,
@@ -17,6 +18,8 @@ import companiesFixture from "../fixtures/companies_list.json";
 import conversationsFixture from "../fixtures/conversations_list.json";
 import conversationGetFixture from "../fixtures/conversation_get.json";
 import conversationReplyFixture from "../fixtures/conversation_reply.json";
+import conversationTaggedFixture from "../fixtures/conversation_tagged.json";
+import contactGetFixture from "../fixtures/contact_get.json";
 
 describe("Intercom normalizeAdministrator", () => {
   it("prefixes id and sets provider", () => {
@@ -144,6 +147,7 @@ describe("Intercom normalizeConversation", () => {
     expect(conversation.adminAssigneeId).toBe("991");
     expect(conversation.teamAssigneeId).toBe("5017691");
     expect(conversation.contactIds).toEqual(["contact-1"]);
+    expect(conversation.tagIds).toEqual([]);
     expect(conversation.sourceType).toBe("conversation");
     expect(conversation.createdAt).toBe(new Date(1663597223 * 1000).toISOString());
   });
@@ -197,5 +201,32 @@ describe("Intercom parseConversationReplyResponse", () => {
     expect(parsed.conversation?.id).toBe("intercom-conversation:147");
     expect(parsed.conversation?.partCount).toBe(2);
     expect(parsed.conversation?.waitingSince).toBeNull();
+  });
+});
+
+describe("Intercom normalizeConversation tagIds", () => {
+  it("extracts tag ids from tags.tags[]", () => {
+    const conversation = normalizeConversation(
+      conversationTaggedFixture as Parameters<typeof normalizeConversation>[0],
+    );
+    expect(conversation.tagIds).toEqual(["7522907"]);
+  });
+
+  it("defaults tagIds to [] when tags missing", () => {
+    expect(normalizeConversation({ id: "1" }).tagIds).toEqual([]);
+  });
+});
+
+describe("Intercom parseContactGetResponse", () => {
+  it("parses contact_get fixture", () => {
+    const parsed = parseContactGetResponse(contactGetFixture);
+    expect(parsed.contact?.id).toBe("intercom-contact:contact-1");
+    expect(parsed.contact?.email).toBe("ada@example.com");
+  });
+
+  it("returns null for invalid payloads", () => {
+    expect(parseContactGetResponse(null).contact).toBeNull();
+    expect(parseContactGetResponse([]).contact).toBeNull();
+    expect(parseContactGetResponse({}).contact).toBeNull();
   });
 });

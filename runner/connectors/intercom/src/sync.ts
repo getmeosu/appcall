@@ -1,13 +1,18 @@
 /**
- * Intercom list/get/reply syncs.
+ * Intercom list/get/reply/close/assign/tag/search syncs.
  *
- * healthcheck          → GET /me
- * admins.list          → GET /admins
- * contacts.list        → GET /contacts
- * companies.list       → POST /companies/list
- * conversations.list   → GET /conversations
- * conversations.get    → GET /conversations/{id}
- * conversations.reply  → POST /conversations/{id}/reply
+ * healthcheck            → GET /me
+ * admins.list            → GET /admins
+ * contacts.list          → GET /contacts
+ * contacts.get           → GET /contacts/{id}
+ * companies.list         → POST /companies/list
+ * conversations.list     → GET /conversations
+ * conversations.get      → GET /conversations/{id}
+ * conversations.search   → POST /conversations/search
+ * conversations.reply    → POST /conversations/{id}/reply (Idempotent → get)
+ * conversations.close    → POST /conversations/{id}/parts (Reconcile → get)
+ * conversations.assign   → POST /conversations/{id}/parts (Reconcile → get)
+ * conversations.tag      → POST /conversations/{id}/tags (Reconcile → get)
  */
 
 import { createAuthClient } from "./http";
@@ -15,10 +20,10 @@ import { assertSafePathSegment } from "../../_shared/jobboard";
 import {
   parseAdminsResponse,
   parseContactsResponse,
+  parseContactGetResponse,
   parseCompaniesResponse,
   parseConversationsResponse,
   parseConversationGetResponse,
-  parseConversationReplyResponse,
   type NormalizedAdministrator,
   type NormalizedContact,
   type NormalizedCompany,
@@ -238,6 +243,7 @@ export async function executeConversationsGetSync(
 
 // ---------------------------------------------------------------------------
 // conversations.reply — POST /conversations/{id}/reply
+// Runtime owns EffectPolicy Idempotent → conversations.get (return raw Conversation with id).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteConversationsReplySyncInput extends IntercomAuthInput {
@@ -254,7 +260,9 @@ export interface ExecuteConversationsReplySyncInput extends IntercomAuthInput {
 }
 
 export interface ExecuteConversationsReplySyncOutput {
-  conversation: NormalizedConversation | null;
+  /** Upstream Conversation JSON; must include top-level `id` for Idempotent. */
+  id?: string | number;
+  [key: string]: unknown;
 }
 
 export async function executeConversationsReplySync(
@@ -278,7 +286,8 @@ export async function executeConversationsReplySync(
     fetch: input.fetch,
     operation: "conversations.reply",
   });
-  const raw = await client.postJSON(
+  // POST only — runner EffectPolicy Idempotent observes via conversations.get.
+  return (await client.postJSON(
     `/conversations/${id}/reply`,
     compactBody({
       message_type: input.messageType,
@@ -286,6 +295,188 @@ export async function executeConversationsReplySync(
       admin_id: input.adminId,
       body: input.body,
     }),
+  )) as ExecuteConversationsReplySyncOutput;
+}
+
+// ---------------------------------------------------------------------------
+// conversations.close — POST /conversations/{id}/parts (message_type close)
+// Runtime owns EffectPolicy Reconcile → conversations.get.
+// ---------------------------------------------------------------------------
+
+export interface ExecuteConversationsCloseSyncInput extends IntercomAuthInput {
+  id: string;
+  adminId: string;
+  body?: string;
+}
+
+export interface ExecuteConversationsMutateSyncOutput {
+  /** Placeholder; runner Reconcile replaces with conversations.get output. */
+  conversation: null;
+}
+
+export async function executeConversationsCloseSync(
+  input: ExecuteConversationsCloseSyncInput,
+): Promise<ExecuteConversationsMutateSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  if (typeof input.adminId !== "string" || input.adminId.length === 0) {
+    throw new Error("adminId is required");
+  }
+  const client = createAuthClient({
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "conversations.close",
+  });
+  await client.postJSON(
+    `/conversations/${id}/parts`,
+    compactBody({
+      message_type: "close",
+      type: "admin",
+      admin_id: input.adminId,
+      body: input.body,
+    }),
   );
-  return parseConversationReplyResponse(raw);
+  return { conversation: null };
+}
+
+// ---------------------------------------------------------------------------
+// conversations.assign — POST /conversations/{id}/parts (message_type assignment)
+// Runtime owns EffectPolicy Reconcile → conversations.get.
+// ---------------------------------------------------------------------------
+
+export interface ExecuteConversationsAssignSyncInput extends IntercomAuthInput {
+  id: string;
+  adminId: string;
+  /** Admin or team id; "0" unassigns. */
+  assigneeId: string;
+  body?: string;
+}
+
+export async function executeConversationsAssignSync(
+  input: ExecuteConversationsAssignSyncInput,
+): Promise<ExecuteConversationsMutateSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  if (typeof input.adminId !== "string" || input.adminId.length === 0) {
+    throw new Error("adminId is required");
+  }
+  if (typeof input.assigneeId !== "string" || input.assigneeId.length === 0) {
+    throw new Error("assigneeId is required");
+  }
+  const client = createAuthClient({
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "conversations.assign",
+  });
+  await client.postJSON(
+    `/conversations/${id}/parts`,
+    compactBody({
+      message_type: "assignment",
+      type: "admin",
+      admin_id: input.adminId,
+      assignee_id: input.assigneeId,
+      body: input.body,
+    }),
+  );
+  return { conversation: null };
+}
+
+// ---------------------------------------------------------------------------
+// conversations.tag — POST /conversations/{id}/tags
+// Runtime owns EffectPolicy Reconcile → conversations.get (discard Tag).
+// ---------------------------------------------------------------------------
+
+export interface ExecuteConversationsTagSyncInput extends IntercomAuthInput {
+  id: string;
+  tagId: string;
+  adminId: string;
+}
+
+export async function executeConversationsTagSync(
+  input: ExecuteConversationsTagSyncInput,
+): Promise<ExecuteConversationsMutateSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  if (typeof input.tagId !== "string" || input.tagId.length === 0) {
+    throw new Error("tagId is required");
+  }
+  if (typeof input.adminId !== "string" || input.adminId.length === 0) {
+    throw new Error("adminId is required");
+  }
+  const client = createAuthClient({
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "conversations.tag",
+  });
+  await client.postJSON(
+    `/conversations/${id}/tags`,
+    compactBody({
+      id: input.tagId,
+      admin_id: input.adminId,
+    }),
+  );
+  return { conversation: null };
+}
+
+// ---------------------------------------------------------------------------
+// contacts.get — GET /contacts/{id}
+// ---------------------------------------------------------------------------
+
+export interface ExecuteContactsGetSyncInput extends IntercomAuthInput {
+  id: string;
+}
+
+export interface ExecuteContactsGetSyncOutput {
+  contact: NormalizedContact | null;
+}
+
+export async function executeContactsGetSync(
+  input: ExecuteContactsGetSyncInput,
+): Promise<ExecuteContactsGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "contacts.get",
+  });
+  const raw = await client.getJSON(`/contacts/${id}`);
+  return parseContactGetResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// conversations.search — POST /conversations/search
+// ---------------------------------------------------------------------------
+
+export interface ExecuteConversationsSearchSyncInput extends IntercomAuthInput {
+  /** Intercom Search query object (single filter or AND/OR tree). Pass-through. */
+  query: Record<string, unknown>;
+  perPage?: number;
+  startingAfter?: string;
+}
+
+export interface ExecuteConversationsSearchSyncOutput {
+  conversations: NormalizedConversation[];
+  total: number | null;
+  nextStartingAfter: string | null;
+}
+
+export async function executeConversationsSearchSync(
+  input: ExecuteConversationsSearchSyncInput,
+): Promise<ExecuteConversationsSearchSyncOutput> {
+  if (input.query == null || typeof input.query !== "object" || Array.isArray(input.query)) {
+    throw new Error("query is required");
+  }
+  const client = createAuthClient({
+    accessToken: input.accessToken,
+    fetch: input.fetch,
+    operation: "conversations.search",
+  });
+  const body: Record<string, unknown> = { query: input.query };
+  if (input.perPage != null || input.startingAfter != null) {
+    body.pagination = {
+      ...(input.perPage != null ? { per_page: input.perPage } : {}),
+      ...(input.startingAfter != null && input.startingAfter !== ""
+        ? { starting_after: input.startingAfter }
+        : {}),
+    };
+  }
+  const raw = await client.postJSON("/conversations/search", body);
+  return parseConversationsResponse(raw);
 }

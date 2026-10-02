@@ -6,7 +6,8 @@
  * - contacts.list → { type: "list", data: [...], total_count, pages }
  * - companies.list → { type: "list", data: [...], total_count, pages } (POST /companies/list)
  * - conversations.list → { type: "conversation.list", conversations: [...], total_count, pages }
- * - conversations.get / reply → bare Conversation object at the top level
+ * - conversations.get / reply / search → Conversation or conversation.list
+ * - contacts.get → bare Contact object at the top level
  */
 
 export interface NormalizedAdministrator {
@@ -65,6 +66,7 @@ export interface NormalizedConversation {
   waitingSince: string | null;
   snoozedUntil: string | null;
   partCount: number | null;
+  tagIds: string[];
 }
 
 function asStringId(value: unknown): string | null {
@@ -267,6 +269,18 @@ export function normalizeCompany(company: IntercomCompany): NormalizedCompany {
   };
 }
 
+
+export function parseContactGetResponse(raw: unknown): {
+  contact: NormalizedContact | null;
+} {
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
+    return { contact: null };
+  }
+  const contact = raw as IntercomContact;
+  if (asStringId(contact.id) == null) return { contact: null };
+  return { contact: normalizeContact(contact) };
+}
+
 export function parseCompaniesResponse(raw: unknown): {
   companies: NormalizedCompany[];
   total: number | null;
@@ -321,12 +335,37 @@ interface IntercomConversation {
   source?: IntercomSource | null;
   contacts?: IntercomConversationContacts | null;
   conversation_parts?: IntercomConversationParts | null;
+  tags?: {
+    type?: string;
+    tags?: Array<{ type?: string; id?: string | number | null; name?: string | null }>;
+  } | null;
 }
 
 function contactIdsFrom(contacts: IntercomConversationContacts | null | undefined): string[] {
   if (!contacts || !Array.isArray(contacts.contacts)) return [];
   return contacts.contacts
     .map((c) => asStringId(c?.id))
+    .filter((v): v is string => v != null);
+}
+
+
+function tagIdsFrom(
+  tags:
+    | {
+        type?: string;
+        tags?: Array<{ type?: string; id?: string | number | null; name?: string | null }>;
+      }
+    | null
+    | undefined,
+): string[] {
+  if (!tags || !Array.isArray(tags.tags)) return [];
+  return tags.tags
+    .map((t) => {
+      const id = t?.id;
+      if (typeof id === "number" && Number.isFinite(id)) return String(id);
+      if (typeof id === "string" && id.length > 0) return id;
+      return null;
+    })
     .filter((v): v is string => v != null);
 }
 
@@ -358,6 +397,7 @@ export function normalizeConversation(conversation: IntercomConversation): Norma
     waitingSince: asIsoTimestamp(conversation.waiting_since),
     snoozedUntil: asIsoTimestamp(conversation.snoozed_until),
     partCount,
+    tagIds: tagIdsFrom(conversation.tags),
   };
 }
 
