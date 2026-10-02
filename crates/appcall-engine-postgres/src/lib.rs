@@ -212,4 +212,31 @@ impl Store for PostgresStore {
             .map_err(safe)?
             .get(0))
     }
+    fn list_run_summaries(&self, after_id: &str, limit: usize) -> Result<Vec<RunSummary>> {
+        if limit == 0 || limit > 100 {
+            return Err(Error::Limit);
+        }
+        let limit = i64::try_from(limit).map_err(|_| Error::Limit)?;
+        let rows = self
+            .client()?
+            .query(
+                "SELECT record FROM appcall_workflow_runs WHERE id>$1 ORDER BY id LIMIT $2",
+                &[&after_id, &limit],
+            )
+            .map_err(safe)?;
+        let mut out = Vec::with_capacity(rows.len());
+        for row in rows {
+            let bytes: Vec<u8> = row.get(0);
+            let run = decode_record(&bytes)?;
+            out.push(RunSummary {
+                id: run.id,
+                workflow: run.workflow,
+                version: run.version,
+                state: run.state,
+                parent: run.parent,
+                wakeup: run.wakeup,
+            });
+        }
+        Ok(out)
+    }
 }

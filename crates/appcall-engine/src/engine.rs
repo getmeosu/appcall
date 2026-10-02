@@ -88,6 +88,15 @@ impl<S: Store> Engine<S> {
             .insert((name.into(), version.into()), Arc::new(workflow));
         Ok(())
     }
+    /// Registered workflow (name, version) pairs, sorted lexicographically.
+    pub fn list_workflows(&self) -> Vec<(String, String)> {
+        let mut keys: Vec<_> = self.workflows.keys().cloned().collect();
+        keys.sort();
+        keys
+    }
+    pub fn list_run_summaries(&self, after_id: &str, limit: usize) -> Result<Vec<RunSummary>> {
+        self.store.list_run_summaries(after_id, limit)
+    }
     /// Registers an activity dispatched to a host executor via DriveOutcome.
     pub fn register_activity(&mut self, name: &str, version: &str) -> Result<()> {
         self.add_activity(name, version, None)

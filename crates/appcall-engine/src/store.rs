@@ -21,6 +21,9 @@ pub trait Store {
     ) -> Result<()>;
     fn runnable(&self, now_ms: i64, limit: usize) -> Result<Vec<String>>;
     fn next_wakeup(&self) -> Result<Option<i64>>;
+    /// Runs with id strictly greater than `after_id`, ordered by id ascending.
+    /// `limit` must be in 1..=100.
+    fn list_run_summaries(&self, after_id: &str, limit: usize) -> Result<Vec<RunSummary>>;
 }
 pub struct SqliteStore {
     connection: Connection,
@@ -214,5 +217,27 @@ impl Store for SqliteStore {
             [],
             |r| r.get(0),
         )?)
+    }
+    fn list_run_summaries(&self, after_id: &str, limit: usize) -> Result<Vec<RunSummary>> {
+        if limit == 0 || limit > 100 {
+            return Err(Error::Limit);
+        }
+        let mut stmt = self
+            .connection
+            .prepare("SELECT record FROM engine_runs WHERE id>?1 ORDER BY id LIMIT ?2")?;
+        let rows = stmt.query_map(params![after_id, limit as i64], |r| r.get::<_, Vec<u8>>(0))?;
+        let mut out = Vec::new();
+        for row in rows {
+            let run = decode_record(&row?)?;
+            out.push(RunSummary {
+                id: run.id,
+                workflow: run.workflow,
+                version: run.version,
+                state: run.state,
+                parent: run.parent,
+                wakeup: run.wakeup,
+            });
+        }
+        Ok(out)
     }
 }

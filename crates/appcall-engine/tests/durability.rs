@@ -1560,6 +1560,9 @@ impl Store for FailWakeStore {
     fn next_wakeup(&self) -> Result<Option<i64>> {
         self.inner.next_wakeup()
     }
+    fn list_run_summaries(&self, after_id: &str, limit: usize) -> Result<Vec<RunSummary>> {
+        self.inner.list_run_summaries(after_id, limit)
+    }
 }
 #[test]
 fn transient_wakeup_failure_retains_parked_dispatch_for_retry() {

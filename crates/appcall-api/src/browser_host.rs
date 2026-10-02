@@ -671,6 +671,7 @@ pub struct ApiDashboard {
     defaults: crate::data_routes::UsageDefaults,
     state: Arc<DashboardSharedState>,
     run_operator_grants: Arc<RunOperatorGrants>,
+    workflow_engine: Option<crate::workflow_engine::WorkflowEngineClient>,
 }
 impl ApiDashboard {
     pub fn new(
@@ -707,10 +708,18 @@ impl ApiDashboard {
             defaults,
             state,
             run_operator_grants: Arc::new(RunOperatorGrants::default()),
+            workflow_engine: None,
         }
     }
     pub fn with_run_operator_grants(mut self, grants: Arc<RunOperatorGrants>) -> Self {
         self.run_operator_grants = grants;
+        self
+    }
+    pub fn with_workflow_engine(
+        mut self,
+        client: Option<crate::workflow_engine::WorkflowEngineClient>,
+    ) -> Self {
+        self.workflow_engine = client;
         self
     }
     pub fn with_dev_oauth(mut self, dev_oauth: crate::dev_oauth::DevOAuth) -> Self {
@@ -896,7 +905,34 @@ impl ApiDashboard {
                 let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;
                 item["connections"]=self.connection_values(&identity,&connections)?.into_iter().filter(|c|c.get("connector").and_then(Value::as_str)==Some(resource)).collect();
                 if let Some((action,op))=selected{item["action"]=action.clone().into();item["inputSchema"]=op.input_schema.clone().unwrap_or_else(||json!({"type":"object"}));item["sample"]=op.sample.clone().unwrap_or(Value::Null);item["connectionId"]=field("connectionId").into();}Ok(item)},
-            Op::Workflows | Op::WorkflowRuns => Ok(json!({"status":"unavailable"})),
+            Op::Workflows => match &self.workflow_engine {
+                None => Ok(json!({"status":"unavailable"})),
+                Some(engine) => match engine.list_workflows().await {
+                    Ok(workflows) => Ok(json!({"status":"ok","workflows":workflows})),
+                    Err(_) => Ok(json!({"status":"error"})),
+                },
+            },
+            Op::WorkflowRuns => match &self.workflow_engine {
+                None => Ok(json!({"status":"unavailable"})),
+                Some(engine) => {
+                    let cursor = field("cursor");
+                    let cursor = (!cursor.is_empty()).then_some(cursor);
+                    match engine.list_run_summaries(cursor).await {
+                        Ok(data) => {
+                            let mut out = json!({"status":"ok"});
+                            if let Some(obj) = out.as_object_mut() {
+                                if let Some(map) = data.as_object() {
+                                    for (k, v) in map {
+                                        obj.insert(k.clone(), v.clone());
+                                    }
+                                }
+                            }
+                            Ok(out)
+                        }
+                        Err(_) => Ok(json!({"status":"error"})),
+                    }
+                }
+            },
             Op::Overview=>{let toolkit_count=self.registry.public_list().count();Ok(self.db(|client|crate::data_routes::overview::read(client,&identity,toolkit_count).map_err(api_error))?)},
             Op::Connections=>{let connections=self.core.connections(&identity).await.map_err(dashboard_failure::map_api_error)?;Ok(json!({"connections":self.connection_values(&identity,&connections)?}))},
             Op::TestConnection=>Ok(connection_value(&self.core.test_connection(&identity,resource).await.map_err(dashboard_failure::map_api_error)?)),

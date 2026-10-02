@@ -11,6 +11,7 @@ pub mod generation;
 pub mod provider_routes;
 pub mod rate_limit;
 pub mod run_operator;
+pub mod workflow_engine;
 mod services;
 pub mod streaming;
 pub use services::*;

@@ -75,7 +75,7 @@ impl PayloadRef {
         self.ephemeral
     }
 }
-pub(crate) fn validate(s: &str) -> Result<()> {
+pub fn validate(s: &str) -> Result<()> {
     if s.is_empty()
         || s.len() > 128
         || !s
@@ -369,6 +369,16 @@ impl PayloadResolver for MissingPayloads {
     fn resolve(&self, _: &PayloadRef) -> Result<Option<Vec<u8>>> {
         Ok(None)
     }
+}
+/// Console/API list row. Real fields only; never invents history or payloads.
+#[derive(Clone, Debug, Serialize)]
+pub struct RunSummary {
+    pub id: String,
+    pub workflow: String,
+    pub version: String,
+    pub state: RunState,
+    pub parent: Option<String>,
+    pub wakeup: Option<i64>,
 }
 #[derive(Clone, Debug)]
 pub enum ActivityFailure {

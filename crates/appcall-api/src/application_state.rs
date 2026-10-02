@@ -10,6 +10,7 @@ pub struct ApplicationSharedState {
     pub(crate) circuit: appcall_actions::Circuit,
     pub(crate) dashboard: Arc<appcall_api::browser_host::DashboardSharedState>,
     pub(crate) run_operator_grants: Arc<appcall_api::run_operator::RunOperatorGrants>,
+    pub(crate) workflow_engine: Option<appcall_api::workflow_engine::WorkflowEngineClient>,
     pub(crate) browser: Option<BrowserState>,
     pub(crate) development_browser:
         Option<appcall_api::development_browser::DevelopmentBrowserConfig>,
@@ -102,11 +103,16 @@ impl ApplicationSharedState {
         } else {
             None
         };
+        let workflow_engine =
+            appcall_api::workflow_engine::WorkflowEngineClient::from_map(environment).map_err(
+                |_| "invalid workflow engine console configuration",
+            )?;
         Ok(Arc::new(Self {
             mcp_usage: Arc::new(appcall_mcp::MemoryUsage::default()),
             circuit: appcall_actions::Circuit::default(),
             dashboard: Arc::new(appcall_api::browser_host::DashboardSharedState::default()),
             run_operator_grants,
+            workflow_engine,
             browser,
             development_browser,
             platform,
@@ -129,6 +135,8 @@ fn capture_environment() -> Result<BTreeMap<String, String>, Box<dyn std::error:
         "APPCALL_RUST_LISTEN",
         "APPCALL_HTTP_ADDR",
         "APPCALL_PUBLIC_BASE_URL",
+        "APPCALL_WORKFLOW_ENGINE_URL",
+        "APPCALL_WORKFLOW_ENGINE_TOKEN",
     ];
     let mut environment = BTreeMap::new();
     for key in KEYS {
