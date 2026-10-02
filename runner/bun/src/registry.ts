@@ -240,6 +240,13 @@ import { healthcheck as metaAdsHealthcheck } from "../../connectors/meta-ads/src
 import { executeCampaignsListSync as listMetaCampaigns, executeAdSetsListSync as listMetaAdSets, executeAdsListSync as listMetaAds, executeAdAccountsListSync as listMetaAdAccounts } from "../../connectors/meta-ads/src/sync";
 import linkedinAdsManifest from "../../connectors/linkedin-ads/manifest.json";
 import { healthcheck as linkedinAdsHealthcheck } from "../../connectors/linkedin-ads/src/healthcheck";
+import {
+  getCampaign as linkedinAdsGetCampaign,
+  getAdAccount as linkedinAdsGetAdAccount,
+  listCampaignGroups as linkedinAdsListCampaignGroups,
+  listCreatives as linkedinAdsListCreatives,
+  getAnalyticsReport as linkedinAdsGetAnalyticsReport,
+} from "../../connectors/linkedin-ads/src/actions";
 import { executeCampaignsListSync as listLinkedInAdsCampaigns, executeAdAccountsListSync as listLinkedInAdsAccounts, executeCreativeAssetsListSync as listLinkedInAdsCreatives } from "../../connectors/linkedin-ads/src/sync";
 import tiktokAdsManifest from "../../connectors/tiktok-ads/manifest.json";
 import { healthcheck as tiktokAdsHealthcheck } from "../../connectors/tiktok-ads/src/healthcheck";
@@ -797,6 +804,13 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "conversion_actions.mutate": gadsMutateConversionActions,
       "labels.mutate": gadsMutateLabels,
       "reports.get": gadsGetReport,
+    },
+    "linkedin-ads": {
+      "campaigns.get": linkedinAdsGetCampaign,
+      "ad_accounts.get": linkedinAdsGetAdAccount,
+      "campaign_groups.list": linkedinAdsListCampaignGroups,
+      "creatives.list": linkedinAdsListCreatives,
+      "analytics.report.get": linkedinAdsGetAnalyticsReport,
     },
     shopify: {
       "products.get": shopifyGetProduct,

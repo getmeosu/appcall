@@ -6,6 +6,12 @@ import {
   parseAdAccountsResponse,
   normalizeCreativeAsset,
   parseCreativeAssetsResponse,
+  normalizeCampaignGroup,
+  parseCampaignGroupsResponse,
+  normalizeCreative,
+  parseCreativesResponse,
+  normalizeAnalyticsRow,
+  parseAnalyticsResponse,
 } from "../src/objects";
 import campaignsList from "../fixtures/campaigns_list.json";
 import campaignsListNoPage from "../fixtures/campaigns_list_no_page.json";
@@ -210,5 +216,81 @@ describe("parseCreativeAssetsResponse", () => {
     const result = parseCreativeAssetsResponse(null);
     expect(result.creativeAssets).toHaveLength(0);
     expect(result.nextStart).toBeNull();
+  });
+});
+
+import campaignGroupsList from "../fixtures/campaign_groups_list.json";
+import creativesList from "../fixtures/creatives_list.json";
+import analyticsReport from "../fixtures/analytics_report.json";
+import campaignGet from "../fixtures/campaign_get.json";
+import adAccountGet from "../fixtures/ad_account_get.json";
+
+describe("normalizeCampaignGroup", () => {
+  it("maps campaign group fields", () => {
+    const g = normalizeCampaignGroup(campaignGroupsList.elements[0] as any);
+    expect(g.id).toBe("li-ads-campaign-group:999888777");
+    expect(g.name).toBe("Q1 Brand Pod");
+    expect(g.status).toBe("ACTIVE");
+    expect(g.accountId).toBe("555666777");
+    expect(g.totalBudget).toBe(50000);
+    expect(g.currency).toBe("USD");
+  });
+});
+
+describe("parseCampaignGroupsResponse", () => {
+  it("parses list with paging", () => {
+    const result = parseCampaignGroupsResponse(campaignGroupsList);
+    expect(result.campaignGroups).toHaveLength(2);
+    expect(result.nextStart).toBe(10);
+  });
+});
+
+describe("normalizeCreative", () => {
+  it("maps creative with campaign association", () => {
+    const c = normalizeCreative(creativesList.elements[0] as any);
+    expect(c.id).toBe("li-ads-creative:1234567890");
+    expect(c.campaignId).toBe("111222333");
+    expect(c.accountId).toBe("555666777");
+    expect(c.intendedStatus).toBe("ACTIVE");
+    expect(c.createdAt).toBe(1704067200000);
+  });
+});
+
+describe("parseCreativesResponse", () => {
+  it("parses creatives list", () => {
+    const result = parseCreativesResponse(creativesList);
+    expect(result.creatives).toHaveLength(3);
+    expect(result.nextStart).toBe(10);
+  });
+});
+
+describe("normalizeAnalyticsRow", () => {
+  it("maps aggregated metrics", () => {
+    const row = normalizeAnalyticsRow(analyticsReport.elements[0] as any);
+    expect(row.impressions).toBe(54494);
+    expect(row.clicks).toBe(177);
+    expect(row.costInLocalCurrency).toBe(12450.75);
+    expect(row.pivotValues[0]).toContain("111222333");
+    expect(row.dateRangeStart).toEqual({ year: 2024, month: 1, day: 1 });
+  });
+});
+
+describe("parseAnalyticsResponse", () => {
+  it("parses analytics elements", () => {
+    const result = parseAnalyticsResponse(analyticsReport);
+    expect(result.rows).toHaveLength(2);
+  });
+});
+
+describe("numeric id campaign/account get fixtures", () => {
+  it("normalizes numeric campaign id", () => {
+    const c = normalizeCampaign(campaignGet as any);
+    expect(c.id).toBe("li-ads-campaign:111222333");
+    expect(c.budget).toBe(15000);
+  });
+
+  it("normalizes numeric ad account id", () => {
+    const a = normalizeAdAccount(adAccountGet as any);
+    expect(a.id).toBe("li-ads-account:555666777");
   });
 });
