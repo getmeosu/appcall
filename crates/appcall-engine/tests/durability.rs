@@ -2139,6 +2139,170 @@ fn fenced_reconcile_blocks_delayed_provider_after_owner_epoch_change() {
     ));
 }
 
+
+#[test]
+fn buffered_signal_before_wait_survives_restart_and_enters_history() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("signal", "v1", |c| {
+        let got = c.signal("go")?;
+        Ok(got)
+    })
+    .unwrap();
+    e.start("r", "signal", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    // Temporal-class buffer: deliver before the workflow parks on the wait.
+    e.signal("r", "go", PayloadRef::durable("buffered").unwrap())
+        .unwrap();
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("signal", "v1", |c| {
+        let got = c.signal("go")?;
+        Ok(got)
+    })
+    .unwrap();
+    match e.drive("r", 0).unwrap() {
+        DriveOutcome::Completed(p) => assert_eq!(p.key(), "buffered"),
+        other => panic!("{other:?}"),
+    }
+    let events = e.history("r").unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].command, Command::Signal("go".into()));
+    assert_eq!(
+        events[0].value,
+        Some(CommandValue::Payload(
+            PayloadRef::durable("buffered").unwrap()
+        ))
+    );
+}
+
+#[test]
+fn signal_fifo_order_survives_restart_across_two_waits() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("dup", "v1", |c| {
+        let first = c.signal("go")?;
+        let second = c.signal("go")?;
+        assert_eq!(first.key(), "first");
+        assert_eq!(second.key(), "second");
+        Ok(second)
+    })
+    .unwrap();
+    e.start("r", "dup", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    e.signal("r", "go", PayloadRef::durable("first").unwrap())
+        .unwrap();
+    e.signal("r", "go", PayloadRef::durable("second").unwrap())
+        .unwrap();
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("dup", "v1", |c| {
+        let first = c.signal("go")?;
+        let second = c.signal("go")?;
+        assert_eq!(first.key(), "first");
+        assert_eq!(second.key(), "second");
+        Ok(second)
+    })
+    .unwrap();
+    match e.drive("r", 0).unwrap() {
+        DriveOutcome::Completed(p) => assert_eq!(p.key(), "second"),
+        other => panic!("{other:?}"),
+    }
+    let events = e.history("r").unwrap();
+    assert_eq!(events.len(), 2);
+    assert_eq!(
+        events[0].value,
+        Some(CommandValue::Payload(PayloadRef::durable("first").unwrap()))
+    );
+    assert_eq!(
+        events[1].value,
+        Some(CommandValue::Payload(
+            PayloadRef::durable("second").unwrap()
+        ))
+    );
+}
+
+#[test]
+fn unrelated_signal_does_not_complete_wait_across_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let db = d.path().join("db");
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("signal", "v1", |c| {
+        let got = c.signal("go")?;
+        Ok(got)
+    })
+    .unwrap();
+    e.start("r", "signal", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    let parked = e.history("r").unwrap();
+    assert_eq!(parked.len(), 1);
+    assert_eq!(parked[0].command, Command::Signal("go".into()));
+    assert!(parked[0].value.is_none());
+
+    e.signal("r", "other", PayloadRef::durable("noise").unwrap())
+        .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        serde_json::to_value(&parked).unwrap()
+    );
+    drop(e);
+
+    let mut e = Engine::open(&db).unwrap();
+    e.register_workflow("signal", "v1", |c| {
+        let got = c.signal("go")?;
+        Ok(got)
+    })
+    .unwrap();
+    assert!(matches!(e.drive("r", 0).unwrap(), DriveOutcome::Waiting));
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        serde_json::to_value(&parked).unwrap()
+    );
+    e.signal("r", "go", PayloadRef::durable("real").unwrap())
+        .unwrap();
+    match e.drive("r", 0).unwrap() {
+        DriveOutcome::Completed(p) => assert_eq!(p.key(), "real"),
+        other => panic!("{other:?}"),
+    }
+    let events = e.history("r").unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].command, Command::Signal("go".into()));
+    assert_eq!(
+        events[0].value,
+        Some(CommandValue::Payload(PayloadRef::durable("real").unwrap()))
+    );
+}
+
+#[test]
+fn signal_rejected_on_terminal_run_without_history_mutation() {
+    let d = tempfile::tempdir().unwrap();
+    let mut e = Engine::open(d.path().join("db")).unwrap();
+    e.register_workflow("done", "v1", |c| Ok(c.input().clone()))
+        .unwrap();
+    e.start("r", "done", "v1", PayloadRef::durable("input").unwrap())
+        .unwrap();
+    assert!(matches!(
+        e.drive("r", 0).unwrap(),
+        DriveOutcome::Completed(_)
+    ));
+    let history = serde_json::to_value(e.history("r").unwrap()).unwrap();
+    assert!(matches!(
+        e.signal("r", "go", PayloadRef::durable("late").unwrap()),
+        Err(Error::Conflict)
+    ));
+    assert_eq!(
+        serde_json::to_value(e.history("r").unwrap()).unwrap(),
+        history
+    );
+}
+
 #[test]
 fn retry_policy_durable_serde_rejects_malformed_policies() {
     let malformed = [
