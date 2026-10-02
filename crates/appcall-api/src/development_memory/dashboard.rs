@@ -208,9 +208,38 @@ impl MemoryDashboard {
             Op::Runs => Ok(json!({"status":"unavailable"})),
             Op::RunDetail => Ok(json!({"status":"unavailable"})),
             Op::RunNow | Op::ResetRun | Op::CancelRun => Err(Error::Forbidden.into()),
-            Op::Logs | Op::Trace | Op::Events | Op::Stream => {
+            Op::Logs => {
+                let mut url = url::Url::parse("http://local.invalid/v1/action-logs")
+                    .map_err(|_| Error::Invalid)?;
+                for (k, v) in &r.fields {
+                    if [
+                        "limit",
+                        "cursor",
+                        "connectionId",
+                        "connector",
+                        "action",
+                        "status",
+                        "requestId",
+                        "errorCode",
+                        "operation",
+                        "createdFrom",
+                        "createdBefore",
+                    ]
+                    .contains(&k.as_str())
+                    {
+                        url.query_pairs_mut().append_pair(k, v);
+                    }
+                }
+                let listed = match self.core.history.read(&identity, &url) {
+                    Ok(response) => response
+                        .map(|r| r.body)
+                        .ok_or_else(|| Error::Invalid.into()),
+                    Err(error) => Err(web_error(error)),
+                };
+                crate::browser_host::logs_list_response(listed)
+            }
+            Op::Trace | Op::Events | Op::Stream => {
                 let path = match r.operation {
-                    Op::Logs => "/v1/action-logs".to_owned(),
                     Op::Trace => format!("/v1/requests/{resource}"),
                     _ => "/v1/webhook-events".into(),
                 };
@@ -229,8 +258,6 @@ impl MemoryDashboard {
                         "operation",
                     ]
                     .contains(&k.as_str())
-                        || r.operation == Op::Logs
-                            && ["createdFrom", "createdBefore"].contains(&k.as_str())
                     {
                         url.query_pairs_mut().append_pair(k, v);
                     }
