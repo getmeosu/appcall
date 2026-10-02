@@ -9,8 +9,8 @@
  * applications.get             → authenticated GET /v3/applications/{id}
  * applications.move            → POST /v3/applications/{id}/move
  *                                (runner EffectPolicy Reconcile → applications.get)
- * applications.create          → POST /v3/applications then
- *                                EffectPolicy Idempotent via applications.get
+ * applications.create          → POST /v3/applications
+ *                                (runner EffectPolicy Idempotent → applications.get)
  * users.list                   → authenticated GET /v3/users
  * interviews.list              → authenticated GET /v3/interviews
  * job_interview_stages.list    → authenticated GET /v3/job_interview_stages
@@ -271,7 +271,7 @@ export async function executeApplicationsMoveSync(
 
 // ---------------------------------------------------------------------------
 // applications.create — POST /v3/applications
-// EffectPolicy Idempotent → applications.get (create returns 201 + application)
+// Runtime owns EffectPolicy Idempotent → applications.get (create returns 201).
 // ---------------------------------------------------------------------------
 
 export interface ExecuteApplicationsCreateSyncInput extends GreenhouseAuthInput {
@@ -292,17 +292,9 @@ export interface ExecuteApplicationsCreateSyncInput extends GreenhouseAuthInput 
 }
 
 export interface ExecuteApplicationsCreateSyncOutput {
-  application: NormalizedApplication | null;
-}
-
-function createdApplicationId(raw: unknown): string {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("applications.create response missing id");
-  }
-  const id = (raw as { id?: unknown }).id;
-  if (typeof id === "number" && Number.isFinite(id)) return String(Math.trunc(id));
-  if (typeof id === "string" && id.length > 0 && /^-?\d+$/.test(id)) return id;
-  throw new Error("applications.create response missing id");
+  /** Raw Harvest create payload; runner Idempotent replaces with applications.get. */
+  id?: number | string;
+  [key: string]: unknown;
 }
 
 export async function executeApplicationsCreateSync(
@@ -330,17 +322,8 @@ export async function executeApplicationsCreateSync(
     fetch: input.fetch,
     operation: "applications.create",
   });
-  const created = await client.postJSON("/applications", body);
-  const id = createdApplicationId(created);
-
-  // EffectPolicy::Idempotent — observe created application via applications.get.
-  // (Runtime auto-reconcile applies only to EffectPolicy Reconcile; create must
-  // map response id → applications.get itself.)
-  return executeApplicationsGetSync({
-    apiKey: input.apiKey,
-    id,
-    fetch: input.fetch,
-  });
+  // POST only — runner EffectPolicy Idempotent observes via applications.get.
+  return (await client.postJSON("/applications", body)) as ExecuteApplicationsCreateSyncOutput;
 }
 
 // ---------------------------------------------------------------------------

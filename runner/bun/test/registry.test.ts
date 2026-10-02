@@ -73,6 +73,162 @@ describe("runner connector registry", () => {
     expect(output).toEqual({ item: { id: "42" }, observed: true });
   });
 
+  test("executeAction Idempotent projects id and returns observe output", async () => {
+    const registry = createConnectorRegistry({
+      manifests: [{
+        key: "idempotent-demo",
+        name: "Idempotent Demo",
+        version: "0.1.0",
+        runtime: "bun",
+        auth: { type: "none", scopes: [] },
+        network: { allowedHosts: ["runner.local"] },
+        operations: {
+          "items.create": {
+            kind: "action",
+            sideEffect: "write",
+            effectPolicy: "Idempotent",
+            reconcile: "items.get",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
+            maxResponseBytes: 1_024,
+          },
+          "items.get": {
+            kind: "sync",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
+            maxResponseBytes: 1_024,
+          },
+        },
+      }],
+      healthchecks: {
+        "idempotent-demo": () => ({ status: "ok" }),
+      },
+      actions: {
+        "idempotent-demo": {
+          "items.create": () => ({ id: 99, created: true }),
+        },
+      },
+      syncs: {
+        "idempotent-demo": {
+          "items.get": (input) => ({ item: input, observed: true }),
+        },
+      },
+    });
+
+    expect(registry.validate()).toEqual([]);
+    const result = registry.executeAction("idempotent-demo", "items.create", {
+      apiKey: "k",
+      candidateId: 1,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const output = await Promise.resolve(result.output);
+    expect(output).toEqual({
+      item: { apiKey: "k", candidateId: 1, id: "99" },
+      observed: true,
+    });
+  });
+
+  test("executeAction Idempotent projects application.id when top-level id missing", async () => {
+    const registry = createConnectorRegistry({
+      manifests: [{
+        key: "idempotent-nested",
+        name: "Idempotent Nested",
+        version: "0.1.0",
+        runtime: "bun",
+        auth: { type: "none", scopes: [] },
+        network: { allowedHosts: ["runner.local"] },
+        operations: {
+          "items.create": {
+            kind: "action",
+            sideEffect: "write",
+            effectPolicy: "Idempotent",
+            reconcile: "items.get",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
+            maxResponseBytes: 1_024,
+          },
+          "items.get": {
+            kind: "sync",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
+            maxResponseBytes: 1_024,
+          },
+        },
+      }],
+      healthchecks: {
+        "idempotent-nested": () => ({ status: "ok" }),
+      },
+      actions: {
+        "idempotent-nested": {
+          "items.create": () => ({ application: { id: "nested-7" } }),
+        },
+      },
+      syncs: {
+        "idempotent-nested": {
+          "items.get": (input) => ({ id: (input as { id: string }).id }),
+        },
+      },
+    });
+
+    const result = registry.executeAction("idempotent-nested", "items.create", { token: "t" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const output = await Promise.resolve(result.output);
+    expect(output).toEqual({ id: "nested-7" });
+  });
+
+  test("executeAction Idempotent fails closed when primary has no id", async () => {
+    const registry = createConnectorRegistry({
+      manifests: [{
+        key: "idempotent-missing",
+        name: "Idempotent Missing",
+        version: "0.1.0",
+        runtime: "bun",
+        auth: { type: "none", scopes: [] },
+        network: { allowedHosts: ["runner.local"] },
+        operations: {
+          "items.create": {
+            kind: "action",
+            sideEffect: "write",
+            effectPolicy: "Idempotent",
+            reconcile: "items.get",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
+            maxResponseBytes: 1_024,
+          },
+          "items.get": {
+            kind: "sync",
+            timeoutMs: 1_000,
+            maxInputBytes: 1_024,
+            maxResponseBytes: 1_024,
+          },
+        },
+      }],
+      healthchecks: {
+        "idempotent-missing": () => ({ status: "ok" }),
+      },
+      actions: {
+        "idempotent-missing": {
+          "items.create": () => ({ status: "created" }),
+        },
+      },
+      syncs: {
+        "idempotent-missing": {
+          "items.get": () => ({ should: "not-run" }),
+        },
+      },
+    });
+
+    const result = registry.executeAction("idempotent-missing", "items.create", {});
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    await expect(Promise.resolve(result.output)).rejects.toMatchObject({
+      ok: false,
+      code: "IDEMPOTENT_ID_MISSING",
+    });
+  });
+
   test("rejects an operation budget above the shared contract before dispatch", () => {
     let called = false;
     const registry = createConnectorRegistry({

@@ -1688,8 +1688,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// Manifest effectPolicy Reconcile: after a successful mutating action, observe
-// post-write state via the declared reconcile handler and return that output.
+// Manifest effectPolicy Reconcile | Idempotent: after a successful mutating
+// action, observe post-write state via the declared reconcile handler.
+// Reconcile reuses the action input (id already known). Idempotent projects
+// id from the primary JSON (id | application.id) fail-closed, merges into
+// action input, then observes. Return observe output either way.
 function applyEffectPolicyReconcile(
   connectorKey: string,
   inputValue: unknown,
@@ -1699,7 +1702,8 @@ function applyEffectPolicyReconcile(
   actions: Record<string, Record<string, ActionHandler>>,
   syncs: Record<string, Record<string, ActionHandler>> | undefined,
 ): unknown {
-  if (operationSpec.effectPolicy !== "Reconcile") {
+  const policy = operationSpec.effectPolicy;
+  if (policy !== "Reconcile" && policy !== "Idempotent") {
     return primary;
   }
   const reconcileName = operationSpec.reconcile;
@@ -1707,7 +1711,7 @@ function applyEffectPolicyReconcile(
     throw {
       ok: false,
       code: "RECONCILE_NOT_DECLARED",
-      message: "Reconcile effectPolicy requires a reconcile operation.",
+      message: `${policy} effectPolicy requires a reconcile operation.`,
     };
   }
   const reconcileHandler =
@@ -1721,14 +1725,47 @@ function applyEffectPolicyReconcile(
     };
   }
   const reconcileSpec = operationSpecs[connectorKey]?.[reconcileName];
-  const runReconcile = () => boundedOutput(
-    reconcileHandler(inputValue),
-    reconcileSpec?.maxResponseBytes ?? operationSpec.maxResponseBytes,
-  );
-  if (isPromiseLike(primary)) {
-    return Promise.resolve(primary).then(() => runReconcile());
+  const runObserve = (resolvedPrimary: unknown) => {
+    let observeInput = inputValue;
+    if (policy === "Idempotent") {
+      const id = projectIdempotentId(resolvedPrimary);
+      observeInput = isRecord(inputValue) ? { ...inputValue, id } : { id };
+    }
+    return boundedOutput(
+      reconcileHandler(observeInput),
+      reconcileSpec?.maxResponseBytes ?? operationSpec.maxResponseBytes,
+    );
+  };
+  // Always settle primary first so Idempotent id-projection throws become
+  // promise rejections (same path as async connector handlers).
+  return Promise.resolve(primary).then((resolved) => runObserve(resolved));
+}
+
+/** Fail-closed id projection for Idempotent observe: primary.id else primary.application.id. */
+function projectIdempotentId(primary: unknown): string {
+  const asId = (value: unknown): string | null => {
+    if (typeof value === "number" && Number.isFinite(value)) return String(Math.trunc(value));
+    if (typeof value === "string" && value.length > 0) return value;
+    return null;
+  };
+  if (!isRecord(primary)) {
+    throw {
+      ok: false,
+      code: "IDEMPOTENT_ID_MISSING",
+      message: "Idempotent effectPolicy could not project an id from the primary response.",
+    };
   }
-  return runReconcile();
+  const top = asId(primary.id);
+  if (top != null) return top;
+  if (isRecord(primary.application)) {
+    const nested = asId(primary.application.id);
+    if (nested != null) return nested;
+  }
+  throw {
+    ok: false,
+    code: "IDEMPOTENT_ID_MISSING",
+    message: "Idempotent effectPolicy could not project an id from the primary response.",
+  };
 }
 
 function unsupportedBudget(spec: OperationSpec | undefined): RegistryFailure | null {

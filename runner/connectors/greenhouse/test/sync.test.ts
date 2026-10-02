@@ -300,12 +300,9 @@ describe("Greenhouse applications.move (write; runner owns Reconcile)", () => {
   });
 });
 
-describe("Greenhouse applications.create (EffectPolicy Idempotent)", () => {
-  test("POSTs /v3/applications then reconciles via applications.get", async () => {
-    const { calls, impl } = stubSequence([
-      { body: JSON.stringify(applicationCreatedFixture), status: 201 },
-      { body: JSON.stringify(applicationGetFixture), status: 200 },
-    ]);
+describe("Greenhouse applications.create (POST only; runner owns Idempotent)", () => {
+  test("POSTs /v3/applications and returns primary payload (no in-handler GET)", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(applicationCreatedFixture), { status: 201 });
 
     const result = await executeApplicationsCreateSync({
       ...auth,
@@ -314,7 +311,7 @@ describe("Greenhouse applications.create (EffectPolicy Idempotent)", () => {
       fetch: impl,
     });
 
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(1);
     const createUrl = new URL(calls[0].url);
     expect(createUrl.pathname).toBe("/v3/applications");
     expect(calls[0].method).toBe("POST");
@@ -322,20 +319,13 @@ describe("Greenhouse applications.create (EffectPolicy Idempotent)", () => {
     const posted = JSON.parse(await calls[0].clone().text());
     expect(posted).toEqual({ candidate_id: 57683957, job_id: 107761 });
 
-    const getUrl = new URL(calls[1].url);
-    expect(getUrl.pathname).toBe("/v3/applications/69306314");
-    expect(calls[1].method).toBe("GET");
-
-    expect(result.application?.id).toBe("gh-application:69306314");
-    expect(result.application?.candidateId).toBe("57683957");
-    expect(result.application?.stageName).toBe("Application Review");
+    expect(result.id).toBe(69306314);
+    expect(result.candidate_id).toBe(57683957);
+    expect(result.job_id).toBe(107761);
   });
 
   test("forwards optional stage/source/recruiter/coordinator/referrer ids", async () => {
-    const { calls, impl } = stubSequence([
-      { body: JSON.stringify(applicationCreatedFixture), status: 201 },
-      { body: JSON.stringify(applicationGetFixture), status: 200 },
-    ]);
+    const { calls, impl } = stubFetch(JSON.stringify(applicationCreatedFixture), { status: 201 });
 
     await executeApplicationsCreateSync({
       ...auth,
@@ -349,6 +339,7 @@ describe("Greenhouse applications.create (EffectPolicy Idempotent)", () => {
       fetch: impl,
     });
 
+    expect(calls).toHaveLength(1);
     const posted = JSON.parse(await calls[0].clone().text());
     expect(posted).toEqual({
       candidate_id: 57683957,
@@ -397,19 +388,6 @@ describe("Greenhouse applications.create (EffectPolicy Idempotent)", () => {
         fetch: impl,
       }),
     ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
-  });
-
-  test("errors when create response lacks id (no search invent)", async () => {
-    const { calls, impl } = stubFetch(JSON.stringify({ status: "in_process" }), { status: 201 });
-    await expect(
-      executeApplicationsCreateSync({
-        ...auth,
-        candidateId: 57683957,
-        jobId: 107761,
-        fetch: impl,
-      }),
-    ).rejects.toThrow(/missing id/);
-    expect(calls).toHaveLength(1);
   });
 });
 
