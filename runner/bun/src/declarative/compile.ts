@@ -263,9 +263,18 @@ async function callProvider(
   }
   let parsed: unknown;
   if (operation.responseFormat === "json") {
-    if (response.body.trim() === "") throw { ok: false, code: "CONNECTOR_RESPONSE_INVALID", message: "Connector returned an empty response." };
-    try { parsed = JSON.parse(response.body); }
-    catch { throw { ok: false, code: "CONNECTOR_RESPONSE_INVALID", message: "Connector returned invalid JSON." }; }
+    // 204 No Content (and static-result envelopes) intentionally omit a body.
+    // Require JSON only when we would otherwise surface the body as `data`.
+    if (response.body.trim() === "") {
+      if (response.status === 204 || request.result !== undefined) {
+        parsed = null;
+      } else {
+        throw { ok: false, code: "CONNECTOR_RESPONSE_INVALID", message: "Connector returned an empty response." };
+      }
+    } else {
+      try { parsed = JSON.parse(response.body); }
+      catch { throw { ok: false, code: "CONNECTOR_RESPONSE_INVALID", message: "Connector returned invalid JSON." }; }
+    }
   } else parsed = parseBody(response.body);
   // A success status is not proof of success. GraphQL providers answer 200 with
   // a populated `errors` array, so a manifest may nominate body paths that
