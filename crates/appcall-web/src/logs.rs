@@ -340,6 +340,16 @@ fn inspector() -> Result<String, Error> {
     Ok(format!("<dialog id=\"logs-inspector\" aria-labelledby=\"logs-inspector-title\"><header class=\"logs-inspector-heading\"><h2 id=\"logs-inspector-title\">Trace inspector</h2><form id=\"logs-inspector-close\" method=\"dialog\">{close}</form></header><div class=\"logs-inspector-actions\"><span id=\"logs-inspector-full\">{full}</span><span id=\"logs-inspector-login\" hidden>{login}</span></div><div id=\"logs-inspector-result\" aria-live=\"polite\" aria-busy=\"false\"></div></dialog>"))
 }
 
+fn row_status(item: &Value) -> Result<String, Error> {
+    // Uncertain statuses stay fail-closed — never paint Unknown as success/idle.
+    match item.get("status").and_then(Value::as_str) {
+        Some("succeeded") => Ok(ui::state(ui::Tone::Ok, "succeeded")),
+        Some("failed") => Ok(ui::state(ui::Tone::Dead, "failed")),
+        Some("running") => Ok(ui::state(ui::Tone::Running, "running")),
+        _ => Err(Error::Unavailable),
+    }
+}
+
 fn table(items: &[Value]) -> Result<String, Error> {
     let mut body = String::from("<div class=\"logs-table-scroll\" role=\"region\" aria-label=\"Tool execution logs\" tabindex=\"0\"><table class=\"logs-table\"><caption class=\"sr-only\">Recorded tool executions</caption><thead><tr>");
     for label in [
@@ -377,16 +387,7 @@ fn table(items: &[Value]) -> Result<String, Error> {
             "requestId",
         ] {
             let value = if key == "status" {
-                let label = item.get(key).and_then(Value::as_str).unwrap_or("Unknown");
-                ui::state(
-                    match label {
-                        "succeeded" => ui::Tone::Ok,
-                        "failed" => ui::Tone::Dead,
-                        "running" => ui::Tone::Running,
-                        _ => ui::Tone::Idle,
-                    },
-                    label,
-                )
+                row_status(item)?
             } else {
                 cell(item, key)
             };
