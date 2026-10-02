@@ -67,3 +67,47 @@ describe("declarative responseFormat json", () => {
     ).rejects.toMatchObject({ code: "CONNECTOR_RESPONSE_INVALID" });
   });
 });
+
+describe("declarative redactResponseKeys", () => {
+  it("omits nested Password keys from list payloads", async () => {
+    const manifest = {
+      ...base(),
+      operations: {
+        zones: {
+          kind: "action",
+          responseFormat: "json",
+          redactResponseKeys: ["Password"],
+          enforceOutputSchema: true,
+          outputSchema: {
+            type: "object",
+            additionalProperties: false,
+            required: ["data"],
+            properties: { data: { type: "object" } },
+          },
+          request: { method: "GET", path: "/storagezone", success: [200] },
+        },
+      },
+    };
+    const action = compileDeclarativeConnector(manifest as never).actions.zones!;
+    const result = await action({
+      token: "t",
+      fetch: async () =>
+        new Response(
+          JSON.stringify({
+            Items: [{ Id: 1, Name: "media", Password: "sekrit" }],
+            TotalItems: 1,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    });
+    expect(result).toEqual({
+      connector: "no-content-demo",
+      action: "zones",
+      source: "provider",
+      data: {
+        Items: [{ Id: 1, Name: "media" }],
+        TotalItems: 1,
+      },
+    });
+  });
+});

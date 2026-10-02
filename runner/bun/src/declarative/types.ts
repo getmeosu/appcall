@@ -130,6 +130,9 @@ export type DeclarativeOperation = {
   inputSchema?: JSONSchema;
   outputSchema?: JSONSchema;
   enforceOutputSchema?: boolean;
+  // Deep-omit these object keys from the mapped result before schema/return
+  // (e.g. Bunny storage-zone Password credentials in list payloads).
+  redactResponseKeys?: string[];
   request?: DeclarativeRequest;
 };
 

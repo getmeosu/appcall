@@ -285,9 +285,15 @@ async function callProvider(
   }
 
   const resultContext = { response: parsed, status: response.status, headers: response.headers, input: validated };
-  const result = request.result === undefined
+  let result = request.result === undefined
     ? { data: parsed }
     : renderTemplate(request.result, resultContext);
+  const redactKeys = Array.isArray(operation.redactResponseKeys)
+    ? operation.redactResponseKeys.filter((key): key is string => typeof key === "string" && key.length > 0)
+    : [];
+  if (redactKeys.length > 0) {
+    result = redactResponseKeys(result, redactKeys);
+  }
 
   if(operation.enforceOutputSchema) {
     try { assertOutputSchema(result, operation.outputSchema!); }
@@ -713,6 +719,23 @@ function upstreamFailure(
 // Preserve provider diagnostics, removing only known credential values and the
 // URL encodings a provider may reflect. Derived auth values are already stored
 // in the injected bundle; never recompute or coerce arbitrary input objects.
+
+/** Deep-omit named object keys from a JSON-like value (arrays walked). */
+function redactResponseKeys(value: unknown, keys: readonly string[]): unknown {
+  const drop = new Set(keys);
+  const walk = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(walk);
+    if (!isRecord(node)) return node;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(node)) {
+      if (drop.has(k)) continue;
+      out[k] = walk(v);
+    }
+    return out;
+  };
+  return walk(value);
+}
+
 function redactCredentialDetail(detail: string, manifest: DeclarativeManifest, http: DeclarativeHttp, input: Record<string, unknown>): string {
   const setup = manifest.auth?.setup;
   const fields = [
