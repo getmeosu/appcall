@@ -206,7 +206,7 @@ impl MemoryDashboard {
             }
             Op::Certification => Ok(json!({"unavailable":true,"certifications":[]})),
             Op::Runs => Ok(json!({"status":"unavailable"})),
-            Op::RunDetail => Err(Error::NotFound.into()),
+            Op::RunDetail => Ok(json!({"status":"unavailable"})),
             Op::RunNow | Op::ResetRun | Op::CancelRun => Err(Error::Forbidden.into()),
             Op::Logs | Op::Trace | Op::Events | Op::Stream => {
                 let path = match r.operation {

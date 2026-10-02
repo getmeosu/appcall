@@ -16,7 +16,7 @@ pub fn run_history_fixture(scenario: Scenario, request: &DashboardRequest) -> Re
         scenario,
         Scenario::RunHistory | Scenario::RunHistoryOperator
     ) {
-        return Ok(json!({"synthetic":true,"unavailable":true}));
+        return Ok(json!({"synthetic":true,"status":"unavailable"}));
     }
     let operator = scenario == Scenario::RunHistoryOperator;
 

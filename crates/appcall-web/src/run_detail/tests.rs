@@ -420,3 +420,33 @@ fn run_detail_rejects_invalid_resource_id_before_rendering() {
         Err(crate::Error::Invalid)
     ));
 }
+
+
+#[test]
+fn unavailable_and_error_never_look_like_success() {
+    let unavailable = super::standalone(&json!({"status":"unavailable"}), "run-42").unwrap();
+    assert!(unavailable.contains("id=\"run-detail-page\""));
+    assert!(unavailable.contains("data-runs-page"));
+    assert!(unavailable.contains("Back to Syncs"));
+    assert!(unavailable.contains("Syncs unavailable"));
+    assert!(unavailable.contains("role=\"alert\""));
+    assert!(!unavailable.contains("ui-state-ok"));
+    assert!(!unavailable.contains("id=\"run-detail\""));
+
+    let error = super::standalone(&json!({"status":"error"}), "run-42").unwrap();
+    assert!(error.contains("Syncs unreachable"));
+    assert!(error.contains("role=\"alert\""));
+    assert!(error.contains("href=\"/app/syncs/run-42\""));
+    assert!(!error.contains("ui-state-ok"));
+}
+
+#[test]
+fn not_found_uses_empty_state_with_back_to_syncs() {
+    let html = super::standalone(&json!({"status":"not_found"}), "missing-run").unwrap();
+    assert!(html.contains("Sync not found"));
+    assert!(html.contains("role=\"status\""));
+    assert!(html.contains("Back to Syncs"));
+    assert!(html.contains("href=\"/app/syncs\""));
+    assert!(!html.contains("role=\"alert\""));
+    assert!(!html.contains("ui-state-ok"));
+}
