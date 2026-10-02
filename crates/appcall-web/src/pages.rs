@@ -463,20 +463,49 @@ fn workflow_run_detail_link(id: &str) -> Result<String, Error> {
         escape(id)
     ))
 }
-fn runs(v: &Value) -> Result<String, Error> {
+fn runs_surface_status(v: &Value) -> Result<&'static str, Error> {
+    // Legacy bare boolean remains accepted during host transition to status.
     if value_bool(v, "unavailable") {
-        return Ok(format!(
-            "<section id=\"runs-page\" data-runs-page aria-labelledby=\"runs-heading\">{}{}</section>",
-            runs_header(),
-            runs_card(
-                "<h3>Syncs status unavailable</h3><p>Configure PostgreSQL and the Rust sync queue to inspect durable syncs.</p>",
-            )
-            .replacen(
-                "class=\"runs-card\"",
-                "class=\"runs-card runs-unavailable-card\"",
-                1,
-            )
-        ));
+        return Ok("unavailable");
+    }
+    match v.get("status").and_then(Value::as_str) {
+        Some("unavailable") => Ok("unavailable"),
+        Some("error") => Ok("error"),
+        Some("ok") | None => Ok("ok"),
+        Some(_) => Err(Error::Unavailable),
+    }
+}
+
+fn runs(v: &Value) -> Result<String, Error> {
+    match runs_surface_status(v)? {
+        "unavailable" => {
+            return Ok(format!(
+                "<section id=\"runs-page\" data-runs-page aria-labelledby=\"runs-heading\">{}{}</section>",
+                runs_header(),
+                empty(
+                    "Syncs unavailable",
+                    "Configure PostgreSQL and the Rust sync queue to inspect durable syncs. This page does not invent queue rows or health.",
+                    "Start here",
+                    "/app/start",
+                    crate::ui::EmptyStateRole::Alert,
+                ),
+            ));
+        }
+        "error" => {
+            return Ok(format!(
+                "<section id=\"runs-page\" data-runs-page aria-labelledby=\"runs-heading\">{}{}</section>",
+                runs_header(),
+                empty(
+                    "Syncs unreachable",
+                    "The console is configured to read the sync queue, but the read failed. Nothing here is invented.",
+                    "Reload",
+                    "/app/syncs",
+                    crate::ui::EmptyStateRole::Alert,
+                ),
+            ));
+        }
+        "ok" => {}
+        _ => return Err(Error::Unavailable),
     }
     let items = rows(v, &["runs", "items", "rows"])?;
     let records_24h = match v.get("records24h") {
@@ -2134,6 +2163,82 @@ mod rendering_contract_tests {
             assert!(docs.contains(&format!("href=\"{target}\"")));
         }
         assert!(static_page("/app/support").contains("mailto:info@manavritti.com"));
+    }
+
+    #[test]
+    fn runs_page_triad_empty_states_and_page_id() {
+        let unavailable = render(Op::Runs, &json!({"status":"unavailable"}), None).unwrap();
+        assert!(unavailable.contains("id=\"runs-page\""));
+        assert!(unavailable.contains("data-runs-page"));
+        assert!(unavailable.contains("Syncs unavailable"));
+        assert!(unavailable.contains("does not invent queue rows or health"));
+        assert!(unavailable.contains("role=\"alert\""));
+        assert!(unavailable.contains("href=\"/app/start\""));
+        assert!(!unavailable.contains("runs-unavailable-card"));
+        assert!(!unavailable.contains("No durable syncs to show."));
+        assert!(!unavailable.contains("runs-stats"));
+        assert!(!unavailable.contains("Filter syncs"));
+
+        let legacy = render(Op::Runs, &json!({"unavailable":true}), None).unwrap();
+        assert!(legacy.contains("Syncs unavailable"));
+        assert!(legacy.contains("role=\"alert\""));
+        assert!(!legacy.contains("runs-unavailable-card"));
+
+        let error = render(Op::Runs, &json!({"status":"error"}), None).unwrap();
+        assert!(error.contains("Syncs unreachable"));
+        assert!(error.contains("role=\"alert\""));
+        assert!(error.contains("href=\"/app/syncs\""));
+        assert!(!error.contains("No durable syncs to show."));
+        assert!(!error.contains("runs-stats"));
+
+        let empty_ok = render(
+            Op::Runs,
+            &json!({
+                "status":"ok",
+                "runs":[],
+                "pendingRuns":0,
+                "runningRuns":0,
+                "backingoffRuns":0,
+                "deadRuns":0,
+                "records24hUnavailable":true,
+                "workerHeartbeatUnavailable":true,
+                "operatorControlsUnavailable":true
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(empty_ok.contains("No durable syncs to show."));
+        assert!(empty_ok.contains("role=\"status\""));
+        assert!(!empty_ok.contains("Syncs unavailable"));
+        assert!(!empty_ok.contains("role=\"alert\""));
+
+        let filtered = render(
+            Op::Runs,
+            &json!({
+                "status":"ok",
+                "runs":[],
+                "hasFilters":true,
+                "pendingRuns":0,
+                "runningRuns":0,
+                "backingoffRuns":0,
+                "deadRuns":0,
+                "records24hUnavailable":true,
+                "workerHeartbeatUnavailable":true,
+                "operatorControlsUnavailable":true
+            }),
+            None,
+        )
+        .unwrap();
+        assert!(filtered.contains("No durable syncs match these filters."));
+        assert!(filtered.contains("role=\"status\""));
+        assert!(!filtered.contains("No durable syncs to show."));
+        assert!(!filtered.contains("Syncs unavailable"));
+
+        assert_eq!(
+            render(Op::Runs, &json!({"status":"mystery"}), None),
+            Err(Error::Unavailable),
+            "unknown status stays fail-closed"
+        );
     }
 
     #[test]
