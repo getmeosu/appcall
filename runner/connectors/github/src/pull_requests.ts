@@ -152,6 +152,19 @@ export function validateListPullRequestFilesInput(input: unknown): ListPullReque
   };
 }
 
+
+export type UpdatePullRequestBranchInput = { owner: string; repo: string; pullNumber: number; expectedHeadSha?: string };
+
+export function validateUpdatePullRequestBranchInput(input: unknown): UpdatePullRequestBranchInput {
+  if (!isRecord(input)) throw new Error("update pull request branch input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    expectedHeadSha: typeof input.expectedHeadSha === "string" ? input.expectedHeadSha : undefined,
+  };
+}
+
 export type CreatePullRequestInput = { owner: string; repo: string; title: string; head: string; base: string; body?: string; draft?: boolean };
 
 export function validateCreatePullRequestInput(input: unknown): CreatePullRequestInput {
@@ -494,6 +507,41 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list PR files request." } };
+    },
+
+
+    async updateBranch(input: unknown) {
+      const payload = validateUpdatePullRequestBranchInput(input);
+      const body: Record<string, string> = {};
+      if (payload.expectedHeadSha) body.expected_head_sha = payload.expectedHeadSha;
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/pulls/${payload.pullNumber}/update-branch`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      // GitHub returns 202 Accepted on success
+      if (response.status === 202 || response.status === 200) {
+        const respBody = (response.body && typeof response.body === "object") ? response.body as Record<string, unknown> : {};
+        return {
+          ok: true as const,
+          update: {
+            message: typeof respBody.message === "string" ? respBody.message : "Updating pull request branch.",
+            url: typeof respBody.url === "string" ? respBody.url : "",
+            accepted: true,
+          },
+        };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Pull request not found." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Pull request branch cannot be updated (conflict or validation)." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the update branch request." } };
     },
 
     async create(input: unknown) {

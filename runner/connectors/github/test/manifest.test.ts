@@ -54,6 +54,9 @@ describe("github connector manifest", () => {
     expect(manifest.models).toContain("label");
     expect(manifest.models).toContain("pull_request_review");
     expect(manifest.models).toContain("pull_request_review_comment");
+    expect(manifest.models).toContain("check_run");
+    expect(manifest.models).toContain("check_suite");
+    expect(manifest.models).toContain("commit_status");
     expect(manifest.models).toContain("workflow");
     expect(manifest.models).toContain("workflow_run");
     expect(manifest.models).toContain("workflow_job");
@@ -222,7 +225,34 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.5.0 after S3+S6", () => {
-    expect(manifest.version).toBe("0.5.0");
+
+  test("S4 write ops declare Reconcile effect policy", () => {
+    expect(manifest.operations["commits.statuses.create"].sideEffect).toBe("write");
+    expect(manifest.operations["commits.statuses.create"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["commits.statuses.create"].reconcile).toBe("commits.status.get");
+    expect(manifest.operations["pull_requests.update_branch"].sideEffect).toBe("write");
+    expect(manifest.operations["pull_requests.update_branch"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["pull_requests.update_branch"].reconcile).toBe("pull_requests.get");
+  });
+
+  test("manifest declares S4 checks-ci-commits ops", () => {
+    for (const key of [
+      "checks.runs.list_for_ref",
+      "checks.runs.get",
+      "checks.suites.list_for_ref",
+      "commits.status.get",
+      "commits.statuses.list",
+      "commits.statuses.create",
+      "commits.get",
+      "repos.compare",
+      "pull_requests.update_branch",
+      "branches.list",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+    }
+  });
+
+  test("manifest version is 0.6.0 after S4 rebase onto S6", () => {
+    expect(manifest.version).toBe("0.6.0");
   });
 });

@@ -137,12 +137,68 @@ export function validateGetRepoContentsInput(input: unknown): GetRepoContentsInp
   };
 }
 
+
+export type CompareCommitsInput = { owner: string; repo: string; base: string; head: string; page?: number; perPage?: number };
+
+export function validateCompareCommitsInput(input: unknown): CompareCommitsInput {
+  if (!isRecord(input)) throw new Error("compare commits input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    base: requireString(input.base, "base"),
+    head: requireString(input.head, "head"),
+    page: typeof input.page === "number" ? input.page : undefined,
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+  };
+}
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 export function createReposClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "repos.get" });
 
   return {
+    async compare(input: unknown) {
+      const payload = validateCompareCommitsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const base = encodeURIComponent(payload.base);
+      const head = encodeURIComponent(payload.head);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/compare/${base}...${head}${qs}`);
+      if (response.status === 200) {
+        const body = (response.body && typeof response.body === "object") ? response.body as Record<string, unknown> : {};
+        const files = Array.isArray(body.files) ? body.files : [];
+        const commits = Array.isArray(body.commits) ? body.commits : [];
+        return {
+          ok: true as const,
+          comparison: {
+            url: typeof body.html_url === "string" ? body.html_url : (typeof body.url === "string" ? body.url : ""),
+            status: typeof body.status === "string" ? body.status : "",
+            aheadBy: typeof body.ahead_by === "number" ? body.ahead_by : 0,
+            behindBy: typeof body.behind_by === "number" ? body.behind_by : 0,
+            totalCommits: typeof body.total_commits === "number" ? body.total_commits : commits.length,
+            commits: commits,
+            files: files,
+            baseCommit: body.base_commit ?? null,
+            mergeBaseCommit: body.merge_base_commit ?? null,
+            permalinkUrl: typeof body.permalink_url === "string" ? body.permalink_url : "",
+            modelVersion: "2026-05-16" as const,
+            raw: body,
+          },
+        };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository or comparison refs not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the compare request." } };
+    },
+
     async get(input: unknown) {
       const payload = validateGetRepoInput(input);
       const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}`);

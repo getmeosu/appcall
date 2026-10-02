@@ -54,12 +54,48 @@ export function validateCreateBranchInput(input: unknown): CreateBranchInput {
   };
 }
 
+
+export type ListBranchesInput = { owner: string; repo: string; protected?: boolean; perPage?: number; page?: number };
+
+export function validateListBranchesInput(input: unknown): ListBranchesInput {
+  if (!isRecord(input)) throw new Error("list branches input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    protected: typeof input.protected === "boolean" ? input.protected : undefined,
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+    page: typeof input.page === "number" ? input.page : undefined,
+  };
+}
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 export function createBranchesClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "branches.get" });
 
   return {
+    async list(input: unknown) {
+      const payload = validateListBranchesInput(input);
+      const params = new URLSearchParams();
+      if (payload.protected !== undefined) params.set("protected", String(payload.protected));
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/branches${qs}`);
+      if (response.status === 200) {
+        const branches = Array.isArray(response.body) ? (response.body as GitHubBranch[]).map(normalizeGitHubBranch) : [];
+        return { ok: true as const, branches };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list branches request." } };
+    },
+
     async get(input: unknown) {
       const payload = validateGetBranchInput(input);
       const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/branches/${encodeURIComponent(payload.branch)}`);
