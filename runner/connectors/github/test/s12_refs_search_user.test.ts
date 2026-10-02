@@ -27,6 +27,9 @@ describe("github S12 refs-search-user", () => {
     expect(validateSearchOrgsInput({ q: "github" }).q).toBe("github");
     expect(buildOrgSearchQuery("github")).toBe("github type:org");
     expect(buildOrgSearchQuery("type:org github")).toBe("type:org github");
+    expect(buildOrgSearchQuery("github -type:org")).toBe("github -type:org type:org");
+    expect(() => validateGetRefInput({ owner: "acme/other", repo: "app", ref: "heads/main" })).toThrow(/owner must be a single path segment/);
+    expect(() => validateGetRefInput({ owner: "acme", repo: "app?x", ref: "heads/main" })).toThrow(/repo must be a single path segment/);
     expect(validateUsersGetAuthenticatedInput({})).toEqual({});
     expect(validateUsersGetAuthenticatedInput(undefined)).toEqual({});
     expect(() => validateUsersGetAuthenticatedInput("nope")).toThrow(/users.get_authenticated/);

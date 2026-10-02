@@ -121,8 +121,8 @@ export type GetRefInput = { owner: string; repo: string; ref: string };
 export function validateGetRefInput(input: unknown): GetRefInput {
   if (!isRecord(input)) throw new Error("get ref input must be an object");
   return {
-    owner: requireString(input.owner, "owner"),
-    repo: requireString(input.repo, "repo"),
+    owner: requirePathSegment(input.owner, "owner"),
+    repo: requirePathSegment(input.repo, "repo"),
     ref: requireString(input.ref, "ref"),
   };
 }
@@ -370,7 +370,7 @@ export function createGitClient(options: { accessToken: string; fetch?: typeof f
     async getRef(input: unknown) {
       const payload = validateGetRefInput(input);
       const refPath = encodeRefPath(payload.ref);
-      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/git/refs/${refPath}`);
+      const response = await client.fetchJSON(`/repos/${encodeURIComponent(payload.owner)}/${encodeURIComponent(payload.repo)}/git/refs/${refPath}`);
       if (response.status === 200) {
         const raw = isRecord(response.body) ? response.body : {};
         const obj = isRecord(raw.object) ? raw.object : {};
@@ -461,6 +461,14 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
   return value;
+}
+
+function requirePathSegment(value: unknown, field: string): string {
+  const text = requireString(value, field);
+  if (text === "." || text === ".." || !/^[A-Za-z0-9._-]+$/.test(text)) {
+    throw new Error(`${field} must be a single path segment`);
+  }
+  return text;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

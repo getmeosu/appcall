@@ -245,7 +245,8 @@ export function normalizeSearchCommit(item: Record<string, unknown>): Normalized
 
 /** GitHub has no /search/orgs. Organizations are users with type:org. */
 export function buildOrgSearchQuery(q: string): string {
-  if (/\btype:org\b/i.test(q)) return q;
+  // A leading "-" is an exclusion (`-type:org`). Only a positive qualifier counts.
+  if (/(?:^|\s)type:org(?:\s|$)/i.test(q)) return q;
   return `${q} type:org`;
 }
 
