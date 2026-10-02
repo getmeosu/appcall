@@ -66,8 +66,13 @@ fn measure_redrive_at_depth(depth: usize, redrives: usize) -> (u128, u128, usize
     })
     .unwrap();
 
-    e.start("r", "deep-wait", "v1", PayloadRef::durable("input").unwrap())
-        .unwrap();
+    e.start(
+        "r",
+        "deep-wait",
+        "v1",
+        PayloadRef::durable("input").unwrap(),
+    )
+    .unwrap();
     let now = timers as i64;
     let mut guard = 0usize;
     loop {
@@ -106,8 +111,7 @@ fn history_borrow_bench_depths_256_and_1024() {
     let redrives = 64usize;
     let mut depth_reports = Vec::new();
     for depth in [256usize, 1024usize] {
-        let (clone_p50, clone_p99, borrow_p50, borrow_p99) =
-            measure_clone_vs_borrow(depth, iters);
+        let (clone_p50, clone_p99, borrow_p50, borrow_p99) = measure_clone_vs_borrow(depth, iters);
         let (redrive_p50, redrive_p99, hist_len) = measure_redrive_at_depth(depth, redrives);
         assert_eq!(hist_len, depth, "parked history depth");
         assert!(
