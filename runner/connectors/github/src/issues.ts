@@ -218,6 +218,170 @@ export function validateCreateCommentInput(input: unknown): CreateCommentInput {
   };
 }
 
+
+// ─── S2: List Comments ────────────────────────────────────────────────────────
+
+export type ListCommentsInput = { owner: string; repo: string; issueNumber: number; perPage?: number; page?: number };
+
+export function validateListCommentsInput(input: unknown): ListCommentsInput {
+  if (!isRecord(input)) throw new Error("list comments input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    issueNumber: requireNumber(input.issueNumber, "issueNumber"),
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+    page: typeof input.page === "number" ? input.page : undefined,
+  };
+}
+
+// ─── S2: Update Comment ───────────────────────────────────────────────────────
+
+export type UpdateCommentInput = { owner: string; repo: string; commentId: number; body: string };
+
+export function validateUpdateCommentInput(input: unknown): UpdateCommentInput {
+  if (!isRecord(input)) throw new Error("update comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    commentId: requireNumber(input.commentId, "commentId"),
+    body: requireString(input.body, "body"),
+  };
+}
+
+// ─── S2: Delete Comment ───────────────────────────────────────────────────────
+
+export type DeleteCommentInput = { owner: string; repo: string; commentId: number };
+
+export function validateDeleteCommentInput(input: unknown): DeleteCommentInput {
+  if (!isRecord(input)) throw new Error("delete comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    commentId: requireNumber(input.commentId, "commentId"),
+  };
+}
+
+// ─── S2: Assignees ────────────────────────────────────────────────────────────
+
+export type AssigneesInput = { owner: string; repo: string; issueNumber: number; assignees: string[] };
+
+export function validateAssigneesInput(input: unknown): AssigneesInput {
+  if (!isRecord(input)) throw new Error("assignees input must be an object");
+  if (!Array.isArray(input.assignees) || input.assignees.length === 0) throw new Error("assignees must be a non-empty array");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    issueNumber: requireNumber(input.issueNumber, "issueNumber"),
+    assignees: (input.assignees as unknown[]).filter((a): a is string => typeof a === "string"),
+  };
+}
+
+// ─── S2: Remove Labels ────────────────────────────────────────────────────────
+
+export type RemoveLabelsInput = { owner: string; repo: string; issueNumber: number; labels: string[] };
+
+export function validateRemoveLabelsInput(input: unknown): RemoveLabelsInput {
+  if (!isRecord(input)) throw new Error("remove labels input must be an object");
+  if (!Array.isArray(input.labels) || input.labels.length === 0) throw new Error("labels must be a non-empty array");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    issueNumber: requireNumber(input.issueNumber, "issueNumber"),
+    labels: (input.labels as unknown[]).filter((l): l is string => typeof l === "string"),
+  };
+}
+
+// ─── S2: Set Labels ───────────────────────────────────────────────────────────
+
+export type SetLabelsInput = { owner: string; repo: string; issueNumber: number; labels: string[] };
+
+export function validateSetLabelsInput(input: unknown): SetLabelsInput {
+  if (!isRecord(input)) throw new Error("set labels input must be an object");
+  if (!Array.isArray(input.labels)) throw new Error("labels must be an array");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    issueNumber: requireNumber(input.issueNumber, "issueNumber"),
+    labels: (input.labels as unknown[]).filter((l): l is string => typeof l === "string"),
+  };
+}
+
+// ─── S2: Lock / Unlock ────────────────────────────────────────────────────────
+
+export type LockIssueInput = { owner: string; repo: string; issueNumber: number; lockReason?: string };
+
+export function validateLockIssueInput(input: unknown): LockIssueInput {
+  if (!isRecord(input)) throw new Error("lock issue input must be an object");
+  const allowed = new Set(["off-topic", "too heated", "resolved", "spam"]);
+  const lockReason = typeof input.lockReason === "string" ? input.lockReason : undefined;
+  if (lockReason !== undefined && !allowed.has(lockReason)) {
+    throw new Error("lockReason must be one of: off-topic, too heated, resolved, spam");
+  }
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    issueNumber: requireNumber(input.issueNumber, "issueNumber"),
+    lockReason,
+  };
+}
+
+export type UnlockIssueInput = { owner: string; repo: string; issueNumber: number };
+
+export function validateUnlockIssueInput(input: unknown): UnlockIssueInput {
+  if (!isRecord(input)) throw new Error("unlock issue input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    issueNumber: requireNumber(input.issueNumber, "issueNumber"),
+  };
+}
+
+// ─── S2: List Repo Labels ─────────────────────────────────────────────────────
+
+export type ListLabelsInput = { owner: string; repo: string; perPage?: number; page?: number };
+
+export function validateListLabelsInput(input: unknown): ListLabelsInput {
+  if (!isRecord(input)) throw new Error("list labels input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+    page: typeof input.page === "number" ? input.page : undefined,
+  };
+}
+
+export type GitHubLabel = {
+  id: number;
+  name: string;
+  color?: string;
+  description?: string;
+  [key: string]: unknown;
+};
+
+export type NormalizedLabel = {
+  id: string;
+  provider: "github";
+  providerLabelId: number;
+  name: string;
+  color: string;
+  description: string;
+  modelVersion: "2026-05-16";
+  raw: GitHubLabel;
+};
+
+export function normalizeGitHubLabel(label: GitHubLabel): NormalizedLabel {
+  return {
+    id: `gh-label:${label.id}`,
+    provider: "github",
+    providerLabelId: label.id,
+    name: label.name ?? "",
+    color: label.color ?? "",
+    description: label.description ?? "",
+    modelVersion: "2026-05-16",
+    raw: label,
+  };
+}
+
 export function createIssuesClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "issues.create" });
 
@@ -324,6 +488,223 @@ export function createIssuesClient(options: { accessToken: string; fetch?: typeo
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the create comment request." } };
+    },
+
+    async listComments(input: unknown) {
+      const payload = validateListCommentsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/comments${qs}`);
+      if (response.status === 200) {
+        const parsed = parseCommentsResponse(response.body);
+        return { ok: true as const, comments: parsed.comments.map(normalizeGitHubComment) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list comments request." } };
+    },
+
+    async updateComment(input: unknown) {
+      const payload = validateUpdateCommentInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/comments/${payload.commentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: payload.body }),
+      });
+      if (response.status === 200) {
+        return { ok: true as const, comment: normalizeGitHubComment(response.body as GitHubIssueComment) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Comment not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the update comment request." } };
+    },
+
+    async deleteComment(input: unknown) {
+      const payload = validateDeleteCommentInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/comments/${payload.commentId}`, {
+        method: "DELETE",
+      });
+      if (response.status === 204) {
+        return { ok: true as const, deleted: true as const, commentId: payload.commentId };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Comment not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the delete comment request." } };
+    },
+
+    async addAssignees(input: unknown) {
+      const payload = validateAssigneesInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/assignees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignees: payload.assignees }),
+      });
+      if (response.status === 201 || response.status === 200) {
+        return { ok: true as const, issue: normalizeGitHubIssue(response.body as GitHubIssue) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the add assignees request." } };
+    },
+
+    async removeAssignees(input: unknown) {
+      const payload = validateAssigneesInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/assignees`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignees: payload.assignees }),
+      });
+      if (response.status === 200) {
+        return { ok: true as const, issue: normalizeGitHubIssue(response.body as GitHubIssue) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the remove assignees request." } };
+    },
+
+    async removeLabels(input: unknown) {
+      const payload = validateRemoveLabelsInput(input);
+      let lastBody: unknown = null;
+      for (const name of payload.labels) {
+        const response = await client.fetchJSON(
+          `/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/labels/${encodeURIComponent(name)}`,
+          { method: "DELETE" },
+        );
+        if (response.status === 200 || response.status === 204) {
+          lastBody = response.body;
+          continue;
+        }
+        if (response.status === 404) {
+          return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `Label or issue not found: ${name}` } };
+        }
+        if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+          const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+          return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+        }
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the remove labels request." } };
+      }
+      const labelsList = Array.isArray(lastBody)
+        ? (lastBody as Record<string, unknown>[]).map((l) => (typeof l.name === "string" ? l.name : ""))
+        : [];
+      return { ok: true as const, labels: labelsList };
+    },
+
+    async setLabels(input: unknown) {
+      const payload = validateSetLabelsInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/labels`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload.labels),
+      });
+      if (response.status === 200) {
+        const labelsList = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).map((l) => (typeof l.name === "string" ? l.name : ""))
+          : [];
+        return { ok: true as const, labels: labelsList };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the set labels request." } };
+    },
+
+    async lock(input: unknown) {
+      const payload = validateLockIssueInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.lockReason) body.lock_reason = payload.lockReason;
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/lock`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 204) {
+        return { ok: true as const, locked: true as const };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the lock issue request." } };
+    },
+
+    async unlock(input: unknown) {
+      const payload = validateUnlockIssueInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/issues/${payload.issueNumber}/lock`, {
+        method: "DELETE",
+      });
+      if (response.status === 204) {
+        return { ok: true as const, locked: false as const };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the unlock issue request." } };
+    },
+
+    async listLabels(input: unknown) {
+      const payload = validateListLabelsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/labels${qs}`);
+      if (response.status === 200) {
+        const labels = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).filter(isRecord).map((l) => normalizeGitHubLabel({
+              id: requireNumber(l.id, "id"),
+              name: requireString(l.name, "name"),
+              color: typeof l.color === "string" ? l.color : undefined,
+              description: typeof l.description === "string" ? l.description : undefined,
+            }))
+          : [];
+        return { ok: true as const, labels };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list labels request." } };
     },
   };
 }

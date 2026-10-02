@@ -51,6 +51,7 @@ describe("github connector manifest", () => {
     expect(manifest.models).toContain("release");
     expect(manifest.models).toContain("gist");
     expect(manifest.models).toContain("branch");
+    expect(manifest.models).toContain("label");
   });
 
   test("manifest has timeout and size limits on all operations", () => {
@@ -77,10 +78,52 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest has at least 14 action operations", () => {
+  test("manifest has at least 26 action operations", () => {
     const actionOps = Object.entries(manifest.operations).filter(
       ([, spec]) => (spec as Record<string, unknown>).kind === "action"
     );
-    expect(actionOps.length).toBeGreaterThanOrEqual(14);
+    expect(actionOps.length).toBeGreaterThanOrEqual(26);
+  });
+
+  test("manifest declares S2 issue deepen and search ops", () => {
+    for (const key of [
+      "issues.comments.list",
+      "issues.comments.update",
+      "issues.comments.delete",
+      "issues.assignees.add",
+      "issues.assignees.remove",
+      "issues.labels.remove",
+      "issues.labels.set",
+      "issues.lock",
+      "issues.unlock",
+      "labels.list",
+      "search.issues",
+      "search.pull_requests",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("action");
+    }
+  });
+
+  test("S2 write ops wire EffectPolicy Reconcile to issues.get", () => {
+    const writes = [
+      "issues.comments.update",
+      "issues.comments.delete",
+      "issues.assignees.add",
+      "issues.assignees.remove",
+      "issues.labels.remove",
+      "issues.labels.set",
+      "issues.lock",
+      "issues.unlock",
+    ];
+    for (const key of writes) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Reconcile");
+      expect(op.reconcile).toBe("issues.get");
+    }
+  });
+
+  test("manifest version is 0.2.0 after S2", () => {
+    expect(manifest.version).toBe("0.2.0");
   });
 });

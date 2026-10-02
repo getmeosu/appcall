@@ -1,4 +1,25 @@
-import { createIssuesClient, validateCreateIssueInput, validateCreateCommentInput, validateGetIssueInput, validateUpdateIssueInput, validateAddLabelsInput } from "./issues";
+import {
+  createIssuesClient,
+  validateCreateIssueInput,
+  validateCreateCommentInput,
+  validateGetIssueInput,
+  validateUpdateIssueInput,
+  validateAddLabelsInput,
+  validateListCommentsInput,
+  validateUpdateCommentInput,
+  validateDeleteCommentInput,
+  validateAssigneesInput,
+  validateRemoveLabelsInput,
+  validateSetLabelsInput,
+  validateLockIssueInput,
+  validateUnlockIssueInput,
+  validateListLabelsInput,
+} from "./issues";
+import {
+  createSearchClient,
+  validateSearchIssuesInput,
+  validateSearchPullRequestsInput,
+} from "./search";
 import { createPullRequestsClient, validateCreatePullRequestInput, validateMergePullRequestInput, validateGetPullRequestInput, validateUpdatePullRequestInput, validateListPullRequestFilesInput } from "./pull_requests";
 import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateListReposInput, validateGetRepoContentsInput } from "./repos";
 import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput } from "./branches";
@@ -326,6 +347,211 @@ export function createGist(input: unknown): Record<string, unknown> | Promise<Re
     });
   }
   return { connector: "github", action: "gists.create", source: "connector", validated: validateCreateGistInput(input) };
+}
+
+
+// ─── S2: issues.comments.list ─────────────────────────────────────────────────
+
+export function listIssueComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listComments(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "issues.comments.list", source: "connector", comments: result.comments };
+    });
+  }
+  return { connector: "github", action: "issues.comments.list", source: "connector", validated: validateListCommentsInput(input) };
+}
+
+// ─── S2: issues.comments.update ───────────────────────────────────────────────
+
+export function updateIssueComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).updateComment(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "issues.comments.update", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "issues.comments.update", source: "connector", validated: validateUpdateCommentInput(input) };
+}
+
+// ─── S2: issues.comments.delete ───────────────────────────────────────────────
+
+export function deleteIssueComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).deleteComment(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "issues.comments.delete", source: "connector", deleted: true, commentId: result.commentId };
+    });
+  }
+  return { connector: "github", action: "issues.comments.delete", source: "connector", validated: validateDeleteCommentInput(input) };
+}
+
+// ─── S2: issues.assignees.add ─────────────────────────────────────────────────
+
+export function addIssueAssignees(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).addAssignees(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "issues.assignees.add", source: "connector", issue: result.issue };
+    });
+  }
+  return { connector: "github", action: "issues.assignees.add", source: "connector", validated: validateAssigneesInput(input) };
+}
+
+// ─── S2: issues.assignees.remove ──────────────────────────────────────────────
+
+export function removeIssueAssignees(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).removeAssignees(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "issues.assignees.remove", source: "connector", issue: result.issue };
+    });
+  }
+  return { connector: "github", action: "issues.assignees.remove", source: "connector", validated: validateAssigneesInput(input) };
+}
+
+// ─── S2: issues.labels.remove ─────────────────────────────────────────────────
+
+export function removeIssueLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).removeLabels(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "issues.labels.remove", source: "connector", labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "issues.labels.remove", source: "connector", validated: validateRemoveLabelsInput(input) };
+}
+
+// ─── S2: issues.labels.set ────────────────────────────────────────────────────
+
+export function setIssueLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).setLabels(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "issues.labels.set", source: "connector", labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "issues.labels.set", source: "connector", validated: validateSetLabelsInput(input) };
+}
+
+// ─── S2: issues.lock ──────────────────────────────────────────────────────────
+
+export function lockIssue(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).lock(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "issues.lock", source: "connector", locked: true };
+    });
+  }
+  return { connector: "github", action: "issues.lock", source: "connector", validated: validateLockIssueInput(input) };
+}
+
+// ─── S2: issues.unlock ────────────────────────────────────────────────────────
+
+export function unlockIssue(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).unlock(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "issues.unlock", source: "connector", locked: false };
+    });
+  }
+  return { connector: "github", action: "issues.unlock", source: "connector", validated: validateUnlockIssueInput(input) };
+}
+
+// ─── S2: labels.list ──────────────────────────────────────────────────────────
+
+export function listLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).listLabels(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "labels.list", source: "connector", labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "labels.list", source: "connector", validated: validateListLabelsInput(input) };
+}
+
+// ─── S2: search.issues ────────────────────────────────────────────────────────
+
+export function searchIssues(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createSearchClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).searchIssues(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "search.issues", source: "connector", ...result.result };
+    });
+  }
+  return { connector: "github", action: "search.issues", source: "connector", validated: validateSearchIssuesInput(input) };
+}
+
+// ─── S2: search.pull_requests ─────────────────────────────────────────────────
+
+export function searchPullRequests(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createSearchClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).searchPullRequests(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "github", action: "search.pull_requests", source: "connector", ...result.result };
+    });
+  }
+  return { connector: "github", action: "search.pull_requests", source: "connector", validated: validateSearchPullRequestsInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
