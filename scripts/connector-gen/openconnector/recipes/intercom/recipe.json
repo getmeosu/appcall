@@ -70,7 +70,12 @@
       "companies.list",
       "conversations.list",
       "conversations.get",
-      "conversations.reply"
+      "conversations.reply",
+      "conversations.close",
+      "conversations.assign",
+      "conversations.tag",
+      "contacts.get",
+      "conversations.search"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -229,14 +234,79 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "POST /conversations/{id}/reply as admin comment/note; preserves raw provider conversation JSON."
+        "POST /conversations/{id}/reply as admin comment/note; EffectPolicy Idempotent observes via conversations.get; preserves raw provider conversation JSON."
+      ]
+    },
+    "conversations.close": {
+      "upstreamActionId": "close_conversation",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/conversations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /conversations/{id}/parts with message_type close; EffectPolicy Reconcile observes via conversations.get."
+      ]
+    },
+    "conversations.assign": {
+      "upstreamActionId": "assign_conversation",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/conversations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /conversations/{id}/parts with message_type assignment; EffectPolicy Reconcile observes via conversations.get."
+      ]
+    },
+    "conversations.tag": {
+      "upstreamActionId": "tag_conversation",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/conversations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /conversations/{id}/tags with id=tagId + admin_id; EffectPolicy Reconcile observes via conversations.get."
+      ]
+    },
+    "contacts.get": {
+      "upstreamActionId": "get_contact",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/contacts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /contacts/{id}; preserves raw contact JSON."
+      ]
+    },
+    "conversations.search": {
+      "upstreamActionId": "search_conversations",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/conversations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /conversations/search with Intercom Search query; optional perPage/startingAfter map to pagination."
       ]
     }
   },
   "manifest": {
     "key": "intercom",
     "name": "Intercom",
-    "version": "0.1.0",
+    "version": "0.3.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -265,7 +335,8 @@
     "models": [
       "administrator",
       "contact",
-      "company"
+      "company",
+      "conversation"
     ],
     "http": {
       "baseUrl": "https://api.intercom.io",
@@ -587,7 +658,7 @@
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "title": "Reply to Conversation",
-        "description": "Reply to an Intercom conversation as an admin (comment or note) via POST /conversations/{id}/reply.",
+        "description": "Reply to an Intercom conversation as an admin (comment or note) via POST /conversations/{id}/reply. EffectPolicy Idempotent projects conversation id from the primary response and observes via conversations.get (handler returns raw Conversation).",
         "inputSchema": {
           "type": "object",
           "required": [
@@ -651,6 +722,313 @@
             "type": "{{type}}",
             "admin_id": "{{adminId}}",
             "body": "{{body}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "effectPolicy": "Idempotent",
+        "reconcile": "conversations.get"
+      },
+      "conversations.close": {
+        "kind": "action",
+        "sideEffect": "write",
+        "effectPolicy": "Reconcile",
+        "reconcile": "conversations.get",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Close Conversation",
+        "description": "Close an Intercom conversation via POST /conversations/{id}/parts (message_type close). EffectPolicy Reconcile observes via conversations.get.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id",
+            "adminId"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom conversation id."
+            },
+            "adminId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Admin id performing the close."
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional closing note."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/conversations/{{id}}/parts",
+          "body": {
+            "message_type": "close",
+            "type": "admin",
+            "admin_id": "{{adminId}}",
+            "body": "{{body}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "conversations.assign": {
+        "kind": "action",
+        "sideEffect": "write",
+        "effectPolicy": "Reconcile",
+        "reconcile": "conversations.get",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Assign Conversation",
+        "description": "Assign an Intercom conversation via POST /conversations/{id}/parts (message_type assignment). assigneeId may be admin or team id; \"0\" unassigns. EffectPolicy Reconcile observes via conversations.get.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id",
+            "adminId",
+            "assigneeId"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom conversation id."
+            },
+            "adminId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Admin id performing the assignment."
+            },
+            "assigneeId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Admin or team id; \"0\" unassigns."
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional note when assigning."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/conversations/{{id}}/parts",
+          "body": {
+            "message_type": "assignment",
+            "type": "admin",
+            "admin_id": "{{adminId}}",
+            "assignee_id": "{{assigneeId}}",
+            "body": "{{body}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "conversations.tag": {
+        "kind": "action",
+        "sideEffect": "write",
+        "effectPolicy": "Reconcile",
+        "reconcile": "conversations.get",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Tag Conversation",
+        "description": "Add a tag via POST /conversations/{id}/tags (body id=tagId, admin_id). Upstream returns Tag; EffectPolicy Reconcile observes conversation via conversations.get.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id",
+            "tagId",
+            "adminId"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Conversation id (path)."
+            },
+            "tagId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Tag id (maps to body id)."
+            },
+            "adminId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Admin applying the tag."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/conversations/{{id}}/tags",
+          "body": {
+            "id": "{{tagId}}",
+            "admin_id": "{{adminId}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contacts.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get Contact",
+        "description": "Retrieve a single Intercom contact by id via GET /contacts/{id}.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom contact id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts/{{id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "conversations.search": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Search Conversations",
+        "description": "Search Intercom conversations via POST /conversations/search. Pass Intercom Search query object; optional perPage/startingAfter map to pagination.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "object",
+              "description": "Intercom Search query (single filter {field,operator,value} or AND/OR tree)."
+            },
+            "perPage": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 150,
+              "description": "Results per page (maps to pagination.per_page)."
+            },
+            "startingAfter": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Cursor (maps to pagination.starting_after)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/conversations/search",
+          "body": {
+            "query": "{{query}}",
+            "pagination": {
+              "per_page": "{{perPage}}",
+              "starting_after": "{{startingAfter}}"
+            }
           },
           "success": [
             200
