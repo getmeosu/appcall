@@ -35,6 +35,7 @@ pub enum DashboardOperation {
     SaveBranding,
     Workflows,
     WorkflowRuns,
+    WorkflowRunDetail,
 }
 pub struct DashboardRequest {
     pub principal: Principal,
@@ -306,7 +307,9 @@ impl DashboardRenderer<'_> {
             }
         }
         let segments: Vec<_> = r.path.trim_start_matches('/').split('/').collect();
-        let resource = if segments.len() >= 3
+        let resource = if matches!(operation, DashboardOperation::WorkflowRunDetail) {
+            (segments.len() >= 4 && segments.get(2) == Some(&"runs")).then(|| segments[3].to_owned())
+        } else if segments.len() >= 3
             && !matches!(
                 operation,
                 DashboardOperation::Usage
@@ -318,7 +321,8 @@ impl DashboardRenderer<'_> {
                     | DashboardOperation::ReconcileActionClaim
                     | DashboardOperation::Workflows
                     | DashboardOperation::WorkflowRuns
-            ) {
+            )
+        {
             Some(segments[2].to_owned())
         } else {
             None
@@ -868,6 +872,9 @@ pub(crate) fn resolve(method: &str, path: &str) -> Option<Option<DashboardOperat
             ) {
                 ("GET", Some("connectors"), 3, _) => Connector,
                 ("GET", Some("syncs"), 3, _) => RunDetail,
+                ("GET", Some("workflows"), 4, _) if parts.get(2).copied() == Some("runs") => {
+                    WorkflowRunDetail
+                }
                 ("GET", Some("connectors"), 4, Some("test-form")) => TestForm,
                 ("GET", Some("connectors"), 4, Some("options")) => Options,
                 ("GET", Some("connectors"), 4, Some("runinput-fields")) => RunInputFields,
@@ -1320,6 +1327,24 @@ mod workflow_route_tests {
         assert_eq!(
             resolve("GET", "/app/syncs"),
             Some(Some(DashboardOperation::Runs))
+        );
+    }
+
+    #[test]
+    fn workflow_run_detail_resolves_only_the_bounded_run_resource_route() {
+        assert_eq!(
+            resolve("GET", "/app/workflows/runs/run-42"),
+            Some(Some(DashboardOperation::WorkflowRunDetail))
+        );
+        assert_eq!(resolve("POST", "/app/workflows/runs/run-42"), None);
+        assert_eq!(resolve("GET", "/app/workflows/runs/run-42/extra"), None);
+        assert_eq!(
+            resolve("GET", "/app/workflows/runs"),
+            Some(Some(DashboardOperation::WorkflowRuns))
+        );
+        assert_ne!(
+            resolve("GET", "/app/workflows/other/run-42"),
+            Some(Some(DashboardOperation::WorkflowRunDetail))
         );
     }
 }

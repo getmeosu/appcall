@@ -13,7 +13,7 @@ pub(crate) fn title(op: Op) -> &'static str {
         Op::Usage => "Usage",
         Op::Branding => "White Labeling",
         Op::Workflows => "Workflows",
-        Op::WorkflowRuns => "Runs",
+        Op::WorkflowRuns | Op::WorkflowRunDetail => "Runs",
         _ => "Result",
     }
 }
@@ -453,6 +453,16 @@ fn run_detail_link(id: &str) -> Result<String, Error> {
         escape(id)
     ))
 }
+fn workflow_run_detail_link(id: &str) -> Result<String, Error> {
+    let href = format!("/app/workflows/runs/{id}");
+    crate::ui::LocalPath::new(&href).ok_or(Error::Invalid)?;
+    Ok(format!(
+        "<a class=\"runs-detail-link\" href=\"{}\" aria-label=\"Open workflow run {}\"><code class=\"runs-code\">{}</code></a>",
+        escape(&href),
+        escape(id),
+        escape(id)
+    ))
+}
 fn runs(v: &Value) -> Result<String, Error> {
     if value_bool(v, "unavailable") {
         return Ok(format!(
@@ -755,6 +765,7 @@ pub(crate) fn render(op: Op, raw: &Value, resource: Option<&str>) -> Result<Stri
   Op::RequestConnector=>"<div id=\"toolkit-request-result\" role=\"status\" aria-label=\"Connector request result\" aria-live=\"polite\" aria-atomic=\"true\" data-request-state=\"success\" class=\"catalog-request-result\">Connector request received.</div>".into(),
   Op::Workflows=>workflows_page(v)?,
   Op::WorkflowRuns=>workflow_runs_page(v)?,
+  Op::WorkflowRunDetail=>crate::workflow_run_detail::standalone(v, resource.ok_or(Error::Invalid)?)?,
   _=>return Err(Error::Invalid)
  };
     Ok(body)
@@ -874,7 +885,7 @@ fn workflows_page(v: &Value) -> Result<String, Error> {
                         return Err(Error::Unavailable);
                     }
                     table.push_str(&format!(
-                        "<tr><td><a href=\"/app/workflows/runs\">{name}</a></td><td class=\"tabular\">{version}</td></tr>"
+                        "<tr><td>{name}</td><td class=\"tabular\">{version}</td></tr>"
                     ));
                 }
                 table.push_str("</tbody></table></div>");
@@ -886,7 +897,7 @@ fn workflows_page(v: &Value) -> Result<String, Error> {
     Ok(format!("<div id=\"workflows-page\">{header}{body}</div>"))
 }
 
-fn workflow_run_state(label: &str) -> Result<String, Error> {
+pub(crate) fn workflow_run_state(label: &str) -> Result<String, Error> {
     use crate::ui::{state, Tone};
     let (tone, word) = match label {
         "Running" => (Tone::Running, "Running"),
@@ -963,8 +974,9 @@ fn workflow_runs_page(v: &Value) -> Result<String, Error> {
                     } else {
                         escape(parent)
                     };
+                    let detail = workflow_run_detail_link(string(row, &["id"]))?;
                     table.push_str(&format!(
-                        "<tr><td class=\"tabular\">{id}</td><td>{workflow}</td><td class=\"tabular\">{version}</td><td>{}</td><td class=\"tabular\">{parent_cell}</td></tr>",
+                        "<tr><td class=\"tabular\">{detail}</td><td>{workflow}</td><td class=\"tabular\">{version}</td><td>{}</td><td class=\"tabular\">{parent_cell}</td></tr>",
                         workflow_run_state(state_label)?
                     ));
                 }
@@ -2211,14 +2223,66 @@ mod rendering_contract_tests {
         assert!(populated.contains("ui-state-dead"));
         assert!(!populated.contains("ui-state-ok"));
         assert!(populated.contains("Running"));
+        assert!(
+            populated.contains("href=\"/app/workflows/runs/r1\""),
+            "run id must link to detail: {populated}"
+        );
+        assert!(
+            populated.contains("href=\"/app/workflows/runs/r2\""),
+            "run id must link to detail: {populated}"
+        );
+        assert!(
+            populated.contains("aria-label=\"Open workflow run r1\""),
+            "detail link needs accessible label: {populated}"
+        );
+        assert!(
+            !populated.contains("<a href=\"/app/workflows/runs\">echo</a>"),
+            "workflow name must not pretend to be a detail link: {populated}"
+        );
     }
 
     #[test]
     fn workflow_ops_titles_are_not_syncs() {
         assert_eq!(title(Op::Workflows), "Workflows");
         assert_eq!(title(Op::WorkflowRuns), "Runs");
+        assert_eq!(title(Op::WorkflowRunDetail), "Runs");
         assert_eq!(title(Op::Runs), "Syncs");
 
+    }
+
+    #[test]
+    fn workflows_list_keeps_names_as_plain_text() {
+        let populated = render(
+            Op::Workflows,
+            &json!({"status":"ok","workflows":[{"name":"echo","version":"v1"}]}),
+            None,
+        )
+        .unwrap();
+        assert!(populated.contains("echo"));
+        assert!(
+            !populated.contains("<a href=\"/app/workflows/runs\">echo</a>"),
+            "workflow name must not link to runs list as a fake detail: {populated}"
+        );
+    }
+
+    #[test]
+    fn workflow_run_detail_operation_dispatches_through_the_dedicated_renderer() {
+        let html = render(
+            Op::WorkflowRunDetail,
+            &json!({
+                "status":"ok",
+                "id":"run_1",
+                "state":"OutcomeUnknown",
+                "failure_reason":null,
+                "reconciliation_audit":[]
+            }),
+            Some("run_1"),
+        )
+        .unwrap();
+        assert!(html.contains("id=\"workflow-run-detail-page\""));
+        assert!(html.contains("Reconcile"));
+        assert!(html.contains("Back to Runs"));
+        assert!(!html.contains("ui-state-ok"));
     }
 }
 

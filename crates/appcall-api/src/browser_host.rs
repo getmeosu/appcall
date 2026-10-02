@@ -602,6 +602,7 @@ pub fn public_path(method: &str, path: &str) -> bool {
         ("GET", ["", "app", "connectors" | "calls", key]) => id(key),
         ("GET", ["", "app", "syncs", key]) => id(key),
         ("GET", ["", "app", "syncs"]) => true,
+        ("GET", ["", "app", "workflows", "runs", key]) => id(key),
         ("GET", ["", "app", "connectors", key, "test-form" | "options" | "runinput-fields"]) => {
             id(key)
         }
@@ -928,6 +929,31 @@ impl ApiDashboard {
                                 }
                             }
                             Ok(out)
+                        }
+                        Err(_) => Ok(json!({"status":"error"})),
+                    }
+                }
+            },
+            Op::WorkflowRunDetail => match &self.workflow_engine {
+                None => Ok(json!({"status":"unavailable"})),
+                Some(engine) => {
+                    if resource.is_empty() {
+                        return Err(Error::Invalid.into());
+                    }
+                    match engine.get_run(resource).await {
+                        Ok(data) => {
+                            let mut out = json!({"status":"ok"});
+                            if let Some(obj) = out.as_object_mut() {
+                                if let Some(map) = data.as_object() {
+                                    for (k, v) in map {
+                                        obj.insert(k.clone(), v.clone());
+                                    }
+                                }
+                            }
+                            Ok(out)
+                        }
+                        Err(crate::workflow_engine::WorkflowEngineError::NotFound) => {
+                            Err(Error::NotFound.into())
                         }
                         Err(_) => Ok(json!({"status":"error"})),
                     }

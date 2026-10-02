@@ -12,6 +12,7 @@ pub enum WorkflowEngineError {
     Configuration,
     Transport,
     Response,
+    NotFound,
 }
 
 /// Bearer-authenticated engine list client. Construct once; clone freely.
@@ -108,6 +109,19 @@ impl WorkflowEngineClient {
         self.get(&path).await
     }
 
+    /// Engine `GET /runs/{id}` — state, failure_reason, reconciliation_audit only.
+    pub async fn get_run(&self, id: &str) -> Result<Value, WorkflowEngineError> {
+        let id = id.trim();
+        if !valid_run_id(id) {
+            return Err(WorkflowEngineError::Configuration);
+        }
+        self.get(&format!(
+            "runs/{}",
+            utf8_percent_encode(id, NON_ALPHANUMERIC)
+        ))
+        .await
+    }
+
     async fn get(&self, relative: &str) -> Result<Value, WorkflowEngineError> {
         if relative.contains('?') || relative.contains('#') || relative.contains("..") {
             return Err(WorkflowEngineError::Configuration);
@@ -125,7 +139,11 @@ impl WorkflowEngineClient {
             .send()
             .await
             .map_err(|_| WorkflowEngineError::Transport)?;
-        if !response.status().is_success() {
+        let status = response.status();
+        if status.as_u16() == 404 {
+            return Err(WorkflowEngineError::NotFound);
+        }
+        if !status.is_success() {
             return Err(WorkflowEngineError::Transport);
         }
         let bytes = response
@@ -146,3 +164,31 @@ impl WorkflowEngineClient {
             .ok_or(WorkflowEngineError::Response)
     }
 }
+
+fn valid_run_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 256
+        && !matches!(value, "." | "..")
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn get_run_rejects_untrusted_identifiers_without_transport() {
+        let client = WorkflowEngineClient::new("http://127.0.0.1:9/", &"a".repeat(32))
+            .expect("client");
+        for bad in ["", ".", "..", "a/b", "a b", "a?b", "a#b", &"x".repeat(257)] {
+            assert_eq!(
+                client.get_run(bad).await,
+                Err(WorkflowEngineError::Configuration),
+                "{bad:?}"
+            );
+        }
+    }
+}
+
