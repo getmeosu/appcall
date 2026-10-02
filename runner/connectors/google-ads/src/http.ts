@@ -1,6 +1,10 @@
 import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bun/src/http";
 import manifest from "../manifest.json";
 
+/** Google Ads REST API version. Task targets v19+; bump when Google sunsets. */
+export const GOOGLE_ADS_API_VERSION = "v19";
+export const GOOGLE_ADS_BASE_URL = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}`;
+
 // ---------------------------------------------------------------------------
 // Google Ads GAQL raw API shapes
 // ---------------------------------------------------------------------------
@@ -54,6 +58,11 @@ export function parseNextPageToken(response: unknown): string | null {
   if (!isRecord(response)) return null;
   const token = response.nextPageToken;
   return typeof token === "string" && token.length > 0 ? token : null;
+}
+
+/** Strip hyphens/spaces from a Google Ads customer ID. */
+export function sanitizeCustomerId(customerId: string): string {
+  return customerId.replace(/[-\s]/g, "");
 }
 
 // ---------------------------------------------------------------------------
@@ -119,11 +128,107 @@ export type GoogleAdsAdRow = {
   [key: string]: unknown;
 };
 
+export type GoogleAdsKeywordRow = {
+  ad_group_criterion: {
+    resource_name: string;
+    criterion_id: string;
+    status: string;
+    type?: string;
+    ad_group?: string;
+    keyword?: {
+      text?: string;
+      match_type?: string;
+    };
+    cpc_bid_micros?: string;
+    negative?: boolean;
+    [key: string]: unknown;
+  };
+  metrics?: {
+    impressions?: string;
+    clicks?: string;
+    cost_micros?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+export type GoogleAdsBudgetRow = {
+  campaign_budget: {
+    resource_name: string;
+    id: string;
+    name?: string;
+    amount_micros?: string;
+    status?: string;
+    delivery_method?: string;
+    period?: string;
+    explicitly_shared?: boolean;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+export type GoogleAdsCustomerClientRow = {
+  customer_client: {
+    resource_name: string;
+    client_customer?: string;
+    id?: string;
+    descriptive_name?: string;
+    status?: string;
+    manager?: boolean;
+    level?: string;
+    currency_code?: string;
+    time_zone?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+export type GoogleAdsUserListRow = {
+  user_list: {
+    resource_name: string;
+    id: string;
+    name?: string;
+    description?: string;
+    membership_status?: string;
+    size_for_display?: string;
+    size_for_search?: string;
+    type?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+export type GoogleAdsConversionActionRow = {
+  conversion_action: {
+    resource_name: string;
+    id: string;
+    name?: string;
+    status?: string;
+    type?: string;
+    category?: string;
+    primary_for_goal?: boolean;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
 export type GoogleAdsSearchResponse = {
   results: unknown[];
   nextPageToken?: string;
   totalResultsCount?: string;
   fieldMask?: string;
+  [key: string]: unknown;
+};
+
+export type GoogleAdsMutateResponse = {
+  results?: Array<{ resourceName?: string; resource_name?: string; [key: string]: unknown }>;
+  partialFailureError?: unknown;
+  [key: string]: unknown;
+};
+
+export type GoogleAdsAccessibleCustomersResponse = {
+  resourceNames?: string[];
+  resource_names?: string[];
   [key: string]: unknown;
 };
 
@@ -140,13 +245,39 @@ export type GoogleAdsClientOptions = {
   operation?: string;
 };
 
-export function createGoogleAdsClient(options: GoogleAdsClientOptions): ConnectorHttpClient {
+export type GoogleAdsHttpResult = {
+  status: number;
+  headers: Record<string, string>;
+  body: unknown;
+};
+
+export function createGoogleAdsClient(options: GoogleAdsClientOptions) {
   const operation = options.operation ?? "campaigns.list";
-  return options.httpClient ?? createConnectorHttpClient({
+  const httpClient = options.httpClient ?? createConnectorHttpClient({
     allowedHosts: manifest.network.allowedHosts as string[],
     maxResponseBytes: (manifest.operations as Record<string, { maxResponseBytes?: number }>)[operation]?.maxResponseBytes ?? 5242880,
     fetch: options.fetch,
   });
+
+  return {
+    async fetchJSON(path: string, init: RequestInit = {}): Promise<GoogleAdsHttpResult> {
+      const url = path.startsWith("http") ? path : `${GOOGLE_ADS_BASE_URL}${path}`;
+      const response = await httpClient.fetchText(url, {
+        ...init,
+        headers: {
+          ...buildGoogleAdsHeaders(options),
+          ...(init.headers as Record<string, string> | undefined),
+        },
+      });
+      let body: unknown;
+      try {
+        body = JSON.parse(response.body);
+      } catch {
+        body = response.body;
+      }
+      return { status: response.status, headers: response.headers, body };
+    },
+  };
 }
 
 /**
@@ -159,7 +290,7 @@ export function buildGoogleAdsHeaders(options: GoogleAdsClientOptions): Record<s
     "Content-Type": "application/json",
   };
   if (options.loginCustomerId) {
-    headers["login-customer-id"] = options.loginCustomerId;
+    headers["login-customer-id"] = sanitizeCustomerId(options.loginCustomerId);
   }
   return headers;
 }

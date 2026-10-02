@@ -208,7 +208,33 @@ import {
 } from "../../connectors/calendly/src/actions";
 import googleAdsManifest from "../../connectors/google-ads/manifest.json";
 import { healthcheck as googleAdsHealthcheck } from "../../connectors/google-ads/src/healthcheck";
-import { executeCampaignsListSync as listGoogleAdsCampaigns, executeAdGroupsListSync as listGoogleAdsAdGroups, executeAdsListSync as listGoogleAdsAds } from "../../connectors/google-ads/src/sync";
+import {
+  listAccessibleCustomers as gadsListAccessibleCustomers,
+  listSubAccounts as gadsListSubAccounts,
+  getCampaign as gadsGetCampaign,
+  getCampaignByName as gadsGetCampaignByName,
+  mutateCampaigns as gadsMutateCampaigns,
+  mutateAdGroups as gadsMutateAdGroups,
+  mutateAds as gadsMutateAds,
+  mutateKeywords as gadsMutateKeywords,
+  mutateBudgets as gadsMutateBudgets,
+  gaqlSearch as gadsGaqlSearch,
+  gaqlSearchStream as gadsGaqlSearchStream,
+  createCustomerList as gadsCreateCustomerList,
+  mutateCustomerListMembers as gadsMutateCustomerListMembers,
+  mutateConversionActions as gadsMutateConversionActions,
+  mutateLabels as gadsMutateLabels,
+  getReport as gadsGetReport,
+} from "../../connectors/google-ads/src/actions";
+import {
+  executeCampaignsListSync as listGoogleAdsCampaigns,
+  executeAdGroupsListSync as listGoogleAdsAdGroups,
+  executeAdsListSync as listGoogleAdsAds,
+  executeKeywordsListSync as listGoogleAdsKeywords,
+  executeBudgetsListSync as listGoogleAdsBudgets,
+  executeCustomerListsListSync as listGoogleAdsCustomerLists,
+  executeConversionActionsListSync as listGoogleAdsConversionActions,
+} from "../../connectors/google-ads/src/sync";
 import metaAdsManifest from "../../connectors/meta-ads/manifest.json";
 import { healthcheck as metaAdsHealthcheck } from "../../connectors/meta-ads/src/healthcheck";
 import { executeCampaignsListSync as listMetaCampaigns, executeAdSetsListSync as listMetaAdSets, executeAdsListSync as listMetaAds, executeAdAccountsListSync as listMetaAdAccounts } from "../../connectors/meta-ads/src/sync";
@@ -754,6 +780,24 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "slots.available": calGetSlots,
       "bookings.create": calCreateBooking,
     },
+    "google-ads": {
+      "customers.listAccessible": gadsListAccessibleCustomers,
+      "customers.listSubAccounts": gadsListSubAccounts,
+      "campaigns.get": gadsGetCampaign,
+      "campaigns.getByName": gadsGetCampaignByName,
+      "campaigns.mutate": gadsMutateCampaigns,
+      "ad_groups.mutate": gadsMutateAdGroups,
+      "ads.mutate": gadsMutateAds,
+      "keywords.mutate": gadsMutateKeywords,
+      "budgets.mutate": gadsMutateBudgets,
+      "gaql.search": gadsGaqlSearch,
+      "gaql.searchStream": gadsGaqlSearchStream,
+      "customer_lists.create": gadsCreateCustomerList,
+      "customer_lists.mutateMembers": gadsMutateCustomerListMembers,
+      "conversion_actions.mutate": gadsMutateConversionActions,
+      "labels.mutate": gadsMutateLabels,
+      "reports.get": gadsGetReport,
+    },
     shopify: {
       "products.get": shopifyGetProduct,
       "products.create": shopifyCreateProduct,
@@ -1023,6 +1067,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "campaigns.list": listGoogleAdsCampaigns,
       "ad_groups.list": listGoogleAdsAdGroups,
       "ads.list": listGoogleAdsAds,
+      "keywords.list": listGoogleAdsKeywords,
+      "budgets.list": listGoogleAdsBudgets,
+      "customer_lists.list": listGoogleAdsCustomerLists,
+      "conversion_actions.list": listGoogleAdsConversionActions,
     },
     "meta-ads": {
       "campaigns.list": listMetaCampaigns,
