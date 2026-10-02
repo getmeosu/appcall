@@ -126,21 +126,16 @@ impl Manifest {
                     require(op.reconcile.is_empty(), "operations.reconcile")?;
                 }
                 crate::EffectPolicy::Idempotent | crate::EffectPolicy::Reconcile => {
-                    if op.effect_policy == crate::EffectPolicy::Reconcile {
-                        require(key(&op.reconcile), "operations.reconcile")?;
-                    } else if !op.reconcile.is_empty() {
-                        require(key(&op.reconcile), "operations.reconcile")?;
-                    }
-                    if !op.reconcile.is_empty() {
-                        let Some(target) = self.operations.get(&op.reconcile) else {
-                            return Err(Error::invalid("operations.reconcile"));
-                        };
-                        // Observe targets must be read-ish: syncs or explicit read actions.
-                        require(
-                            target.kind == OperationKind::Sync || target.is_read_only(),
-                            "operations.reconcile",
-                        )?;
-                    }
+                    // Both policies observe via reconcile; empty is invalid.
+                    require(key(&op.reconcile), "operations.reconcile")?;
+                    let Some(target) = self.operations.get(&op.reconcile) else {
+                        return Err(Error::invalid("operations.reconcile"));
+                    };
+                    // Observe targets must be read-ish: syncs or explicit read actions.
+                    require(
+                        target.kind == OperationKind::Sync || target.is_read_only(),
+                        "operations.reconcile",
+                    )?;
                 }
             }
         }
