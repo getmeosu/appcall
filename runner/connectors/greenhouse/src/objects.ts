@@ -2,8 +2,9 @@
  * Greenhouse object normalization.
  *
  * jobs.list uses the public Job Board shape ({ jobs: [...] }).
- * Authenticated Harvest list ops return a bare JSON array
- * (GET /v1/candidates, /v1/applications, /v1/users).
+ * jobs.get uses authenticated Harvest GET /v1/jobs/{id} (name/offices).
+ * Authenticated Harvest list/get ops return bare JSON
+ * (GET /v1/candidates, /v1/applications, /v1/users, /v1/scheduled_interviews).
  */
 
 export interface NormalizedJob {
@@ -67,21 +68,49 @@ export interface NormalizedUser {
   updatedAt: string | null;
 }
 
+export interface NormalizedInterview {
+  id: string;
+  provider: string;
+  applicationId: string | null;
+  externalEventId: string | null;
+  status: string | null;
+  interviewId: string | null;
+  interviewName: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  location: string | null;
+  videoConferencingUrl: string | null;
+  organizerId: string | null;
+  interviewerIds: string[];
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 interface GreenhouseLocation {
   name?: string;
 }
 
 interface GreenhouseJob {
-  id: number;
-  title?: string;
+  id: number | string;
+  /** Job Board field. */
+  title?: string | null;
+  /** Harvest jobs field (GET /v1/jobs/{id}). */
+  name?: string | null;
   location?: GreenhouseLocation | null;
-  departments?: Array<{ name?: string }> | null;
+  departments?: Array<{ name?: string | null }> | null;
+  /** Harvest offices (preferred location source for jobs.get). */
+  offices?: Array<{ name?: string | null; location?: GreenhouseLocation | null }> | null;
   updated_at?: string | null;
   absolute_url?: string | null;
+  status?: string | null;
   metadata?: Array<{
     name?: string;
     value?: string | null;
   }> | null;
+  keyed_custom_fields?: Record<
+    string,
+    { name?: string | null; type?: string | null; value?: string | null } | null
+  > | null;
 }
 
 function asStringId(value: unknown): string | null {
@@ -113,7 +142,11 @@ function asStringArray(value: unknown): string[] {
 }
 
 export function normalizeJob(job: GreenhouseJob): NormalizedJob {
-  const location = job.location?.name ?? null;
+  const office = Array.isArray(job.offices) ? job.offices[0] : undefined;
+  const location =
+    job.location?.name ??
+    office?.location?.name ??
+    (typeof office?.name === "string" && office.name.length > 0 ? office.name : null);
   const department = job.departments?.[0]?.name ?? null;
 
   let jobType: string | null = null;
@@ -121,11 +154,22 @@ export function normalizeJob(job: GreenhouseJob): NormalizedJob {
     const typeMeta = job.metadata.find((m) => m.name === "Employment Type");
     if (typeMeta?.value) jobType = typeMeta.value;
   }
+  if (!jobType && job.keyed_custom_fields) {
+    const emp = job.keyed_custom_fields.employment_type;
+    if (emp?.value) jobType = emp.value;
+  }
+
+  const title =
+    (typeof job.title === "string" && job.title.length > 0 ? job.title : null) ??
+    (typeof job.name === "string" ? job.name : "") ??
+    "";
+
+  const id = asStringId(job.id) ?? "";
 
   return {
-    id: `gh-job:${job.id}`,
+    id: `gh-job:${id}`,
     provider: "greenhouse",
-    title: job.title ?? "",
+    title,
     location,
     department,
     jobType,
@@ -288,4 +332,96 @@ export function parseUsersResponse(raw: unknown): {
 } {
   const items = Array.isArray(raw) ? (raw as GreenhouseUser[]) : [];
   return { users: items.map(normalizeUser) };
+}
+
+/** Harvest GET /v1/candidates/{id} returns the candidate object at the top level. */
+export function parseCandidateGetResponse(raw: unknown): {
+  candidate: NormalizedCandidate | null;
+} {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { candidate: null };
+  }
+  const candidate = raw as GreenhouseCandidate;
+  if (candidate.id == null || asStringId(candidate.id) == null) {
+    return { candidate: null };
+  }
+  return { candidate: normalizeCandidate(candidate) };
+}
+
+/** Harvest GET /v1/jobs/{id} returns the job object at the top level. */
+export function parseJobGetResponse(raw: unknown): { job: NormalizedJob | null } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { job: null };
+  }
+  const job = raw as GreenhouseJob;
+  if (job.id == null || asStringId(job.id) == null) {
+    return { job: null };
+  }
+  return { job: normalizeJob(job) };
+}
+
+interface GreenhouseInterviewTime {
+  date_time?: string | null;
+  date?: string | null;
+}
+
+interface GreenhouseInterview {
+  id: number | string;
+  application_id?: number | string | null;
+  external_event_id?: string | null;
+  status?: string | null;
+  location?: string | null;
+  video_conferencing_url?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  start?: GreenhouseInterviewTime | null;
+  end?: GreenhouseInterviewTime | null;
+  interview?: { id?: number | string | null; name?: string | null } | null;
+  organizer?: { id?: number | string | null } | null;
+  interviewers?: Array<{ user_id?: number | string | null; id?: number | string | null }> | null;
+}
+
+function interviewTimestamp(slot: GreenhouseInterviewTime | null | undefined): string | null {
+  if (!slot || typeof slot !== "object") return null;
+  if (typeof slot.date_time === "string" && slot.date_time.length > 0) return slot.date_time;
+  if (typeof slot.date === "string" && slot.date.length > 0) return slot.date;
+  return null;
+}
+
+export function normalizeInterview(interview: GreenhouseInterview): NormalizedInterview {
+  const id = asStringId(interview.id) ?? "";
+  const interviewerIds: string[] = [];
+  if (Array.isArray(interview.interviewers)) {
+    for (const row of interview.interviewers) {
+      const uid = asStringId(row?.user_id ?? row?.id ?? null);
+      if (uid) interviewerIds.push(uid);
+    }
+  }
+  return {
+    id: `gh-interview:${id}`,
+    provider: "greenhouse",
+    applicationId: asStringId(interview.application_id ?? null),
+    externalEventId:
+      typeof interview.external_event_id === "string" && interview.external_event_id.length > 0
+        ? interview.external_event_id
+        : null,
+    status: interview.status ?? null,
+    interviewId: asStringId(interview.interview?.id ?? null),
+    interviewName: interview.interview?.name ?? null,
+    startsAt: interviewTimestamp(interview.start),
+    endsAt: interviewTimestamp(interview.end),
+    location: interview.location ?? null,
+    videoConferencingUrl: interview.video_conferencing_url ?? null,
+    organizerId: asStringId(interview.organizer?.id ?? null),
+    interviewerIds,
+    createdAt: asIso(interview.created_at),
+    updatedAt: asIso(interview.updated_at),
+  };
+}
+
+export function parseInterviewsResponse(raw: unknown): {
+  interviews: NormalizedInterview[];
+} {
+  const items = Array.isArray(raw) ? (raw as GreenhouseInterview[]) : [];
+  return { interviews: items.map(normalizeInterview) };
 }

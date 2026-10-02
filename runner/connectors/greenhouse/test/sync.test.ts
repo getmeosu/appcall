@@ -1,13 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import {
   executeJobsListSync,
+  executeJobsGetSync,
   executeCandidatesListSync,
+  executeCandidatesGetSync,
   executeApplicationsListSync,
   executeUsersListSync,
+  executeInterviewsListSync,
 } from "../src/sync";
 import candidatesFixture from "../fixtures/candidates_list.json";
+import candidateGetFixture from "../fixtures/candidate_get.json";
 import applicationsFixture from "../fixtures/applications_list.json";
 import usersFixture from "../fixtures/users_list.json";
+import jobGetFixture from "../fixtures/job_get.json";
+import interviewsFixture from "../fixtures/interviews_list.json";
 
 // Every request is served by an injected fetch. No real network.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
@@ -212,6 +218,115 @@ describe("Greenhouse users.list sync", () => {
   test("classifies upstream errors", async () => {
     const { impl } = stubFetch("{}", { status: 401 });
     await expect(executeUsersListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
+  });
+});
+
+describe("Greenhouse candidates.get sync", () => {
+  test("GETs /v1/candidates/{id} with Basic auth on harvest host", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(candidateGetFixture));
+
+    const result = await executeCandidatesGetSync({ ...auth, id: "53883394", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("harvest.greenhouse.io");
+    expect(url.pathname).toBe("/v1/candidates/53883394");
+    expect(calls[0].method).toBe("GET");
+    expect(calls[0].headers.get("authorization")).toBe(
+      `Basic ${Buffer.from("fixturekey:", "utf8").toString("base64")}`,
+    );
+    expect(result.candidate?.id).toBe("gh-candidate:53883394");
+    expect(result.candidate?.name).toBe("John Locke");
+  });
+
+  test("rejects unsafe id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(
+      executeCandidatesGetSync({ ...auth, id: "../evil", fetch: impl }),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 404 });
+    await expect(
+      executeCandidatesGetSync({ ...auth, id: "53883394", fetch: impl }),
+    ).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+describe("Greenhouse jobs.get sync", () => {
+  test("GETs Harvest /v1/jobs/{id} (not boards)", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(jobGetFixture));
+
+    const result = await executeJobsGetSync({ ...auth, id: "224588", fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("harvest.greenhouse.io");
+    expect(url.pathname).toBe("/v1/jobs/224588");
+    expect(calls[0].method).toBe("GET");
+    expect(result.job?.id).toBe("gh-job:224588");
+    expect(result.job?.title).toBe("Product Manager");
+    expect(result.job?.department).toBe("Product");
+  });
+
+  test("rejects unsafe id before fetch", async () => {
+    const { calls, impl } = stubFetch("{}");
+    await expect(executeJobsGetSync({ ...auth, id: "a/b", fetch: impl })).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 500 });
+    await expect(executeJobsGetSync({ ...auth, id: "224588", fetch: impl })).rejects.toMatchObject({
+      code: "CONNECTOR_UPSTREAM_ERROR",
+    });
+  });
+});
+
+describe("Greenhouse interviews.list sync", () => {
+  test("GETs /v1/scheduled_interviews with Basic auth on harvest host", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
+
+    const result = await executeInterviewsListSync({ ...auth, fetch: impl });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.hostname).toBe("harvest.greenhouse.io");
+    expect(url.pathname).toBe("/v1/scheduled_interviews");
+    expect(calls[0].method).toBe("GET");
+    expect(result.interviews).toHaveLength(2);
+    expect(result.interviews[0].id).toBe("gh-interview:997234");
+    expect(result.interviews[0].interviewName).toBe("Recruiter Phone Screen");
+  });
+
+  test("forwards perPage/page/applicationId/jobId filters", async () => {
+    const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
+
+    await executeInterviewsListSync({
+      ...auth,
+      perPage: 25,
+      page: 2,
+      applicationId: 69306314,
+      jobId: 107761,
+      createdAfter: "2017-01-01T00:00:00.000Z",
+      fetch: impl,
+    });
+
+    const url = new URL(calls[0].url);
+    expect(url.searchParams.get("per_page")).toBe("25");
+    expect(url.searchParams.get("page")).toBe("2");
+    expect(url.searchParams.get("application_id")).toBe("69306314");
+    expect(url.searchParams.get("job_id")).toBe("107761");
+    expect(url.searchParams.get("created_after")).toBe("2017-01-01T00:00:00.000Z");
+  });
+
+  test("classifies upstream errors", async () => {
+    const { impl } = stubFetch("{}", { status: 503 });
+    await expect(executeInterviewsListSync({ ...auth, fetch: impl })).rejects.toMatchObject({
       code: "CONNECTOR_UPSTREAM_ERROR",
     });
   });

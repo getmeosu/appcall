@@ -6,8 +6,8 @@ describe("Greenhouse manifest", () => {
     expect(manifest.key).toBe("greenhouse");
   });
 
-  it("has version 0.2.0", () => {
-    expect(manifest.version).toBe("0.2.0");
+  it("has version 0.3.0", () => {
+    expect(manifest.version).toBe("0.3.0");
   });
 
   it("uses bun runtime", () => {
@@ -30,11 +30,14 @@ describe("Greenhouse manifest", () => {
     expect(manifest.network.allowedHosts).toContain("boards-api.greenhouse.io");
   });
 
-  it("declares P0 Harvest list ops", () => {
+  it("declares P0 list + P1 get/interview ops", () => {
     expect(manifest.operations["candidates.list"]).toBeTruthy();
+    expect(manifest.operations["candidates.get"]).toBeTruthy();
     expect(manifest.operations["applications.list"]).toBeTruthy();
     expect(manifest.operations["users.list"]).toBeTruthy();
     expect(manifest.operations["jobs.list"]).toBeTruthy();
+    expect(manifest.operations["jobs.get"]).toBeTruthy();
+    expect(manifest.operations["interviews.list"]).toBeTruthy();
   });
 
   it("declares authenticated healthcheck request", () => {
@@ -42,7 +45,7 @@ describe("Greenhouse manifest", () => {
     expect(manifest.operations.healthcheck.kind).toBe("action");
   });
 
-  it("declares job/candidate/application/user models", () => {
-    expect(manifest.models).toEqual(["job", "candidate", "application", "user"]);
+  it("declares job/candidate/application/user/interview models", () => {
+    expect(manifest.models).toEqual(["job", "candidate", "application", "user", "interview"]);
   });
 });

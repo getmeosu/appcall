@@ -2,17 +2,24 @@ import { describe, expect, it } from "bun:test";
 import {
   normalizeJob,
   parseJobsResponse,
+  parseJobGetResponse,
   normalizeCandidate,
   parseCandidatesResponse,
+  parseCandidateGetResponse,
   normalizeApplication,
   parseApplicationsResponse,
   normalizeUser,
   parseUsersResponse,
+  normalizeInterview,
+  parseInterviewsResponse,
 } from "../src/objects";
 import jobsFixture from "../fixtures/jobs_list.json";
+import jobGetFixture from "../fixtures/job_get.json";
 import candidatesFixture from "../fixtures/candidates_list.json";
+import candidateGetFixture from "../fixtures/candidate_get.json";
 import applicationsFixture from "../fixtures/applications_list.json";
 import usersFixture from "../fixtures/users_list.json";
+import interviewsFixture from "../fixtures/interviews_list.json";
 
 describe("Greenhouse normalizeJob", () => {
   it("normalizes a full job correctly", () => {
@@ -245,5 +252,79 @@ describe("Greenhouse parseUsersResponse", () => {
 
   it("handles non-array body", () => {
     expect(parseUsersResponse({}).users).toHaveLength(0);
+  });
+});
+
+describe("Greenhouse parseCandidateGetResponse", () => {
+  it("parses Harvest candidate get fixture", () => {
+    const result = parseCandidateGetResponse(candidateGetFixture);
+    expect(result.candidate?.id).toBe("gh-candidate:53883394");
+    expect(result.candidate?.name).toBe("John Locke");
+    expect(result.candidate?.emails).toEqual(["test@work.com", "test@example.com"]);
+  });
+
+  it("returns null for non-object bodies", () => {
+    expect(parseCandidateGetResponse([]).candidate).toBeNull();
+    expect(parseCandidateGetResponse(null).candidate).toBeNull();
+    expect(parseCandidateGetResponse({}).candidate).toBeNull();
+  });
+});
+
+describe("Greenhouse parseJobGetResponse", () => {
+  it("parses Harvest job get fixture", () => {
+    const result = parseJobGetResponse(jobGetFixture);
+    expect(result.job?.id).toBe("gh-job:224588");
+    expect(result.job?.title).toBe("Product Manager");
+    expect(result.job?.department).toBe("Product");
+    expect(result.job?.location).toBe("New York, NY");
+    expect(result.job?.jobType).toBe("Full-time");
+    expect(result.job?.provider).toBe("greenhouse");
+  });
+
+  it("returns null for non-object bodies", () => {
+    expect(parseJobGetResponse([]).job).toBeNull();
+    expect(parseJobGetResponse(null).job).toBeNull();
+    expect(parseJobGetResponse({}).job).toBeNull();
+  });
+});
+
+describe("Greenhouse normalizeInterview", () => {
+  it("normalizes a scheduled interview from fixture", () => {
+    const interview = normalizeInterview(interviewsFixture[0] as never);
+    expect(interview.id).toBe("gh-interview:997234");
+    expect(interview.provider).toBe("greenhouse");
+    expect(interview.applicationId).toBe("69306314");
+    expect(interview.externalEventId).toBe("evt-abc-123");
+    expect(interview.status).toBe("scheduled");
+    expect(interview.interviewId).toBe("4567");
+    expect(interview.interviewName).toBe("Recruiter Phone Screen");
+    expect(interview.startsAt).toBe("2017-10-15T15:00:00.000Z");
+    expect(interview.endsAt).toBe("2017-10-15T16:00:00.000Z");
+    expect(interview.location).toBe("123 Main Street, Boston, MA");
+    expect(interview.videoConferencingUrl).toBe("https://zoom.us/j/555111222");
+    expect(interview.organizerId).toBe("92120");
+    expect(interview.interviewerIds).toEqual(["92120", "453636"]);
+  });
+
+  it("falls back to date when date_time is null", () => {
+    const interview = normalizeInterview(interviewsFixture[1] as never);
+    expect(interview.startsAt).toBe("2017-10-20");
+    expect(interview.endsAt).toBe("2017-10-20");
+    expect(interview.status).toBe("complete");
+    expect(interview.organizerId).toBeNull();
+    expect(interview.interviewerIds).toEqual([]);
+  });
+});
+
+describe("Greenhouse parseInterviewsResponse", () => {
+  it("parses fixture response", () => {
+    const result = parseInterviewsResponse(interviewsFixture);
+    expect(result.interviews).toHaveLength(2);
+    expect(result.interviews[0].id).toBe("gh-interview:997234");
+  });
+
+  it("handles non-array body", () => {
+    expect(parseInterviewsResponse({}).interviews).toHaveLength(0);
+    expect(parseInterviewsResponse(null).interviews).toHaveLength(0);
   });
 });

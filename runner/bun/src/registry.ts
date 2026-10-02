@@ -174,9 +174,12 @@ import { executeInvoicesListSync as listQBInvoices, executeCustomersListSync as 
 import greenhouseManifest from "../../connectors/greenhouse/manifest.json";
 import {
   executeJobsListSync as listGreenhouseJobs,
+  executeJobsGetSync as getGreenhouseJob,
   executeCandidatesListSync as listGreenhouseCandidates,
+  executeCandidatesGetSync as getGreenhouseCandidate,
   executeApplicationsListSync as listGreenhouseApplications,
   executeUsersListSync as listGreenhouseUsers,
+  executeInterviewsListSync as listGreenhouseInterviews,
 } from "../../connectors/greenhouse/src/sync";
 import leverManifest from "../../connectors/lever/manifest.json";
 import {
@@ -1113,9 +1116,12 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
     greenhouse: {
       "jobs.list": listGreenhouseJobs,
+      "jobs.get": getGreenhouseJob,
       "candidates.list": listGreenhouseCandidates,
+      "candidates.get": getGreenhouseCandidate,
       "applications.list": listGreenhouseApplications,
       "users.list": listGreenhouseUsers,
+      "interviews.list": listGreenhouseInterviews,
     },
     lever: {
       "jobs.list": listLeverJobs,

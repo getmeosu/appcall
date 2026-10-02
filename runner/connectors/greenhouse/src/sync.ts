@@ -1,22 +1,30 @@
 /**
- * Greenhouse list syncs.
+ * Greenhouse list/get syncs.
  *
  * jobs.list          → public GET /v1/boards/{boardToken}/jobs
+ * jobs.get           → authenticated Harvest GET /v1/jobs/{id}
  * candidates.list    → authenticated GET /v1/candidates
+ * candidates.get     → authenticated GET /v1/candidates/{id}
  * applications.list  → authenticated GET /v1/applications
  * users.list         → authenticated GET /v1/users
+ * interviews.list    → authenticated GET /v1/scheduled_interviews
  */
 
 import { createClient, createAuthClient } from "./http";
+import { assertSafePathSegment } from "../../_shared/jobboard";
 import {
   parseJobsResponse,
+  parseJobGetResponse,
   parseCandidatesResponse,
+  parseCandidateGetResponse,
   parseApplicationsResponse,
   parseUsersResponse,
+  parseInterviewsResponse,
   type NormalizedJob,
   type NormalizedCandidate,
   type NormalizedApplication,
   type NormalizedUser,
+  type NormalizedInterview,
 } from "./objects";
 
 export interface ExecuteJobsListSyncInput {
@@ -96,6 +104,32 @@ export async function executeCandidatesListSync(
     });
   const raw = await client.getJSON(path);
   return parseCandidatesResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// candidates.get — GET /v1/candidates/{id}
+// ---------------------------------------------------------------------------
+
+export interface ExecuteCandidatesGetSyncInput extends GreenhouseAuthInput {
+  /** Harvest candidate id. */
+  id: string;
+}
+
+export interface ExecuteCandidatesGetSyncOutput {
+  candidate: NormalizedCandidate | null;
+}
+
+export async function executeCandidatesGetSync(
+  input: ExecuteCandidatesGetSyncInput,
+): Promise<ExecuteCandidatesGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "candidates.get",
+  });
+  const raw = await client.getJSON(`/candidates/${id}`);
+  return parseCandidateGetResponse(raw);
 }
 
 // ---------------------------------------------------------------------------
@@ -180,4 +214,73 @@ export async function executeUsersListSync(
     });
   const raw = await client.getJSON(path);
   return parseUsersResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// jobs.get — Harvest GET /v1/jobs/{id} (NOT boards)
+// ---------------------------------------------------------------------------
+
+export interface ExecuteJobsGetSyncInput extends GreenhouseAuthInput {
+  /** Harvest job id. */
+  id: string;
+}
+
+export interface ExecuteJobsGetSyncOutput {
+  job: NormalizedJob | null;
+}
+
+export async function executeJobsGetSync(
+  input: ExecuteJobsGetSyncInput,
+): Promise<ExecuteJobsGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "jobs.get",
+  });
+  const raw = await client.getJSON(`/jobs/${id}`);
+  return parseJobGetResponse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// interviews.list — GET /v1/scheduled_interviews
+// ---------------------------------------------------------------------------
+
+export interface ExecuteInterviewsListSyncInput extends GreenhouseAuthInput {
+  perPage?: number;
+  page?: number;
+  applicationId?: string | number;
+  jobId?: string | number;
+  createdBefore?: string;
+  createdAfter?: string;
+  updatedBefore?: string;
+  updatedAfter?: string;
+}
+
+export interface ExecuteInterviewsListSyncOutput {
+  interviews: NormalizedInterview[];
+}
+
+export async function executeInterviewsListSync(
+  input: ExecuteInterviewsListSyncInput,
+): Promise<ExecuteInterviewsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "interviews.list",
+  });
+  const path =
+    "/scheduled_interviews" +
+    buildQuery({
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+      page: input.page != null ? String(input.page) : undefined,
+      application_id: input.applicationId != null ? String(input.applicationId) : undefined,
+      job_id: input.jobId != null ? String(input.jobId) : undefined,
+      created_before: input.createdBefore,
+      created_after: input.createdAfter,
+      updated_before: input.updatedBefore,
+      updated_after: input.updatedAfter,
+    });
+  const raw = await client.getJSON(path);
+  return parseInterviewsResponse(raw);
 }
