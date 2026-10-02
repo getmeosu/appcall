@@ -153,8 +153,14 @@ fn sqlite_sealed_history_is_load_bearing_in_source_and_evidence() {
 #[test]
 #[ignore = "set APPCALL_BLOB_REWRITE_PHASE=before|after to regenerate evidence"]
 fn measure_sqlite_blob_rewrite_vs_history_depth() {
-    let phase = std::env::var("APPCALL_BLOB_REWRITE_PHASE").expect("APPCALL_BLOB_REWRITE_PHASE");
-    assert!(phase == "before" || phase == "after");
+    let Ok(phase) = std::env::var("APPCALL_BLOB_REWRITE_PHASE") else {
+        // cargo test -- --ignored runs without a regenerate request.
+        return;
+    };
+    assert!(
+        phase == "before" || phase == "after",
+        "APPCALL_BLOB_REWRITE_PHASE must be before|after, got {phase}"
+    );
 
     let depths: &[usize] = &[1, 16, 64, 256, 512, 1024];
     let samples = 5u32;
