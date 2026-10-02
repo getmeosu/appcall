@@ -179,7 +179,12 @@ import ashbyManifest from "../../connectors/ashby/manifest.json";
 import { executeJobsListSync as listAshbyJobs } from "../../connectors/ashby/src/sync";
 import workableManifest from "../../connectors/workable/manifest.json";
 import { healthcheck as workableHealthcheck } from "../../connectors/workable/src/healthcheck";
-import { executeJobsListSync as listWorkableJobs } from "../../connectors/workable/src/sync";
+import {
+  executeJobsListSync as listWorkableJobs,
+  executeCandidatesListSync as listWorkableCandidates,
+  executeStagesListSync as listWorkableStages,
+  executeMembersListSync as listWorkableMembers,
+} from "../../connectors/workable/src/sync";
 import smartrecruitersManifest from "../../connectors/smartrecruiters/manifest.json";
 import { executeJobsListSync as listSmartRecruitersJobs } from "../../connectors/smartrecruiters/src/sync";
 import recruiteeManifest from "../../connectors/recruitee/manifest.json";
@@ -1076,6 +1081,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     },
     workable: {
       "jobs.list": listWorkableJobs,
+      "candidates.list": listWorkableCandidates,
+      "stages.list": listWorkableStages,
+      "members.list": listWorkableMembers,
     },
     smartrecruiters: {
       "jobs.list": listSmartRecruitersJobs,
