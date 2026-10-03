@@ -285,6 +285,14 @@ import {
   validateListUserProjectFieldsInput,
 } from "./card5_reads";
 import {
+  createCard8ReadsClient,
+  validateGetAppInput,
+  validateGetAuthenticatedUserPackageInput,
+  validateGetOrgPackageInput,
+  validateGetOrgPackageVersionInput,
+  validateGetUserPackageInput,
+} from "./card8_reads";
+import {
   createCard6ReadsClient,
   validateGetCodeOfConductInput,
   validateListRepoAssigneesInput,
@@ -5211,6 +5219,69 @@ export function searchLabels(input: unknown): Record<string, unknown> | Promise<
   }
   return { connector: "github", action: "search.labels.list", source: "connector", validated: validateSearchLabelsInput(input) };
 }
+
+
+// ─── card8-reads: app and package reads ──────────────────────────────────────
+
+function liveCard8ReadsClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard8ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getApp(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard8ReadsClient(input, "apps.get").getApp(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "apps.get", source: "connector", app: result.app };
+    });
+  }
+  return { connector: "github", action: "apps.get", source: "connector", validated: validateGetAppInput(input) };
+}
+
+export function getOrgPackage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard8ReadsClient(input, "orgs.packages.get").getOrgPackage(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.packages.get", source: "connector", package: result.package };
+    });
+  }
+  return { connector: "github", action: "orgs.packages.get", source: "connector", validated: validateGetOrgPackageInput(input) };
+}
+
+export function getUserPackage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard8ReadsClient(input, "users.packages.get").getUserPackage(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.packages.get", source: "connector", package: result.package };
+    });
+  }
+  return { connector: "github", action: "users.packages.get", source: "connector", validated: validateGetUserPackageInput(input) };
+}
+
+export function getAuthenticatedUserPackage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard8ReadsClient(input, "user.packages.get").getAuthenticatedUserPackage(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.packages.get", source: "connector", package: result.package };
+    });
+  }
+  return { connector: "github", action: "user.packages.get", source: "connector", validated: validateGetAuthenticatedUserPackageInput(input) };
+}
+
+export function getOrgPackageVersion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard8ReadsClient(input, "orgs.packages.versions.get").getOrgPackageVersion(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.packages.versions.get", source: "connector", version: result.version };
+    });
+  }
+  return { connector: "github", action: "orgs.packages.versions.get", source: "connector", validated: validateGetOrgPackageVersionInput(input) };
+}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
