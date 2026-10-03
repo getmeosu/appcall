@@ -14,6 +14,8 @@ import {
   validateLockIssueInput,
   validateUnlockIssueInput,
   validateListLabelsInput,
+  validateListIssueTimelineInput,
+  validateListIssueEventsInput,
 } from "./issues";
 import {
   createSearchClient,
@@ -58,6 +60,11 @@ import {
   validateDraftStateInput,
   validateUpdatePullRequestBranchInput,
   validateListConversationCommentsInput,
+  validateGetReviewInput,
+  validateSubmitReviewInput,
+  validateUpdateReviewCommentInput,
+  validateDeleteReviewCommentInput,
+  validateDeletePendingReviewInput,
 } from "./pull_requests";
 import {
   createWorkflowsClient,
@@ -141,8 +148,8 @@ import {
   validateStarRepoInput,
   validateUnstarRepoInput,
 } from "./notifications_social";
-import { createChecksClient, validateListCheckRunsForRefInput, validateGetCheckRunInput, validateListCheckSuitesForRefInput } from "./checks";
-import { createCommitsClient, validateGetCommitStatusInput, validateListCommitStatusesInput, validateCreateCommitStatusInput, validateGetCommitInput, validateCreateCommitCommentInput } from "./commits";
+import { createChecksClient, validateListCheckRunsForRefInput, validateGetCheckRunInput, validateListCheckSuitesForRefInput, validateListCheckAnnotationsInput, validateCreateCheckRunInput } from "./checks";
+import { createCommitsClient, validateGetCommitStatusInput, validateListCommitStatusesInput, validateCreateCommitStatusInput, validateGetCommitInput, validateCreateCommitCommentInput, validateListCommitCommentsInput, validateUpdateCommitCommentInput, validateDeleteCommitCommentInput } from "./commits";
 import { createGitHubClient } from "./http";
 import {
   createDiscussionsClient,
@@ -2473,6 +2480,188 @@ export function uploadReleaseAsset(input: unknown): Record<string, unknown> | Pr
     });
   }
   return { connector: "github", action: "releases.assets.upload", source: "connector", validated: validateUploadReleaseAssetInput(input) };
+}
+
+// ─── N2: reviews, comments, timeline, check-run create ───────────────────────
+
+export function getPullRequestReview(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.reviews.get" }),
+    }).getReview(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.reviews.get", source: "connector", review: result.review };
+    });
+  }
+  return { connector: "github", action: "pull_requests.reviews.get", source: "connector", validated: validateGetReviewInput(input) };
+}
+
+export function submitPullRequestReview(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.reviews.submit" }),
+    }).submitReview(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.reviews.submit", source: "connector", review: result.review };
+    });
+  }
+  return { connector: "github", action: "pull_requests.reviews.submit", source: "connector", validated: validateSubmitReviewInput(input) };
+}
+
+export function updatePullRequestReviewComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.review_comments.update" }),
+    }).updateReviewComment(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.review_comments.update", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "pull_requests.review_comments.update", source: "connector", validated: validateUpdateReviewCommentInput(input) };
+}
+
+export function deletePullRequestReviewComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.review_comments.delete" }),
+    }).deleteReviewComment(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.review_comments.delete", source: "connector", deleted: result.deleted, commentId: result.commentId };
+    });
+  }
+  return { connector: "github", action: "pull_requests.review_comments.delete", source: "connector", validated: validateDeleteReviewCommentInput(input) };
+}
+
+export function deletePendingPullRequestReview(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.reviews.delete_pending" }),
+    }).deletePendingReview(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.reviews.delete_pending", source: "connector", deleted: result.deleted, reviewId: result.reviewId };
+    });
+  }
+  return { connector: "github", action: "pull_requests.reviews.delete_pending", source: "connector", validated: validateDeletePendingReviewInput(input) };
+}
+
+export function listCommitComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createCommitsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "commits.comments.list" }),
+    }).listComments(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "commits.comments.list", source: "connector", comments: result.comments };
+    });
+  }
+  return { connector: "github", action: "commits.comments.list", source: "connector", validated: validateListCommitCommentsInput(input) };
+}
+
+export function updateCommitComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createCommitsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "commits.comments.update" }),
+    }).updateComment(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "commits.comments.update", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "commits.comments.update", source: "connector", validated: validateUpdateCommitCommentInput(input) };
+}
+
+export function deleteCommitComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createCommitsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "commits.comments.delete" }),
+    }).deleteComment(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "commits.comments.delete", source: "connector", deleted: result.deleted, commentId: result.commentId };
+    });
+  }
+  return { connector: "github", action: "commits.comments.delete", source: "connector", validated: validateDeleteCommitCommentInput(input) };
+}
+
+export function listIssueTimeline(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "issues.timeline.list" }),
+    }).listTimeline(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "issues.timeline.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "issues.timeline.list", source: "connector", validated: validateListIssueTimelineInput(input) };
+}
+
+export function listIssueEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createIssuesClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "issues.events.list" }),
+    }).listEvents(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "issues.events.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "issues.events.list", source: "connector", validated: validateListIssueEventsInput(input) };
+}
+
+export function listCheckAnnotations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createChecksClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "checks.annotations.list" }),
+    }).listAnnotations(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "checks.annotations.list", source: "connector", annotations: result.annotations };
+    });
+  }
+  return { connector: "github", action: "checks.annotations.list", source: "connector", validated: validateListCheckAnnotationsInput(input) };
+}
+
+export function createCheckRun(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createChecksClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "checks.runs.create" }),
+    }).createRun(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "checks.runs.create", source: "connector", id: result.id, checkRun: result.checkRun };
+    });
+  }
+  return { connector: "github", action: "checks.runs.create", source: "connector", validated: validateCreateCheckRunInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
