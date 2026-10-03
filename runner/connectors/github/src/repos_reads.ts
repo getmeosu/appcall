@@ -121,6 +121,49 @@ export function validateGetRepoLicenseInput(input: unknown): RepoScope {
   return repo(input);
 }
 
+type PageScope = RepoScope & { perPage?: number; page?: number };
+type PublicReposList = { since?: number; perPage?: number; page?: number };
+
+export function validateListNetworkEventsInput(input: unknown): PageScope {
+  return validateRepoPage(input, "repos.network.events.list");
+}
+
+export function validateListPublicRepositoriesInput(input: unknown): PublicReposList {
+  if (input === undefined || input === null) return {};
+  if (!isRecord(input)) throw new Error("repos.public.list input must be an object");
+  return {
+    since: optionalSince(input.since),
+    perPage: optionalPage(input.perPage, "perPage", 100),
+    page: optionalPage(input.page, "page", 1_000_000),
+  };
+}
+
+export function validateListRepoActivityInput(input: unknown): PageScope {
+  return validateRepoPage(input, "repos.activity.list");
+}
+
+export function validateListContributorsInput(input: unknown): PageScope {
+  return validateRepoPage(input, "repos.contributors.list");
+}
+
+export function validateListRepoEventsInput(input: unknown): PageScope {
+  return validateRepoPage(input, "repos.events.list");
+}
+
+export function validateListRepoLanguagesInput(input: unknown): RepoScope {
+  if (!isRecord(input)) throw new Error("repos.languages.list input must be an object");
+  return repo(input);
+}
+
+export function validateListRepoSecurityAdvisoriesInput(input: unknown): PageScope {
+  return validateRepoPage(input, "repos.security_advisories.list");
+}
+
+export function validateGetRepoTopicsInput(input: unknown): RepoScope {
+  if (!isRecord(input)) throw new Error("repos.topics.get input must be an object");
+  return repo(input);
+}
+
 export function validateListOrgAttestationRepositoriesInput(input: unknown): OrgScope {
   if (!isRecord(input)) throw new Error("orgs.attestations.repositories.list input must be an object");
   return {
@@ -319,6 +362,87 @@ export function createReposReadsClient(options: { accessToken: string; fetch?: t
       return mapRateOrUpstream(response, "GitHub rejected the get repository license request.");
     },
 
+    async listNetworkEvents(input: unknown) {
+      const payload = validateListNetworkEventsInput(input);
+      const response = await client.fetchJSON(`/networks/${encodeURIComponent(payload.owner)}/${encodeURIComponent(payload.repo)}/events${pageQuery(payload)}`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, events: response.body.filter(isRecord).map(normalizeRepoEvent) };
+      }
+      if (response.status === 404) return upstream("Network events not found.");
+      return mapRateOrUpstream(response, "GitHub rejected the list network events request.");
+    },
+
+    async listPublicRepositories(input: unknown) {
+      const payload = validateListPublicRepositoriesInput(input);
+      const response = await client.fetchJSON(`/repositories${pageQuery(payload)}`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, repositories: response.body.filter(isRecord).map(normalizePublicRepository) };
+      }
+      if (response.status === 404) return upstream("Public repositories not found.");
+      return mapRateOrUpstream(response, "GitHub rejected the list public repositories request.");
+    },
+
+    async listActivity(input: unknown) {
+      const payload = validateListRepoActivityInput(input);
+      const response = await client.fetchJSON(`${repoPath(payload)}/activity${pageQuery(payload)}`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, activity: response.body.filter(isRecord).map(normalizeRepoActivity) };
+      }
+      if (response.status === 404) return upstream("Repository activity not found.");
+      return mapRateOrUpstream(response, "GitHub rejected the list repository activity request.");
+    },
+
+    async listContributors(input: unknown) {
+      const payload = validateListContributorsInput(input);
+      const response = await client.fetchJSON(`${repoPath(payload)}/contributors${pageQuery(payload)}`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, contributors: response.body.filter(isRecord).map(normalizeContributor) };
+      }
+      if (response.status === 404) return upstream("Repository contributors not found.");
+      return mapRateOrUpstream(response, "GitHub rejected the list contributors request.");
+    },
+
+    async listEvents(input: unknown) {
+      const payload = validateListRepoEventsInput(input);
+      const response = await client.fetchJSON(`${repoPath(payload)}/events${pageQuery(payload)}`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, events: response.body.filter(isRecord).map(normalizeRepoEvent) };
+      }
+      if (response.status === 404) return upstream("Repository events not found.");
+      return mapRateOrUpstream(response, "GitHub rejected the list repository events request.");
+    },
+
+    async listLanguages(input: unknown) {
+      const payload = validateListRepoLanguagesInput(input);
+      const response = await client.fetchJSON(`${repoPath(payload)}/languages`);
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, languages: normalizeLanguages(response.body) };
+      }
+      if (response.status === 404) return upstream("Repository languages not found.");
+      return mapRateOrUpstream(response, "GitHub rejected the list repository languages request.");
+    },
+
+    async listSecurityAdvisories(input: unknown) {
+      const payload = validateListRepoSecurityAdvisoriesInput(input);
+      const response = await client.fetchJSON(`${repoPath(payload)}/security-advisories${pageQuery(payload)}`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, advisories: response.body.filter(isRecord).map(normalizeSecurityAdvisory) };
+      }
+      if (response.status === 404) return upstream("Repository security advisories not found.");
+      return mapRateOrUpstream(response, "GitHub rejected the list security advisories request.");
+    },
+
+    async getTopics(input: unknown) {
+      const payload = validateGetRepoTopicsInput(input);
+      const response = await client.fetchJSON(`${repoPath(payload)}/topics`);
+      if (response.status === 200 && isRecord(response.body) && Array.isArray(response.body.names)) {
+        const names = response.body.names.filter((name): name is string => typeof name === "string");
+        return { ok: true as const, names };
+      }
+      if (response.status === 404) return upstream("Repository topics not found.");
+      return mapRateOrUpstream(response, "GitHub rejected the get repository topics request.");
+    },
+
     async listOrgAttestationRepositories(input: unknown) {
       const payload = validateListOrgAttestationRepositoriesInput(input);
       const response = await client.fetchJSON(`/orgs/${encodeURIComponent(payload.org)}/attestations/repositories${pageQuery(payload)}`);
@@ -339,6 +463,108 @@ export function createReposReadsClient(options: { accessToken: string; fetch?: t
   };
 }
 
+export type NormalizedRepoEvent = {
+  id: string;
+  type: string;
+  actor: string;
+  repo: string;
+  public: boolean;
+  createdAt: string;
+};
+
+export type NormalizedPublicRepository = {
+  id: number;
+  name: string;
+  fullName: string;
+  private: boolean;
+  htmlUrl: string;
+  description: string;
+};
+
+export type NormalizedRepoActivity = {
+  id: number;
+  activityType: string;
+  timestamp: string;
+  ref: string;
+  actor: string;
+};
+
+export type NormalizedContributor = {
+  login: string;
+  id: number;
+  contributions: number;
+  type: string;
+};
+
+export function normalizeRepoEvent(item: Record<string, unknown>): NormalizedRepoEvent {
+  const actor = isRecord(item.actor) ? item.actor : {};
+  const repoName = isRecord(item.repo) ? item.repo : {};
+  return {
+    id: item.id === undefined || item.id === null ? "" : String(item.id),
+    type: typeof item.type === "string" ? item.type : "",
+    actor: typeof actor.login === "string" ? actor.login : "",
+    repo: typeof repoName.name === "string" ? repoName.name : "",
+    public: item.public === true,
+    createdAt: typeof item.created_at === "string" ? item.created_at : "",
+  };
+}
+
+export function normalizePublicRepository(item: Record<string, unknown>): NormalizedPublicRepository {
+  return {
+    id: typeof item.id === "number" ? item.id : 0,
+    name: typeof item.name === "string" ? item.name : "",
+    fullName: typeof item.full_name === "string" ? item.full_name : "",
+    private: item.private === true,
+    htmlUrl: typeof item.html_url === "string" ? item.html_url : "",
+    description: typeof item.description === "string" ? item.description : "",
+  };
+}
+
+export function normalizeRepoActivity(item: Record<string, unknown>): NormalizedRepoActivity {
+  const actor = isRecord(item.actor) ? item.actor : {};
+  return {
+    id: typeof item.id === "number" ? item.id : 0,
+    activityType: typeof item.activity_type === "string" ? item.activity_type : "",
+    timestamp: typeof item.timestamp === "string" ? item.timestamp : "",
+    ref: typeof item.ref === "string" ? item.ref : "",
+    actor: typeof actor.login === "string" ? actor.login : "",
+  };
+}
+
+export function normalizeContributor(item: Record<string, unknown>): NormalizedContributor {
+  return {
+    login: typeof item.login === "string" ? item.login : "",
+    id: typeof item.id === "number" ? item.id : 0,
+    contributions: typeof item.contributions === "number" ? item.contributions : 0,
+    type: typeof item.type === "string" ? item.type : "",
+  };
+}
+
+export function normalizeLanguages(item: Record<string, unknown>): Record<string, number> {
+  const languages: Record<string, number> = {};
+  for (const [name, bytes] of Object.entries(item)) {
+    if (typeof bytes === "number") languages[name] = bytes;
+  }
+  return languages;
+}
+
+function validateRepoPage(input: unknown, operation: string): PageScope {
+  if (!isRecord(input)) throw new Error(`${operation} input must be an object`);
+  return {
+    ...repo(input),
+    perPage: optionalPage(input.perPage, "perPage", 100),
+    page: optionalPage(input.page, "page", 1_000_000),
+  };
+}
+
+function optionalSince(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error("since must be a non-negative integer");
+  }
+  return value;
+}
+
 function repo(input: Record<string, unknown>): RepoScope {
   return {
     owner: requireSingleSegment(input.owner, "owner"),
@@ -355,8 +581,9 @@ function refQuery(ref: string | undefined): string {
   return `?${new URLSearchParams({ ref }).toString()}`;
 }
 
-function pageQuery(payload: { perPage?: number; page?: number }): string {
+function pageQuery(payload: { perPage?: number; page?: number; since?: number }): string {
   const params = new URLSearchParams();
+  if (payload.since) params.set("since", String(payload.since));
   if (payload.perPage) params.set("per_page", String(payload.perPage));
   if (payload.page) params.set("page", String(payload.page));
   const qs = params.toString();

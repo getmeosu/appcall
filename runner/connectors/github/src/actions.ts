@@ -252,6 +252,14 @@ import {
   validateGetSecurityAdvisoryInput,
   validateGetRepoLicenseInput,
   validateListOrgAttestationRepositoriesInput,
+  validateListNetworkEventsInput,
+  validateListPublicRepositoriesInput,
+  validateListRepoActivityInput,
+  validateListContributorsInput,
+  validateListRepoEventsInput,
+  validateListRepoLanguagesInput,
+  validateListRepoSecurityAdvisoriesInput,
+  validateGetRepoTopicsInput,
 } from "./repos_reads";
 import {
   createGovernanceClient,
@@ -4343,6 +4351,88 @@ export function listRepoTrafficPopularReferrers(input: unknown): Record<string, 
     });
   }
   return { connector: "github", action: "repos.traffic.popular.referrers.list", source: "connector", validated: validateListTrafficPopularReferrersInput(input) };
+}
+
+// ─── repos-3: repository activity reads ───────────────────────────────────────
+
+export function listRepoNetworkEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.network.events.list").listNetworkEvents(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.network.events.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "repos.network.events.list", source: "connector", validated: validateListNetworkEventsInput(input) };
+}
+
+export function listPublicRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.public.list").listPublicRepositories(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.public.list", source: "connector", repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "repos.public.list", source: "connector", validated: validateListPublicRepositoriesInput(input) };
+}
+
+export function listRepoActivity(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.activity.list").listActivity(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.activity.list", source: "connector", activity: result.activity };
+    });
+  }
+  return { connector: "github", action: "repos.activity.list", source: "connector", validated: validateListRepoActivityInput(input) };
+}
+
+export function listRepoContributors(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.contributors.list").listContributors(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.contributors.list", source: "connector", contributors: result.contributors };
+    });
+  }
+  return { connector: "github", action: "repos.contributors.list", source: "connector", validated: validateListContributorsInput(input) };
+}
+
+export function listRepoEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.events.list").listEvents(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.events.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "repos.events.list", source: "connector", validated: validateListRepoEventsInput(input) };
+}
+
+export function listRepoLanguages(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.languages.list").listLanguages(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.languages.list", source: "connector", languages: result.languages };
+    });
+  }
+  return { connector: "github", action: "repos.languages.list", source: "connector", validated: validateListRepoLanguagesInput(input) };
+}
+
+export function listRepoSecurityAdvisories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.security_advisories.list").listSecurityAdvisories(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.security_advisories.list", source: "connector", advisories: result.advisories };
+    });
+  }
+  return { connector: "github", action: "repos.security_advisories.list", source: "connector", validated: validateListRepoSecurityAdvisoriesInput(input) };
+}
+
+export function getRepoTopics(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.topics.get").getTopics(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.topics.get", source: "connector", names: result.names };
+    });
+  }
+  return { connector: "github", action: "repos.topics.get", source: "connector", validated: validateGetRepoTopicsInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

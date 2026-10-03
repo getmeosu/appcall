@@ -327,6 +327,14 @@ import {
   getRepoStatsParticipation as ghGetRepoStatsParticipation,
   listRepoTrafficPopularPaths as ghListRepoTrafficPopularPaths,
   listRepoTrafficPopularReferrers as ghListRepoTrafficPopularReferrers,
+  listRepoNetworkEvents as ghListRepoNetworkEvents,
+  listPublicRepositories as ghListPublicRepositories,
+  listRepoActivity as ghListRepoActivity,
+  listRepoContributors as ghListRepoContributors,
+  listRepoEvents as ghListRepoEvents,
+  listRepoLanguages as ghListRepoLanguages,
+  listRepoSecurityAdvisories as ghListRepoSecurityAdvisories,
+  getRepoTopics as ghGetRepoTopics,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1263,6 +1271,14 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "repos.stats.participation.get": ghGetRepoStatsParticipation,
       "repos.traffic.popular.paths.list": ghListRepoTrafficPopularPaths,
       "repos.traffic.popular.referrers.list": ghListRepoTrafficPopularReferrers,
+      "repos.network.events.list": ghListRepoNetworkEvents,
+      "repos.public.list": ghListPublicRepositories,
+      "repos.activity.list": ghListRepoActivity,
+      "repos.contributors.list": ghListRepoContributors,
+      "repos.events.list": ghListRepoEvents,
+      "repos.languages.list": ghListRepoLanguages,
+      "repos.security_advisories.list": ghListRepoSecurityAdvisories,
+      "repos.topics.get": ghGetRepoTopics,
     },
     salesforce: {
       "contacts.create": createContact,
