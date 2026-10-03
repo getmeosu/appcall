@@ -203,6 +203,20 @@ import {
   validateDeleteOrgVariableInput,
 } from "./actions_env_org_variables";
 import {
+  createActionsDeployPolicyClient,
+  validateGetWorkflowPermissionsInput,
+  validateSetWorkflowPermissionsInput,
+  validateGetActionsPermissionsInput,
+  validateSetActionsPermissionsInput,
+  validateGetSelectedActionsInput,
+  validateSetSelectedActionsInput,
+  validateListBranchPoliciesInput,
+  validateGetBranchPolicyInput,
+  validateCreateBranchPolicyInput,
+  validateUpdateBranchPolicyInput,
+  validateDeleteBranchPolicyInput,
+} from "./actions_deploy_policy";
+import {
   createGovernanceClient,
   validateGetCollaboratorPermissionInput,
   validateGetBranchProtectionInput,
@@ -3709,6 +3723,128 @@ export function deleteOrgVariable(input: unknown): Record<string, unknown> | Pro
     });
   }
   return { connector: "github", action: "actions.org_variables.delete", source: "connector", validated: validateDeleteOrgVariableInput(input) };
+}
+
+
+// ─── N9: actions permissions and deployment branch policies ──────────────────
+
+function liveDeployPolicyClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createActionsDeployPolicyClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getWorkflowPermissions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "actions.permissions.workflow.get").getWorkflowPermissions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.permissions.workflow.get", source: "connector", permissions: result.permissions };
+    });
+  }
+  return { connector: "github", action: "actions.permissions.workflow.get", source: "connector", validated: validateGetWorkflowPermissionsInput(input) };
+}
+
+export function setWorkflowPermissions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "actions.permissions.workflow.set").setWorkflowPermissions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.permissions.workflow.set", source: "connector", permissions: result.permissions };
+    });
+  }
+  return { connector: "github", action: "actions.permissions.workflow.set", source: "connector", validated: validateSetWorkflowPermissionsInput(input) };
+}
+
+export function getActionsPermissions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "actions.permissions.get").getActionsPermissions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.permissions.get", source: "connector", permissions: result.permissions };
+    });
+  }
+  return { connector: "github", action: "actions.permissions.get", source: "connector", validated: validateGetActionsPermissionsInput(input) };
+}
+
+export function setActionsPermissions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "actions.permissions.set").setActionsPermissions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.permissions.set", source: "connector", permissions: result.permissions };
+    });
+  }
+  return { connector: "github", action: "actions.permissions.set", source: "connector", validated: validateSetActionsPermissionsInput(input) };
+}
+
+export function getSelectedActions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "actions.permissions.selected_actions.get").getSelectedActions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.permissions.selected_actions.get", source: "connector", selectedActions: result.selectedActions };
+    });
+  }
+  return { connector: "github", action: "actions.permissions.selected_actions.get", source: "connector", validated: validateGetSelectedActionsInput(input) };
+}
+
+export function setSelectedActions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "actions.permissions.selected_actions.set").setSelectedActions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.permissions.selected_actions.set", source: "connector", selectedActions: result.selectedActions };
+    });
+  }
+  return { connector: "github", action: "actions.permissions.selected_actions.set", source: "connector", validated: validateSetSelectedActionsInput(input) };
+}
+
+export function listDeploymentBranchPolicies(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "deployments.branch_policies.list").listBranchPolicies(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "deployments.branch_policies.list", source: "connector", totalCount: result.totalCount, policies: result.policies };
+    });
+  }
+  return { connector: "github", action: "deployments.branch_policies.list", source: "connector", validated: validateListBranchPoliciesInput(input) };
+}
+
+export function getDeploymentBranchPolicy(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "deployments.branch_policies.get").getBranchPolicy(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "deployments.branch_policies.get", source: "connector", policy: result.policy };
+    });
+  }
+  return { connector: "github", action: "deployments.branch_policies.get", source: "connector", validated: validateGetBranchPolicyInput(input) };
+}
+
+export function createDeploymentBranchPolicy(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "deployments.branch_policies.create").createBranchPolicy(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "deployments.branch_policies.create", source: "connector", id: result.policy.id || result.policy.name, policy: result.policy, created: result.created };
+    });
+  }
+  return { connector: "github", action: "deployments.branch_policies.create", source: "connector", validated: validateCreateBranchPolicyInput(input) };
+}
+
+export function updateDeploymentBranchPolicy(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "deployments.branch_policies.update").updateBranchPolicy(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "deployments.branch_policies.update", source: "connector", policy: result.policy };
+    });
+  }
+  return { connector: "github", action: "deployments.branch_policies.update", source: "connector", validated: validateUpdateBranchPolicyInput(input) };
+}
+
+export function deleteDeploymentBranchPolicy(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDeployPolicyClient(input, "deployments.branch_policies.delete").deleteBranchPolicy(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "deployments.branch_policies.delete", source: "connector", id: result.branchPolicyId, deleted: result.deleted, branchPolicyId: result.branchPolicyId, alreadyGone: result.alreadyGone };
+    });
+  }
+  return { connector: "github", action: "deployments.branch_policies.delete", source: "connector", validated: validateDeleteBranchPolicyInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
