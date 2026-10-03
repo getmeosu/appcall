@@ -184,14 +184,13 @@ describe("github N7 actions rules", () => {
     });
     expect(deleted.deleted).toBe(true);
 
-    const gone = await deleteCache({
+    await expect(deleteCache({
       accessToken: "t",
       owner: "acme",
       repo: "app",
       cacheId: 9,
       fetch: async () => new Response("", { status: 404 }),
-    });
-    expect(gone.deleted).toBe(true);
+    })).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR", message: "Actions cache not found." });
 
     const byKey = await deleteCachesByKey({
       accessToken: "t",
