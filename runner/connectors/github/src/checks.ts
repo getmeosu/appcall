@@ -126,7 +126,12 @@ export function validateGetCheckRunInput(input: unknown): GetCheckRunInput {
   } else if (typeof input.id === "number") {
     checkRunId = requireNumber(input.id, "id");
   } else if (typeof input.id === "string" && /^\d+$/.test(input.id)) {
-    checkRunId = Number(input.id);
+    const parsed = Number(input.id);
+    // Number() rounds past MAX_SAFE_INTEGER; refuse a string that is not that integer.
+    if (!Number.isSafeInteger(parsed) || String(parsed) !== input.id) {
+      throw new Error("checkRunId must be a safe integer");
+    }
+    checkRunId = parsed;
   } else {
     throw new Error("checkRunId must be a number");
   }
