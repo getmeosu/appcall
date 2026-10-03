@@ -332,6 +332,24 @@ import {
   validateListRepoRunnerLabelsInput,
 } from "./card10_reads";
 
+import {
+  createCard11ReadsClient,
+  validateCheckUserFollowingInput,
+  validateListAuthenticatedFollowersInput,
+  validateListAuthenticatedFollowingInput,
+  validateListAuthenticatedSubscriptionsInput,
+  validateListOrgRunnerDownloadsInput,
+  validateListOrgRunnersInput,
+  validateListRepoRunnerDownloadsInput,
+  validateListRepoRunnersInput,
+  validateListRepoStargazersInput,
+  validateListRepoSubscribersInput,
+  validateListUserFollowersInput,
+  validateListUserFollowingInput,
+  validateListUserSubscriptionsInput,
+} from "./card11_reads";
+
+
 
 import {
   createReposReadsClient,
@@ -5538,6 +5556,148 @@ export function listRepoActionsRunnerLabels(input: unknown): Record<string, unkn
     });
   }
   return { connector: "github", action: "repos.actions.runners.labels.list", source: "connector", validated: validateListRepoRunnerLabelsInput(input) };
+}
+
+
+// ─── card11-reads: runners, follows, stars, and subscribers ──────────────────
+
+function liveCard11ReadsClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard11ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listOrgRunnerDownloads(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "orgs.actions.runners.downloads.list").listOrgRunnerDownloads(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.actions.runners.downloads.list", source: "connector", downloads: result.downloads };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.downloads.list", source: "connector", validated: validateListOrgRunnerDownloadsInput(input) };
+}
+
+export function listRepoRunnerDownloads(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "repos.actions.runners.downloads.list").listRepoRunnerDownloads(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.actions.runners.downloads.list", source: "connector", downloads: result.downloads };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.downloads.list", source: "connector", validated: validateListRepoRunnerDownloadsInput(input) };
+}
+
+export function listOrgActionsRunners(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "orgs.actions.runners.list").listOrgRunners(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.actions.runners.list", source: "connector", totalCount: result.totalCount, runners: result.runners };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.list", source: "connector", validated: validateListOrgRunnersInput(input) };
+}
+
+export function listRepoActionsRunners(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "repos.actions.runners.list").listRepoRunners(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.actions.runners.list", source: "connector", totalCount: result.totalCount, runners: result.runners };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.list", source: "connector", validated: validateListRepoRunnersInput(input) };
+}
+
+export function checkUserFollowing(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "users.following.check").checkFollowing(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.following.check", source: "connector", following: result.following };
+    });
+  }
+  return { connector: "github", action: "users.following.check", source: "connector", validated: validateCheckUserFollowingInput(input) };
+}
+
+export function listUserFollowers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "users.followers.list").listUserFollowers(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.followers.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "users.followers.list", source: "connector", validated: validateListUserFollowersInput(input) };
+}
+
+export function listAuthenticatedUserFollowers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "user.followers.list").listAuthenticatedFollowers(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.followers.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "user.followers.list", source: "connector", validated: validateListAuthenticatedFollowersInput(input) };
+}
+
+export function listUserSubscriptions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "users.subscriptions.list").listUserSubscriptions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.subscriptions.list", source: "connector", repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "users.subscriptions.list", source: "connector", validated: validateListUserSubscriptionsInput(input) };
+}
+
+export function listAuthenticatedUserSubscriptions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "user.subscriptions.list").listAuthenticatedSubscriptions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.subscriptions.list", source: "connector", repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "user.subscriptions.list", source: "connector", validated: validateListAuthenticatedSubscriptionsInput(input) };
+}
+
+export function listRepoStargazers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "repos.stargazers.list").listStargazers(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.stargazers.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "repos.stargazers.list", source: "connector", validated: validateListRepoStargazersInput(input) };
+}
+
+export function listUserFollowing(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "users.following.list").listUserFollowing(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.following.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "users.following.list", source: "connector", validated: validateListUserFollowingInput(input) };
+}
+
+export function listAuthenticatedUserFollowing(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "user.following.list").listAuthenticatedFollowing(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.following.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "user.following.list", source: "connector", validated: validateListAuthenticatedFollowingInput(input) };
+}
+
+export function listRepoSubscribers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard11ReadsClient(input, "repos.subscribers.list").listSubscribers(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.subscribers.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "repos.subscribers.list", source: "connector", validated: validateListRepoSubscribersInput(input) };
 }
 
 
