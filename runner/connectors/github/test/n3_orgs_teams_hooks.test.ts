@@ -272,14 +272,13 @@ describe("github N3 orgs teams hooks", () => {
     expect(removeReqs[0].url).toBe("https://api.github.com/orgs/acme/teams/platform/memberships/octocat");
     expect(removed.removed).toBe(true);
 
-    const already = await removeTeamMembership({
+    await expect(removeTeamMembership({
       accessToken: "t",
       org: "acme",
       teamSlug: "platform",
       username: "octocat",
       fetch: async () => new Response(JSON.stringify({ message: "Not Found" }), { status: 404 }),
-    });
-    expect(already.removed).toBe(true);
+    })).rejects.toMatchObject({ code: "CONNECTOR_UPSTREAM_ERROR" });
 
     const dispatchReqs: Request[] = [];
     const dispatched = await dispatchRepo({
