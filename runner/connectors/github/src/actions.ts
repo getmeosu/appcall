@@ -101,7 +101,7 @@ import {
 } from "./labels_milestones";
 import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateUpdateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput, validateGetRepoTreeInput } from "./repos";
 import { createContentsClient, validatePutContentsInput, validateDeleteContentsInput, validatePushFilesInput } from "./contents";
-import { createGitClient, validateCreateBlobInput, validateGetBlobInput, validateCreateTreeInput, validateGetTreeInput, validateCreateRefInput, validateUpdateRefInput, validateGetRefInput, validateCreateGitCommitInput } from "./git";
+import { createGitClient, validateCreateBlobInput, validateGetBlobInput, validateCreateTreeInput, validateGetTreeInput, validateCreateRefInput, validateUpdateRefInput, validateGetRefInput, validateListRefsInput, validateDeleteRefInput, validateGetTagInput, validateCreateTagInput, validateCreateGitCommitInput } from "./git";
 import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput, validateDeleteBranchInput, validateListBranchesInput } from "./branches";
 import {
   createReleasesClient,
@@ -133,7 +133,18 @@ import {
   validateListGistsInput,
   validateGetGistInput,
   validateUpdateGistInput,
+  validateDeleteGistInput,
 } from "./gists";
+import {
+  createAlertsClient,
+  validateListDependabotAlertsInput,
+  validateListCodeScanningAlertsInput,
+  validateGetCodeScanningAlertInput,
+  validateUpdateCodeScanningAlertInput,
+  validateListSecretScanningAlertsInput,
+  validateListActionsVariablesInput,
+  validateListActionsSecretsInput,
+} from "./alerts";
 import { createTagsClient, validateListTagsInput } from "./tags";
 import {
   createNotificationsSocialClient,
@@ -2680,7 +2691,6 @@ export function createCheckRun(input: unknown): Record<string, unknown> | Promis
   return { connector: "github", action: "checks.runs.create", source: "connector", validated: validateCreateCheckRunInput(input) };
 }
 
-
 // ─── N3: orgs, teams, hooks, rules, invitations ─────────────────────────────
 
 export function getCollaboratorPermission(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -2876,6 +2886,152 @@ export function dispatchRepo(input: unknown): Record<string, unknown> | Promise<
     });
   }
   return { connector: "github", action: "repos.dispatch", source: "connector", validated: validateDispatchRepoInput(input) };
+}
+
+// ─── N4: alerts, refs, tags, gist delete ─────────────────────────────────────
+
+function liveFetch(input: Record<string, unknown>): typeof fetch | undefined {
+  return typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+}
+
+export function listDependabotAlerts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).listDependabotAlerts(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "dependabot.alerts.list", source: "connector", alerts: result.alerts };
+    });
+  }
+  return { connector: "github", action: "dependabot.alerts.list", source: "connector", validated: validateListDependabotAlertsInput(input) };
+}
+
+export function listCodeScanningAlerts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).listCodeScanningAlerts(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "code_scanning.alerts.list", source: "connector", alerts: result.alerts };
+    });
+  }
+  return { connector: "github", action: "code_scanning.alerts.list", source: "connector", validated: validateListCodeScanningAlertsInput(input) };
+}
+
+export function getCodeScanningAlert(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).getCodeScanningAlert(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "code_scanning.alerts.get", source: "connector", alert: result.alert };
+    });
+  }
+  return { connector: "github", action: "code_scanning.alerts.get", source: "connector", validated: validateGetCodeScanningAlertInput(input) };
+}
+
+export function updateCodeScanningAlert(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).updateCodeScanningAlert(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "code_scanning.alerts.update", source: "connector", alert: result.alert };
+    });
+  }
+  return { connector: "github", action: "code_scanning.alerts.update", source: "connector", validated: validateUpdateCodeScanningAlertInput(input) };
+}
+
+export function listSecretScanningAlerts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).listSecretScanningAlerts(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "secret_scanning.alerts.list", source: "connector", alerts: result.alerts };
+    });
+  }
+  return { connector: "github", action: "secret_scanning.alerts.list", source: "connector", validated: validateListSecretScanningAlertsInput(input) };
+}
+
+export function listActionsVariables(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).listActionsVariables(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "actions.variables.list", source: "connector", totalCount: result.totalCount, variables: result.variables };
+    });
+  }
+  return { connector: "github", action: "actions.variables.list", source: "connector", validated: validateListActionsVariablesInput(input) };
+}
+
+export function listActionsSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).listActionsSecrets(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "actions.secrets.list", source: "connector", total_count: result.total_count, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "actions.secrets.list", source: "connector", validated: validateListActionsSecretsInput(input) };
+}
+
+export function listGitRefs(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = liveFetch(input);
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "git.refs.list" }),
+    }).listRefs(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "git.refs.list", source: "connector", refs: result.refs };
+    });
+  }
+  return { connector: "github", action: "git.refs.list", source: "connector", validated: validateListRefsInput(input) };
+}
+
+export function deleteGitRef(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = liveFetch(input);
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "git.refs.delete" }),
+    }).deleteRef(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "git.refs.delete", source: "connector", deleted: result.deleted, ref: result.ref };
+    });
+  }
+  return { connector: "github", action: "git.refs.delete", source: "connector", validated: validateDeleteRefInput(input) };
+}
+
+export function getGitTag(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = liveFetch(input);
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "git.tags.get" }),
+    }).getTag(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "git.tags.get", source: "connector", tag: result.tag };
+    });
+  }
+  return { connector: "github", action: "git.tags.get", source: "connector", validated: validateGetTagInput(input) };
+}
+
+export function createGitTag(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = liveFetch(input);
+    return createGitClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "git.tags.create" }),
+    }).createTag(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "git.tags.create", source: "connector", tag: result.tag };
+    });
+  }
+  return { connector: "github", action: "git.tags.create", source: "connector", validated: validateCreateTagInput(input) };
+}
+
+export function deleteGist(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createGistsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).delete(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "gists.delete", source: "connector", deleted: result.deleted, gistId: result.gistId };
+    });
+  }
+  return { connector: "github", action: "gists.delete", source: "connector", validated: validateDeleteGistInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
