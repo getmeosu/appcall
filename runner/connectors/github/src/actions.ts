@@ -269,6 +269,23 @@ import {
 } from "./orgs_reads";
 
 import {
+  createCard5ReadsClient,
+  validateListRepoEnvironmentSecretsInput,
+  validateListRepoOrganizationSecretsInput,
+  validateListUserCodespacesSecretsInput,
+  validateListUserCodespacesSecretRepositoriesInput,
+  validateGetBranchProtectionRestrictionsInput,
+  validateGetBranchProtectionEnforceAdminsInput,
+  validateGetBranchProtectionRequiredSignaturesInput,
+  validateGetDeploymentProtectionRuleInput,
+  validateGetRequiredPullRequestReviewsInput,
+  validateGetRequiredStatusChecksInput,
+  validateListBranchProtectionTeamsInput,
+  validateListBranchProtectionUsersInput,
+  validateListUserProjectFieldsInput,
+} from "./card5_reads";
+
+import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -4958,6 +4975,147 @@ export function getUserBillingUsage(input: unknown): Record<string, unknown> | P
     });
   }
   return { connector: "github", action: "users.billing.usage.get", source: "connector", validated: validateGetUserBillingUsageInput(input) };
+}
+
+// ─── card5-reads: secret, protection, and project field reads ────────────────
+
+function liveCard5ReadsClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard5ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listRepoEnvironmentSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "repos.environments.secrets.list").listRepoEnvironmentSecrets(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.environments.secrets.list", source: "connector", total_count: result.total_count, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "repos.environments.secrets.list", source: "connector", validated: validateListRepoEnvironmentSecretsInput(input) };
+}
+
+export function listRepoOrganizationSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "actions.organization_secrets.list").listRepoOrganizationSecrets(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.organization_secrets.list", source: "connector", total_count: result.total_count, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "actions.organization_secrets.list", source: "connector", validated: validateListRepoOrganizationSecretsInput(input) };
+}
+
+export function listUserCodespacesSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "user.codespaces.secrets.list").listUserCodespacesSecrets(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.codespaces.secrets.list", source: "connector", total_count: result.total_count, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.secrets.list", source: "connector", validated: validateListUserCodespacesSecretsInput(input) };
+}
+
+export function listUserCodespacesSecretRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "user.codespaces.secrets.repositories.list").listUserCodespacesSecretRepositories(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.codespaces.secrets.repositories.list", source: "connector", total_count: result.total_count, repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.secrets.repositories.list", source: "connector", validated: validateListUserCodespacesSecretRepositoriesInput(input) };
+}
+
+export function getBranchProtectionRestrictions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "branches.protection.restrictions.get").getBranchProtectionRestrictions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "branches.protection.restrictions.get", source: "connector", users: result.users, teams: result.teams, apps: result.apps };
+    });
+  }
+  return { connector: "github", action: "branches.protection.restrictions.get", source: "connector", validated: validateGetBranchProtectionRestrictionsInput(input) };
+}
+
+export function getBranchProtectionEnforceAdmins(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "branches.protection.enforce_admins.get").getBranchProtectionEnforceAdmins(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "branches.protection.enforce_admins.get", source: "connector", url: result.url, enabled: result.enabled };
+    });
+  }
+  return { connector: "github", action: "branches.protection.enforce_admins.get", source: "connector", validated: validateGetBranchProtectionEnforceAdminsInput(input) };
+}
+
+export function getBranchProtectionRequiredSignatures(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "branches.protection.required_signatures.get").getBranchProtectionRequiredSignatures(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "branches.protection.required_signatures.get", source: "connector", url: result.url, enabled: result.enabled };
+    });
+  }
+  return { connector: "github", action: "branches.protection.required_signatures.get", source: "connector", validated: validateGetBranchProtectionRequiredSignaturesInput(input) };
+}
+
+export function getEnvironmentDeploymentProtectionRule(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "environments.deployment_protection_rules.get").getDeploymentProtectionRule(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "environments.deployment_protection_rules.get", source: "connector", rule: result.rule };
+    });
+  }
+  return { connector: "github", action: "environments.deployment_protection_rules.get", source: "connector", validated: validateGetDeploymentProtectionRuleInput(input) };
+}
+
+export function getRequiredPullRequestReviews(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "branches.protection.required_pull_request_reviews.get").getRequiredPullRequestReviews(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "branches.protection.required_pull_request_reviews.get", source: "connector", reviews: result.reviews };
+    });
+  }
+  return { connector: "github", action: "branches.protection.required_pull_request_reviews.get", source: "connector", validated: validateGetRequiredPullRequestReviewsInput(input) };
+}
+
+export function getRequiredStatusChecks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "branches.protection.required_status_checks.get").getRequiredStatusChecks(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "branches.protection.required_status_checks.get", source: "connector", checks: result.checks };
+    });
+  }
+  return { connector: "github", action: "branches.protection.required_status_checks.get", source: "connector", validated: validateGetRequiredStatusChecksInput(input) };
+}
+
+export function listBranchProtectionRestrictionTeams(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "branches.protection.restrictions.teams.list").listBranchProtectionTeams(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "branches.protection.restrictions.teams.list", source: "connector", teams: result.teams };
+    });
+  }
+  return { connector: "github", action: "branches.protection.restrictions.teams.list", source: "connector", validated: validateListBranchProtectionTeamsInput(input) };
+}
+
+export function listBranchProtectionRestrictionUsers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "branches.protection.restrictions.users.list").listBranchProtectionUsers(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "branches.protection.restrictions.users.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "branches.protection.restrictions.users.list", source: "connector", validated: validateListBranchProtectionUsersInput(input) };
+}
+
+export function listUserProjectFields(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard5ReadsClient(input, "users.projects_v2.fields.list").listUserProjectFields(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.projects_v2.fields.list", source: "connector", fields: result.fields };
+    });
+  }
+  return { connector: "github", action: "users.projects_v2.fields.list", source: "connector", validated: validateListUserProjectFieldsInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
