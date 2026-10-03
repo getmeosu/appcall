@@ -349,6 +349,25 @@ import {
   validateListUserSubscriptionsInput,
 } from "./card11_reads";
 
+import {
+  createCard12ReadsClient,
+  validateCheckGistStarInput,
+  validateGetGistCommentInput,
+  validateGetGistRevisionInput,
+  validateListUserGistsInput,
+  validateListGistCommentsInput,
+  validateListGistCommitsInput,
+  validateListGistForksInput,
+  validateListPublicGistsInput,
+  validateListStarredGistsInput,
+  validateCheckIssueAssigneeInput,
+  validateGetIssueEventInput,
+  validateListAssignedIssuesInput,
+  validateListRepoIssueCommentsInput,
+  validateListRepoIssueEventsInput,
+  validateListMilestoneLabelsInput,
+} from "./card12_reads";
+
 
 
 import {
@@ -5700,6 +5719,165 @@ export function listRepoSubscribers(input: unknown): Record<string, unknown> | P
   return { connector: "github", action: "repos.subscribers.list", source: "connector", validated: validateListRepoSubscribersInput(input) };
 }
 
+
+function liveCard12Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard12ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function checkGistStar(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "gists.star.check").checkGistStar(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.star.check", source: "connector", starred: result.starred };
+    });
+  }
+  return { connector: "github", action: "gists.star.check", source: "connector", validated: validateCheckGistStarInput(input) };
+}
+
+export function getGistComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "gists.comments.get").getGistComment(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.comments.get", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "gists.comments.get", source: "connector", validated: validateGetGistCommentInput(input) };
+}
+
+export function getGistRevision(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "gists.revision.get").getGistRevision(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.revision.get", source: "connector", gist: result.gist };
+    });
+  }
+  return { connector: "github", action: "gists.revision.get", source: "connector", validated: validateGetGistRevisionInput(input) };
+}
+
+export function listUserGists(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "users.gists.list").listUserGists(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.gists.list", source: "connector", gists: result.gists };
+    });
+  }
+  return { connector: "github", action: "users.gists.list", source: "connector", validated: validateListUserGistsInput(input) };
+}
+
+export function listGistComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "gists.comments.list").listGistComments(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.comments.list", source: "connector", comments: result.comments };
+    });
+  }
+  return { connector: "github", action: "gists.comments.list", source: "connector", validated: validateListGistCommentsInput(input) };
+}
+
+export function listGistCommits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "gists.commits.list").listGistCommits(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.commits.list", source: "connector", commits: result.commits };
+    });
+  }
+  return { connector: "github", action: "gists.commits.list", source: "connector", validated: validateListGistCommitsInput(input) };
+}
+
+export function listGistForks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "gists.forks.list").listGistForks(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.forks.list", source: "connector", forks: result.forks };
+    });
+  }
+  return { connector: "github", action: "gists.forks.list", source: "connector", validated: validateListGistForksInput(input) };
+}
+
+export function listPublicGists(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "gists.public.list").listPublicGists(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.public.list", source: "connector", gists: result.gists };
+    });
+  }
+  return { connector: "github", action: "gists.public.list", source: "connector", validated: validateListPublicGistsInput(input) };
+}
+
+export function listStarredGists(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "gists.starred.list").listStarredGists(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.starred.list", source: "connector", gists: result.gists };
+    });
+  }
+  return { connector: "github", action: "gists.starred.list", source: "connector", validated: validateListStarredGistsInput(input) };
+}
+
+export function checkIssueAssignee(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "issues.assignees.check").checkIssueAssignee(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "issues.assignees.check", source: "connector", assignable: result.assignable };
+    });
+  }
+  return { connector: "github", action: "issues.assignees.check", source: "connector", validated: validateCheckIssueAssigneeInput(input) };
+}
+
+export function getIssueEvent(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "issues.events.get").getIssueEvent(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "issues.events.get", source: "connector", event: result.event };
+    });
+  }
+  return { connector: "github", action: "issues.events.get", source: "connector", validated: validateGetIssueEventInput(input) };
+}
+
+export function listAssignedIssues(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "issues.assigned.list").listAssignedIssues(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "issues.assigned.list", source: "connector", issues: result.issues };
+    });
+  }
+  return { connector: "github", action: "issues.assigned.list", source: "connector", validated: validateListAssignedIssuesInput(input) };
+}
+
+export function listRepoIssueComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "repos.issues.comments.list").listRepoIssueComments(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.issues.comments.list", source: "connector", comments: result.comments };
+    });
+  }
+  return { connector: "github", action: "repos.issues.comments.list", source: "connector", validated: validateListRepoIssueCommentsInput(input) };
+}
+
+export function listRepoIssueEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "repos.issues.events.list").listRepoIssueEvents(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.issues.events.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "repos.issues.events.list", source: "connector", validated: validateListRepoIssueEventsInput(input) };
+}
+
+export function listMilestoneLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard12Client(input, "milestones.labels.list").listMilestoneLabels(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "milestones.labels.list", source: "connector", labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "milestones.labels.list", source: "connector", validated: validateListMilestoneLabelsInput(input) };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
