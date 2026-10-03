@@ -481,8 +481,15 @@ function optionalPage(value: unknown, field: string, max = 100): number | undefi
 
 function optionalId(value: unknown, field: string): number | undefined {
   if (value === undefined || value === null) return undefined;
-  if (typeof value === "number" && Number.isInteger(value) && value >= 1) return value;
-  if (typeof value === "string" && /^[1-9]\d*$/.test(value)) return Number(value);
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${field} must be a positive integer`);
+    return value;
+  }
+  if (typeof value === "string" && /^[1-9]\d*$/.test(value)) {
+    const asBig = BigInt(value);
+    if (asBig > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error(`${field} must be a positive integer`);
+    return Number(asBig);
+  }
   throw new Error(`${field} must be a positive integer`);
 }
 
