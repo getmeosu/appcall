@@ -87,9 +87,11 @@ export type GetRepoInput = { owner: string; repo: string };
 export function validateGetRepoInput(input: unknown): GetRepoInput {
   if (!isRecord(input)) throw new Error("get repo input must be an object");
   // repos.update Reconcile reuses its input. `name` is the post-rename repository name.
+  // orgs.repos.create Reconcile reuses {org, name}: org is the owner when owner is absent.
   const renamed = typeof input.name === "string" && input.name.length > 0 ? input.name : undefined;
+  const ownerRaw = typeof input.owner === "string" && input.owner.length > 0 ? input.owner : input.org;
   return {
-    owner: requireString(input.owner, "owner"),
+    owner: requireString(ownerRaw, "owner"),
     repo: requireString(renamed ?? input.repo, "repo"),
   };
 }
