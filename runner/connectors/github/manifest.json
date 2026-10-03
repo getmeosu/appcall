@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -12954,6 +12954,718 @@
           }
         }
       }
+    },
+    "actions.environment_variables.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Environment Variables",
+      "description": "List Actions environment variables via GET /repos/{owner}/{repo}/environments/{environment_name}/variables. The environment name is URL-encoded. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "environment_name": {
+            "type": "string",
+            "description": "Environment name. URL-encoded on the path (slashes become %2F)."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (GitHub max 30)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "environment_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number"
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.environment_variables.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Environment Variable",
+      "description": "Get an Actions environment variable via GET /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}. Observe target for environment variable writes. The environment name and variable name are URL-encoded. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "environment_name": {
+            "type": "string",
+            "description": "Environment name. URL-encoded on the path (slashes become %2F)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name. URL-encoded on the path."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "environment_name",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.environment_variables.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Environment Variable",
+      "description": "Create an Actions environment variable via POST /repos/{owner}/{repo}/environments/{environment_name}/variables. EffectPolicy Idempotent projects id (the variable name) from the primary response and observes via actions.environment_variables.get. Handler GETs first and skips POST when the name already exists. POST does not change an existing value. The effect type is Idempotent, not Reconcile. Body is name and value. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "environment_name": {
+            "type": "string",
+            "description": "Environment name. URL-encoded on the path (slashes become %2F)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name. URL-encoded on the path."
+          },
+          "value": {
+            "type": "string",
+            "description": "Actions variable value. This is a variable, not a secret."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "environment_name",
+          "name",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            }
+          },
+          "created": {
+            "type": "boolean",
+            "description": "False when the name already existed and POST was skipped."
+          },
+          "id": {
+            "type": "string",
+            "description": "Variable name projected for Idempotent observe."
+          }
+        }
+      },
+      "effectPolicy": "Idempotent",
+      "reconcile": "actions.environment_variables.get"
+    },
+    "actions.environment_variables.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Environment Variable",
+      "description": "Update an Actions environment variable via PATCH /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}. EffectPolicy Reconcile observes via actions.environment_variables.get. Input already carries owner, repo, environment_name, and name; the runner does not inject an id. Body name stays the path name. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "environment_name": {
+            "type": "string",
+            "description": "Environment name. URL-encoded on the path (slashes become %2F)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name. Reconcile observes this name via actions.environment_variables.get."
+          },
+          "value": {
+            "type": "string",
+            "description": "Actions variable value. This is a variable, not a secret."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "environment_name",
+          "name",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "actions.environment_variables.get"
+    },
+    "actions.environment_variables.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete Environment Variable",
+      "description": "Delete an Actions environment variable via DELETE /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}. EffectPolicy Idempotent projects id (the variable name) from the primary response and observes via actions.environment_variables.get. Handler GETs first and skips DELETE when the variable is already absent. A 404 from DELETE itself is an upstream error, not a second success. The effect type is Idempotent, not Reconcile. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "environment_name": {
+            "type": "string",
+            "description": "Environment name. URL-encoded on the path (slashes become %2F)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name. URL-encoded on the path."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "environment_name",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "description": "Variable name projected for Idempotent observe."
+          }
+        }
+      },
+      "effectPolicy": "Idempotent",
+      "reconcile": "actions.environment_variables.get"
+    },
+    "actions.org_variables.list_for_repo": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Repository Organization Variables",
+      "description": "List organization Actions variables shared with a repository via GET /repos/{owner}/{repo}/actions/organization-variables. This is not the org-wide list. Response variables include value and omit visibility. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (GitHub max 30)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number"
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.org_variables.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Organization Variables",
+      "description": "List organization Actions variables via GET /orgs/{org}/actions/variables. OAuth app tokens and personal access tokens (classic) need the admin:org scope. Response includes visibility and selected_repositories_url. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. Not case sensitive. OAuth app tokens and personal access tokens (classic) need the admin:org scope."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (GitHub max 30)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "org"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number"
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": [
+                    "all",
+                    "private",
+                    "selected"
+                  ],
+                  "description": "Repository visibility for this organization variable."
+                },
+                "selectedRepositoriesUrl": {
+                  "type": "string",
+                  "description": "GitHub selected_repositories_url. The response does not include selected_repository_ids."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.org_variables.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Organization Variable",
+      "description": "Get an organization Actions variable via GET /orgs/{org}/actions/variables/{name}. Observe target for organization variable writes. Response includes visibility and selected_repositories_url, not selected_repository_ids. OAuth app tokens and personal access tokens (classic) need the admin:org scope. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. Not case sensitive. OAuth app tokens and personal access tokens (classic) need the admin:org scope."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name. URL-encoded on the path."
+          }
+        },
+        "required": [
+          "org",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "private",
+                  "selected"
+                ],
+                "description": "Repository visibility for this organization variable."
+              },
+              "selectedRepositoriesUrl": {
+                "type": "string",
+                "description": "GitHub selected_repositories_url. The response does not include selected_repository_ids."
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.org_variables.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Organization Variable",
+      "description": "Create an organization Actions variable via POST /orgs/{org}/actions/variables. EffectPolicy Idempotent projects id (the variable name) from the primary response and observes via actions.org_variables.get. Handler GETs first and skips POST when the name already exists (HTTP 200). POST does not change an existing value. The effect type is Idempotent, not Reconcile. Body requires name, value, and visibility. selected_repository_ids is included only when visibility is selected. OAuth app tokens and personal access tokens (classic) need the admin:org scope. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. Not case sensitive. OAuth app tokens and personal access tokens (classic) need the admin:org scope."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name. URL-encoded on the path."
+          },
+          "value": {
+            "type": "string",
+            "description": "Actions variable value. This is a variable, not a secret."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "all",
+              "private",
+              "selected"
+            ],
+            "description": "Who can use the variable: all, private, or selected."
+          },
+          "selected_repository_ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Repository ids. Sent only when visibility is selected. Required in that case."
+          }
+        },
+        "required": [
+          "org",
+          "name",
+          "value",
+          "visibility"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              },
+              "visibility": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "private",
+                  "selected"
+                ],
+                "description": "Repository visibility for this organization variable."
+              },
+              "selectedRepositoriesUrl": {
+                "type": "string",
+                "description": "GitHub selected_repositories_url. The response does not include selected_repository_ids."
+              }
+            }
+          },
+          "created": {
+            "type": "boolean",
+            "description": "False when the name already existed and POST was skipped."
+          },
+          "id": {
+            "type": "string",
+            "description": "Variable name projected for Idempotent observe."
+          }
+        }
+      },
+      "effectPolicy": "Idempotent",
+      "reconcile": "actions.org_variables.get"
+    },
+    "actions.org_variables.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Organization Variable",
+      "description": "Update an organization Actions variable via PATCH /orgs/{org}/actions/variables/{name}. EffectPolicy Reconcile observes via actions.org_variables.get using org and name from the input. Body fields are value, visibility, and name when rename is set. selected_repository_ids is included only when visibility is selected. OAuth app tokens and personal access tokens (classic) need the admin:org scope. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. Not case sensitive. OAuth app tokens and personal access tokens (classic) need the admin:org scope."
+          },
+          "name": {
+            "type": "string",
+            "description": "Current variable name. Reconcile observes this name via actions.org_variables.get."
+          },
+          "value": {
+            "type": "string",
+            "description": "Actions variable value. This is a variable, not a secret."
+          },
+          "rename": {
+            "type": "string",
+            "description": "New variable name. Sent as the body name. The path name stays the observe key for actions.org_variables.get."
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "all",
+              "private",
+              "selected"
+            ],
+            "description": "Who can use the variable: all, private, or selected."
+          },
+          "selected_repository_ids": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Repository ids. Sent only when visibility is selected. Required in that case."
+          }
+        },
+        "required": [
+          "org",
+          "name",
+          "value",
+          "visibility"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "description": "Path name. Reconcile observes this name, not rename."
+          },
+          "value": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "rename": {
+            "type": "string"
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "actions.org_variables.get"
+    },
+    "actions.org_variables.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete Organization Variable",
+      "description": "Delete an organization Actions variable via DELETE /orgs/{org}/actions/variables/{name}. EffectPolicy Idempotent projects id (the variable name) from the primary response and observes via actions.org_variables.get. Handler GETs first and skips DELETE when the variable is already absent. A 404 from DELETE itself is an upstream error, not a second success. The effect type is Idempotent, not Reconcile. OAuth app tokens and personal access tokens (classic) need the admin:org scope. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. Not case sensitive. OAuth app tokens and personal access tokens (classic) need the admin:org scope."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name. URL-encoded on the path."
+          }
+        },
+        "required": [
+          "org",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "description": "Variable name projected for Idempotent observe."
+          }
+        }
+      },
+      "effectPolicy": "Idempotent",
+      "reconcile": "actions.org_variables.get"
     }
   },
   "models": [

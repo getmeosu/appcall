@@ -189,6 +189,20 @@ import {
   validateDeleteActionsVariableInput,
 } from "./actions_variables";
 import {
+  createActionsEnvOrgVariablesClient,
+  validateListEnvironmentVariablesInput,
+  validateGetEnvironmentVariableInput,
+  validateCreateEnvironmentVariableInput,
+  validateUpdateEnvironmentVariableInput,
+  validateDeleteEnvironmentVariableInput,
+  validateListRepoOrgVariablesInput,
+  validateListOrgVariablesInput,
+  validateGetOrgVariableInput,
+  validateCreateOrgVariableInput,
+  validateUpdateOrgVariableInput,
+  validateDeleteOrgVariableInput,
+} from "./actions_env_org_variables";
+import {
   createGovernanceClient,
   validateGetCollaboratorPermissionInput,
   validateGetBranchProtectionInput,
@@ -3570,6 +3584,131 @@ export function getGitCommit(input: unknown): Record<string, unknown> | Promise<
     });
   }
   return { connector: "github", action: "git.commits.get", source: "connector", validated: validateGetGitCommitInput(input) };
+}
+
+// ─── N8: environment and organization Actions variables ──────────────────────
+
+function liveEnvOrgClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createActionsEnvOrgVariablesClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+function throwVariable(result: { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }): never {
+  throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+}
+
+export function listEnvironmentVariables(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.environment_variables.list").listEnvironmentVariables(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.environment_variables.list", source: "connector", totalCount: result.totalCount, variables: result.variables };
+    });
+  }
+  return { connector: "github", action: "actions.environment_variables.list", source: "connector", validated: validateListEnvironmentVariablesInput(input) };
+}
+
+export function getEnvironmentVariable(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.environment_variables.get").getEnvironmentVariable(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.environment_variables.get", source: "connector", variable: result.variable };
+    });
+  }
+  return { connector: "github", action: "actions.environment_variables.get", source: "connector", validated: validateGetEnvironmentVariableInput(input) };
+}
+
+export function createEnvironmentVariable(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.environment_variables.create").createEnvironmentVariable(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.environment_variables.create", source: "connector", id: result.variable.name, variable: result.variable, created: result.created };
+    });
+  }
+  return { connector: "github", action: "actions.environment_variables.create", source: "connector", validated: validateCreateEnvironmentVariableInput(input) };
+}
+
+export function updateEnvironmentVariable(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.environment_variables.update").updateEnvironmentVariable(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.environment_variables.update", source: "connector", updated: result.updated, name: result.name, value: result.value };
+    });
+  }
+  return { connector: "github", action: "actions.environment_variables.update", source: "connector", validated: validateUpdateEnvironmentVariableInput(input) };
+}
+
+export function deleteEnvironmentVariable(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.environment_variables.delete").deleteEnvironmentVariable(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.environment_variables.delete", source: "connector", id: result.name, deleted: result.deleted, name: result.name };
+    });
+  }
+  return { connector: "github", action: "actions.environment_variables.delete", source: "connector", validated: validateDeleteEnvironmentVariableInput(input) };
+}
+
+export function listRepoOrganizationVariables(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.org_variables.list_for_repo").listRepoOrgVariables(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.org_variables.list_for_repo", source: "connector", totalCount: result.totalCount, variables: result.variables };
+    });
+  }
+  return { connector: "github", action: "actions.org_variables.list_for_repo", source: "connector", validated: validateListRepoOrgVariablesInput(input) };
+}
+
+export function listOrgVariables(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.org_variables.list").listOrgVariables(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.org_variables.list", source: "connector", totalCount: result.totalCount, variables: result.variables };
+    });
+  }
+  return { connector: "github", action: "actions.org_variables.list", source: "connector", validated: validateListOrgVariablesInput(input) };
+}
+
+export function getOrgVariable(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.org_variables.get").getOrgVariable(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.org_variables.get", source: "connector", variable: result.variable };
+    });
+  }
+  return { connector: "github", action: "actions.org_variables.get", source: "connector", validated: validateGetOrgVariableInput(input) };
+}
+
+export function createOrgVariable(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.org_variables.create").createOrgVariable(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.org_variables.create", source: "connector", id: result.variable.name, variable: result.variable, created: result.created };
+    });
+  }
+  return { connector: "github", action: "actions.org_variables.create", source: "connector", validated: validateCreateOrgVariableInput(input) };
+}
+
+export function updateOrgVariable(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.org_variables.update").updateOrgVariable(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.org_variables.update", source: "connector", updated: result.updated, name: result.name, value: result.value, visibility: result.visibility, ...(result.rename !== undefined ? { rename: result.rename } : {}) };
+    });
+  }
+  return { connector: "github", action: "actions.org_variables.update", source: "connector", validated: validateUpdateOrgVariableInput(input) };
+}
+
+export function deleteOrgVariable(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveEnvOrgClient(input, "actions.org_variables.delete").deleteOrgVariable(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "actions.org_variables.delete", source: "connector", id: result.name, deleted: result.deleted, name: result.name };
+    });
+  }
+  return { connector: "github", action: "actions.org_variables.delete", source: "connector", validated: validateDeleteOrgVariableInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
