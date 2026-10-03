@@ -1,4 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { createConnectorHttpClient } from "../../../bun/src/http";
+import manifest from "../manifest.json";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -240,6 +242,101 @@ export function validateListReleaseAssetsInput(input: unknown): ListReleaseAsset
   };
 }
 
+
+export type GenerateReleaseNotesInput = {
+  owner: string;
+  repo: string;
+  tagName: string;
+  targetCommitish?: string;
+  previousTagName?: string;
+  configurationFilePath?: string;
+};
+
+export function validateGenerateReleaseNotesInput(input: unknown): GenerateReleaseNotesInput {
+  if (!isRecord(input)) throw new Error("releases.generate_notes input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    tagName: requireString(input.tagName, "tagName"),
+    targetCommitish: optionalPlain(input.targetCommitish, "targetCommitish"),
+    previousTagName: optionalPlain(input.previousTagName, "previousTagName"),
+    configurationFilePath: optionalPlain(input.configurationFilePath, "configurationFilePath"),
+  };
+}
+
+export type DeleteReleaseInput = { owner: string; repo: string; releaseId: number };
+
+export function validateDeleteReleaseInput(input: unknown): DeleteReleaseInput {
+  if (!isRecord(input)) throw new Error("releases.delete input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    releaseId: requireNumber(input.releaseId, "releaseId"),
+  };
+}
+
+export type GetReleaseAssetInput = {
+  owner: string;
+  repo: string;
+  assetId?: number;
+  releaseId?: number;
+  name?: string;
+};
+
+export function validateGetReleaseAssetInput(input: unknown): GetReleaseAssetInput {
+  if (!isRecord(input)) throw new Error("releases.assets.get input must be an object");
+  const assetId = optionalPositive(input.assetId, "assetId") ?? optionalPositive(input.id, "id");
+  const releaseId = optionalPositive(input.releaseId, "releaseId");
+  const name = optionalPlain(input.name, "name");
+  if (assetId === undefined && (releaseId === undefined || !name)) {
+    throw new Error("assetId or releaseId and name is required");
+  }
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    assetId,
+    releaseId,
+    name,
+  };
+}
+
+export type UploadReleaseAssetInput = {
+  owner: string;
+  repo: string;
+  releaseId: number;
+  name: string;
+  contentType: string;
+  label?: string;
+  bytes: Uint8Array;
+};
+
+export function validateUploadReleaseAssetInput(input: unknown): UploadReleaseAssetInput {
+  if (!isRecord(input)) throw new Error("releases.assets.upload input must be an object");
+  const hasB64 = input.contentBase64 !== undefined;
+  const hasText = input.content !== undefined;
+  if (hasB64 === hasText) throw new Error("exactly one of contentBase64 or content is required");
+  let bytes: Uint8Array;
+  if (hasB64) {
+    if (typeof input.contentBase64 !== "string" || input.contentBase64.length === 0) throw new Error("contentBase64 is required");
+    bytes = decodeBase64(input.contentBase64);
+  } else {
+    if (typeof input.content !== "string") throw new Error("content must be a string");
+    bytes = new TextEncoder().encode(input.content);
+  }
+  if (bytes.byteLength === 0) throw new Error("asset content must not be empty");
+  const contentType = requireString(input.contentType, "contentType");
+  if (/[\r\n;]/.test(contentType)) throw new Error("contentType must be a media type");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    releaseId: requireNumber(input.releaseId, "releaseId"),
+    name: requireString(input.name, "name"),
+    contentType,
+    label: optionalPlain(input.label, "label"),
+    bytes,
+  };
+}
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 function mapReleaseError(status: number, headers: Headers, action: string) {
@@ -360,7 +457,112 @@ export function createReleasesClient(options: { accessToken: string; fetch?: typ
       }
       return mapReleaseError(response.status, response.headers, "releases.assets.list");
     },
+
+    async generateNotes(input: unknown) {
+      const payload = validateGenerateReleaseNotesInput(input);
+      const client = base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "releases.generate_notes" });
+      const body: Record<string, unknown> = { tag_name: payload.tagName };
+      if (payload.targetCommitish !== undefined) body.target_commitish = payload.targetCommitish;
+      if (payload.previousTagName !== undefined) body.previous_tag_name = payload.previousTagName;
+      if (payload.configurationFilePath !== undefined) body.configuration_file_path = payload.configurationFilePath;
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/releases/generate-notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 200 && isRecord(response.body)) {
+        return {
+          ok: true as const,
+          name: typeof response.body.name === "string" ? response.body.name : "",
+          body: typeof response.body.body === "string" ? response.body.body : "",
+        };
+      }
+      return mapReleaseError(response.status, response.headers, "releases.generate_notes");
+    },
+
+    async delete(input: unknown) {
+      const payload = validateDeleteReleaseInput(input);
+      const client = base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "releases.delete" });
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/releases/${payload.releaseId}`, { method: "DELETE" });
+      if (response.status === 204 || response.status === 404) {
+        return { ok: true as const, deleted: true as const, releaseId: payload.releaseId };
+      }
+      return mapReleaseError(response.status, response.headers, "releases.delete");
+    },
+
+    async getAsset(input: unknown) {
+      const payload = validateGetReleaseAssetInput(input);
+      const client = base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "releases.assets.get" });
+      if (payload.assetId !== undefined) {
+        const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/releases/assets/${payload.assetId}`);
+        if (response.status === 200 && isRecord(response.body)) {
+          return { ok: true as const, asset: normalizeGitHubReleaseAsset(response.body as GitHubReleaseAsset) };
+        }
+        return mapReleaseError(response.status, response.headers, "releases.assets.get");
+      }
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/releases/${payload.releaseId}/assets?per_page=100`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        const match = (response.body as GitHubReleaseAsset[]).find((asset) => asset.name === payload.name);
+        if (!match) {
+          return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Not found for releases.assets.get." } };
+        }
+        return { ok: true as const, asset: normalizeGitHubReleaseAsset(match) };
+      }
+      return mapReleaseError(response.status, response.headers, "releases.assets.get");
+    },
+
+    async uploadAsset(input: unknown) {
+      const payload = validateUploadReleaseAssetInput(input);
+      const params = new URLSearchParams({ name: payload.name });
+      if (payload.label) params.set("label", payload.label);
+      const url = `https://uploads.github.com/repos/${payload.owner}/${payload.repo}/releases/${payload.releaseId}/assets?${params.toString()}`;
+      const spec = (manifest.operations as Record<string, { maxResponseBytes?: number; timeoutMs?: number }>)["releases.assets.upload"];
+      const http = createConnectorHttpClient({
+        allowedHosts: manifest.network.allowedHosts as string[],
+        maxResponseBytes: spec?.maxResponseBytes ?? 1048576,
+        timeoutMs: spec?.timeoutMs ?? 15000,
+        fetch: options.fetch,
+      });
+      const response = await http.fetchText(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${options.accessToken}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": payload.contentType,
+        },
+        body: payload.bytes,
+      });
+      let parsed: unknown = response.body;
+      try { parsed = JSON.parse(response.body); } catch { /* keep text */ }
+      const headers = response.headers;
+      if ((response.status === 201 || response.status === 200) && isRecord(parsed)) {
+        return { ok: true as const, asset: normalizeGitHubReleaseAsset(parsed as GitHubReleaseAsset) };
+      }
+      return mapReleaseError(response.status, headers, "releases.assets.upload");
+    },
   };
+}
+
+
+function optionalPlain(value: unknown, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.length === 0 || /[\r\n]/.test(value)) throw new Error(`${field} must be a non-empty string`);
+  return value;
+}
+
+function optionalPositive(value: unknown, field: string): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "number" && Number.isInteger(value) && value >= 1) return value;
+  if (typeof value === "string" && /^[1-9]\d*$/.test(value)) return Number(value);
+  throw new Error(`${field} must be a positive integer`);
+}
+
+function decodeBase64(value: string): Uint8Array {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) throw new Error("contentBase64 must be valid base64");
+  const buf = Buffer.from(value, "base64");
+  if (buf.toString("base64").replace(/=+$/, "") !== value.replace(/=+$/, "")) throw new Error("contentBase64 must be valid base64");
+  return new Uint8Array(buf);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

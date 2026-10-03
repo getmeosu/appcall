@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -24,7 +24,8 @@
   "network": {
     "allowedHosts": [
       "api.github.com",
-      "github.com"
+      "github.com",
+      "uploads.github.com"
     ]
   },
   "operations": {
@@ -7919,6 +7920,772 @@
           }
         }
       }
+    },
+    "deployments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Deployments",
+      "description": "List deployments via GET /repos/{owner}/{repo}/deployments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "sha": {
+            "type": "string",
+            "description": "Filter by commit SHA."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Filter by ref (branch, tag, or SHA)."
+          },
+          "task": {
+            "type": "string",
+            "description": "Filter by deployment task name."
+          },
+          "environment": {
+            "type": "string",
+            "description": "Filter by environment name."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deployments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "deployments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Deployment",
+      "description": "Get a deployment via GET /repos/{owner}/{repo}/deployments/{deployment_id}. Accepts deploymentId or id. When only ref is set (EffectPolicy Reconcile from deployments.create), returns the newest matching deployment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "deploymentId": {
+            "type": "number",
+            "description": "Deployment id."
+          },
+          "id": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Alias for deploymentId."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Ref used to observe a deployment created by deployments.create when deploymentId is not yet known."
+          },
+          "environment": {
+            "type": "string",
+            "description": "Optional environment filter when observing by ref."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deployment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "deployments.statuses.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Deployment Statuses",
+      "description": "List deployment statuses via GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "deploymentId": {
+            "type": "number",
+            "description": "Deployment id."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "deploymentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "statuses": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "environments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Environments",
+      "description": "List repository environments via GET /repos/{owner}/{repo}/environments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number"
+          },
+          "environments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "environments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Environment",
+      "description": "Get an environment via GET /repos/{owner}/{repo}/environments/{environment_name}. Accepts name or environment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Environment name."
+          },
+          "environment": {
+            "type": "string",
+            "description": "Alias for name."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "environment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "actions.runs.logs.download": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Download Workflow Run Logs",
+      "description": "Capture the short-lived redirect URL for workflow run logs via GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs (302 Location; redirect is not followed).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "logs": {
+            "type": "object",
+            "properties": {
+              "runId": {
+                "type": "number"
+              },
+              "downloadUrl": {
+                "type": "string"
+              },
+              "expiresInSeconds": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.artifacts.download": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Download Artifact",
+      "description": "Capture the short-lived redirect URL for an artifact archive via GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip (302 Location; redirect is not followed).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "artifactId": {
+            "type": "number",
+            "description": "Artifact id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "artifactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "download": {
+            "type": "object",
+            "properties": {
+              "artifactId": {
+                "type": "number"
+              },
+              "downloadUrl": {
+                "type": "string"
+              },
+              "expiresInSeconds": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "releases.assets.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Release Asset",
+      "description": "Get a release asset via GET /repos/{owner}/{repo}/releases/assets/{asset_id}. Accepts assetId or id. EffectPolicy Reconcile from releases.assets.upload may pass releaseId plus name instead of an asset id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "assetId": {
+            "type": "number",
+            "description": "Release asset id."
+          },
+          "id": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Alias for assetId."
+          },
+          "releaseId": {
+            "type": "number",
+            "description": "Release id used with name when assetId is not known."
+          },
+          "name": {
+            "type": "string",
+            "description": "Asset file name used with releaseId when assetId is not known."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "asset": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "deployments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "deployments.get",
+      "title": "Create Deployment",
+      "description": "Create a deployment via POST /repos/{owner}/{repo}/deployments. EffectPolicy Reconcile observes via deployments.get (ref, and environment when set). Primary action result is returned; EffectPolicy Reconcile observes via deployments.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Git ref to deploy (branch, tag, or SHA). Shared with deployments.get for reconcile."
+          },
+          "task": {
+            "type": "string",
+            "description": "Deployment task name. Defaults to deploy on GitHub."
+          },
+          "autoMerge": {
+            "type": "boolean",
+            "description": "Merge the default branch into the requested ref before deploying."
+          },
+          "requiredContexts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Commit status contexts that must succeed."
+          },
+          "payload": {
+            "type": "object",
+            "description": "JSON payload attached to the deployment. A string is also accepted."
+          },
+          "environment": {
+            "type": "string",
+            "description": "Environment name. Shared with deployments.get when observing by ref."
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description of the deployment."
+          },
+          "transientEnvironment": {
+            "type": "boolean",
+            "description": "Mark the environment as transient."
+          },
+          "productionEnvironment": {
+            "type": "boolean",
+            "description": "Mark the environment as a production environment."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "ref"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deployment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "deployments.statuses.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "deployments.statuses.list",
+      "title": "Create Deployment Status",
+      "description": "Create a deployment status via POST /repos/{owner}/{repo}/deployments/{deployment_id}/statuses. EffectPolicy Reconcile observes via deployments.statuses.list. Primary action result is returned; EffectPolicy Reconcile observes via deployments.statuses.list for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "deploymentId": {
+            "type": "number",
+            "description": "Deployment id. Shared with deployments.statuses.list for reconcile."
+          },
+          "state": {
+            "type": "string",
+            "description": "Deployment status state.",
+            "enum": [
+              "error",
+              "failure",
+              "inactive",
+              "in_progress",
+              "queued",
+              "pending",
+              "success"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description of the status."
+          },
+          "environment": {
+            "type": "string",
+            "description": "Environment name."
+          },
+          "logUrl": {
+            "type": "string",
+            "description": "URL of the deployment output log (sent as log_url and target_url)."
+          },
+          "environmentUrl": {
+            "type": "string",
+            "description": "URL of the deployed environment."
+          },
+          "autoInactive": {
+            "type": "boolean",
+            "description": "Mark existing statuses inactive when adding a success status."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "deploymentId",
+          "state"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "actions.runs.rerun_failed": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "actions.runs.get",
+      "title": "Rerun Failed Jobs",
+      "description": "Rerun failed jobs for a workflow run via POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun-failed-jobs. EffectPolicy Reconcile observes via actions.runs.get. Primary action result is returned; EffectPolicy Reconcile observes via actions.runs.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id. Shared with actions.runs.get for reconcile."
+          },
+          "enableDebugLogging": {
+            "type": "boolean",
+            "description": "Enable debug logging for the rerun."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rerun": {
+            "type": "boolean"
+          },
+          "runId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "releases.generate_notes": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Generate Release Notes",
+      "description": "Preview generated release notes via POST /repos/{owner}/{repo}/releases/generate-notes. This does not persist a release, so there is no EffectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "tagName": {
+            "type": "string",
+            "description": "Tag name to generate notes for."
+          },
+          "targetCommitish": {
+            "type": "string",
+            "description": "Commitish that the tag will point to."
+          },
+          "previousTagName": {
+            "type": "string",
+            "description": "Previous tag to diff against."
+          },
+          "configurationFilePath": {
+            "type": "string",
+            "description": "Path to a release notes configuration file."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "tagName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "releases.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Delete Release",
+      "description": "Delete a release via DELETE /repos/{owner}/{repo}/releases/{release_id}. EffectPolicy Idempotent (double-delete is safe to classify; a missing release is already gone, so there is no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "releaseId": {
+            "type": "number",
+            "description": "Release id to delete."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "releaseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "releaseId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "releases.assets.upload": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "releases.assets.get",
+      "title": "Upload Release Asset",
+      "description": "Upload a release asset via POST https://uploads.github.com/repos/{owner}/{repo}/releases/{release_id}/assets. EffectPolicy Reconcile observes via releases.assets.get using releaseId and name. Primary action result is returned; EffectPolicy Reconcile observes via releases.assets.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "releaseId": {
+            "type": "number",
+            "description": "Release id. Shared with releases.assets.get for reconcile."
+          },
+          "name": {
+            "type": "string",
+            "description": "Asset file name. Shared with releases.assets.get for reconcile."
+          },
+          "contentType": {
+            "type": "string",
+            "description": "Asset media type sent as Content-Type."
+          },
+          "label": {
+            "type": "string",
+            "description": "Optional asset label."
+          },
+          "contentBase64": {
+            "type": "string",
+            "description": "Base64-encoded asset bytes. Mutually exclusive with content."
+          },
+          "content": {
+            "type": "string",
+            "description": "UTF-8 asset text. Mutually exclusive with contentBase64."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "releaseId",
+          "name",
+          "contentType"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "asset": {
+            "type": "object"
+          }
+        }
+      }
     }
   },
   "models": [
@@ -7952,6 +8719,9 @@
     "git_ref",
     "commit_comment",
     "notification",
-    "team"
+    "team",
+    "deployment",
+    "deployment_status",
+    "environment"
   ]
 }
