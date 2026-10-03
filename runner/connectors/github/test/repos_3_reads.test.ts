@@ -36,9 +36,9 @@ const READS = [
 ] as const;
 
 describe("github repos-3 repository activity reads", () => {
-  test("manifest stays v0.38.0 at 370 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.38.0");
-    expect(Object.keys(manifest.operations).length).toBe(370);
+  test("manifest stays v0.39.0 at 379 ops and these reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.39.0");
+    expect(Object.keys(manifest.operations).length).toBe(379);
     expect(READS).toHaveLength(8);
     expect(manifest.operations["repos.security_advisories.get"]).toBeDefined();
     for (const key of READS) {
