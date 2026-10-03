@@ -222,6 +222,18 @@ import {
   validateDeleteBranchPolicyInput,
 } from "./actions_deploy_policy";
 import {
+  createReposReadsClient,
+  validateGetAutolinkInput,
+  validateGetReadmeInput,
+  validateGetReadmeForDirInput,
+  validateGetSubscriptionInput,
+  validateGetCommunityProfileInput,
+  validateGetInteractionLimitsInput,
+  validateGetSecurityAdvisoryInput,
+  validateGetRepoLicenseInput,
+  validateListOrgAttestationRepositoriesInput,
+} from "./repos_reads";
+import {
   createGovernanceClient,
   validateGetCollaboratorPermissionInput,
   validateGetBranchProtectionInput,
@@ -3990,6 +4002,108 @@ export function listCheckRunsForSuite(input: unknown): Record<string, unknown> |
   }
   return { connector: "github", action: "checks.runs.list_for_suite", source: "connector", validated: validateListCheckRunsForSuiteInput(input) };
 }
+
+// ─── repos-2: repository metadata reads ───────────────────────────────────────
+
+function liveReposReadsClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createReposReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getRepoAutolink(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.autolinks.get").getAutolink(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.autolinks.get", source: "connector", autolink: result.autolink };
+    });
+  }
+  return { connector: "github", action: "repos.autolinks.get", source: "connector", validated: validateGetAutolinkInput(input) };
+}
+
+export function getRepoReadme(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.readme.get").getReadme(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.readme.get", source: "connector", readme: result.readme };
+    });
+  }
+  return { connector: "github", action: "repos.readme.get", source: "connector", validated: validateGetReadmeInput(input) };
+}
+
+export function getRepoReadmeForDir(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.readme.get_for_dir").getReadmeForDir(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.readme.get_for_dir", source: "connector", readme: result.readme };
+    });
+  }
+  return { connector: "github", action: "repos.readme.get_for_dir", source: "connector", validated: validateGetReadmeForDirInput(input) };
+}
+
+export function getRepoSubscription(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.subscription.get").getSubscription(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.subscription.get", source: "connector", subscription: result.subscription };
+    });
+  }
+  return { connector: "github", action: "repos.subscription.get", source: "connector", validated: validateGetSubscriptionInput(input) };
+}
+
+export function getRepoCommunityProfile(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.community.profile.get").getCommunityProfile(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.community.profile.get", source: "connector", profile: result.profile };
+    });
+  }
+  return { connector: "github", action: "repos.community.profile.get", source: "connector", validated: validateGetCommunityProfileInput(input) };
+}
+
+export function getRepoInteractionLimits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.interaction_limits.get").getInteractionLimits(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.interaction_limits.get", source: "connector", limits: result.limits, present: result.present };
+    });
+  }
+  return { connector: "github", action: "repos.interaction_limits.get", source: "connector", validated: validateGetInteractionLimitsInput(input) };
+}
+
+export function getRepoSecurityAdvisory(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.security_advisories.get").getSecurityAdvisory(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.security_advisories.get", source: "connector", advisory: result.advisory };
+    });
+  }
+  return { connector: "github", action: "repos.security_advisories.get", source: "connector", validated: validateGetSecurityAdvisoryInput(input) };
+}
+
+export function getRepoLicense(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "repos.license.get").getLicense(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.license.get", source: "connector", license: result.license };
+    });
+  }
+  return { connector: "github", action: "repos.license.get", source: "connector", validated: validateGetRepoLicenseInput(input) };
+}
+
+export function listOrgAttestationRepositories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveReposReadsClient(input, "orgs.attestations.repositories.list").listOrgAttestationRepositories(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.attestations.repositories.list", source: "connector", totalCount: result.totalCount, repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "orgs.attestations.repositories.list", source: "connector", validated: validateListOrgAttestationRepositoriesInput(input) };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isRecord(value: unknown): value is Record<string, unknown> {
