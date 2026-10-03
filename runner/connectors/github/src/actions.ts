@@ -43,6 +43,14 @@ import {
   validateListUserSocialAccountsInput,
   validateListAuthenticatedSocialAccountsInput,
   validateListUserSshSigningKeysInput,
+  validateUsersHovercardGetInput,
+  validateListUserEmailsInput,
+  validateListUserEventsInput,
+  validateListUserReceivedEventsInput,
+  validateListUserGpgKeysInput,
+  validateListMarketplacePurchasesInput,
+  validateListMarketplacePurchasesStubbedInput,
+  validateListUserBlocksInput,
 } from "./users";
 import {
   createOrgsClient,
@@ -178,6 +186,10 @@ import {
   validateListSecretScanningAlertsInput,
   validateListActionsVariablesInput,
   validateListActionsSecretsInput,
+  validateGetEnvironmentSecretsPublicKeyInput,
+  validateGetEnvironmentSecretInput,
+  validateGetCodespacesSecretInput,
+  validateGetCodespacesSecretsPublicKeyInput,
 } from "./alerts";
 import { createTagsClient, validateListTagsInput } from "./tags";
 import {
@@ -1435,6 +1447,126 @@ export function listUserSshSigningKeys(input: unknown): Record<string, unknown> 
     });
   }
   return { connector: "github", action: "users.ssh_signing_keys.list", source: "connector", validated: validateListUserSshSigningKeysInput(input) };
+}
+
+export function getUserHovercard(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.hovercard.get" }),
+    }).getHovercard(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.hovercard.get", source: "connector", hovercard: result.hovercard };
+    });
+  }
+  return { connector: "github", action: "users.hovercard.get", source: "connector", validated: validateUsersHovercardGetInput(input) };
+}
+
+export function listUserEmails(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "user.emails.list" }),
+    }).listEmails(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "user.emails.list", source: "connector", emails: result.emails };
+    });
+  }
+  return { connector: "github", action: "user.emails.list", source: "connector", validated: validateListUserEmailsInput(input) };
+}
+
+export function listUserEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.events.list" }),
+    }).listEvents(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.events.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "users.events.list", source: "connector", validated: validateListUserEventsInput(input) };
+}
+
+export function listUserReceivedEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.received_events.list" }),
+    }).listReceivedEvents(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.received_events.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "users.received_events.list", source: "connector", validated: validateListUserReceivedEventsInput(input) };
+}
+
+export function listUserGpgKeys(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.gpg_keys.list" }),
+    }).listGpgKeys(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.gpg_keys.list", source: "connector", keys: result.keys };
+    });
+  }
+  return { connector: "github", action: "users.gpg_keys.list", source: "connector", validated: validateListUserGpgKeysInput(input) };
+}
+
+export function listMarketplacePurchases(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "user.marketplace_purchases.list" }),
+    }).listMarketplacePurchases(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "user.marketplace_purchases.list", source: "connector", purchases: result.purchases };
+    });
+  }
+  return { connector: "github", action: "user.marketplace_purchases.list", source: "connector", validated: validateListMarketplacePurchasesInput(input) };
+}
+
+export function listMarketplacePurchasesStubbed(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "user.marketplace_purchases.stubbed.list" }),
+    }).listMarketplacePurchasesStubbed(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "user.marketplace_purchases.stubbed.list", source: "connector", purchases: result.purchases };
+    });
+  }
+  return { connector: "github", action: "user.marketplace_purchases.stubbed.list", source: "connector", validated: validateListMarketplacePurchasesStubbedInput(input) };
+}
+
+export function listUserBlocks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "user.blocks.list" }),
+    }).listBlocks(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "user.blocks.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "user.blocks.list", source: "connector", validated: validateListUserBlocksInput(input) };
 }
 
 export function getOrg(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -3339,6 +3471,46 @@ export function listActionsSecrets(input: unknown): Record<string, unknown> | Pr
     });
   }
   return { connector: "github", action: "actions.secrets.list", source: "connector", validated: validateListActionsSecretsInput(input) };
+}
+
+export function getEnvironmentSecretsPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).getEnvironmentSecretsPublicKey(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.environments.secrets.public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "repos.environments.secrets.public_key.get", source: "connector", validated: validateGetEnvironmentSecretsPublicKeyInput(input) };
+}
+
+export function getEnvironmentSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).getEnvironmentSecret(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.environments.secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "repos.environments.secrets.get", source: "connector", validated: validateGetEnvironmentSecretInput(input) };
+}
+
+export function getCodespacesSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).getCodespacesSecret(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "user.codespaces.secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.secrets.get", source: "connector", validated: validateGetCodespacesSecretInput(input) };
+}
+
+export function getCodespacesSecretsPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).getCodespacesSecretsPublicKey(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "user.codespaces.secrets.public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.secrets.public_key.get", source: "connector", validated: validateGetCodespacesSecretsPublicKeyInput(input) };
 }
 
 export function listGitRefs(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
