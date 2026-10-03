@@ -271,6 +271,14 @@ import {
   validateGetRepoRulesetInput,
   validateGetRulesForBranchInput,
   validateListRepoHooksInput,
+  validateGetOrgHookInput,
+  validateGetRepoHookInput,
+  validateGetOrgHookConfigInput,
+  validateGetRepoHookConfigInput,
+  validateGetOrgHookDeliveryInput,
+  validateGetRepoHookDeliveryInput,
+  validateListOrgHookDeliveriesInput,
+  validateListRepoHookDeliveriesInput,
   validateGetTeamMembershipInput,
   validateListTeamReposInput,
   validateListRepoInvitationsInput,
@@ -3080,6 +3088,126 @@ export function createRepoHook(input: unknown): Record<string, unknown> | Promis
     });
   }
   return { connector: "github", action: "repos.hooks.create", source: "connector", validated: validateCreateRepoHookInput(input) };
+}
+
+export function getOrgHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createGovernanceClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "orgs.hooks.get" }),
+    }).getOrgHook(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "orgs.hooks.get", source: "connector", hook: result.hook };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.get", source: "connector", validated: validateGetOrgHookInput(input) };
+}
+
+export function getRepoHook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createGovernanceClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "repos.hooks.get" }),
+    }).getRepoHook(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.hooks.get", source: "connector", hook: result.hook };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.get", source: "connector", validated: validateGetRepoHookInput(input) };
+}
+
+export function getOrgHookConfig(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createGovernanceClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "orgs.hooks.config.get" }),
+    }).getOrgHookConfig(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "orgs.hooks.config.get", source: "connector", config: result.config };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.config.get", source: "connector", validated: validateGetOrgHookConfigInput(input) };
+}
+
+export function getRepoHookConfig(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createGovernanceClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "repos.hooks.config.get" }),
+    }).getRepoHookConfig(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.hooks.config.get", source: "connector", config: result.config };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.config.get", source: "connector", validated: validateGetRepoHookConfigInput(input) };
+}
+
+export function getOrgHookDelivery(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createGovernanceClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "orgs.hooks.deliveries.get" }),
+    }).getOrgHookDelivery(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "orgs.hooks.deliveries.get", source: "connector", delivery: result.delivery };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.deliveries.get", source: "connector", validated: validateGetOrgHookDeliveryInput(input) };
+}
+
+export function getRepoHookDelivery(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createGovernanceClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "repos.hooks.deliveries.get" }),
+    }).getRepoHookDelivery(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.hooks.deliveries.get", source: "connector", delivery: result.delivery };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.deliveries.get", source: "connector", validated: validateGetRepoHookDeliveryInput(input) };
+}
+
+export function listOrgHookDeliveries(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createGovernanceClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "orgs.hooks.deliveries.list" }),
+    }).listOrgHookDeliveries(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "orgs.hooks.deliveries.list", source: "connector", deliveries: result.deliveries };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.deliveries.list", source: "connector", validated: validateListOrgHookDeliveriesInput(input) };
+}
+
+export function listRepoHookDeliveries(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createGovernanceClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "repos.hooks.deliveries.list" }),
+    }).listRepoHookDeliveries(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.hooks.deliveries.list", source: "connector", deliveries: result.deliveries };
+    });
+  }
+  return { connector: "github", action: "repos.hooks.deliveries.list", source: "connector", validated: validateListRepoHookDeliveriesInput(input) };
 }
 
 export function removeTeamMembership(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
