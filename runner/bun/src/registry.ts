@@ -389,6 +389,9 @@ import {
   getCodeOfConduct as ghGetCodeOfConduct,
   listRepoAssignees as ghListRepoAssignees,
   listPublicEvents as ghListPublicEvents,
+  listRepoForks as ghListRepoForks,
+  searchTopics as ghSearchTopics,
+  searchLabels as ghSearchLabels,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1144,6 +1147,8 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "search.code": ghSearchCode,
       "search.commits": ghSearchCommits,
       "search.repositories": ghSearchRepositories,
+      "search.topics.list": ghSearchTopics,
+      "search.labels.list": ghSearchLabels,
       "search.orgs": ghSearchOrgs,
       "users.get": ghGetAuthenticatedUser,
       "users.get_authenticated": ghGetUsersAuthenticated,
@@ -1217,6 +1222,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "teams.members.list": ghListTeamMembers,
       "teams.membership.add": ghAddTeamMembership,
       "repos.fork": ghForkRepo,
+      "repos.forks.list": ghListRepoForks,
       "repos.star": ghStarRepo,
       "repos.unstar": ghUnstarRepo,
       "deployments.list": ghListDeployments,

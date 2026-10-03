@@ -290,6 +290,13 @@ import {
   validateListRepoAssigneesInput,
   validateListPublicEventFeedInput,
 } from "./card6_reads";
+import {
+  createCard7ReadsClient,
+  validateListRepoForksInput,
+  validateSearchTopicsInput,
+  validateSearchLabelsInput,
+} from "./card7_reads";
+
 
 import {
   createReposReadsClient,
@@ -5161,6 +5168,48 @@ export function listPublicEvents(input: unknown): Record<string, unknown> | Prom
     });
   }
   return { connector: "github", action: "events.public.list", source: "connector", validated: validateListPublicEventFeedInput(input) };
+}
+
+
+// ─── card 7: forks list and search reads ─────────────────────────────────────
+
+function liveCard7Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard7ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listRepoForks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard7Client(input, "repos.forks.list").listForks(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.forks.list", source: "connector", forks: result.forks };
+    });
+  }
+  return { connector: "github", action: "repos.forks.list", source: "connector", validated: validateListRepoForksInput(input) };
+}
+
+export function searchTopics(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard7Client(input, "search.topics.list").searchTopics(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "search.topics.list", source: "connector", totalCount: result.totalCount, incompleteResults: result.incompleteResults, items: result.items };
+    });
+  }
+  return { connector: "github", action: "search.topics.list", source: "connector", validated: validateSearchTopicsInput(input) };
+}
+
+export function searchLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard7Client(input, "search.labels.list").searchLabels(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "search.labels.list", source: "connector", totalCount: result.totalCount, incompleteResults: result.incompleteResults, items: result.items };
+    });
+  }
+  return { connector: "github", action: "search.labels.list", source: "connector", validated: validateSearchLabelsInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
