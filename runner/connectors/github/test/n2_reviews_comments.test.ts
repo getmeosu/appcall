@@ -286,5 +286,8 @@ describe("github N2 reviews comments timeline checks", () => {
     expect((created.checkRun as Record<string, unknown>).headSha).toBe("abc123def456abc123def456abc123def456abc1");
     const byId = getCheckRun({ owner: "acme", repo: "app", id: 42 });
     expect((byId.validated as Record<string, unknown>).checkRunId).toBe(42);
+    const byString = getCheckRun({ owner: "acme", repo: "app", id: "42" });
+    expect((byString.validated as Record<string, unknown>).checkRunId).toBe(42);
+    expect(() => getCheckRun({ owner: "acme", repo: "app", id: "9007199254740993" })).toThrow(/safe integer/);
   });
 });
