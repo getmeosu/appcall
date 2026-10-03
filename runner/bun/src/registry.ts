@@ -354,6 +354,13 @@ import {
   listOrgEvents as ghListOrgEvents,
   listPublicOrgMembers as ghListPublicOrgMembers,
   listOrgBlocks as ghListOrgBlocks,
+  listOrgRoleUsers as ghListOrgRoleUsers,
+  getRepoTarball as ghGetRepoTarball,
+  getRepoZipball as ghGetRepoZipball,
+  checkRepoAssignee as ghCheckRepoAssignee,
+  checkUserBlocked as ghCheckUserBlocked,
+  getNotificationThreadSubscription as ghGetNotificationThreadSubscription,
+  getUserBillingUsage as ghGetUserBillingUsage,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1317,6 +1324,13 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "orgs.events.list": ghListOrgEvents,
       "orgs.public_members.list": ghListPublicOrgMembers,
       "orgs.blocks.list": ghListOrgBlocks,
+      "orgs.organization_roles.users.list": ghListOrgRoleUsers,
+      "repos.tarball.get": ghGetRepoTarball,
+      "repos.zipball.get": ghGetRepoZipball,
+      "repos.assignees.check": ghCheckRepoAssignee,
+      "user.blocks.check": ghCheckUserBlocked,
+      "notifications.threads.subscription.get": ghGetNotificationThreadSubscription,
+      "users.billing.usage.get": ghGetUserBillingUsage,
     },
     salesforce: {
       "contacts.create": createContact,

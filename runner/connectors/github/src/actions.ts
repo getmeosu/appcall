@@ -277,6 +277,16 @@ import {
   validateGetRepoTopicsInput,
 } from "./repos_reads";
 import {
+  createCard3ReadsClient,
+  validateListOrgRoleUsersInput,
+  validateGetRepoTarballInput,
+  validateGetRepoZipballInput,
+  validateCheckRepoAssigneeInput,
+  validateCheckUserBlockedInput,
+  validateGetThreadSubscriptionInput,
+  validateGetUserBillingUsageInput,
+} from "./card3_reads";
+import {
   createGovernanceClient,
   validateGetCollaboratorPermissionInput,
   validateGetBranchProtectionInput,
@@ -4589,6 +4599,15 @@ function liveOrgsReadsClient(input: Record<string, unknown>, operation: string) 
   });
 }
 
+function liveCard3Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard3ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
 export function checkOrgBlock(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return liveOrgsReadsClient(input, "orgs.blocks.check").checkBlock(input).then((result) => {
@@ -4697,6 +4716,76 @@ export function listOrgBlocks(input: unknown): Record<string, unknown> | Promise
     });
   }
   return { connector: "github", action: "orgs.blocks.list", source: "connector", validated: validateListOrgBlocksInput(input) };
+}
+
+export function listOrgRoleUsers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard3Client(input, "orgs.organization_roles.users.list").listOrgRoleUsers(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.organization_roles.users.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.users.list", source: "connector", validated: validateListOrgRoleUsersInput(input) };
+}
+
+export function getRepoTarball(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard3Client(input, "repos.tarball.get").getTarball(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.tarball.get", source: "connector", downloadUrl: result.downloadUrl };
+    });
+  }
+  return { connector: "github", action: "repos.tarball.get", source: "connector", validated: validateGetRepoTarballInput(input) };
+}
+
+export function getRepoZipball(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard3Client(input, "repos.zipball.get").getZipball(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.zipball.get", source: "connector", downloadUrl: result.downloadUrl };
+    });
+  }
+  return { connector: "github", action: "repos.zipball.get", source: "connector", validated: validateGetRepoZipballInput(input) };
+}
+
+export function checkRepoAssignee(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard3Client(input, "repos.assignees.check").checkAssignee(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.assignees.check", source: "connector", assigned: result.assigned };
+    });
+  }
+  return { connector: "github", action: "repos.assignees.check", source: "connector", validated: validateCheckRepoAssigneeInput(input) };
+}
+
+export function checkUserBlocked(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard3Client(input, "user.blocks.check").checkBlocked(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.blocks.check", source: "connector", blocked: result.blocked };
+    });
+  }
+  return { connector: "github", action: "user.blocks.check", source: "connector", validated: validateCheckUserBlockedInput(input) };
+}
+
+export function getNotificationThreadSubscription(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard3Client(input, "notifications.threads.subscription.get").getThreadSubscription(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "notifications.threads.subscription.get", source: "connector", notModified: result.notModified, subscription: result.notModified ? undefined : result.subscription };
+    });
+  }
+  return { connector: "github", action: "notifications.threads.subscription.get", source: "connector", validated: validateGetThreadSubscriptionInput(input) };
+}
+
+export function getUserBillingUsage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard3Client(input, "users.billing.usage.get").getBillingUsage(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.billing.usage.get", source: "connector", usageItems: result.usageItems };
+    });
+  }
+  return { connector: "github", action: "users.billing.usage.get", source: "connector", validated: validateGetUserBillingUsageInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
