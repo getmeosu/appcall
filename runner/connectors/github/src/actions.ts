@@ -319,6 +319,18 @@ import {
   validateSearchTopicsInput,
   validateSearchLabelsInput,
 } from "./card7_reads";
+import {
+  createCard10ReadsClient,
+  validateListOrgHooksInput,
+  validateListIssueReactionsInput,
+  validateListIssueCommentReactionsInput,
+  validateListCommitCommentReactionsInput,
+  validateListReviewCommentReactionsInput,
+  validateListReleaseReactionsInput,
+  validateGetOrgRunnerInput,
+  validateGetRepoRunnerInput,
+  validateListRepoRunnerLabelsInput,
+} from "./card10_reads";
 
 
 import {
@@ -5424,6 +5436,108 @@ export function listCodespaceMachines(input: unknown): Record<string, unknown> |
     });
   }
   return { connector: "github", action: "user.codespaces.machines.list", source: "connector", validated: validateListCodespaceMachinesInput(input) };
+}
+
+
+// ─── card 10: org hooks, reactions, and runner reads ─────────────────────────
+
+function liveCard10Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard10ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listOrgHooks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard10Client(input, "orgs.hooks.list").listOrgHooks(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.hooks.list", source: "connector", hooks: result.hooks };
+    });
+  }
+  return { connector: "github", action: "orgs.hooks.list", source: "connector", validated: validateListOrgHooksInput(input) };
+}
+
+export function listIssueReactions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard10Client(input, "issues.reactions.list").listIssueReactions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.reactions.list", source: "connector", reactions: result.reactions };
+    });
+  }
+  return { connector: "github", action: "issues.reactions.list", source: "connector", validated: validateListIssueReactionsInput(input) };
+}
+
+export function listIssueCommentReactions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard10Client(input, "issues.comments.reactions.list").listIssueCommentReactions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.comments.reactions.list", source: "connector", reactions: result.reactions };
+    });
+  }
+  return { connector: "github", action: "issues.comments.reactions.list", source: "connector", validated: validateListIssueCommentReactionsInput(input) };
+}
+
+export function listCommitCommentReactions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard10Client(input, "commits.comments.reactions.list").listCommitCommentReactions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "commits.comments.reactions.list", source: "connector", reactions: result.reactions };
+    });
+  }
+  return { connector: "github", action: "commits.comments.reactions.list", source: "connector", validated: validateListCommitCommentReactionsInput(input) };
+}
+
+export function listReviewCommentReactions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard10Client(input, "pull_requests.review_comments.reactions.list").listReviewCommentReactions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "pull_requests.review_comments.reactions.list", source: "connector", reactions: result.reactions };
+    });
+  }
+  return { connector: "github", action: "pull_requests.review_comments.reactions.list", source: "connector", validated: validateListReviewCommentReactionsInput(input) };
+}
+
+export function listReleaseReactions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard10Client(input, "releases.reactions.list").listReleaseReactions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "releases.reactions.list", source: "connector", reactions: result.reactions };
+    });
+  }
+  return { connector: "github", action: "releases.reactions.list", source: "connector", validated: validateListReleaseReactionsInput(input) };
+}
+
+export function getOrgActionsRunner(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard10Client(input, "orgs.actions.runners.get").getOrgRunner(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.runners.get", source: "connector", runner: result.runner };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.runners.get", source: "connector", validated: validateGetOrgRunnerInput(input) };
+}
+
+export function getRepoActionsRunner(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard10Client(input, "repos.actions.runners.get").getRepoRunner(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.actions.runners.get", source: "connector", runner: result.runner };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.get", source: "connector", validated: validateGetRepoRunnerInput(input) };
+}
+
+export function listRepoActionsRunnerLabels(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard10Client(input, "repos.actions.runners.labels.list").listRepoRunnerLabels(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.actions.runners.labels.list", source: "connector", totalCount: result.totalCount, labels: result.labels };
+    });
+  }
+  return { connector: "github", action: "repos.actions.runners.labels.list", source: "connector", validated: validateListRepoRunnerLabelsInput(input) };
 }
 
 

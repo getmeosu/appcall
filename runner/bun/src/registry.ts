@@ -409,6 +409,15 @@ import {
   listRepoForks as ghListRepoForks,
   searchTopics as ghSearchTopics,
   searchLabels as ghSearchLabels,
+  listOrgHooks as ghListOrgHooks,
+  listIssueReactions as ghListIssueReactions,
+  listIssueCommentReactions as ghListIssueCommentReactions,
+  listCommitCommentReactions as ghListCommitCommentReactions,
+  listReviewCommentReactions as ghListReviewCommentReactions,
+  listReleaseReactions as ghListReleaseReactions,
+  getOrgActionsRunner as ghGetOrgActionsRunner,
+  getRepoActionsRunner as ghGetRepoActionsRunner,
+  listRepoActionsRunnerLabels as ghListRepoActionsRunnerLabels,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1427,6 +1436,15 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "user.codespaces.list": ghListUserCodespaces,
       "orgs.codespaces.list": ghListOrgCodespaces,
       "user.codespaces.machines.list": ghListCodespaceMachines,
+      "orgs.hooks.list": ghListOrgHooks,
+      "issues.reactions.list": ghListIssueReactions,
+      "issues.comments.reactions.list": ghListIssueCommentReactions,
+      "commits.comments.reactions.list": ghListCommitCommentReactions,
+      "pull_requests.review_comments.reactions.list": ghListReviewCommentReactions,
+      "releases.reactions.list": ghListReleaseReactions,
+      "orgs.actions.runners.get": ghGetOrgActionsRunner,
+      "repos.actions.runners.get": ghGetRepoActionsRunner,
+      "repos.actions.runners.labels.list": ghListRepoActionsRunnerLabels,
     },
     salesforce: {
       "contacts.create": createContact,
