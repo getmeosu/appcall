@@ -1219,10 +1219,11 @@ export function createWorkflowsClient(options: {
         `/repos/${payload.owner}/${payload.repo}/actions/caches/${payload.cacheId}`,
         { method: "DELETE" },
       );
-      // No get-by-id. A missing cache is already gone.
-      if (response.status === 204 || response.status === 404) {
+      // 204 is the delete. 404 is not success: a missing repository looks the same as a missing cache.
+      if (response.status === 204) {
         return { ok: true as const, deleted: true as const, cacheId: payload.cacheId };
       }
+      if (response.status === 404) return upstream("Actions cache not found.");
       if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
       return upstream("GitHub rejected the delete cache request.");
     },
@@ -1246,10 +1247,8 @@ export function createWorkflowsClient(options: {
           caches,
         };
       }
-      // Idempotent: a key that matches nothing is already gone.
-      if (response.status === 404) {
-        return { ok: true as const, deleted: true as const, key: payload.key, ref: payload.ref ?? "", totalCount: 0, caches: [] };
-      }
+      // 200 with total_count 0 is the empty match. 404 is not success.
+      if (response.status === 404) return upstream("Repository or cache key not found.");
       if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
       return upstream("GitHub rejected the delete caches by key request.");
     },
@@ -1285,10 +1284,11 @@ export function createWorkflowsClient(options: {
         `/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}`,
         { method: "DELETE" },
       );
-      // GitHub also deletes this run's artifacts. A missing run is already gone.
-      if (response.status === 204 || response.status === 404) {
+      // GitHub also deletes this run's artifacts. 404 is not success: a missing repository looks the same as a missing run.
+      if (response.status === 204) {
         return { ok: true as const, deleted: true as const, runId: payload.runId };
       }
+      if (response.status === 404) return upstream("Workflow run not found.");
       if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
       return upstream("GitHub rejected the delete run request.");
     },
