@@ -11,9 +11,9 @@ const READS = ["codes_of_conduct.get", "repos.assignees.list", "events.public.li
 const CHECK_DESCRIPTION = "GET /repos/{owner}/{repo}/assignees/{assignee}. A 204 means the user is an assignee (assigned true). A 404 means they are not (assigned false). Neither is CONNECTOR_UPSTREAM_ERROR.";
 
 describe("github card-6 reads", () => {
-  test("version stays 0.39.0 at 379 ops and the new reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.39.0");
-    expect(Object.keys(manifest.operations).length).toBe(379);
+  test("version stays 0.40.0 at 392 ops and the new reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.40.0");
+    expect(Object.keys(manifest.operations).length).toBe(392);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("read");
