@@ -432,8 +432,8 @@ export function validateListRequestedReviewersInput(input: unknown): ListRequest
     owner: requireString(input.owner, "owner"),
     repo: requireString(input.repo, "repo"),
     pullNumber: requireNumber(input.pullNumber, "pullNumber"),
-    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
-    page: typeof input.page === "number" ? input.page : undefined,
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
   };
 }
 
@@ -464,8 +464,8 @@ export function validateListReviewCommentsForReviewInput(input: unknown): ListRe
     repo: requireString(input.repo, "repo"),
     pullNumber: requireNumber(input.pullNumber, "pullNumber"),
     reviewId: requireNumber(input.reviewId, "reviewId"),
-    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
-    page: typeof input.page === "number" ? input.page : undefined,
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
   };
 }
 
@@ -1151,6 +1151,15 @@ function parseNextLink(response: Record<string, unknown>): string | null {
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
+  return value;
+}
+
+
+function optionalPage(value: unknown, field: string, max = 100): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > max) {
+    throw new Error(`${field} must be an integer between 1 and ${max}`);
+  }
   return value;
 }
 

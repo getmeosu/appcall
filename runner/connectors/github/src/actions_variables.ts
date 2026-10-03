@@ -99,6 +99,11 @@ export function createActionsVariablesClient(options: { accessToken: string; fet
         };
       }
       if (response.status === 422) {
+        // A concurrent create can win between the 404 and this POST.
+        const raced = await getVariable(payload);
+        if (raced.ok) {
+          return { ok: true as const, variable: raced.variable, created: false as const };
+        }
         return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Actions variable already exists or is invalid." } };
       }
       return mapRateOrUpstream(response, "GitHub rejected the create actions variable request.");

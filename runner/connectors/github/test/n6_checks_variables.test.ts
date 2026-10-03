@@ -303,6 +303,28 @@ describe("github N6 checks and actions variables", () => {
     expect(createdCalls[1].body).toBe(JSON.stringify({ name: "NEW_VAR", value: "1" }));
     expect(created.created).toBe(true);
 
+    let raceGets = 0;
+    const raced = await createActionsVariable({
+      accessToken: "t",
+      owner: "acme",
+      repo: "app",
+      name: "NEW_VAR",
+      value: "1",
+      fetch: async (input, init) => {
+        const method = init?.method ?? "GET";
+        if (method === "GET") {
+          raceGets += 1;
+          if (raceGets === 1) return new Response("", { status: 404 });
+          return new Response(JSON.stringify(variableFixture), { status: 200 });
+        }
+        expect(String(input)).toBe("https://api.github.com/repos/acme/app/actions/variables");
+        return new Response(JSON.stringify({ message: "Variable already exists" }), { status: 422 });
+      },
+    });
+    expect(raceGets).toBe(2);
+    expect(raced.created).toBe(false);
+    expect(raced.variable?.name).toBe("DEPLOY_ENV");
+
     const patched = await updateActionsVariable({
       accessToken: "t",
       owner: "acme",
