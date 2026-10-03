@@ -34,9 +34,9 @@ const READS = [
 ] as const;
 
 describe("github users-3 public user reads", () => {
-  test("manifest stays v0.30.0 at 304 ops and these reads omit effect policy", () => {
-    expect(manifest.version).toBe("0.30.0");
-    expect(Object.keys(manifest.operations).length).toBe(304);
+  test("manifest stays v0.31.0 at 315 ops and these reads omit effect policy", () => {
+    expect(manifest.version).toBe("0.31.0");
+    expect(Object.keys(manifest.operations).length).toBe(315);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");

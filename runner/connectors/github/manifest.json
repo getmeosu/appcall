@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -17025,6 +17025,529 @@
             "type": "array",
             "items": {
               "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "orgs.blocks.check": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Check if a user is blocked by an organization",
+      "description": "Read GET /orgs/{org}/blocks/{username}. HTTP 204 means the user is blocked. HTTP 404 means the user is not blocked. A 404 is not CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "username": {
+            "type": "string",
+            "description": "GitHub user login. A single path segment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "isBlocked": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "orgs.public_members.check": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Check public organization membership",
+      "description": "Read GET /orgs/{org}/public_members/{username}. HTTP 204 means the user is a public member. HTTP 404 means the user is not a public member. A 404 is not CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "username": {
+            "type": "string",
+            "description": "GitHub user login. A single path segment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "isPublicMember": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "orgs.organization_roles.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get an organization role",
+      "description": "Read GET /orgs/{org}/organization-roles/{role_id}. A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "roleId": {
+            "type": "number",
+            "description": "Organization role id. Official path parameter role_id. A positive integer."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "org",
+          "roleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.interaction_limits.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get organization interaction limits",
+      "description": "Read GET /orgs/{org}/interaction-limits. A 404 is CONNECTOR_UPSTREAM_ERROR. Does not change repos.interaction_limits.get. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "org"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "limits": {
+            "type": "object",
+            "properties": {
+              "limit": {
+                "type": "string"
+              },
+              "origin": {
+                "type": "string"
+              },
+              "expiresAt": {
+                "type": "string"
+              }
+            }
+          },
+          "present": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "orgs.public.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List public organizations",
+      "description": "Read GET /organizations. Pagination uses since and per_page. This is not orgs.list (GET /user/orgs). A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "since": {
+            "type": "number",
+            "description": "Organization id cursor. Official query parameter since. Only organizations with a greater id are returned."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page. Official query parameter per_page. Integer from 1 to 100."
+          }
+        },
+        "additionalProperties": false,
+        "required": []
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "organizations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "login": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "users.orgs.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List public organizations for a user",
+      "description": "Read GET /users/{username}/orgs. Public memberships only. This is not orgs.list (GET /user/orgs). A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "GitHub user login. A single path segment."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page. Official query parameter per_page. Integer from 1 to 100."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number. Official query parameter page. Integer from 1."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "organizations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "login": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "users.events.orgs.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List organization events for a user",
+      "description": "Read GET /users/{username}/events/orgs/{org}. A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "GitHub user login. A single path segment."
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page. Official query parameter per_page. Integer from 1 to 100."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number. Official query parameter page. Integer from 1."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "org"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "eventId": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.outside_collaborators.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List outside collaborators",
+      "description": "Read GET /orgs/{org}/outside_collaborators. Optional filter is 2fa_disabled, 2fa_insecure, or all. A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Official query parameter filter.",
+            "enum": [
+              "2fa_disabled",
+              "2fa_insecure",
+              "all"
+            ]
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page. Official query parameter per_page. Integer from 1 to 100."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number. Official query parameter page. Integer from 1."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "org"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "collaborators": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "login": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.events.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List public organization events",
+      "description": "Read GET /orgs/{org}/events. A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page. Official query parameter per_page. Integer from 1 to 100."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number. Official query parameter page. Integer from 1."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "org"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "eventId": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.public_members.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List public organization members",
+      "description": "Read GET /orgs/{org}/public_members. A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page. Official query parameter per_page. Integer from 1 to 100."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number. Official query parameter page. Integer from 1."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "org"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "login": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "orgs.blocks.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List users blocked by an organization",
+      "description": "Read GET /orgs/{org}/blocks. A 404 is CONNECTOR_UPSTREAM_ERROR. No effectPolicy and no reconcile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "org": {
+            "type": "string",
+            "description": "Organization login. A single path segment. The name is not case sensitive."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page. Official query parameter per_page. Integer from 1 to 100."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number. Official query parameter page. Integer from 1."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "org"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "login": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              }
             }
           }
         }

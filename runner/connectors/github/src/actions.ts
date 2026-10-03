@@ -242,6 +242,21 @@ import {
   validateListTrafficPopularReferrersInput,
 } from "./traffic";
 import {
+  createOrgsReadsClient,
+  validateCheckOrgBlockInput,
+  validateCheckPublicMemberInput,
+  validateGetOrganizationRoleInput,
+  validateGetOrgInteractionLimitsInput,
+  validateListPublicOrgsInput,
+  validateListUserOrgsInput,
+  validateListUserOrgEventsInput,
+  validateListOutsideCollaboratorsInput,
+  validateListOrgEventsInput,
+  validateListPublicMembersInput,
+  validateListOrgBlocksInput,
+} from "./orgs_reads";
+
+import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -4561,6 +4576,127 @@ export function getRepoTopics(input: unknown): Record<string, unknown> | Promise
     });
   }
   return { connector: "github", action: "repos.topics.get", source: "connector", validated: validateGetRepoTopicsInput(input) };
+}
+
+// ─── orgs-reads: organization membership, role, and event reads ──────────────
+
+function liveOrgsReadsClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createOrgsReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function checkOrgBlock(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "orgs.blocks.check").checkBlock(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.blocks.check", source: "connector", isBlocked: result.isBlocked, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.blocks.check", source: "connector", validated: validateCheckOrgBlockInput(input) };
+}
+
+export function checkOrgPublicMember(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "orgs.public_members.check").checkPublicMember(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.public_members.check", source: "connector", isPublicMember: result.isPublicMember, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.public_members.check", source: "connector", validated: validateCheckPublicMemberInput(input) };
+}
+
+export function getOrganizationRole(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "orgs.organization_roles.get").getOrganizationRole(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.organization_roles.get", source: "connector", role: result.role };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.get", source: "connector", validated: validateGetOrganizationRoleInput(input) };
+}
+
+export function getOrgInteractionLimits(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "orgs.interaction_limits.get").getInteractionLimits(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.interaction_limits.get", source: "connector", limits: result.limits, present: result.present };
+    });
+  }
+  return { connector: "github", action: "orgs.interaction_limits.get", source: "connector", validated: validateGetOrgInteractionLimitsInput(input) };
+}
+
+export function listPublicOrgs(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "orgs.public.list").listPublicOrgs(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.public.list", source: "connector", organizations: result.organizations };
+    });
+  }
+  return { connector: "github", action: "orgs.public.list", source: "connector", validated: validateListPublicOrgsInput(input) };
+}
+
+export function listUserOrgs(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "users.orgs.list").listUserOrgs(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.orgs.list", source: "connector", organizations: result.organizations };
+    });
+  }
+  return { connector: "github", action: "users.orgs.list", source: "connector", validated: validateListUserOrgsInput(input) };
+}
+
+export function listUserOrgEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "users.events.orgs.list").listUserOrgEvents(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.events.orgs.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "users.events.orgs.list", source: "connector", validated: validateListUserOrgEventsInput(input) };
+}
+
+export function listOutsideCollaborators(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "orgs.outside_collaborators.list").listOutsideCollaborators(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.outside_collaborators.list", source: "connector", collaborators: result.collaborators };
+    });
+  }
+  return { connector: "github", action: "orgs.outside_collaborators.list", source: "connector", validated: validateListOutsideCollaboratorsInput(input) };
+}
+
+export function listOrgEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "orgs.events.list").listOrgEvents(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.events.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "orgs.events.list", source: "connector", validated: validateListOrgEventsInput(input) };
+}
+
+export function listPublicOrgMembers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "orgs.public_members.list").listPublicMembers(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.public_members.list", source: "connector", members: result.members };
+    });
+  }
+  return { connector: "github", action: "orgs.public_members.list", source: "connector", validated: validateListPublicMembersInput(input) };
+}
+
+export function listOrgBlocks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgsReadsClient(input, "orgs.blocks.list").listBlocks(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.blocks.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "orgs.blocks.list", source: "connector", validated: validateListOrgBlocksInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
