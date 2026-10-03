@@ -34,7 +34,7 @@ describe("github S5 contents-write actions", () => {
       content: "aGVsbG8gd29ybGQK",
       branch: "main",
     });
-    expect(sync.action).toBe("contents.put");
+    expect(sync.action).toBe("repos.contents.put");
 
     const requests: Request[] = [];
     const result = await putContents({

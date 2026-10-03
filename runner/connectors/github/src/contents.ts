@@ -19,7 +19,7 @@ export type PutContentsInput = {
 export function validatePutContentsInput(input: unknown): PutContentsInput {
   if (!isRecord(input)) throw new Error("put contents input must be an object");
   // Accept `ref` as alias for `branch` so EffectPolicy Reconcile can reuse
-  // contents.put input when calling repos.contents.get (which takes `ref`).
+  // repos.contents.put input when calling repos.contents.get (which takes `ref`).
   const branchRaw = input.branch ?? input.ref;
   return {
     owner: requireString(input.owner, "owner"),
@@ -127,7 +127,7 @@ function gitRefPath(branch: string): string {
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 export function createContentsClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
-  const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "contents.put" });
+  const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "repos.contents.put" });
 
   return {
     async put(input: unknown) {

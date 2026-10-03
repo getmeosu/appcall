@@ -175,7 +175,7 @@ export type GetRepoContentsInput = { owner: string; repo: string; path: string; 
 
 export function validateGetRepoContentsInput(input: unknown): GetRepoContentsInput {
   if (!isRecord(input)) throw new Error("get repo contents input must be an object");
-  // contents.put / contents.delete write `branch` (and only fall back to `ref`).
+  // repos.contents.put / repos.contents.delete write `branch` (and only fall back to `ref`).
   // Reconcile reuses that input, so `branch` wins when both differ.
   const refRaw = input.branch ?? input.ref;
   return {

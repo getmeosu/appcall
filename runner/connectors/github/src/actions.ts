@@ -1817,58 +1817,58 @@ export function updateDiscussionComment(input: unknown): Record<string, unknown>
   return { connector: "github", action: "discussions.comments.update", source: "connector", validated: validateUpdateDiscussionCommentInput(input) };
 }
 
-// ─── S5: contents.put ─────────────────────────────────────────────────────────
+// ─── S5: repos.contents.put ─────────────────────────────────────────────────────────
 
 export function putContents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return createContentsClient({
       accessToken: input.accessToken,
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
-      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "contents.put" }),
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "repos.contents.put" }),
     }).put(input).then((result) => {
       if (!result.ok) {
         throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
       }
-      return { connector: "github", action: "contents.put", source: "connector", content: result.content };
+      return { connector: "github", action: "repos.contents.put", source: "connector", content: result.content };
     });
   }
-  return { connector: "github", action: "contents.put", source: "connector", validated: validatePutContentsInput(input) };
+  return { connector: "github", action: "repos.contents.put", source: "connector", validated: validatePutContentsInput(input) };
 }
 
-// ─── S5: contents.delete ──────────────────────────────────────────────────────
+// ─── S5: repos.contents.delete ──────────────────────────────────────────────────────
 
 export function deleteContents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return createContentsClient({
       accessToken: input.accessToken,
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
-      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "contents.delete" }),
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "repos.contents.delete" }),
     }).delete(input).then((result) => {
       if (!result.ok) {
         throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
       }
-      return { connector: "github", action: "contents.delete", source: "connector", deleted: result.deleted, path: result.path, commitSha: result.commitSha };
+      return { connector: "github", action: "repos.contents.delete", source: "connector", deleted: result.deleted, path: result.path, commitSha: result.commitSha };
     });
   }
-  return { connector: "github", action: "contents.delete", source: "connector", validated: validateDeleteContentsInput(input) };
+  return { connector: "github", action: "repos.contents.delete", source: "connector", validated: validateDeleteContentsInput(input) };
 }
 
-// ─── S5: contents.push_files ──────────────────────────────────────────────────
+// ─── S5: repos.contents.push_files ──────────────────────────────────────────────────
 
 export function pushFiles(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return createContentsClient({
       accessToken: input.accessToken,
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
-      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "contents.push_files" }),
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined, operation: "repos.contents.push_files" }),
     }).pushFiles(input).then((result) => {
       if (!result.ok) {
         throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
       }
-      return { connector: "github", action: "contents.push_files", source: "connector", commit: result.commit };
+      return { connector: "github", action: "repos.contents.push_files", source: "connector", commit: result.commit };
     });
   }
-  return { connector: "github", action: "contents.push_files", source: "connector", validated: validatePushFilesInput(input) };
+  return { connector: "github", action: "repos.contents.push_files", source: "connector", validated: validatePushFilesInput(input) };
 }
 
 // ─── S5: git.blobs.create ─────────────────────────────────────────────────────
