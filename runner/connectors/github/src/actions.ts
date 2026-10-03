@@ -387,6 +387,13 @@ import {
   validateGetWorkflowTimingInput,
 } from "./card13_reads";
 
+import {
+  createCard14ReadsClient,
+  validateGetGitignoreTemplateInput,
+  validateGetLicenseInput,
+  validateGetZenInput,
+} from "./card14_reads";
+
 
 
 import {
@@ -6048,6 +6055,48 @@ export function getActionsWorkflowTiming(input: unknown): Record<string, unknown
     });
   }
   return { connector: "github", action: "actions.workflows.timing.get", source: "connector", validated: validateGetWorkflowTimingInput(input) };
+}
+
+
+// ─── card14-reads: zen, licenses, and gitignore templates ────────────────────
+
+function liveCard14ReadsClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard14ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getZen(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard14ReadsClient(input, "meta.zen.get").getZen(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "meta.zen.get", source: "connector", text: result.text };
+    });
+  }
+  return { connector: "github", action: "meta.zen.get", source: "connector", validated: validateGetZenInput(input) };
+}
+
+export function getLicense(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard14ReadsClient(input, "licenses.get").getLicense(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "licenses.get", source: "connector", license: result.license };
+    });
+  }
+  return { connector: "github", action: "licenses.get", source: "connector", validated: validateGetLicenseInput(input) };
+}
+
+export function getGitignoreTemplate(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard14ReadsClient(input, "gitignore.templates.get").getGitignoreTemplate(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gitignore.templates.get", source: "connector", template: result.template };
+    });
+  }
+  return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
 }
 
 
