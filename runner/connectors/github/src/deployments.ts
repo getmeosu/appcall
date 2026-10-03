@@ -335,6 +335,80 @@ function mapError(status: number, headers: Record<string, string>, action: strin
   return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub rejected the ${action} request.` } };
 }
 
+
+export type CreateEnvironmentInput = {
+  owner: string;
+  repo: string;
+  name: string;
+  waitTimer?: number;
+  preventSelfReview?: boolean;
+  reviewers?: { type: "User" | "Team"; id: number }[];
+  deploymentBranchPolicy?: { protectedBranches: boolean; customBranchPolicies: boolean } | null;
+};
+
+export function validateCreateEnvironmentInput(input: unknown): CreateEnvironmentInput {
+  if (!isRecord(input)) throw new Error("environments.create input must be an object");
+  let reviewers: { type: "User" | "Team"; id: number }[] | undefined;
+  if (input.reviewers !== undefined) {
+    if (!Array.isArray(input.reviewers)) throw new Error("reviewers must be an array");
+    reviewers = input.reviewers.map((reviewer) => {
+      if (!isRecord(reviewer)) throw new Error("reviewers must be objects");
+      if (reviewer.type !== "User" && reviewer.type !== "Team") throw new Error("reviewer type must be User or Team");
+      return { type: reviewer.type, id: requireSafeId(reviewer.id, "reviewers.id") };
+    });
+  }
+  let deploymentBranchPolicy: CreateEnvironmentInput["deploymentBranchPolicy"];
+  if (input.deploymentBranchPolicy === null) deploymentBranchPolicy = null;
+  else if (input.deploymentBranchPolicy !== undefined) {
+    if (!isRecord(input.deploymentBranchPolicy)) throw new Error("deploymentBranchPolicy must be an object or null");
+    if (typeof input.deploymentBranchPolicy.protectedBranches !== "boolean" || typeof input.deploymentBranchPolicy.customBranchPolicies !== "boolean") {
+      throw new Error("deploymentBranchPolicy flags must be booleans");
+    }
+    deploymentBranchPolicy = {
+      protectedBranches: input.deploymentBranchPolicy.protectedBranches,
+      customBranchPolicies: input.deploymentBranchPolicy.customBranchPolicies,
+    };
+  }
+  const waitTimer = input.waitTimer === undefined ? undefined : requireWaitTimer(input.waitTimer);
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    name: requireString(input.name, "name"),
+    waitTimer,
+    preventSelfReview: optionalBoolean(input.preventSelfReview, "preventSelfReview"),
+    reviewers,
+    deploymentBranchPolicy,
+  };
+}
+
+export type DeleteDeploymentInput = { owner: string; repo: string; deploymentId: number };
+export function validateDeleteDeploymentInput(input: unknown): DeleteDeploymentInput {
+  if (!isRecord(input)) throw new Error("deployments.delete input must be an object");
+  const deploymentId = optionalId(input.deploymentId, "deploymentId");
+  if (deploymentId === undefined) throw new Error("deploymentId is required");
+  return { owner: requireString(input.owner, "owner"), repo: requireString(input.repo, "repo"), deploymentId };
+}
+
+export type DeleteEnvironmentInput = { owner: string; repo: string; name: string };
+export function validateDeleteEnvironmentInput(input: unknown): DeleteEnvironmentInput {
+  if (!isRecord(input)) throw new Error("environments.delete input must be an object");
+  const name = optionalString(input.name, "name") ?? optionalString(input.environment, "environment");
+  if (!name) throw new Error("name is required");
+  return { owner: requireString(input.owner, "owner"), repo: requireString(input.repo, "repo"), name };
+}
+
+function requireSafeId(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) throw new Error(`${field} must be a positive integer`);
+  return value;
+}
+
+function requireWaitTimer(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 43200) {
+    throw new Error("waitTimer must be an integer between 0 and 43200");
+  }
+  return value;
+}
+
 export function createDeploymentsClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const base = options.githubClient;
   const clientFor = (operation: string) =>
@@ -467,6 +541,54 @@ export function createDeploymentsClient(options: { accessToken: string; fetch?: 
         return { ok: true as const, environment: normalizeGitHubEnvironment(response.body as GitHubEnvironment) };
       }
       return mapError(response.status, response.headers, "environments.get");
+    },
+
+    async createEnvironment(input: unknown) {
+      const payload = validateCreateEnvironmentInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.waitTimer !== undefined) body.wait_timer = payload.waitTimer;
+      if (payload.preventSelfReview !== undefined) body.prevent_self_review = payload.preventSelfReview;
+      if (payload.reviewers !== undefined) {
+        body.reviewers = payload.reviewers.map((reviewer) => ({ type: reviewer.type, id: reviewer.id }));
+      }
+      if (payload.deploymentBranchPolicy !== undefined) {
+        body.deployment_branch_policy = payload.deploymentBranchPolicy === null ? null : {
+          protected_branches: payload.deploymentBranchPolicy.protectedBranches,
+          custom_branch_policies: payload.deploymentBranchPolicy.customBranchPolicies,
+        };
+      }
+      const response = await clientFor("environments.create").fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/environments/${encodeURIComponent(payload.name)}`,
+        { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+      );
+      if ((response.status === 200 || response.status === 201) && isRecord(response.body)) {
+        return { ok: true as const, environment: normalizeGitHubEnvironment(response.body as GitHubEnvironment) };
+      }
+      return mapError(response.status, response.headers, "environments.create");
+    },
+
+    async deleteDeployment(input: unknown) {
+      const payload = validateDeleteDeploymentInput(input);
+      const response = await clientFor("deployments.delete").fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/deployments/${payload.deploymentId}`,
+        { method: "DELETE" },
+      );
+      if (response.status === 204 || response.status === 404) {
+        return { ok: true as const, deleted: true as const, deploymentId: payload.deploymentId };
+      }
+      return mapError(response.status, response.headers, "deployments.delete");
+    },
+
+    async deleteEnvironment(input: unknown) {
+      const payload = validateDeleteEnvironmentInput(input);
+      const response = await clientFor("environments.delete").fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/environments/${encodeURIComponent(payload.name)}`,
+        { method: "DELETE" },
+      );
+      if (response.status === 204 || response.status === 404) {
+        return { ok: true as const, deleted: true as const, name: payload.name };
+      }
+      return mapError(response.status, response.headers, "environments.delete");
     },
   };
 }

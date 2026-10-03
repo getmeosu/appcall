@@ -173,6 +173,37 @@ export function normalizeArtifact(item: Record<string, unknown>): NormalizedArti
   };
 }
 
+
+function normalizePendingDeployment(item: Record<string, unknown>) {
+  const environment = isRecord(item.environment) ? item.environment : {};
+  return {
+    environmentId: typeof environment.id === "number" ? environment.id : 0,
+    environment: typeof environment.name === "string" ? environment.name : "",
+    currentUserCanApprove: item.current_user_can_approve === true,
+    waitTimer: typeof item.wait_timer === "number" ? item.wait_timer : 0,
+    waitTimerStartedAt: typeof item.wait_timer_started_at === "string" ? item.wait_timer_started_at : "",
+    modelVersion: "2026-05-16" as const,
+    raw: item,
+  };
+}
+
+function normalizeRunApproval(item: Record<string, unknown>) {
+  const user = isRecord(item.user) ? item.user : {};
+  const environments = Array.isArray(item.environments) ? item.environments.filter(isRecord) : [];
+  return {
+    state: typeof item.state === "string" ? item.state : "",
+    comment: typeof item.comment === "string" ? item.comment : "",
+    user: typeof user.login === "string" ? user.login : "",
+    environments: environments.map((env) => ({
+      id: typeof env.id === "number" ? env.id : 0,
+      name: typeof env.name === "string" ? env.name : "",
+    })),
+    createdAt: typeof item.created_at === "string" ? item.created_at : "",
+    modelVersion: "2026-05-16" as const,
+    raw: item,
+  };
+}
+
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 function requireString(value: unknown, field: string): string {
@@ -395,6 +426,92 @@ export function validateRerunFailedJobsInput(input: unknown): RerunFailedJobsInp
     throw new Error("enableDebugLogging must be a boolean");
   }
   return { ...base, enableDebugLogging: typeof input.enableDebugLogging === "boolean" ? input.enableDebugLogging : undefined };
+}
+
+
+export type RunAttemptInput = { owner: string; repo: string; runId: number; attemptNumber: number };
+export function validateRunAttemptInput(input: unknown): RunAttemptInput {
+  if (!isRecord(input)) throw new Error("workflow run attempt input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    runId: requireSafeId(input.runId, "runId"),
+    attemptNumber: requireSafeId(input.attemptNumber, "attemptNumber"),
+  };
+}
+
+export type ListPendingDeploymentsInput = { owner: string; repo: string; runId: number };
+export function validateListPendingDeploymentsInput(input: unknown): ListPendingDeploymentsInput {
+  if (!isRecord(input)) throw new Error("pending deployments input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    runId: requireSafeId(input.runId, "runId"),
+  };
+}
+
+export type ReviewPendingDeploymentsInput = {
+  owner: string;
+  repo: string;
+  runId: number;
+  environmentIds: number[];
+  state: "approved" | "rejected";
+  comment: string;
+};
+export function validateReviewPendingDeploymentsInput(input: unknown): ReviewPendingDeploymentsInput {
+  if (!isRecord(input)) throw new Error("pending deployment review input must be an object");
+  if (!Array.isArray(input.environmentIds) || input.environmentIds.length === 0) {
+    throw new Error("environmentIds must be a non-empty array");
+  }
+  const environmentIds = input.environmentIds.map((id) => requireSafeId(id, "environmentIds"));
+  const state = input.state;
+  if (state !== "approved" && state !== "rejected") throw new Error("state must be approved or rejected");
+  if (typeof input.comment !== "string" || input.comment.length === 0) throw new Error("comment is required");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    runId: requireSafeId(input.runId, "runId"),
+    environmentIds,
+    state,
+    comment: input.comment,
+  };
+}
+
+export type WorkflowToggleInput = { owner: string; repo: string; workflowId: string };
+export function validateWorkflowToggleInput(input: unknown): WorkflowToggleInput {
+  if (!isRecord(input)) throw new Error("workflow toggle input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    workflowId: requireWorkflowId(input.workflowId),
+  };
+}
+
+export type DeleteArtifactInput = { owner: string; repo: string; artifactId: number };
+export function validateDeleteArtifactInput(input: unknown): DeleteArtifactInput {
+  if (!isRecord(input)) throw new Error("delete artifact input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    artifactId: requireSafeId(input.artifactId, "artifactId"),
+  };
+}
+
+export type ForceCancelRunInput = { owner: string; repo: string; runId: number };
+export function validateForceCancelRunInput(input: unknown): ForceCancelRunInput {
+  if (!isRecord(input)) throw new Error("force cancel input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    runId: requireSafeId(input.runId, "runId"),
+  };
+}
+
+function requireSafeId(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
+    throw new Error(`${field} must be a positive integer`);
+  }
+  return value;
 }
 
 // ─── Error helpers ────────────────────────────────────────────────────────────
@@ -790,6 +907,163 @@ export function createWorkflowsClient(options: {
       if (response.status === 404) return upstream("Workflow run not found.");
       if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
       return upstream("GitHub rejected the rerun failed jobs request.");
+    },
+
+    async listPendingDeployments(input: unknown) {
+      const payload = validateListPendingDeploymentsInput(input);
+      const client = clientFor("actions.runs.pending_deployments.list");
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/pending_deployments`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        const pendingDeployments = response.body.filter(isRecord).map(normalizePendingDeployment);
+        return { ok: true as const, pendingDeployments };
+      }
+      if (response.status === 404) return upstream("Workflow run not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the list pending deployments request.");
+    },
+
+    async reviewPendingDeployments(input: unknown) {
+      const payload = validateReviewPendingDeploymentsInput(input);
+      const client = clientFor("actions.runs.pending_deployments.review");
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/pending_deployments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          environment_ids: payload.environmentIds,
+          state: payload.state,
+          comment: payload.comment,
+        }),
+      });
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, pendingDeployments: response.body.filter(isRecord).map(normalizePendingDeployment) };
+      }
+      if (response.status === 422) return upstream("Pending deployment review was rejected. A second review returns 422.");
+      if (response.status === 404) return upstream("Workflow run not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the pending deployment review.");
+    },
+
+    async listRunApprovals(input: unknown) {
+      const payload = validateListPendingDeploymentsInput(input);
+      const client = clientFor("actions.runs.approvals.list");
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/approvals`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, approvals: response.body.filter(isRecord).map(normalizeRunApproval) };
+      }
+      if (response.status === 404) return upstream("Workflow run not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the list approvals request.");
+    },
+
+    async disableWorkflow(input: unknown) {
+      const payload = validateWorkflowToggleInput(input);
+      const client = clientFor("actions.workflows.disable");
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/workflows/${encodeURIComponent(payload.workflowId)}/disable`,
+        { method: "PUT" },
+      );
+      if (response.status === 204) {
+        return { ok: true as const, workflowId: payload.workflowId, state: "disabled_manually" as const };
+      }
+      if (response.status === 404) return upstream("Workflow not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the disable workflow request.");
+    },
+
+    async enableWorkflow(input: unknown) {
+      const payload = validateWorkflowToggleInput(input);
+      const client = clientFor("actions.workflows.enable");
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/workflows/${encodeURIComponent(payload.workflowId)}/enable`,
+        { method: "PUT" },
+      );
+      if (response.status === 204) {
+        return { ok: true as const, workflowId: payload.workflowId, state: "active" as const };
+      }
+      if (response.status === 404) return upstream("Workflow not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the enable workflow request.");
+    },
+
+    async deleteArtifact(input: unknown) {
+      const payload = validateDeleteArtifactInput(input);
+      const client = clientFor("actions.artifacts.delete");
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/artifacts/${payload.artifactId}`,
+        { method: "DELETE" },
+      );
+      if (response.status === 204 || response.status === 404) {
+        return { ok: true as const, deleted: true as const, artifactId: payload.artifactId };
+      }
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the delete artifact request.");
+    },
+
+    async getRunAttempt(input: unknown) {
+      const payload = validateRunAttemptInput(input);
+      const client = clientFor("actions.runs.attempt.get");
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/attempts/${payload.attemptNumber}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, run: normalizeWorkflowRun(response.body) };
+      }
+      if (response.status === 404) return upstream("Workflow run attempt not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the get run attempt request.");
+    },
+
+    async listAttemptJobs(input: unknown) {
+      const payload = validateRunAttemptInput(input);
+      const client = clientFor("actions.runs.attempt.jobs.list");
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/attempts/${payload.attemptNumber}/jobs`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        const raw = Array.isArray(response.body.jobs) ? response.body.jobs : [];
+        const jobs = raw.filter(isRecord).map(normalizeWorkflowJob);
+        return {
+          ok: true as const,
+          totalCount: typeof response.body.total_count === "number" ? response.body.total_count : jobs.length,
+          jobs,
+        };
+      }
+      if (response.status === 404) return upstream("Workflow run attempt not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the list attempt jobs request.");
+    },
+
+    async downloadAttemptLogs(input: unknown) {
+      const payload = validateRunAttemptInput(input);
+      const url = `https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/attempts/${payload.attemptNumber}/logs`;
+      const captured = await captureRedirect(url, "workflow run attempt logs");
+      if (!captured.ok) return captured;
+      return {
+        ok: true as const,
+        logs: {
+          runId: payload.runId,
+          attemptNumber: payload.attemptNumber,
+          downloadUrl: captured.downloadUrl,
+          expiresInSeconds: 60,
+        },
+      };
+    },
+
+    async forceCancelRun(input: unknown) {
+      const payload = validateForceCancelRunInput(input);
+      const client = clientFor("actions.runs.force_cancel");
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/force-cancel`,
+        { method: "POST" },
+      );
+      if (response.status === 202) {
+        return { ok: true as const, forced: true as const, runId: payload.runId };
+      }
+      // Only valid after actions.runs.cancel does not stick. 409 means the run already finished cancelling.
+      if (response.status === 409) return upstream("Workflow run already finished cancelling. force_cancel is not a normal cancel.");
+      if (response.status === 404) return upstream("Workflow run not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the force cancel request.");
     },
   };
 }

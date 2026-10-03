@@ -83,6 +83,12 @@ import {
   validateDownloadRunLogsInput,
   validateDownloadArtifactInput,
   validateRerunFailedJobsInput,
+  validateListPendingDeploymentsInput,
+  validateReviewPendingDeploymentsInput,
+  validateWorkflowToggleInput,
+  validateDeleteArtifactInput,
+  validateRunAttemptInput,
+  validateForceCancelRunInput,
 } from "./workflows";
 import {
   createLabelsMilestonesClient,
@@ -126,6 +132,9 @@ import {
   validateCreateDeploymentStatusInput,
   validateListEnvironmentsInput,
   validateGetEnvironmentInput,
+  validateCreateEnvironmentInput,
+  validateDeleteDeploymentInput,
+  validateDeleteEnvironmentInput,
 } from "./deployments";
 import {
   createGistsClient,
@@ -3032,6 +3041,138 @@ export function deleteGist(input: unknown): Record<string, unknown> | Promise<Re
     });
   }
   return { connector: "github", action: "gists.delete", source: "connector", validated: validateDeleteGistInput(input) };
+}
+
+// ─── N5: actions attempts, env protection, force cancel ──────────────────────
+
+export function listPendingDeployments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).listPendingDeployments(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.pending_deployments.list", source: "connector", pendingDeployments: result.pendingDeployments };
+    });
+  }
+  return { connector: "github", action: "actions.runs.pending_deployments.list", source: "connector", validated: validateListPendingDeploymentsInput(input) };
+}
+
+export function reviewPendingDeployments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).reviewPendingDeployments(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.pending_deployments.review", source: "connector", pendingDeployments: result.pendingDeployments };
+    });
+  }
+  return { connector: "github", action: "actions.runs.pending_deployments.review", source: "connector", validated: validateReviewPendingDeploymentsInput(input) };
+}
+
+export function listRunApprovals(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).listRunApprovals(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.approvals.list", source: "connector", approvals: result.approvals };
+    });
+  }
+  return { connector: "github", action: "actions.runs.approvals.list", source: "connector", validated: validateListPendingDeploymentsInput(input) };
+}
+
+export function createEnvironment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createDeploymentsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).createEnvironment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "environments.create", source: "connector", environment: result.environment };
+    });
+  }
+  return { connector: "github", action: "environments.create", source: "connector", validated: validateCreateEnvironmentInput(input) };
+}
+
+export function deleteDeployment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createDeploymentsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).deleteDeployment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "deployments.delete", source: "connector", deleted: result.deleted, deploymentId: result.deploymentId };
+    });
+  }
+  return { connector: "github", action: "deployments.delete", source: "connector", validated: validateDeleteDeploymentInput(input) };
+}
+
+export function deleteEnvironment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createDeploymentsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).deleteEnvironment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "environments.delete", source: "connector", deleted: result.deleted, name: result.name };
+    });
+  }
+  return { connector: "github", action: "environments.delete", source: "connector", validated: validateDeleteEnvironmentInput(input) };
+}
+
+export function disableWorkflow(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).disableWorkflow(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.workflows.disable", source: "connector", workflowId: result.workflowId, state: result.state };
+    });
+  }
+  return { connector: "github", action: "actions.workflows.disable", source: "connector", validated: validateWorkflowToggleInput(input) };
+}
+
+export function enableWorkflow(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).enableWorkflow(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.workflows.enable", source: "connector", workflowId: result.workflowId, state: result.state };
+    });
+  }
+  return { connector: "github", action: "actions.workflows.enable", source: "connector", validated: validateWorkflowToggleInput(input) };
+}
+
+export function deleteArtifact(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).deleteArtifact(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.artifacts.delete", source: "connector", deleted: result.deleted, artifactId: result.artifactId };
+    });
+  }
+  return { connector: "github", action: "actions.artifacts.delete", source: "connector", validated: validateDeleteArtifactInput(input) };
+}
+
+export function getRunAttempt(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).getRunAttempt(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.attempt.get", source: "connector", run: result.run };
+    });
+  }
+  return { connector: "github", action: "actions.runs.attempt.get", source: "connector", validated: validateRunAttemptInput(input) };
+}
+
+export function listAttemptJobs(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).listAttemptJobs(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.attempt.jobs.list", source: "connector", totalCount: result.totalCount, jobs: result.jobs };
+    });
+  }
+  return { connector: "github", action: "actions.runs.attempt.jobs.list", source: "connector", validated: validateRunAttemptInput(input) };
+}
+
+export function downloadAttemptLogs(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).downloadAttemptLogs(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.attempt.logs.download", source: "connector", logs: result.logs };
+    });
+  }
+  return { connector: "github", action: "actions.runs.attempt.logs.download", source: "connector", validated: validateRunAttemptInput(input) };
+}
+
+export function forceCancelRun(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWorkflowsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).forceCancelRun(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.force_cancel", source: "connector", forced: result.forced, runId: result.runId };
+    });
+  }
+  return { connector: "github", action: "actions.runs.force_cancel", source: "connector", validated: validateForceCancelRunInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
