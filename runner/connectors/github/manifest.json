@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -10903,6 +10903,643 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "actions.runs.pending_deployments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "List Pending Deployments",
+      "description": "List pending environment deployments for a workflow run via GET /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pendingDeployments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "actions.runs.pending_deployments.review": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Review Pending Deployments",
+      "description": "Approve or reject pending deployments via POST /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments. One-shot: a second review returns 422 and is not hidden. No EffectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          },
+          "environmentIds": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Environment ids to approve or reject."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "description": "Review decision."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Review comment."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId",
+          "environmentIds",
+          "state",
+          "comment"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pendingDeployments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "actions.runs.approvals.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "List Workflow Run Approvals",
+      "description": "List deployment reviews for a workflow run via GET /repos/{owner}/{repo}/actions/runs/{run_id}/approvals.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "approvals": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "environments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "environments.get",
+      "title": "Create or Update Environment",
+      "description": "Create or update an environment via PUT /repos/{owner}/{repo}/environments/{environment_name}. EffectPolicy Reconcile observes via environments.get (name is shared). Primary action result is returned; EffectPolicy Reconcile observes via environments.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Environment name. Shared with environments.get for reconcile."
+          },
+          "waitTimer": {
+            "type": "number",
+            "description": "Wait timer in minutes (0-43200)."
+          },
+          "preventSelfReview": {
+            "type": "boolean",
+            "description": "Prevent the user who triggered the workflow from approving."
+          },
+          "reviewers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Reviewers with type User or Team and an id."
+          },
+          "deploymentBranchPolicy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Branch policy, or null to clear it."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "environment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "deployments.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Delete Deployment",
+      "description": "Delete a deployment via DELETE /repos/{owner}/{repo}/deployments/{deployment_id}. EffectPolicy Idempotent (a missing deployment is already gone; no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "deploymentId": {
+            "type": "number",
+            "description": "Deployment id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "deploymentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "deploymentId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "environments.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Delete Environment",
+      "description": "Delete an environment via DELETE /repos/{owner}/{repo}/environments/{environment_name}. EffectPolicy Idempotent (a missing environment is already gone; no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Environment name."
+          },
+          "environment": {
+            "type": "string",
+            "description": "Alias for name."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "actions.workflows.disable": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "actions.workflows.get",
+      "title": "Disable Workflow",
+      "description": "Disable a workflow via PUT /repos/{owner}/{repo}/actions/workflows/{workflow_id}/disable. EffectPolicy Reconcile observes via actions.workflows.get; the desired workflow state is disabled_manually. Primary action result is returned; EffectPolicy Reconcile observes via actions.workflows.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "workflowId": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Workflow id or file name. Shared with actions.workflows.get."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "workflowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowId": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "disabled_manually"
+            ]
+          }
+        }
+      }
+    },
+    "actions.workflows.enable": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "actions.workflows.get",
+      "title": "Enable Workflow",
+      "description": "Enable a workflow via PUT /repos/{owner}/{repo}/actions/workflows/{workflow_id}/enable. EffectPolicy Reconcile observes via actions.workflows.get; the desired workflow state is active. Primary action result is returned; EffectPolicy Reconcile observes via actions.workflows.get for durability.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "workflowId": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "description": "Workflow id or file name. Shared with actions.workflows.get."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "workflowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowId": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active"
+            ]
+          }
+        }
+      }
+    },
+    "actions.artifacts.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Delete Artifact",
+      "description": "Delete an artifact via DELETE /repos/{owner}/{repo}/actions/artifacts/{artifact_id}. EffectPolicy Idempotent (a missing artifact is already gone; no reconcile).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "artifactId": {
+            "type": "number",
+            "description": "Artifact id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "artifactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "artifactId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "actions.runs.attempt.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Workflow Run Attempt",
+      "description": "Get one attempt of a workflow run via GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          },
+          "attemptNumber": {
+            "type": "number",
+            "description": "Run attempt number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId",
+          "attemptNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "actions.runs.attempt.jobs.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Jobs for a Run Attempt",
+      "description": "List jobs for one workflow run attempt via GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          },
+          "attemptNumber": {
+            "type": "number",
+            "description": "Run attempt number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId",
+          "attemptNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number"
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "actions.runs.attempt.logs.download": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Download Workflow Run Attempt Logs",
+      "description": "Capture the short-lived redirect URL for one run attempt's logs via GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/logs (302 Location; redirect is not followed).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          },
+          "attemptNumber": {
+            "type": "number",
+            "description": "Run attempt number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId",
+          "attemptNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "logs": {
+            "type": "object",
+            "properties": {
+              "runId": {
+                "type": "number"
+              },
+              "attemptNumber": {
+                "type": "number"
+              },
+              "downloadUrl": {
+                "type": "string"
+              },
+              "expiresInSeconds": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.runs.force_cancel": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Force Cancel Workflow Run",
+      "description": "Force-cancel a workflow run via POST /repos/{owner}/{repo}/actions/runs/{run_id}/force-cancel. One-shot and only valid after actions.runs.cancel does not stick: cancel returns 202, then force_cancel returns 409 if the run already finished cancelling. That 409 is not hidden. No EffectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "forced": {
+            "type": "boolean"
+          },
+          "runId": {
+            "type": "number"
           }
         }
       }
