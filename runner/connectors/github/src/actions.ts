@@ -284,6 +284,12 @@ import {
   validateListBranchProtectionUsersInput,
   validateListUserProjectFieldsInput,
 } from "./card5_reads";
+import {
+  createCard6ReadsClient,
+  validateGetCodeOfConductInput,
+  validateListRepoAssigneesInput,
+  validateListPublicEventFeedInput,
+} from "./card6_reads";
 
 import {
   createReposReadsClient,
@@ -5116,6 +5122,45 @@ export function listUserProjectFields(input: unknown): Record<string, unknown> |
     });
   }
   return { connector: "github", action: "users.projects_v2.fields.list", source: "connector", validated: validateListUserProjectFieldsInput(input) };
+}
+
+function liveCard6Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard6ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getCodeOfConduct(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard6Client(input, "codes_of_conduct.get").getCodeOfConduct(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "codes_of_conduct.get", source: "connector", codeOfConduct: result.codeOfConduct };
+    });
+  }
+  return { connector: "github", action: "codes_of_conduct.get", source: "connector", validated: validateGetCodeOfConductInput(input) };
+}
+
+export function listRepoAssignees(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard6Client(input, "repos.assignees.list").listRepoAssignees(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.assignees.list", source: "connector", assignees: result.assignees };
+    });
+  }
+  return { connector: "github", action: "repos.assignees.list", source: "connector", validated: validateListRepoAssigneesInput(input) };
+}
+
+export function listPublicEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard6Client(input, "events.public.list").listPublicEvents(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "events.public.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "events.public.list", source: "connector", validated: validateListPublicEventFeedInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

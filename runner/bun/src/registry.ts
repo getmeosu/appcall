@@ -386,6 +386,9 @@ import {
   checkUserBlocked as ghCheckUserBlocked,
   getNotificationThreadSubscription as ghGetNotificationThreadSubscription,
   getUserBillingUsage as ghGetUserBillingUsage,
+  getCodeOfConduct as ghGetCodeOfConduct,
+  listRepoAssignees as ghListRepoAssignees,
+  listPublicEvents as ghListPublicEvents,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1381,6 +1384,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "user.blocks.check": ghCheckUserBlocked,
       "notifications.threads.subscription.get": ghGetNotificationThreadSubscription,
       "users.billing.usage.get": ghGetUserBillingUsage,
+      "codes_of_conduct.get": ghGetCodeOfConduct,
+      "repos.assignees.list": ghListRepoAssignees,
+      "events.public.list": ghListPublicEvents,
     },
     salesforce: {
       "contacts.create": createContact,
