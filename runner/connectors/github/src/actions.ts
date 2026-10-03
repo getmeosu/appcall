@@ -369,6 +369,25 @@ import {
 } from "./card12_reads";
 
 
+import {
+  createCard13ReadsClient,
+  validateListSubIssuesInput,
+  validateGetTeamRepoPermissionInput,
+  validateGetOrgTeamInput,
+  validateListChildTeamsInput,
+  validateListTeamInvitationsInput,
+  validateListRepoTeamsInput,
+  validateListUserTeamsInput,
+  validateListOrgRoleTeamsInput,
+  validateGetOrgWorkflowPermissionsInput,
+  validateGetOrgCacheUsageInput,
+  validateGetRepoCacheUsageInput,
+  validateGetOrgActionsPermissionsInput,
+  validateGetRunTimingInput,
+  validateGetWorkflowTimingInput,
+} from "./card13_reads";
+
+
 
 import {
   createReposReadsClient,
@@ -5878,6 +5897,159 @@ export function listMilestoneLabels(input: unknown): Record<string, unknown> | P
   }
   return { connector: "github", action: "milestones.labels.list", source: "connector", validated: validateListMilestoneLabelsInput(input) };
 }
+
+
+// ─── card 13: team, permission, and timing reads ─────────────────────────────
+
+function liveCard13Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard13ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listIssueSubIssues(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "issues.sub_issues.list").listSubIssues(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.sub_issues.list", source: "connector", subIssues: result.subIssues };
+    });
+  }
+  return { connector: "github", action: "issues.sub_issues.list", source: "connector", validated: validateListSubIssuesInput(input) };
+}
+
+export function getOrgTeamRepoPermission(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "orgs.teams.repos.permission.get").getTeamRepoPermission(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.repos.permission.get", source: "connector", permission: result.permission };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.repos.permission.get", source: "connector", validated: validateGetTeamRepoPermissionInput(input) };
+}
+
+export function getOrgTeam(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "orgs.teams.get").getOrgTeam(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.get", source: "connector", team: result.team };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.get", source: "connector", validated: validateGetOrgTeamInput(input) };
+}
+
+export function listOrgChildTeams(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "orgs.teams.child.list").listChildTeams(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.child.list", source: "connector", teams: result.teams };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.child.list", source: "connector", validated: validateListChildTeamsInput(input) };
+}
+
+export function listOrgTeamInvitations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "orgs.teams.invitations.list").listTeamInvitations(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.teams.invitations.list", source: "connector", invitations: result.invitations };
+    });
+  }
+  return { connector: "github", action: "orgs.teams.invitations.list", source: "connector", validated: validateListTeamInvitationsInput(input) };
+}
+
+export function listRepoTeams(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "repos.teams.list").listRepoTeams(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.teams.list", source: "connector", teams: result.teams };
+    });
+  }
+  return { connector: "github", action: "repos.teams.list", source: "connector", validated: validateListRepoTeamsInput(input) };
+}
+
+export function listAuthenticatedUserTeams(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "user.teams.list").listUserTeams(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.teams.list", source: "connector", teams: result.teams };
+    });
+  }
+  return { connector: "github", action: "user.teams.list", source: "connector", validated: validateListUserTeamsInput(input) };
+}
+
+export function listOrgRoleTeams(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "orgs.organization_roles.teams.list").listOrgRoleTeams(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.organization_roles.teams.list", source: "connector", teams: result.teams };
+    });
+  }
+  return { connector: "github", action: "orgs.organization_roles.teams.list", source: "connector", validated: validateListOrgRoleTeamsInput(input) };
+}
+
+export function getOrgActionsWorkflowPermissions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "orgs.actions.permissions.workflow.get").getOrgWorkflowPermissions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.workflow.get", source: "connector", permissions: result.permissions };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.workflow.get", source: "connector", validated: validateGetOrgWorkflowPermissionsInput(input) };
+}
+
+export function getOrgActionsCacheUsage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "orgs.actions.cache.usage.get").getOrgCacheUsage(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.cache.usage.get", source: "connector", usage: result.usage };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.cache.usage.get", source: "connector", validated: validateGetOrgCacheUsageInput(input) };
+}
+
+export function getRepoActionsCacheUsage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "repos.actions.cache.usage.get").getRepoCacheUsage(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.actions.cache.usage.get", source: "connector", usage: result.usage };
+    });
+  }
+  return { connector: "github", action: "repos.actions.cache.usage.get", source: "connector", validated: validateGetRepoCacheUsageInput(input) };
+}
+
+export function getOrgActionsPermissions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "orgs.actions.permissions.get").getOrgActionsPermissions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.get", source: "connector", permissions: result.permissions };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.get", source: "connector", validated: validateGetOrgActionsPermissionsInput(input) };
+}
+
+export function getActionsRunTiming(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "actions.runs.timing.get").getRunTiming(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.timing.get", source: "connector", timing: result.timing };
+    });
+  }
+  return { connector: "github", action: "actions.runs.timing.get", source: "connector", validated: validateGetRunTimingInput(input) };
+}
+
+export function getActionsWorkflowTiming(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard13Client(input, "actions.workflows.timing.get").getWorkflowTiming(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.workflows.timing.get", source: "connector", timing: result.timing };
+    });
+  }
+  return { connector: "github", action: "actions.workflows.timing.get", source: "connector", validated: validateGetWorkflowTimingInput(input) };
+}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
