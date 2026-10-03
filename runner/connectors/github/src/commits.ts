@@ -248,6 +248,61 @@ export type NormalizedCommitComment = {
   raw: Record<string, unknown>;
 };
 
+export type ListCommitCommentsInput = {
+  owner: string;
+  repo: string;
+  sha: string;
+  perPage?: number;
+  page?: number;
+};
+
+export function validateListCommitCommentsInput(input: unknown): ListCommitCommentsInput {
+  if (!isRecord(input)) throw new Error("list commit comments input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    sha: requireString(input.sha, "sha"),
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+    page: typeof input.page === "number" ? input.page : undefined,
+  };
+}
+
+export type UpdateCommitCommentInput = {
+  owner: string;
+  repo: string;
+  sha: string;
+  commentId: number;
+  body: string;
+};
+
+export function validateUpdateCommitCommentInput(input: unknown): UpdateCommitCommentInput {
+  if (!isRecord(input)) throw new Error("update commit comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    sha: requireString(input.sha, "sha"),
+    commentId: requireNumber(input.commentId, "commentId"),
+    body: requireString(input.body, "body"),
+  };
+}
+
+export type DeleteCommitCommentInput = {
+  owner: string;
+  repo: string;
+  sha: string;
+  commentId: number;
+};
+
+export function validateDeleteCommitCommentInput(input: unknown): DeleteCommitCommentInput {
+  if (!isRecord(input)) throw new Error("delete commit comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    sha: requireString(input.sha, "sha"),
+    commentId: requireNumber(input.commentId, "commentId"),
+  };
+}
+
 export function normalizeCommitComment(comment: Record<string, unknown>): NormalizedCommitComment {
   const user = isRecord(comment.user) ? comment.user : {};
   return {
@@ -373,7 +428,69 @@ export function createCommitsClient(options: { accessToken: string; fetch?: type
       }
       return mapRateOrUpstream(response, "GitHub rejected the create commit comment request.");
     },
+
+    async listComments(input: unknown) {
+      const payload = validateListCommitCommentsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/commits/${encodeURIComponent(payload.sha)}/comments${qs}`,
+      );
+      if (response.status === 200) {
+        const comments = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).filter(isRecord).map((c) => normalizeCommitComment(c))
+          : [];
+        return { ok: true as const, comments };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit SHA or repository not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the list commit comments request.");
+    },
+
+    async updateComment(input: unknown) {
+      const payload = validateUpdateCommitCommentInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/comments/${payload.commentId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: payload.body }),
+        },
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, comment: normalizeCommitComment(response.body) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit comment not found." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for update commit comment." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the update commit comment request.");
+    },
+
+    async deleteComment(input: unknown) {
+      const payload = validateDeleteCommitCommentInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/comments/${payload.commentId}`,
+        { method: "DELETE" },
+      );
+      if (response.status === 204) {
+        return { ok: true as const, deleted: true as const, commentId: payload.commentId };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit comment not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the delete commit comment request.");
+    },
   };
+}
+
+function repoPath(owner: string, repo: string): string {
+  return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 }
 
 function mapRateOrUpstream(response: { status: number; headers: Record<string, string> }, message: string) {
@@ -398,6 +515,11 @@ function parseNextLink(response: Record<string, unknown>): string | null {
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
+  return value;
+}
+
+function requireNumber(value: unknown, field: string): number {
+  if (typeof value !== "number") throw new Error(`${field} must be a number`);
   return value;
 }
 

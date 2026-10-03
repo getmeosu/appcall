@@ -242,6 +242,78 @@ export function validateDismissReviewInput(input: unknown): DismissReviewInput {
   };
 }
 
+export type GetReviewInput = { owner: string; repo: string; pullNumber: number; reviewId: number };
+
+export function validateGetReviewInput(input: unknown): GetReviewInput {
+  if (!isRecord(input)) throw new Error("get review input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    reviewId: requireNumber(input.reviewId, "reviewId"),
+  };
+}
+
+const SUBMIT_REVIEW_EVENTS = ["APPROVE", "REQUEST_CHANGES", "COMMENT"] as const;
+
+export type SubmitReviewInput = {
+  owner: string; repo: string; pullNumber: number; reviewId: number;
+  event: string; body?: string;
+};
+
+export function validateSubmitReviewInput(input: unknown): SubmitReviewInput {
+  if (!isRecord(input)) throw new Error("submit review input must be an object");
+  const event = requireString(input.event, "event");
+  if (!SUBMIT_REVIEW_EVENTS.includes(event as (typeof SUBMIT_REVIEW_EVENTS)[number])) {
+    throw new Error("event must be APPROVE, REQUEST_CHANGES, or COMMENT");
+  }
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    reviewId: requireNumber(input.reviewId, "reviewId"),
+    event,
+    body: typeof input.body === "string" ? input.body : undefined,
+  };
+}
+
+export type UpdateReviewCommentInput = {
+  owner: string; repo: string; pullNumber: number; commentId: number; body: string;
+};
+
+export function validateUpdateReviewCommentInput(input: unknown): UpdateReviewCommentInput {
+  if (!isRecord(input)) throw new Error("update review comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    commentId: requireNumber(input.commentId, "commentId"),
+    body: requireString(input.body, "body"),
+  };
+}
+
+export type DeleteReviewCommentInput = {
+  owner: string; repo: string; pullNumber: number; commentId: number;
+};
+
+export function validateDeleteReviewCommentInput(input: unknown): DeleteReviewCommentInput {
+  if (!isRecord(input)) throw new Error("delete review comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    commentId: requireNumber(input.commentId, "commentId"),
+  };
+}
+
+export type DeletePendingReviewInput = GetReviewInput;
+
+export function validateDeletePendingReviewInput(input: unknown): DeletePendingReviewInput {
+  if (!isRecord(input)) throw new Error("delete pending review input must be an object");
+  return validateGetReviewInput(input);
+}
+
+
 // ─── S1: Review comments ──────────────────────────────────────────────────────
 
 export type ListReviewCommentsInput = { owner: string; repo: string; pullNumber: number; perPage?: number; page?: number };
@@ -696,6 +768,54 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
       return mapGithubError(response, "dismiss review");
     },
 
+    async getReview(input: unknown) {
+      const payload = validateGetReviewInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/pulls/${payload.pullNumber}/reviews/${payload.reviewId}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, review: normalizeGitHubReview(response.body) };
+      }
+      return mapGithubError(response, "get review");
+    },
+
+    async submitReview(input: unknown) {
+      const payload = validateSubmitReviewInput(input);
+      const body: Record<string, unknown> = { event: payload.event };
+      if (payload.body !== undefined) body.body = payload.body;
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/pulls/${payload.pullNumber}/reviews/${payload.reviewId}/events`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, review: normalizeGitHubReview(response.body) };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for submit review." } };
+      }
+      return mapGithubError(response, "submit review");
+    },
+
+    async deletePendingReview(input: unknown) {
+      const payload = validateDeletePendingReviewInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/pulls/${payload.pullNumber}/reviews/${payload.reviewId}`,
+        { method: "DELETE" },
+      );
+      if (response.status === 204) {
+        return { ok: true as const, deleted: true as const, reviewId: payload.reviewId };
+      }
+      // Same as contents.delete: 404 is an upstream error, not a second success.
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Review not found." } };
+      }
+      return mapGithubError(response, "delete pending review");
+    },
+
     async listReviewComments(input: unknown) {
       const payload = validateListReviewCommentsInput(input);
       const params = new URLSearchParams();
@@ -751,6 +871,37 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
         return { ok: true as const, comment: normalizeGitHubReviewComment(response.body as Record<string, unknown>) };
       }
       return mapGithubError(response, "reply to review comment");
+    },
+
+    async updateReviewComment(input: unknown) {
+      const payload = validateUpdateReviewCommentInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/pulls/comments/${payload.commentId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: payload.body }),
+        },
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, comment: normalizeGitHubReviewComment(response.body) };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for update review comment." } };
+      }
+      return mapGithubError(response, "update review comment");
+    },
+
+    async deleteReviewComment(input: unknown) {
+      const payload = validateDeleteReviewCommentInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/pulls/comments/${payload.commentId}`,
+        { method: "DELETE" },
+      );
+      if (response.status === 204) {
+        return { ok: true as const, deleted: true as const, commentId: payload.commentId };
+      }
+      return mapGithubError(response, "delete review comment");
     },
 
     async addRequestedReviewers(input: unknown) {
@@ -871,6 +1022,10 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
       return mapGithubError(response, "list pull request comments");
     },
   };
+}
+
+function repoPath(owner: string, repo: string): string {
+  return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 }
 
 function mapGithubError(

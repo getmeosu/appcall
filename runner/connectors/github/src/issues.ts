@@ -391,6 +391,52 @@ export function normalizeGitHubLabel(label: GitHubLabel): NormalizedLabel {
   };
 }
 
+export type ListIssueTimelineInput = {
+  owner: string; repo: string; issueNumber: number; perPage?: number; page?: number;
+};
+
+export function validateListIssueTimelineInput(input: unknown): ListIssueTimelineInput {
+  if (!isRecord(input)) throw new Error("list issue timeline input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    issueNumber: requireNumber(input.issueNumber, "issueNumber"),
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
+  };
+}
+
+export type ListIssueEventsInput = ListIssueTimelineInput;
+
+export function validateListIssueEventsInput(input: unknown): ListIssueEventsInput {
+  if (!isRecord(input)) throw new Error("list issue events input must be an object");
+  return validateListIssueTimelineInput(input);
+}
+
+export type NormalizedIssueActivity = {
+  id: string;
+  provider: "github";
+  event: string;
+  actor: string;
+  createdAt: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeIssueActivity(item: Record<string, unknown>): NormalizedIssueActivity {
+  const actor = isRecord(item.actor) ? item.actor : (isRecord(item.user) ? item.user : {});
+  const id = item.id ?? item.node_id ?? "";
+  return {
+    id: `gh-issue-activity:${id}`,
+    provider: "github",
+    event: typeof item.event === "string" ? item.event : "",
+    actor: typeof actor.login === "string" ? actor.login : "",
+    createdAt: typeof item.created_at === "string" ? item.created_at : (typeof item.updated_at === "string" ? item.updated_at : ""),
+    modelVersion: "2026-05-16",
+    raw: item,
+  };
+}
+
 export function createIssuesClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "issues.create" });
 
@@ -726,7 +772,62 @@ export function createIssuesClient(options: { accessToken: string; fetch?: typeo
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list labels request." } };
     },
+
+    async listTimeline(input: unknown) {
+      const payload = validateListIssueTimelineInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      // Timeline is stable on API version 2022-11-28; no preview media type.
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/issues/${payload.issueNumber}/timeline${qs}`,
+      );
+      if (response.status === 200) {
+        const events = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).filter(isRecord).map(normalizeIssueActivity)
+          : [];
+        return { ok: true as const, events };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list issue timeline request." } };
+    },
+
+    async listEvents(input: unknown) {
+      const payload = validateListIssueEventsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/issues/${payload.issueNumber}/events${qs}`,
+      );
+      if (response.status === 200) {
+        const events = Array.isArray(response.body)
+          ? (response.body as Record<string, unknown>[]).filter(isRecord).map(normalizeIssueActivity)
+          : [];
+        return { ok: true as const, events };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list issue events request." } };
+    },
   };
+}
+
+function repoPath(owner: string, repo: string): string {
+  return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 }
 
 function parseNextLink(response: Record<string, unknown>): string | null {
