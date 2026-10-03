@@ -3695,7 +3695,7 @@ export function updateOrgVariable(input: unknown): Record<string, unknown> | Pro
   if (isRecord(input) && typeof input.accessToken === "string") {
     return liveEnvOrgClient(input, "actions.org_variables.update").updateOrgVariable(input).then((result) => {
       if (!result.ok) throwVariable(result);
-      return { connector: "github", action: "actions.org_variables.update", source: "connector", updated: result.updated, name: result.name, value: result.value, visibility: result.visibility, ...(result.rename !== undefined ? { rename: result.rename } : {}) };
+      return { connector: "github", action: "actions.org_variables.update", source: "connector", updated: result.updated, name: result.name, value: result.value, visibility: result.visibility };
     });
   }
   return { connector: "github", action: "actions.org_variables.update", source: "connector", validated: validateUpdateOrgVariableInput(input) };

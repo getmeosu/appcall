@@ -29,7 +29,7 @@ const READS = [
 
 describe("github N8 environment and org action variables", () => {
   test("manifest stays on the base version and wires Idempotent reconcile like milestones.create", () => {
-    expect(manifest.version).toBe("0.22.0");
+    expect(manifest.version).toBe("0.23.0");
     expect(Object.keys(manifest.operations).length).toBe(240);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
@@ -41,9 +41,7 @@ describe("github N8 environment and org action variables", () => {
     }
     for (const [key, reconcile] of [
       ["actions.environment_variables.create", "actions.environment_variables.get"],
-      ["actions.environment_variables.delete", "actions.environment_variables.get"],
       ["actions.org_variables.create", "actions.org_variables.get"],
-      ["actions.org_variables.delete", "actions.org_variables.get"],
     ] as const) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("write");
@@ -51,6 +49,28 @@ describe("github N8 environment and org action variables", () => {
       expect(op.reconcile).toBe(reconcile);
       expect(op.observe).toBeUndefined();
     }
+    for (const key of [
+      "actions.environment_variables.delete",
+      "actions.org_variables.delete",
+    ] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe("Idempotent");
+      expect(op.reconcile).toBeUndefined();
+      expect(op.observe).toBeUndefined();
+      expect(String(op.description)).not.toContain("observes via");
+    }
+    const orgUpdate = manifest.operations["actions.org_variables.update"] as {
+      description: string;
+      inputSchema: { properties: Record<string, unknown> };
+      outputSchema: { properties: Record<string, unknown> };
+    };
+    expect(orgUpdate.inputSchema.properties.current_name).toBeDefined();
+    expect(orgUpdate.inputSchema.properties.rename).toBeUndefined();
+    expect(orgUpdate.outputSchema.properties.rename).toBeUndefined();
+    expect(orgUpdate.description).toContain("current_name");
+    expect(orgUpdate.description).not.toContain("rename");
+    expect(String((orgUpdate.inputSchema.properties.name as { description: string }).description)).toContain("after the PATCH");
     for (const [key, reconcile] of [
       ["actions.environment_variables.update", "actions.environment_variables.get"],
       ["actions.org_variables.update", "actions.org_variables.get"],
@@ -317,9 +337,9 @@ describe("github N8 environment and org action variables", () => {
     const patched = await updateOrgVariable({
       accessToken: "t",
       org: "acme",
-      name: "ORG_REGION",
+      name: "ORG_REGION_2",
+      current_name: "ORG_REGION",
       value: "eu-central-1",
-      rename: "ORG_REGION_2",
       visibility: "selected",
       selected_repository_ids: [7],
       fetch: async (input, init) => {
@@ -334,9 +354,34 @@ describe("github N8 environment and org action variables", () => {
         return new Response("", { status: 204 });
       },
     });
-    expect(patched.name).toBe("ORG_REGION");
-    expect(patched.rename).toBe("ORG_REGION_2");
+    expect(patched.name).toBe("ORG_REGION_2");
+    expect(patched).not.toHaveProperty("rename");
     expect(patched.visibility).toBe("selected");
+
+    const sameName = await updateOrgVariable({
+      accessToken: "t",
+      org: "acme",
+      name: "ORG_REGION",
+      value: "eu-west-1",
+      visibility: "private",
+      fetch: async (input, init) => {
+        expect(String(input)).toBe("https://api.github.com/orgs/acme/actions/variables/ORG_REGION");
+        expect(init?.method).toBe("PATCH");
+        expect(JSON.parse(String(init?.body))).toEqual({ value: "eu-west-1", visibility: "private" });
+        expect(JSON.parse(String(init?.body))).not.toHaveProperty("name");
+        return new Response("", { status: 204 });
+      },
+    });
+    expect(sameName.name).toBe("ORG_REGION");
+
+    expect(() => updateOrgVariable({
+      org: "acme",
+      name: "ORG_REGION_2",
+      current_name: "ORG_REGION",
+      value: "1",
+      visibility: "all",
+      rename: "NOPE",
+    })).toThrow(/rename is not a field/);
 
     const removedCalls: string[] = [];
     const removed = await deleteOrgVariable({

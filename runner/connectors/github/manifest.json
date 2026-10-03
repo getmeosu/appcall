@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -13217,7 +13217,7 @@
       "maxResponseBytes": 65536,
       "sideEffect": "write",
       "title": "Delete Environment Variable",
-      "description": "Delete an Actions environment variable via DELETE /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}. EffectPolicy Idempotent projects id (the variable name) from the primary response and observes via actions.environment_variables.get. Handler GETs first and skips DELETE when the variable is already absent. A 404 from DELETE itself is an upstream error, not a second success. The effect type is Idempotent, not Reconcile. This is a variable, not a secret.",
+      "description": "Delete an Actions environment variable via DELETE /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}. EffectPolicy Idempotent. The reconcile field is omitted: a registry observe after a 204 would GET the removed name and 404, so a good delete would look failed. Handler GETs first and returns already-gone without DELETE when the name is absent. A 404 from DELETE itself is an upstream error, not success. This is a variable, not a secret.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -13256,12 +13256,11 @@
           },
           "id": {
             "type": "string",
-            "description": "Variable name projected for Idempotent observe."
+            "description": "Variable name returned by the handler. Idempotency is the pre-DELETE GET, not a post-delete observe."
           }
         }
       },
-      "effectPolicy": "Idempotent",
-      "reconcile": "actions.environment_variables.get"
+      "effectPolicy": "Idempotent"
     },
     "actions.org_variables.list_for_repo": {
       "kind": "action",
@@ -13556,7 +13555,7 @@
       "maxResponseBytes": 1048576,
       "sideEffect": "write",
       "title": "Update Organization Variable",
-      "description": "Update an organization Actions variable via PATCH /orgs/{org}/actions/variables/{name}. EffectPolicy Reconcile observes via actions.org_variables.get using org and name from the input. Body fields are value, visibility, and name when rename is set. selected_repository_ids is included only when visibility is selected. OAuth app tokens and personal access tokens (classic) need the admin:org scope. This is a variable, not a secret.",
+      "description": "Update an organization Actions variable via PATCH /orgs/{org}/actions/variables/{path name}. EffectPolicy Reconcile observes via actions.org_variables.get. The input field name is the name that exists after the PATCH, and that is the observe key. Optional current_name is the name that exists before the PATCH. When current_name is set, the path is current_name and the body sends name as the new name. When current_name is omitted, the path is name and the body does not send name. Body also includes value and visibility. selected_repository_ids is included only when visibility is selected. OAuth app tokens and personal access tokens (classic) need the admin:org scope. This is a variable, not a secret.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -13566,15 +13565,15 @@
           },
           "name": {
             "type": "string",
-            "description": "Current variable name. Reconcile observes this name via actions.org_variables.get."
+            "description": "Name that exists after the PATCH. Reconcile observes this name via actions.org_variables.get. It is not the pre-patch name."
+          },
+          "current_name": {
+            "type": "string",
+            "description": "Optional name that exists before the PATCH. When set, the request path uses this name and the body sends name as the new name. When omitted, the path uses name and the body does not send a name."
           },
           "value": {
             "type": "string",
             "description": "Actions variable value. This is a variable, not a secret."
-          },
-          "rename": {
-            "type": "string",
-            "description": "New variable name. Sent as the body name. The path name stays the observe key for actions.org_variables.get."
           },
           "visibility": {
             "type": "string",
@@ -13608,15 +13607,12 @@
           },
           "name": {
             "type": "string",
-            "description": "Path name. Reconcile observes this name, not rename."
+            "description": "Post-patch variable name. Reconcile observes this name via actions.org_variables.get."
           },
           "value": {
             "type": "string"
           },
           "visibility": {
-            "type": "string"
-          },
-          "rename": {
             "type": "string"
           }
         }
@@ -13631,7 +13627,7 @@
       "maxResponseBytes": 65536,
       "sideEffect": "write",
       "title": "Delete Organization Variable",
-      "description": "Delete an organization Actions variable via DELETE /orgs/{org}/actions/variables/{name}. EffectPolicy Idempotent projects id (the variable name) from the primary response and observes via actions.org_variables.get. Handler GETs first and skips DELETE when the variable is already absent. A 404 from DELETE itself is an upstream error, not a second success. The effect type is Idempotent, not Reconcile. OAuth app tokens and personal access tokens (classic) need the admin:org scope. This is a variable, not a secret.",
+      "description": "Delete an organization Actions variable via DELETE /orgs/{org}/actions/variables/{name}. EffectPolicy Idempotent. The reconcile field is omitted: a registry observe after a 204 would GET the removed name and 404, so a good delete would look failed. Handler GETs first and returns already-gone without DELETE when the name is absent. A 404 from DELETE itself is an upstream error, not success. OAuth app tokens and personal access tokens (classic) need the admin:org scope. This is a variable, not a secret.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -13660,12 +13656,11 @@
           },
           "id": {
             "type": "string",
-            "description": "Variable name projected for Idempotent observe."
+            "description": "Variable name returned by the handler. Idempotency is the pre-DELETE GET, not a post-delete observe."
           }
         }
       },
-      "effectPolicy": "Idempotent",
-      "reconcile": "actions.org_variables.get"
+      "effectPolicy": "Idempotent"
     }
   },
   "models": [

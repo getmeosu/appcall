@@ -26,7 +26,7 @@ type OrgWrite = OrgNamed & {
   visibility: Visibility;
   selectedRepositoryIds?: number[];
 };
-type OrgUpdate = OrgWrite & { rename?: string };
+type OrgUpdate = OrgWrite & { currentName?: string };
 
 export function validateListEnvironmentVariablesInput(input: unknown): EnvScope & { perPage?: number; page?: number } {
   if (!isRecord(input)) throw new Error("actions.environment_variables.list input must be an object");
@@ -84,8 +84,11 @@ export function validateCreateOrgVariableInput(input: unknown): OrgWrite {
 export function validateUpdateOrgVariableInput(input: unknown): OrgUpdate {
   const write = orgWrite(input, "actions.org_variables.update");
   const raw = record(input);
-  const rename = raw.rename === undefined ? undefined : requireString(raw.rename, "rename");
-  return { ...write, rename };
+  if (raw.rename !== undefined) {
+    throw new Error("rename is not a field; set current_name to the existing name and name to the post-patch name");
+  }
+  const currentName = raw.current_name === undefined ? undefined : requireString(raw.current_name, "current_name");
+  return { ...write, currentName };
 }
 
 export function validateDeleteOrgVariableInput(input: unknown): OrgNamed {
@@ -240,9 +243,10 @@ export function createActionsEnvOrgVariablesClient(options: { accessToken: strin
 
     async updateOrgVariable(input: unknown) {
       const payload = validateUpdateOrgVariableInput(input);
-      // Path stays payload.name so Reconcile can observe actions.org_variables.get.
-      // rename, when set, is the body name only.
-      const response = await client.fetchJSON(orgVariablePath(payload), {
+      // name is the post-patch observe key for actions.org_variables.get.
+      // currentName, when set, is the path of the variable that exists now.
+      const pathName = payload.currentName ?? payload.name;
+      const response = await client.fetchJSON(orgVariablePath({ org: payload.org, name: pathName }), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orgUpdateBody(payload)),
@@ -254,7 +258,6 @@ export function createActionsEnvOrgVariablesClient(options: { accessToken: strin
           name: payload.name,
           value: payload.value,
           visibility: payload.visibility,
-          ...(payload.rename !== undefined ? { rename: payload.rename } : {}),
         };
       }
       if (response.status === 200 && isRecord(response.body)) {
@@ -357,12 +360,12 @@ function orgCreateBody(payload: OrgWrite): Record<string, unknown> {
 }
 
 function orgUpdateBody(payload: OrgUpdate): Record<string, unknown> {
-  // name in the body is the rename only. The path name stays the observe key.
+  // Body name is sent only when currentName is set. The observe key is always payload.name.
   const body: Record<string, unknown> = {
     value: payload.value,
     visibility: payload.visibility,
   };
-  if (payload.rename !== undefined) body.name = payload.rename;
+  if (payload.currentName !== undefined) body.name = payload.name;
   if (payload.visibility === "selected") body.selected_repository_ids = payload.selectedRepositoryIds;
   return body;
 }
