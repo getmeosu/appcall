@@ -106,6 +106,13 @@ export type UpdateGistInput = {
   files?: GistFile[];
 };
 
+export type DeleteGistInput = { gistId: string };
+
+export function validateDeleteGistInput(input: unknown): DeleteGistInput {
+  if (!isRecord(input)) throw new Error("gists.delete input must be an object");
+  return { gistId: requireString(input.gistId, "gistId") };
+}
+
 export function validateUpdateGistInput(input: unknown): UpdateGistInput {
   if (!isRecord(input)) throw new Error("gists.update input must be an object");
   let files: GistFile[] | undefined;
@@ -214,6 +221,20 @@ export function createGistsClient(options: { accessToken: string; fetch?: typeof
         return { ok: true as const, gist: normalizeGitHubGist(response.body as GitHubGist) };
       }
       return mapGistError(response.status, response.headers, "gists.update");
+    },
+
+    async delete(input: unknown) {
+      const payload = validateDeleteGistInput(input);
+      const client = base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "gists.delete" });
+      const response = await client.fetchJSON(`/gists/${encodeURIComponent(payload.gistId)}`, { method: "DELETE" });
+      if (response.status === 204) {
+        return { ok: true as const, deleted: true as const, gistId: payload.gistId };
+      }
+      // Same as contents.delete: 404 is an upstream error, not a second success.
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Gist not found." } };
+      }
+      return mapGistError(response.status, response.headers, "gists.delete");
     },
   };
 }

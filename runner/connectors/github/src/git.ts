@@ -116,6 +116,88 @@ export function validateUpdateRefInput(input: unknown): UpdateRefInput {
   };
 }
 
+export type ListRefsInput = {
+  owner: string;
+  repo: string;
+  /** Prefix such as heads/ or tags/v1. Omitted lists every ref. */
+  ref?: string;
+  perPage?: number;
+  page?: number;
+};
+
+export function validateListRefsInput(input: unknown): ListRefsInput {
+  if (!isRecord(input)) throw new Error("git.refs.list input must be an object");
+  const ref = typeof input.ref === "string" && input.ref.length > 0 ? input.ref : undefined;
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    ref,
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
+  };
+}
+
+export type DeleteRefInput = { owner: string; repo: string; ref: string };
+
+export function validateDeleteRefInput(input: unknown): DeleteRefInput {
+  if (!isRecord(input)) throw new Error("git.refs.delete input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    ref: requireString(input.ref, "ref"),
+  };
+}
+
+const TAG_OBJECT_TYPES = ["commit", "tree", "blob"] as const;
+
+export type GetTagInput = { owner: string; repo: string; sha: string };
+
+export function validateGetTagInput(input: unknown): GetTagInput {
+  if (!isRecord(input)) throw new Error("git.tags.get input must be an object");
+  const sha = firstString(input.sha, input.tagSha);
+  if (!sha) throw new Error("sha is required");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    sha,
+  };
+}
+
+export type CreateTagInput = {
+  owner: string;
+  repo: string;
+  tag: string;
+  message: string;
+  object: string;
+  type: string;
+  taggerName: string;
+  taggerEmail: string;
+  taggerDate?: string;
+  /** Tag object SHA for Reconcile via git.tags.get. Not sent on create. */
+  sha?: string;
+};
+
+export function validateCreateTagInput(input: unknown): CreateTagInput {
+  if (!isRecord(input)) throw new Error("git.tags.create input must be an object");
+  const type = requireString(input.type, "type");
+  if (!TAG_OBJECT_TYPES.includes(type as (typeof TAG_OBJECT_TYPES)[number])) {
+    throw new Error("type must be commit, tree, or blob");
+  }
+  const sha = firstString(input.sha, input.tagSha);
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    tag: requireString(input.tag, "tag"),
+    message: requireString(input.message, "message"),
+    object: requireString(input.object, "object"),
+    type,
+    taggerName: requireString(input.taggerName, "taggerName"),
+    taggerEmail: requireString(input.taggerEmail, "taggerEmail"),
+    taggerDate: typeof input.taggerDate === "string" && input.taggerDate.length > 0 ? input.taggerDate : undefined,
+    sha,
+  };
+}
+
 export type GetRefInput = { owner: string; repo: string; ref: string };
 
 export function validateGetRefInput(input: unknown): GetRefInput {
@@ -367,6 +449,92 @@ export function createGitClient(options: { accessToken: string; fetch?: typeof f
       return mapRateOrUpstream(response, "GitHub rejected the update ref request.");
     },
 
+    async listRefs(input: unknown) {
+      const payload = validateListRefsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      // Prefix uses matching-refs. No prefix uses the repo refs list (GET /git/refs).
+      const path = payload.ref
+        ? `${repoPath(payload.owner, payload.repo)}/git/matching-refs/${encodeRefPath(payload.ref)}${qs}`
+        : `${repoPath(payload.owner, payload.repo)}/git/refs${qs}`;
+      const response = await client.fetchJSON(path);
+      if (response.status === 200) {
+        const items = Array.isArray(response.body)
+          ? response.body
+          : isRecord(response.body) ? [response.body] : [];
+        return { ok: true as const, refs: items.filter(isRecord).map(normalizeListedRef) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Not found for git.refs.list." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the git.refs.list request.");
+    },
+
+    async deleteRef(input: unknown) {
+      const payload = validateDeleteRefInput(input);
+      // GitHub wants heads/... or tags/..., never a leading refs/.
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/git/refs/${encodeRefPath(payload.ref)}`,
+        { method: "DELETE" },
+      );
+      if (response.status === 204) {
+        return { ok: true as const, deleted: true as const, ref: normalizeRefPath(payload.ref) };
+      }
+      // Same as contents.delete: 404 is an upstream error, not a second success.
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Ref not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the git.refs.delete request.");
+    },
+
+    async getTag(input: unknown) {
+      const payload = validateGetTagInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/git/tags/${encodeURIComponent(payload.sha)}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, tag: normalizeGitTag(response.body) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Tag not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the git.tags.get request.");
+    },
+
+    async createTag(input: unknown) {
+      const payload = validateCreateTagInput(input);
+      // sha/tagSha is only for Reconcile → git.tags.get. A retry must not POST another tag object
+      // on the observe path; this POST never sends the tag-object SHA.
+      const body: Record<string, unknown> = {
+        tag: payload.tag,
+        message: payload.message,
+        object: payload.object,
+        type: payload.type,
+        tagger: {
+          name: payload.taggerName,
+          email: payload.taggerEmail,
+          ...(payload.taggerDate ? { date: payload.taggerDate } : {}),
+        },
+      };
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/git/tags`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 201 && isRecord(response.body)) {
+        return { ok: true as const, tag: normalizeGitTag(response.body) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository not found." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for create tag." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the git.tags.create request.");
+    },
+
     async getRef(input: unknown) {
       const payload = validateGetRefInput(input);
       const refPath = encodeRefPath(payload.ref);
@@ -441,6 +609,48 @@ export function createGitClient(options: { accessToken: string; fetch?: typeof f
       return mapRateOrUpstream(response, "GitHub rejected the create commit request.");
     },
   };
+}
+
+function repoPath(owner: string, repo: string): string {
+  return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+}
+
+function normalizeListedRef(raw: Record<string, unknown>) {
+  const obj = isRecord(raw.object) ? raw.object : {};
+  return {
+    ref: typeof raw.ref === "string" ? raw.ref : "",
+    sha: typeof obj.sha === "string" ? obj.sha : "",
+    url: typeof raw.url === "string" ? raw.url : "",
+  };
+}
+
+function normalizeGitTag(raw: Record<string, unknown>) {
+  const obj = isRecord(raw.object) ? raw.object : {};
+  return {
+    sha: typeof raw.sha === "string" ? raw.sha : "",
+    tag: typeof raw.tag === "string" ? raw.tag : "",
+    message: typeof raw.message === "string" ? raw.message : "",
+    objectSha: typeof obj.sha === "string" ? obj.sha : "",
+    objectType: typeof obj.type === "string" ? obj.type : "",
+    url: typeof raw.url === "string" ? raw.url : "",
+    modelVersion: "2026-05-16" as const,
+    raw,
+  };
+}
+
+function firstString(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return undefined;
+}
+
+function optionalPage(value: unknown, field: string, max = 100): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > max) {
+    throw new Error(`${field} must be an integer between 1 and ${max}`);
+  }
+  return value;
 }
 
 function mapRateOrUpstream(response: { status: number; headers: Record<string, string> }, message: string) {
