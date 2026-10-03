@@ -546,8 +546,9 @@ export function createGovernanceClient(options: { accessToken: string; fetch?: t
         `/orgs/${encodeURIComponent(payload.org)}/teams/${encodeURIComponent(payload.teamSlug)}/memberships/${encodeURIComponent(payload.username)}`,
         { method: "DELETE" },
       );
-      // 204 removed. 404 means the membership is already gone (same Idempotent delete shape as releases.delete).
-      if (response.status === 204 || response.status === 404) {
+      // Same as repos.contents.delete: 204 is success. 404 is an upstream error
+      // (missing org or team is not proof the membership is gone).
+      if (response.status === 204) {
         return { ok: true as const, removed: true as const, username: payload.username };
       }
       return mapError(response.status, response.headers, "teams.membership.remove");
