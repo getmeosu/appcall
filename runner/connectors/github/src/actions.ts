@@ -230,6 +230,18 @@ import {
   validateDeleteBranchPolicyInput,
 } from "./actions_deploy_policy";
 import {
+  createTrafficClient,
+  validateListStatsContributorsInput,
+  validateGetTrafficViewsInput,
+  validateGetTrafficClonesInput,
+  validateGetStatsPunchCardInput,
+  validateListStatsCommitActivityInput,
+  validateGetStatsCodeFrequencyInput,
+  validateGetStatsParticipationInput,
+  validateListTrafficPopularPathsInput,
+  validateListTrafficPopularReferrersInput,
+} from "./traffic";
+import {
   createReposReadsClient,
   validateGetAutolinkInput,
   validateGetReadmeInput,
@@ -4230,6 +4242,107 @@ export function listOrgAttestationRepositories(input: unknown): Record<string, u
     });
   }
   return { connector: "github", action: "orgs.attestations.repositories.list", source: "connector", validated: validateListOrgAttestationRepositoriesInput(input) };
+}
+
+// ─── traffic: repository statistics and traffic reads ─────────────────────────
+
+function liveTrafficClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createTrafficClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listRepoStatsContributors(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveTrafficClient(input, "repos.stats.contributors.list").listContributors(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.stats.contributors.list", source: "connector", contributors: result.contributors };
+    });
+  }
+  return { connector: "github", action: "repos.stats.contributors.list", source: "connector", validated: validateListStatsContributorsInput(input) };
+}
+
+export function getRepoTrafficViews(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveTrafficClient(input, "repos.traffic.views.get").getViews(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.traffic.views.get", source: "connector", views: result.views };
+    });
+  }
+  return { connector: "github", action: "repos.traffic.views.get", source: "connector", validated: validateGetTrafficViewsInput(input) };
+}
+
+export function getRepoTrafficClones(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveTrafficClient(input, "repos.traffic.clones.get").getClones(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.traffic.clones.get", source: "connector", clones: result.clones };
+    });
+  }
+  return { connector: "github", action: "repos.traffic.clones.get", source: "connector", validated: validateGetTrafficClonesInput(input) };
+}
+
+export function getRepoStatsPunchCard(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveTrafficClient(input, "repos.stats.punch_card.get").getPunchCard(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.stats.punch_card.get", source: "connector", punchCard: result.punchCard };
+    });
+  }
+  return { connector: "github", action: "repos.stats.punch_card.get", source: "connector", validated: validateGetStatsPunchCardInput(input) };
+}
+
+export function listRepoStatsCommitActivity(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveTrafficClient(input, "repos.stats.commit_activity.list").listCommitActivity(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.stats.commit_activity.list", source: "connector", activity: result.activity };
+    });
+  }
+  return { connector: "github", action: "repos.stats.commit_activity.list", source: "connector", validated: validateListStatsCommitActivityInput(input) };
+}
+
+export function getRepoStatsCodeFrequency(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveTrafficClient(input, "repos.stats.code_frequency.get").getCodeFrequency(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.stats.code_frequency.get", source: "connector", frequency: result.frequency };
+    });
+  }
+  return { connector: "github", action: "repos.stats.code_frequency.get", source: "connector", validated: validateGetStatsCodeFrequencyInput(input) };
+}
+
+export function getRepoStatsParticipation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveTrafficClient(input, "repos.stats.participation.get").getParticipation(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.stats.participation.get", source: "connector", participation: result.participation };
+    });
+  }
+  return { connector: "github", action: "repos.stats.participation.get", source: "connector", validated: validateGetStatsParticipationInput(input) };
+}
+
+export function listRepoTrafficPopularPaths(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveTrafficClient(input, "repos.traffic.popular.paths.list").listPopularPaths(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.traffic.popular.paths.list", source: "connector", paths: result.paths };
+    });
+  }
+  return { connector: "github", action: "repos.traffic.popular.paths.list", source: "connector", validated: validateListTrafficPopularPathsInput(input) };
+}
+
+export function listRepoTrafficPopularReferrers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveTrafficClient(input, "repos.traffic.popular.referrers.list").listPopularReferrers(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.traffic.popular.referrers.list", source: "connector", referrers: result.referrers };
+    });
+  }
+  return { connector: "github", action: "repos.traffic.popular.referrers.list", source: "connector", validated: validateListTrafficPopularReferrersInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

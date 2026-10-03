@@ -318,6 +318,15 @@ import {
   getRepoSecurityAdvisory as ghGetRepoSecurityAdvisory,
   getRepoLicense as ghGetRepoLicense,
   listOrgAttestationRepositories as ghListOrgAttestationRepositories,
+  listRepoStatsContributors as ghListRepoStatsContributors,
+  getRepoTrafficViews as ghGetRepoTrafficViews,
+  getRepoTrafficClones as ghGetRepoTrafficClones,
+  getRepoStatsPunchCard as ghGetRepoStatsPunchCard,
+  listRepoStatsCommitActivity as ghListRepoStatsCommitActivity,
+  getRepoStatsCodeFrequency as ghGetRepoStatsCodeFrequency,
+  getRepoStatsParticipation as ghGetRepoStatsParticipation,
+  listRepoTrafficPopularPaths as ghListRepoTrafficPopularPaths,
+  listRepoTrafficPopularReferrers as ghListRepoTrafficPopularReferrers,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1245,6 +1254,15 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "repos.security_advisories.get": ghGetRepoSecurityAdvisory,
       "repos.license.get": ghGetRepoLicense,
       "orgs.attestations.repositories.list": ghListOrgAttestationRepositories,
+      "repos.stats.contributors.list": ghListRepoStatsContributors,
+      "repos.traffic.views.get": ghGetRepoTrafficViews,
+      "repos.traffic.clones.get": ghGetRepoTrafficClones,
+      "repos.stats.punch_card.get": ghGetRepoStatsPunchCard,
+      "repos.stats.commit_activity.list": ghListRepoStatsCommitActivity,
+      "repos.stats.code_frequency.get": ghGetRepoStatsCodeFrequency,
+      "repos.stats.participation.get": ghGetRepoStatsParticipation,
+      "repos.traffic.popular.paths.list": ghListRepoTrafficPopularPaths,
+      "repos.traffic.popular.referrers.list": ghListRepoTrafficPopularReferrers,
     },
     salesforce: {
       "contacts.create": createContact,
