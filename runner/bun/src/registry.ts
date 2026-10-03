@@ -460,6 +460,9 @@ import {
   getOrgActionsPermissions as ghGetOrgActionsPermissions,
   getActionsRunTiming as ghGetActionsRunTiming,
   getActionsWorkflowTiming as ghGetActionsWorkflowTiming,
+  getZen as ghGetZen,
+  getLicense as ghGetLicense,
+  getGitignoreTemplate as ghGetGitignoreTemplate,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1529,6 +1532,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "orgs.actions.permissions.get": ghGetOrgActionsPermissions,
       "actions.runs.timing.get": ghGetActionsRunTiming,
       "actions.workflows.timing.get": ghGetActionsWorkflowTiming,
+      "meta.zen.get": ghGetZen,
+      "licenses.get": ghGetLicense,
+      "gitignore.templates.get": ghGetGitignoreTemplate,
     },
     salesforce: {
       "contacts.create": createContact,
