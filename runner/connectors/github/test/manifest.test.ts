@@ -260,9 +260,9 @@ describe("github connector manifest", () => {
 
   test("manifest declares S5 contents-write ops", () => {
     for (const key of [
-      "contents.put",
-      "contents.delete",
-      "contents.push_files",
+      "repos.contents.put",
+      "repos.contents.delete",
+      "repos.contents.push_files",
       "git.blobs.create",
       "git.blobs.get",
       "git.trees.create",
@@ -277,14 +277,14 @@ describe("github connector manifest", () => {
   });
 
   test("S5 write ops wire EffectPolicy", () => {
-    expect(manifest.operations["contents.put"].sideEffect).toBe("write");
-    expect(manifest.operations["contents.put"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["contents.put"].reconcile).toBe("repos.contents.get");
-    expect(manifest.operations["contents.delete"].sideEffect).toBe("write");
-    expect(manifest.operations["contents.delete"].effectPolicy).toBe("Idempotent");
-    expect(manifest.operations["contents.push_files"].sideEffect).toBe("write");
-    expect(manifest.operations["contents.push_files"].effectPolicy).toBe("Reconcile");
-    expect(manifest.operations["contents.push_files"].reconcile).toBe("commits.get");
+    expect(manifest.operations["repos.contents.put"].sideEffect).toBe("write");
+    expect(manifest.operations["repos.contents.put"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["repos.contents.put"].reconcile).toBe("repos.contents.get");
+    expect(manifest.operations["repos.contents.delete"].sideEffect).toBe("write");
+    expect(manifest.operations["repos.contents.delete"].effectPolicy).toBe("Idempotent");
+    expect(manifest.operations["repos.contents.push_files"].sideEffect).toBe("write");
+    expect(manifest.operations["repos.contents.push_files"].effectPolicy).toBe("Reconcile");
+    expect(manifest.operations["repos.contents.push_files"].reconcile).toBe("commits.get");
     for (const key of [
       "git.blobs.create",
       "git.trees.create",
@@ -297,8 +297,8 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.13.0 after S12 on S10 tip", () => {
-    expect(manifest.version).toBe("0.13.0");
+  test("manifest version is 0.14.0 after S13 contents id rename", () => {
+    expect(manifest.version).toBe("0.14.0");
   });
 
   test("manifest declares S8 labels milestones collab ops", () => {
