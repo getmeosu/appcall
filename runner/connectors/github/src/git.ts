@@ -243,6 +243,17 @@ export function validateCreateGitCommitInput(input: unknown): CreateGitCommitInp
   };
 }
 
+
+export type GetGitCommitInput = { owner: string; repo: string; commitSha: string };
+export function validateGetGitCommitInput(input: unknown): GetGitCommitInput {
+  if (!isRecord(input)) throw new Error("get git commit input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    commitSha: requireString(input.commitSha, "commitSha"),
+  };
+}
+
 /** Normalize ref for URL path: refs/heads/x → heads/x; heads/x stays. */
 export function normalizeRefPath(ref: string): string {
   return ref.startsWith("refs/") ? ref.slice("refs/".length) : ref;
@@ -557,6 +568,35 @@ export function createGitClient(options: { accessToken: string; fetch?: typeof f
         return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Ref not found." } };
       }
       return mapRateOrUpstream(response, "GitHub rejected the get ref request.");
+    },
+
+
+    async getCommit(input: unknown) {
+      const payload = validateGetGitCommitInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/git/commits/${encodeURIComponent(payload.commitSha)}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        const raw = response.body;
+        const tree = isRecord(raw.tree) ? raw.tree : {};
+        const parents = Array.isArray(raw.parents) ? raw.parents.filter(isRecord) : [];
+        return {
+          ok: true as const,
+          commit: {
+            sha: typeof raw.sha === "string" ? raw.sha : payload.commitSha,
+            message: typeof raw.message === "string" ? raw.message : "",
+            treeSha: typeof tree.sha === "string" ? tree.sha : "",
+            url: typeof raw.html_url === "string" ? raw.html_url : (typeof raw.url === "string" ? raw.url : ""),
+            parents: parents.map((parent) => (typeof parent.sha === "string" ? parent.sha : "")),
+            modelVersion: "2026-05-16" as const,
+            raw,
+          },
+        };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Git commit not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the git.commits.get request.");
     },
 
     async createCommit(input: unknown) {

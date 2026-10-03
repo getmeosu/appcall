@@ -1,4 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { normalizeGitHubPullRequest, type GitHubPullRequest } from "./pull_requests";
+import { normalizeGitHubBranch, type GitHubBranch } from "./branches";
 
 export type GitHubCommit = {
   sha: string;
@@ -331,6 +333,29 @@ export function normalizeCommitComment(comment: Record<string, unknown>): Normal
   };
 }
 
+
+export type ListCommitPullsInput = { owner: string; repo: string; commitSha: string; perPage?: number; page?: number };
+export function validateListCommitPullsInput(input: unknown): ListCommitPullsInput {
+  if (!isRecord(input)) throw new Error("commits.pulls.list input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    commitSha: requireString(input.commitSha, "commitSha"),
+    perPage: optionalBounded(input.perPage, "perPage", 100),
+    page: optionalBounded(input.page, "page", 1_000_000),
+  };
+}
+
+export type ListBranchesWhereHeadInput = { owner: string; repo: string; commitSha: string };
+export function validateListBranchesWhereHeadInput(input: unknown): ListBranchesWhereHeadInput {
+  if (!isRecord(input)) throw new Error("commits.branches_where_head.list input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    commitSha: requireString(input.commitSha, "commitSha"),
+  };
+}
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 export function createCommitsClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
@@ -498,6 +523,39 @@ export function createCommitsClient(options: { accessToken: string; fetch?: type
       return mapRateOrUpstream(response, "GitHub rejected the delete commit comment request.");
     },
 
+
+    async listPulls(input: unknown) {
+      const payload = validateListCommitPullsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/commits/${encodeURIComponent(payload.commitSha)}/pulls${qs}`,
+      );
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, pullRequests: (response.body as GitHubPullRequest[]).map(normalizeGitHubPullRequest) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the commits.pulls.list request.");
+    },
+
+    async listBranchesWhereHead(input: unknown) {
+      const payload = validateListBranchesWhereHeadInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/commits/${encodeURIComponent(payload.commitSha)}/branches-where-head`,
+      );
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, branches: (response.body as GitHubBranch[]).map(normalizeGitHubBranch) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the commits.branches_where_head.list request.");
+    },
+
     async getComment(input: unknown) {
       const payload = validateGetCommitCommentInput(input);
       const response = await client.fetchJSON(
@@ -536,6 +594,15 @@ function mapRateOrUpstream(response: { status: number; headers: Record<string, s
 function parseNextLink(response: Record<string, unknown>): string | null {
   const link = response.nextLink;
   return typeof link === "string" && link.length > 0 ? link : null;
+}
+
+
+function optionalBounded(value: unknown, field: string, max: number): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > max) {
+    throw new Error(`${field} must be an integer between 1 and ${max}`);
+  }
+  return value;
 }
 
 function requireString(value: unknown, field: string): string {

@@ -51,6 +51,7 @@ export type GitHubRuleset = {
   source_type?: string;
   source?: string;
   enforcement?: string;
+  rules?: unknown[];
   [key: string]: unknown;
 };
 
@@ -173,6 +174,25 @@ export function validateGetBranchProtectionInput(input: unknown): GetBranchProte
     repo: requireString(input.repo, "repo"),
     branch: requireString(input.branch, "branch"),
   };
+}
+
+
+export type ListRuleSuitesInput = RepoScope & Page;
+export function validateListRuleSuitesInput(input: unknown): ListRuleSuitesInput {
+  if (!isRecord(input)) throw new Error("repos.rule_suites.list input must be an object");
+  return { ...repoScope(input), ...pageInput(input) };
+}
+
+export type GetRuleSuiteInput = RepoScope & { ruleSuiteId: number };
+export function validateGetRuleSuiteInput(input: unknown): GetRuleSuiteInput {
+  if (!isRecord(input)) throw new Error("repos.rule_suites.get input must be an object");
+  return { ...repoScope(input), ruleSuiteId: requirePositive(input.ruleSuiteId, "ruleSuiteId") };
+}
+
+export type GetRepoRulesetInput = RepoScope & { rulesetId: number };
+export function validateGetRepoRulesetInput(input: unknown): GetRepoRulesetInput {
+  if (!isRecord(input)) throw new Error("repos.rulesets.get input must be an object");
+  return { ...repoScope(input), rulesetId: requirePositive(input.rulesetId, "rulesetId") };
 }
 
 export type ListRepoRulesetsInput = RepoScope & Page;
@@ -554,6 +574,44 @@ export function createGovernanceClient(options: { accessToken: string; fetch?: t
       return mapError(response.status, response.headers, "teams.membership.remove");
     },
 
+
+    async listRuleSuites(input: unknown) {
+      const payload = validateListRuleSuitesInput(input);
+      const client = clientFor(options, base, "repos.rule_suites.list");
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/rulesets/rule-suites${pageQuery(payload.perPage, payload.page)}`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, ruleSuites: response.body.filter(isRecord).map(normalizeRuleSuite) };
+      }
+      return mapError(response.status, response.headers, "repos.rule_suites.list");
+    },
+
+    async getRuleSuite(input: unknown) {
+      const payload = validateGetRuleSuiteInput(input);
+      const client = clientFor(options, base, "repos.rule_suites.get");
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/rulesets/rule-suites/${payload.ruleSuiteId}`);
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, ruleSuite: normalizeRuleSuite(response.body) };
+      }
+      return mapError(response.status, response.headers, "repos.rule_suites.get");
+    },
+
+    async getRuleset(input: unknown) {
+      const payload = validateGetRepoRulesetInput(input);
+      const client = clientFor(options, base, "repos.rulesets.get");
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/rulesets/${payload.rulesetId}`);
+      if (response.status === 200 && isRecord(response.body)) {
+        const ruleset = response.body as GitHubRuleset;
+        return {
+          ok: true as const,
+          ruleset: {
+            ...normalizeGitHubRuleset(ruleset),
+            rules: Array.isArray(ruleset.rules) ? ruleset.rules : [],
+          },
+        };
+      }
+      return mapError(response.status, response.headers, "repos.rulesets.get");
+    },
+
     async dispatch(input: unknown) {
       const payload = validateDispatchRepoInput(input);
       const client = clientFor(options, base, "repos.dispatch");
@@ -615,6 +673,39 @@ function optionalStringList(value: unknown, field: string): string[] | undefined
   if (value === undefined) return undefined;
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.length === 0)) {
     throw new Error(`${field} must be an array of non-empty strings`);
+  }
+  return value;
+}
+
+
+type GitHubRuleSuite = {
+  id: number;
+  actor_name?: string;
+  ref?: string;
+  result?: string;
+  before_sha?: string;
+  after_sha?: string;
+  [key: string]: unknown;
+};
+
+function normalizeRuleSuite(suite: GitHubRuleSuite) {
+  return {
+    id: `gh-rule-suite:${suite.id}`,
+    provider: "github" as const,
+    ruleSuiteId: suite.id,
+    actorName: suite.actor_name ?? "",
+    ref: suite.ref ?? "",
+    result: suite.result ?? "",
+    beforeSha: suite.before_sha ?? "",
+    afterSha: suite.after_sha ?? "",
+    modelVersion: "2026-05-16" as const,
+    raw: suite,
+  };
+}
+
+function requirePositive(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
+    throw new Error(`${field} must be a positive safe integer`);
   }
   return value;
 }

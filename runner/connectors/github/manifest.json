@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -12273,6 +12273,687 @@
         }
       },
       "effectPolicy": "Idempotent"
+    },
+    "actions.workflows.runs.list": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Workflow Runs",
+      "description": "List workflow runs for one workflow via GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs. workflow_id may be the workflow file name (for example ci.yml), not only a numeric id. This is a separate op from actions.runs.list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "workflowId": {
+            "type": "string",
+            "description": "Workflow id or workflow file name (for example ci.yml)."
+          },
+          "actor": {
+            "type": "string",
+            "description": "Filter by actor login."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Filter by branch name."
+          },
+          "event": {
+            "type": "string",
+            "description": "Filter by event type (push, pull_request, \u2026)."
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by status or conclusion."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          },
+          "headSha": {
+            "type": "string",
+            "description": "Filter by head SHA."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "workflowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number"
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "actions.caches.list": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Actions Caches",
+      "description": "List GitHub Actions caches via GET /repos/{owner}/{repo}/actions/caches. Supports key and ref query filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "key": {
+            "type": "string",
+            "description": "Cache key or prefix filter."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Full Git ref filter, for example refs/heads/main."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number"
+          },
+          "caches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "number"
+                },
+                "ref": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "lastAccessedAt": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "sizeInBytes": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.caches.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "reconcile": "actions.caches.list",
+      "title": "Delete Actions Cache",
+      "description": "Delete an Actions cache by id via DELETE /repos/{owner}/{repo}/actions/caches/{cache_id}. EffectPolicy Idempotent. There is no get-by-id. Reconcile observes via actions.caches.list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "cacheId": {
+            "type": "number",
+            "description": "Actions cache id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "cacheId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "cacheId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "actions.caches.delete_by_key": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "reconcile": "actions.caches.list",
+      "title": "Delete Actions Caches by Key",
+      "description": "Delete Actions caches by key via DELETE /repos/{owner}/{repo}/actions/caches?key={key} with optional ref. EffectPolicy Idempotent. Reconcile observes via actions.caches.list filtered by the same key and, when sent, the same ref.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "key": {
+            "type": "string",
+            "description": "Complete cache key."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Optional full Git ref. When set, only caches for this ref are deleted and the list observe uses the same ref."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "ref": {
+            "type": "string"
+          },
+          "totalCount": {
+            "type": "number"
+          },
+          "caches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "number"
+                },
+                "ref": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "lastAccessedAt": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "sizeInBytes": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.runs.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "reconcile": "actions.runs.get",
+      "title": "Delete Workflow Run",
+      "description": "Delete a workflow run via DELETE /repos/{owner}/{repo}/actions/runs/{run_id}. EffectPolicy Idempotent. Reconcile observes via actions.runs.get. Deleting a run also deletes that run's artifacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "runId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "actions.jobs.rerun": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Rerun Workflow Job",
+      "description": "Rerun a workflow job via POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun. One-shot. No EffectPolicy and no reconcile. The handler pre-checks GET actions.jobs.get for status before POST. That read is not a retry key and not desired state. The first call returns 201. A repeat returns 403, which is not success and is not retried. Not actions.runs.rerun or actions.runs.rerun_failed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "jobId": {
+            "type": "number",
+            "description": "Workflow job id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "jobId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rerun": {
+            "type": "boolean"
+          },
+          "jobId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "actions.runs.approve": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Approve Workflow Run",
+      "description": "Approve a workflow run from a public fork via POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve. One-shot. No EffectPolicy and no reconcile. The handler pre-checks GET actions.runs.get for status before POST. That read is not a retry key and not desired state. Not actions.runs.pending_deployments.review.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "runId": {
+            "type": "number",
+            "description": "Workflow run id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "runId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          },
+          "runId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "repos.rule_suites.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Rule Suites",
+      "description": "List repository rule suites via GET /repos/{owner}/{repo}/rulesets/rule-suites.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ruleSuites": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "repos.rule_suites.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Rule Suite",
+      "description": "Get a repository rule suite via GET /repos/{owner}/{repo}/rulesets/rule-suites/{rule_suite_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "ruleSuiteId": {
+            "type": "number",
+            "description": "Rule suite id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "ruleSuiteId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ruleSuite": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "repos.rulesets.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Repository Ruleset",
+      "description": "Get a repository ruleset via GET /repos/{owner}/{repo}/rulesets/{ruleset_id}. Read only. No ruleset create, update, or delete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "rulesetId": {
+            "type": "number",
+            "description": "Ruleset id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "rulesetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ruleset": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "commits.pulls.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Pull Requests for Commit",
+      "description": "List pull requests associated with a commit via GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "commitSha": {
+            "type": "string",
+            "description": "Commit SHA."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "commitSha"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "pullRequests": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "commits.branches_where_head.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Branches Where Head",
+      "description": "List branches where the given commit is the head via GET /repos/{owner}/{repo}/commits/{commit_sha}/branches-where-head.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "commitSha": {
+            "type": "string",
+            "description": "Commit SHA."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "commitSha"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "branches": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "git.commits.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Git Commit",
+      "description": "Get a Git database commit object via GET /repos/{owner}/{repo}/git/commits/{commit_sha}. This is the git commit object, not commits.get (the REST commit).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "commitSha": {
+            "type": "string",
+            "description": "Git commit SHA."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "commitSha"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "commit": {
+            "type": "object",
+            "properties": {
+              "sha": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "treeSha": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "parents": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "models": [
