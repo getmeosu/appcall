@@ -368,6 +368,33 @@ export function validateGetArtifactInput(input: unknown): GetArtifactInput {
   };
 }
 
+
+export type DownloadRunLogsInput = { owner: string; repo: string; runId: number };
+export function validateDownloadRunLogsInput(input: unknown): DownloadRunLogsInput {
+  if (!isRecord(input)) throw new Error("download run logs input must be an object");
+  return validateGetRunInput(input);
+}
+
+export type DownloadArtifactInput = { owner: string; repo: string; artifactId: number };
+export function validateDownloadArtifactInput(input: unknown): DownloadArtifactInput {
+  if (!isRecord(input)) throw new Error("download artifact input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    artifactId: requireNumber(input.artifactId, "artifactId"),
+  };
+}
+
+export type RerunFailedJobsInput = GetRunInput & { enableDebugLogging?: boolean };
+export function validateRerunFailedJobsInput(input: unknown): RerunFailedJobsInput {
+  if (!isRecord(input)) throw new Error("rerun failed jobs input must be an object");
+  const base = validateGetRunInput(input);
+  if (input.enableDebugLogging !== undefined && typeof input.enableDebugLogging !== "boolean") {
+    throw new Error("enableDebugLogging must be a boolean");
+  }
+  return { ...base, enableDebugLogging: typeof input.enableDebugLogging === "boolean" ? input.enableDebugLogging : undefined };
+}
+
 // ─── Error helpers ────────────────────────────────────────────────────────────
 
 function rateLimited(status: number, headers: Record<string, string>) {
@@ -414,6 +441,34 @@ export function createWorkflowsClient(options: {
       fetch: options.fetch,
       operation,
     });
+
+  /**
+   * Run logs and artifact archives return a short-lived 302 Location.
+   * Capture it with redirect:manual and do not follow the URL outbound.
+   */
+  async function captureRedirect(url: string, label: string) {
+    const response = await fetchImpl(url, {
+      method: "GET",
+      redirect: "manual",
+      headers: {
+        Authorization: `Bearer ${options.accessToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+    const headers: Record<string, string> = {};
+    response.headers.forEach((v, k) => {
+      headers[k] = v;
+    });
+    if (response.status === 302 || response.status === 301 || response.status === 307 || response.status === 308) {
+      const downloadUrl = response.headers.get("location") ?? response.headers.get("Location") ?? "";
+      if (!downloadUrl) return upstream(`GitHub returned a redirect without Location for ${label}.`);
+      return { ok: true as const, downloadUrl };
+    }
+    if (response.status === 404) return upstream(`${label[0].toUpperCase()}${label.slice(1)} not found.`);
+    if (isRateLimited(response.status, headers)) return rateLimited(response.status, headers);
+    return upstream(`GitHub rejected the ${label} request.`);
+  }
 
   return {
     async listWorkflows(input: unknown) {
@@ -675,6 +730,46 @@ export function createWorkflowsClient(options: {
       if (response.status === 404) return upstream("Artifact not found.");
       if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
       return upstream("GitHub rejected the get artifact request.");
+    },
+
+    async downloadRunLogs(input: unknown) {
+      const payload = validateDownloadRunLogsInput(input);
+      const url = `https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/logs`;
+      const captured = await captureRedirect(url, "workflow run logs");
+      if (!captured.ok) return captured;
+      return {
+        ok: true as const,
+        logs: { runId: payload.runId, downloadUrl: captured.downloadUrl, expiresInSeconds: 60 },
+      };
+    },
+
+    async downloadArtifact(input: unknown) {
+      const payload = validateDownloadArtifactInput(input);
+      const url = `https://api.github.com/repos/${payload.owner}/${payload.repo}/actions/artifacts/${payload.artifactId}/zip`;
+      const captured = await captureRedirect(url, "artifact archive");
+      if (!captured.ok) return captured;
+      return {
+        ok: true as const,
+        download: { artifactId: payload.artifactId, downloadUrl: captured.downloadUrl, expiresInSeconds: 60 },
+      };
+    },
+
+    async rerunFailedJobs(input: unknown) {
+      const payload = validateRerunFailedJobsInput(input);
+      const client = clientFor("actions.runs.rerun_failed");
+      const body: Record<string, unknown> = {};
+      if (payload.enableDebugLogging === true) body.enable_debug_logging = true;
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/rerun-failed-jobs`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+      );
+      if (response.status === 201) {
+        return { ok: true as const, rerun: true as const, runId: payload.runId };
+      }
+      if (response.status === 403) return upstream("Forbidden to rerun failed jobs.");
+      if (response.status === 404) return upstream("Workflow run not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the rerun failed jobs request.");
     },
   };
 }

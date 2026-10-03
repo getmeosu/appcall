@@ -297,8 +297,9 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.14.0 after S13 contents id rename", () => {
-    expect(manifest.version).toBe("0.14.0");
+  test("manifest version is 0.15.0 after N1 on S13 tip", () => {
+    expect(manifest.version).toBe("0.15.0");
+    expect(manifest.version).not.toBe("0.14.0");
   });
 
   test("manifest declares S8 labels milestones collab ops", () => {
@@ -418,7 +419,7 @@ describe("github connector manifest", () => {
     expect(comment.sideEffect).toBe("write");
     expect(comment.effectPolicy).toBe("Reconcile");
     expect(comment.reconcile).toBe("commits.get");
-    expect(Object.keys(manifest.operations).length).toBe(138);
+    expect(Object.keys(manifest.operations).length).toBe(152);
   });
 
   test("manifest declares S12 refs search user reads", () => {
@@ -471,4 +472,48 @@ describe("github connector manifest", () => {
       expect(op.reconcile).toBe(reconcile);
     }
   });
+
+  test("manifest declares N1 deployment environment release ops", () => {
+    const reads = [
+      "deployments.list",
+      "deployments.get",
+      "deployments.statuses.list",
+      "environments.list",
+      "environments.get",
+      "actions.runs.logs.download",
+      "actions.artifacts.download",
+      "releases.assets.get",
+    ] as const;
+    for (const key of reads) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.kind).toBe("action");
+      expect(op.sideEffect).toBe("read");
+      expect(op.effectPolicy).toBeUndefined();
+    }
+    const notes = manifest.operations["releases.generate_notes"] as Record<string, unknown>;
+    expect(notes.sideEffect).toBe("write");
+    expect(notes.effectPolicy).toBeUndefined();
+    expect(notes.reconcile).toBeUndefined();
+    expect(Object.keys(manifest.operations).length).toBe(152);
+    expect(manifest.network.allowedHosts).toContain("uploads.github.com");
+  });
+
+  test("N1 write ops wire EffectPolicy", () => {
+    for (const [key, policy, reconcile] of [
+      ["deployments.create", "Reconcile", "deployments.get"],
+      ["deployments.statuses.create", "Reconcile", "deployments.statuses.list"],
+      ["actions.runs.rerun_failed", "Reconcile", "actions.runs.get"],
+      ["releases.assets.upload", "Reconcile", "releases.assets.get"],
+    ] as const) {
+      const op = manifest.operations[key] as Record<string, unknown>;
+      expect(op.sideEffect).toBe("write");
+      expect(op.effectPolicy).toBe(policy);
+      expect(op.reconcile).toBe(reconcile);
+    }
+    const del = manifest.operations["releases.delete"] as Record<string, unknown>;
+    expect(del.sideEffect).toBe("write");
+    expect(del.effectPolicy).toBe("Idempotent");
+    expect(del.reconcile).toBeUndefined();
+  });
+
 });
