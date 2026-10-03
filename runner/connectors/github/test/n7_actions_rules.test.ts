@@ -33,7 +33,7 @@ const N7_READS = [
 ] as const;
 
 describe("github N7 actions rules", () => {
-  test("manifest is v0.23.0 with 240 ops and the N7 policies", () => {
+  test("manifest is v0.24.0 with 251 ops and the N7 policies", () => {
     expect(manifest.version).toBe("0.24.0");
     expect(Object.keys(manifest.operations).length).toBe(251);
     for (const key of N7_READS) {

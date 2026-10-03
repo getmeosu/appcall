@@ -297,7 +297,7 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.23.0 after N7", () => {
+  test("manifest version is 0.24.0 after N7", () => {
     expect(manifest.version).toBe("0.24.0");
     expect(manifest.version).not.toBe("0.19.0");
   });
