@@ -35,6 +35,14 @@ import {
   validateGetUserByUsernameInput,
   validateListUserReposInput,
   validateUsersGetAuthenticatedInput,
+  validateListPublicEventsInput,
+  validateListPublicReceivedEventsInput,
+  validateListUserKeysInput,
+  validateListUserStarredInput,
+  validateListAuthenticatedStarredInput,
+  validateListUserSocialAccountsInput,
+  validateListAuthenticatedSocialAccountsInput,
+  validateListUserSshSigningKeysInput,
 } from "./users";
 import {
   createOrgsClient,
@@ -1254,6 +1262,126 @@ export function listUserRepos(input: unknown): Record<string, unknown> | Promise
     });
   }
   return { connector: "github", action: "users.repos.list", source: "connector", validated: validateListUserReposInput(input) };
+}
+
+export function listPublicUserEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.events.public.list" }),
+    }).listPublicEvents(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.events.public.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "users.events.public.list", source: "connector", validated: validateListPublicEventsInput(input) };
+}
+
+export function listPublicReceivedUserEvents(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.received_events.public.list" }),
+    }).listPublicReceivedEvents(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.received_events.public.list", source: "connector", events: result.events };
+    });
+  }
+  return { connector: "github", action: "users.received_events.public.list", source: "connector", validated: validateListPublicReceivedEventsInput(input) };
+}
+
+export function listUserKeys(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.keys.list" }),
+    }).listKeys(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.keys.list", source: "connector", keys: result.keys };
+    });
+  }
+  return { connector: "github", action: "users.keys.list", source: "connector", validated: validateListUserKeysInput(input) };
+}
+
+export function listUserStarred(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.starred.list" }),
+    }).listStarred(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.starred.list", source: "connector", repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "users.starred.list", source: "connector", validated: validateListUserStarredInput(input) };
+}
+
+export function listAuthenticatedStarred(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "user.starred.list" }),
+    }).listAuthenticatedStarred(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "user.starred.list", source: "connector", repositories: result.repositories };
+    });
+  }
+  return { connector: "github", action: "user.starred.list", source: "connector", validated: validateListAuthenticatedStarredInput(input) };
+}
+
+export function listUserSocialAccounts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.social_accounts.list" }),
+    }).listSocialAccounts(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.social_accounts.list", source: "connector", socialAccounts: result.socialAccounts };
+    });
+  }
+  return { connector: "github", action: "users.social_accounts.list", source: "connector", validated: validateListUserSocialAccountsInput(input) };
+}
+
+export function listAuthenticatedSocialAccounts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "user.social_accounts.list" }),
+    }).listAuthenticatedSocialAccounts(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "user.social_accounts.list", source: "connector", socialAccounts: result.socialAccounts };
+    });
+  }
+  return { connector: "github", action: "user.social_accounts.list", source: "connector", validated: validateListAuthenticatedSocialAccountsInput(input) };
+}
+
+export function listUserSshSigningKeys(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "users.ssh_signing_keys.list" }),
+    }).listSshSigningKeys(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.ssh_signing_keys.list", source: "connector", keys: result.keys };
+    });
+  }
+  return { connector: "github", action: "users.ssh_signing_keys.list", source: "connector", validated: validateListUserSshSigningKeysInput(input) };
 }
 
 export function getOrg(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
