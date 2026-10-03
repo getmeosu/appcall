@@ -249,6 +249,78 @@ export type ListCheckSuitesForRefInput = {
   page?: number;
 };
 
+export type GetCheckSuiteInput = { owner: string; repo: string; checkSuiteId: number };
+
+export function validateGetCheckSuiteInput(input: unknown): GetCheckSuiteInput {
+  if (!isRecord(input)) throw new Error("get check suite input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    checkSuiteId: requireNumber(input.checkSuiteId, "checkSuiteId"),
+  };
+}
+
+export type UpdateCheckRunInput = {
+  owner: string;
+  repo: string;
+  checkRunId: number;
+  name?: string;
+  status?: string;
+  conclusion?: string;
+  detailsUrl?: string;
+  externalId?: string;
+  startedAt?: string;
+  completedAt?: string;
+  output?: CheckRunOutputInput;
+};
+
+export function validateUpdateCheckRunInput(input: unknown): UpdateCheckRunInput {
+  if (!isRecord(input)) throw new Error("update check run input must be an object");
+  const status = typeof input.status === "string" ? input.status : undefined;
+  if (status !== undefined && !CHECK_STATUSES.includes(status as (typeof CHECK_STATUSES)[number])) {
+    throw new Error("status must be a check run status");
+  }
+  const conclusion = typeof input.conclusion === "string" ? input.conclusion : undefined;
+  if (conclusion !== undefined && !CHECK_CONCLUSIONS.includes(conclusion as (typeof CHECK_CONCLUSIONS)[number])) {
+    throw new Error("conclusion must be a check run conclusion");
+  }
+  let output: CheckRunOutputInput | undefined;
+  if (input.output !== undefined) {
+    if (!isRecord(input.output)) throw new Error("output must be an object");
+    // Annotations are append-only on GitHub. Never copy an annotations array into the update body.
+    output = {
+      title: requireString(input.output.title, "output.title"),
+      summary: requireString(input.output.summary, "output.summary"),
+      text: typeof input.output.text === "string" ? input.output.text : undefined,
+    };
+  }
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    checkRunId: requireNumber(input.checkRunId, "checkRunId"),
+    name: typeof input.name === "string" ? input.name : undefined,
+    status,
+    conclusion,
+    detailsUrl: typeof input.detailsUrl === "string" ? input.detailsUrl : undefined,
+    externalId: typeof input.externalId === "string" ? input.externalId : undefined,
+    startedAt: typeof input.startedAt === "string" ? input.startedAt : undefined,
+    completedAt: typeof input.completedAt === "string" ? input.completedAt : undefined,
+    output,
+  };
+}
+
+export type RerequestCheckRunInput = GetCheckRunInput;
+
+export function validateRerequestCheckRunInput(input: unknown): RerequestCheckRunInput {
+  if (!isRecord(input)) throw new Error("rerequest check run input must be an object");
+  return validateGetCheckRunInput(input);
+}
+
+export function validateRerequestCheckSuiteInput(input: unknown): GetCheckSuiteInput {
+  if (!isRecord(input)) throw new Error("rerequest check suite input must be an object");
+  return validateGetCheckSuiteInput(input);
+}
+
 export function validateListCheckSuitesForRefInput(input: unknown): ListCheckSuitesForRefInput {
   if (!isRecord(input)) throw new Error("list check suites input must be an object");
   return {
@@ -390,6 +462,100 @@ export function createChecksClient(options: { accessToken: string; fetch?: typeo
         return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository or ref not found." } };
       }
       return mapRateOrUpstream(response, "GitHub rejected the list check suites request.");
+    },
+
+    async getSuite(input: unknown) {
+      const payload = validateGetCheckSuiteInput(input);
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/check-suites/${payload.checkSuiteId}`);
+      if (response.status === 200 && isRecord(response.body)) {
+        const checkSuite = normalizeGitHubCheckSuite(response.body as GitHubCheckSuite);
+        return {
+          ok: true as const,
+          checkSuite,
+          rerequestable: response.body.rerequestable === true,
+        };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Check suite not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the get check suite request.");
+    },
+
+    async updateRun(input: unknown) {
+      const payload = validateUpdateCheckRunInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.name !== undefined) body.name = payload.name;
+      if (payload.status !== undefined) body.status = payload.status;
+      if (payload.conclusion !== undefined) body.conclusion = payload.conclusion;
+      if (payload.detailsUrl !== undefined) body.details_url = payload.detailsUrl;
+      if (payload.externalId !== undefined) body.external_id = payload.externalId;
+      if (payload.startedAt !== undefined) body.started_at = payload.startedAt;
+      if (payload.completedAt !== undefined) body.completed_at = payload.completedAt;
+      if (payload.output) {
+        const output: Record<string, string> = {
+          title: payload.output.title,
+          summary: payload.output.summary,
+        };
+        if (payload.output.text !== undefined) output.text = payload.output.text;
+        body.output = output;
+      }
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/check-runs/${payload.checkRunId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 200 && isRecord(response.body)) {
+        const checkRun = normalizeGitHubCheckRun(response.body as GitHubCheckRun);
+        return { ok: true as const, checkRun, id: checkRun.id };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Check run not found." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for update check run." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the update check run request.");
+    },
+
+    async rerequestRun(input: unknown) {
+      const payload = validateRerequestCheckRunInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/check-runs/${payload.checkRunId}/rerequest`,
+        { method: "POST" },
+      );
+      if (response.status === 201) {
+        return { ok: true as const, rerequested: true as const, checkRunId: payload.checkRunId };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Check run not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the rerequest check run request.");
+    },
+
+    async rerequestSuite(input: unknown) {
+      const payload = validateRerequestCheckSuiteInput(input);
+      const lookedUp = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/check-suites/${payload.checkSuiteId}`);
+      if (lookedUp.status !== 200 || !isRecord(lookedUp.body)) {
+        if (lookedUp.status === 404) {
+          return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Check suite not found." } };
+        }
+        return mapRateOrUpstream(lookedUp, "GitHub rejected the get check suite request.");
+      }
+      // Official check-suite field. Do not rerequest when it is absent or not true.
+      if (lookedUp.body.rerequestable !== true) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Check suite is not rerequestable." } };
+      }
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/check-suites/${payload.checkSuiteId}/rerequest`,
+        { method: "POST" },
+      );
+      if (response.status === 201) {
+        return { ok: true as const, rerequested: true as const, checkSuiteId: payload.checkSuiteId };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Check suite not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the rerequest check suite request.");
     },
   };
 }

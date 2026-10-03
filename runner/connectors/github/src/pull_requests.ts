@@ -424,6 +424,51 @@ export type RequestedReviewersInput = {
   reviewers?: string[]; teamReviewers?: string[];
 };
 
+export type ListRequestedReviewersInput = { owner: string; repo: string; pullNumber: number; perPage?: number; page?: number };
+
+export function validateListRequestedReviewersInput(input: unknown): ListRequestedReviewersInput {
+  if (!isRecord(input)) throw new Error("list requested reviewers input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
+  };
+}
+
+export type GetReviewCommentInput = { owner: string; repo: string; commentId: number };
+
+export function validateGetReviewCommentInput(input: unknown): GetReviewCommentInput {
+  if (!isRecord(input)) throw new Error("get review comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    commentId: requireNumber(input.commentId, "commentId"),
+  };
+}
+
+export type ListReviewCommentsForReviewInput = {
+  owner: string;
+  repo: string;
+  pullNumber: number;
+  reviewId: number;
+  perPage?: number;
+  page?: number;
+};
+
+export function validateListReviewCommentsForReviewInput(input: unknown): ListReviewCommentsForReviewInput {
+  if (!isRecord(input)) throw new Error("list review comments for review input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    pullNumber: requireNumber(input.pullNumber, "pullNumber"),
+    reviewId: requireNumber(input.reviewId, "reviewId"),
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
+  };
+}
+
 export function validateRequestedReviewersInput(input: unknown): RequestedReviewersInput {
   if (!isRecord(input)) throw new Error("requested reviewers input must be an object");
   const reviewers = Array.isArray(input.reviewers)
@@ -1021,6 +1066,63 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
       }
       return mapGithubError(response, "list pull request comments");
     },
+
+    async listRequestedReviewers(input: unknown) {
+      const payload = validateListRequestedReviewersInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/pulls/${payload.pullNumber}/requested_reviewers${qs}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        const users = Array.isArray(response.body.users)
+          ? response.body.users.filter(isRecord).map((user) => ({
+              login: typeof user.login === "string" ? user.login : "",
+              id: typeof user.id === "number" ? user.id : null,
+            }))
+          : [];
+        const teams = Array.isArray(response.body.teams)
+          ? response.body.teams.filter(isRecord).map((team) => ({
+              slug: typeof team.slug === "string" ? team.slug : "",
+              name: typeof team.name === "string" ? team.name : "",
+              id: typeof team.id === "number" ? team.id : null,
+            }))
+          : [];
+        return { ok: true as const, users, teams };
+      }
+      return mapGithubError(response, "list requested reviewers");
+    },
+
+    async getReviewComment(input: unknown) {
+      const payload = validateGetReviewCommentInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/pulls/comments/${payload.commentId}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, comment: normalizeGitHubReviewComment(response.body) };
+      }
+      return mapGithubError(response, "get review comment");
+    },
+
+    async listReviewCommentsForReview(input: unknown) {
+      const payload = validateListReviewCommentsForReviewInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/pulls/${payload.pullNumber}/reviews/${payload.reviewId}/comments${qs}`,
+      );
+      if (response.status === 200) {
+        const comments = Array.isArray(response.body)
+          ? response.body.filter(isRecord).map((comment) => normalizeGitHubReviewComment(comment))
+          : [];
+        return { ok: true as const, comments };
+      }
+      return mapGithubError(response, "list review comments for review");
+    },
   };
 }
 
@@ -1049,6 +1151,15 @@ function parseNextLink(response: Record<string, unknown>): string | null {
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
+  return value;
+}
+
+
+function optionalPage(value: unknown, field: string, max = 100): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > max) {
+    throw new Error(`${field} must be an integer between 1 and ${max}`);
+  }
   return value;
 }
 

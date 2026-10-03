@@ -349,6 +349,30 @@ export function validateUnlockIssueInput(input: unknown): UnlockIssueInput {
 
 export type ListLabelsInput = { owner: string; repo: string; perPage?: number; page?: number };
 
+export type GetIssueCommentInput = { owner: string; repo: string; commentId: number };
+
+export function validateGetIssueCommentInput(input: unknown): GetIssueCommentInput {
+  if (!isRecord(input)) throw new Error("get issue comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    commentId: requireNumber(input.commentId, "commentId"),
+  };
+}
+
+export type ListIssueLabelsInput = { owner: string; repo: string; issueNumber: number; perPage?: number; page?: number };
+
+export function validateListIssueLabelsInput(input: unknown): ListIssueLabelsInput {
+  if (!isRecord(input)) throw new Error("list issue labels input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    issueNumber: requireNumber(input.issueNumber, "issueNumber"),
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
+  };
+}
+
 export function validateListLabelsInput(input: unknown): ListLabelsInput {
   if (!isRecord(input)) throw new Error("list labels input must be an object");
   return {
@@ -822,6 +846,52 @@ export function createIssuesClient(options: { accessToken: string; fetch?: typeo
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list issue events request." } };
+    },
+
+    async getComment(input: unknown) {
+      const payload = validateGetIssueCommentInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/issues/comments/${payload.commentId}`,
+      );
+      if (response.status === 200 && isRecord(response.body) && typeof response.body.id === "number") {
+        return { ok: true as const, comment: normalizeGitHubComment(response.body as GitHubIssueComment) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue comment not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the get issue comment request." } };
+    },
+
+    async listIssueLabels(input: unknown) {
+      const payload = validateListIssueLabelsInput(input);
+      const params = new URLSearchParams();
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/issues/${payload.issueNumber}/labels${qs}`,
+      );
+      if (response.status === 200 && Array.isArray(response.body)) {
+        const labels = response.body.filter(isRecord).map((label) => normalizeGitHubLabel({
+          id: typeof label.id === "number" ? label.id : 0,
+          name: typeof label.name === "string" ? label.name : "",
+          color: typeof label.color === "string" ? label.color : undefined,
+          description: typeof label.description === "string" ? label.description : undefined,
+        }));
+        return { ok: true as const, labels };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Issue not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list issue labels request." } };
     },
   };
 }

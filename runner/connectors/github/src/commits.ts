@@ -293,6 +293,17 @@ export type DeleteCommitCommentInput = {
   commentId: number;
 };
 
+export type GetCommitCommentInput = { owner: string; repo: string; commentId: number };
+
+export function validateGetCommitCommentInput(input: unknown): GetCommitCommentInput {
+  if (!isRecord(input)) throw new Error("get commit comment input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    commentId: requireNumber(input.commentId, "commentId"),
+  };
+}
+
 export function validateDeleteCommitCommentInput(input: unknown): DeleteCommitCommentInput {
   if (!isRecord(input)) throw new Error("delete commit comment input must be an object");
   return {
@@ -485,6 +496,20 @@ export function createCommitsClient(options: { accessToken: string; fetch?: type
         return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit comment not found." } };
       }
       return mapRateOrUpstream(response, "GitHub rejected the delete commit comment request.");
+    },
+
+    async getComment(input: unknown) {
+      const payload = validateGetCommitCommentInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/comments/${payload.commentId}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, comment: normalizeCommitComment(response.body) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Commit comment not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the get commit comment request.");
     },
   };
 }
