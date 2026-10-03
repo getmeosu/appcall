@@ -316,6 +316,67 @@ export function normalizeActionsSecret(item: Record<string, unknown>): Normalize
   };
 }
 
+export type NormalizedSecretPublicKey = {
+  key_id: string;
+  key: string;
+};
+
+export function normalizeSecretPublicKey(item: Record<string, unknown>): NormalizedSecretPublicKey {
+  return {
+    key_id: typeof item.key_id === "string" ? item.key_id : "",
+    key: typeof item.key === "string" ? item.key : "",
+  };
+}
+
+/** Name and timestamps only. Never returns a secret value. */
+export type NormalizedNamedSecret = {
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export function normalizeNamedSecret(item: Record<string, unknown>): NormalizedNamedSecret {
+  return {
+    name: typeof item.name === "string" ? item.name : "",
+    created_at: typeof item.created_at === "string" ? item.created_at : "",
+    updated_at: typeof item.updated_at === "string" ? item.updated_at : "",
+  };
+}
+
+export type EnvSecretScope = { owner: string; repo: string; environment_name: string };
+export type EnvSecretNamed = EnvSecretScope & { secret_name: string };
+export type CodespacesSecretNamed = { secret_name: string };
+
+export function validateGetEnvironmentSecretsPublicKeyInput(input: unknown): EnvSecretScope {
+  if (!isRecord(input)) throw new Error("repos.environments.secrets.public_key.get input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    environment_name: requireString(input.environment_name, "environment_name"),
+  };
+}
+
+export function validateGetEnvironmentSecretInput(input: unknown): EnvSecretNamed {
+  if (!isRecord(input)) throw new Error("repos.environments.secrets.get input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    environment_name: requireString(input.environment_name, "environment_name"),
+    secret_name: requireString(input.secret_name, "secret_name"),
+  };
+}
+
+export function validateGetCodespacesSecretInput(input: unknown): CodespacesSecretNamed {
+  if (!isRecord(input)) throw new Error("user.codespaces.secrets.get input must be an object");
+  return { secret_name: requireString(input.secret_name, "secret_name") };
+}
+
+export function validateGetCodespacesSecretsPublicKeyInput(input: unknown): Record<string, never> {
+  if (input === undefined || input === null) return {};
+  if (!isRecord(input)) throw new Error("user.codespaces.secrets.public_key.get input must be an object");
+  return {};
+}
+
 export function createAlertsClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const forOp = (operation: string) => options.githubClient ?? createGitHubClient({
     accessToken: options.accessToken,
@@ -414,6 +475,50 @@ export function createAlertsClient(options: { accessToken: string; fetch?: typeo
         };
       }
       return mapError(response, "actions.secrets.list");
+    },
+
+    async getEnvironmentSecretsPublicKey(input: unknown) {
+      const payload = validateGetEnvironmentSecretsPublicKeyInput(input);
+      const response = await forOp("repos.environments.secrets.public_key.get").fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/environments/${encodeURIComponent(payload.environment_name)}/secrets/public-key`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, publicKey: normalizeSecretPublicKey(response.body) };
+      }
+      return mapError(response, "repos.environments.secrets.public_key.get");
+    },
+
+    async getEnvironmentSecret(input: unknown) {
+      const payload = validateGetEnvironmentSecretInput(input);
+      const response = await forOp("repos.environments.secrets.get").fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/environments/${encodeURIComponent(payload.environment_name)}/secrets/${encodeURIComponent(payload.secret_name)}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, secret: normalizeNamedSecret(response.body) };
+      }
+      return mapError(response, "repos.environments.secrets.get");
+    },
+
+    async getCodespacesSecret(input: unknown) {
+      const payload = validateGetCodespacesSecretInput(input);
+      const response = await forOp("user.codespaces.secrets.get").fetchJSON(
+        `/user/codespaces/secrets/${encodeURIComponent(payload.secret_name)}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, secret: normalizeNamedSecret(response.body) };
+      }
+      return mapError(response, "user.codespaces.secrets.get");
+    },
+
+    async getCodespacesSecretsPublicKey(input: unknown) {
+      validateGetCodespacesSecretsPublicKeyInput(input);
+      const response = await forOp("user.codespaces.secrets.public_key.get").fetchJSON(
+        `/user/codespaces/secrets/public-key`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, publicKey: normalizeSecretPublicKey(response.body) };
+      }
+      return mapError(response, "user.codespaces.secrets.public_key.get");
     },
 
     async listCodeScanningInstances(input: unknown) {

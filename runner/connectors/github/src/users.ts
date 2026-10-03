@@ -311,6 +311,237 @@ export function validateListAuthenticatedSocialAccountsInput(input: unknown): Au
   };
 }
 
+export type HovercardInput = {
+  username: string;
+  subject_type?: string;
+  subject_id?: string;
+};
+
+export type NormalizedHovercardContext = {
+  message: string;
+  octicon: string;
+};
+
+export type NormalizedHovercard = {
+  contexts: NormalizedHovercardContext[];
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeGitHubHovercard(body: Record<string, unknown>): NormalizedHovercard {
+  const contextsRaw = Array.isArray(body.contexts) ? body.contexts : [];
+  const contexts = contextsRaw.filter(isRecord).map((item) => ({
+    message: typeof item.message === "string" ? item.message : "",
+    octicon: typeof item.octicon === "string" ? item.octicon : "",
+  }));
+  return { contexts, modelVersion: "2026-05-16", raw: body };
+}
+
+export function validateUsersHovercardGetInput(input: unknown): HovercardInput {
+  if (!isRecord(input)) throw new Error("users.hovercard.get input must be an object");
+  const subjectType = input.subject_type === undefined ? undefined : requireString(input.subject_type, "subject_type");
+  const subjectId = input.subject_id === undefined ? undefined : requireString(input.subject_id, "subject_id");
+  if ((subjectType === undefined) !== (subjectId === undefined)) {
+    throw new Error("subject_type and subject_id must both be set or both omitted");
+  }
+  if (subjectType !== undefined && !["organization", "repository", "issue", "pull_request"].includes(subjectType)) {
+    throw new Error("subject_type must be organization, repository, issue, or pull_request");
+  }
+  return {
+    username: requireString(input.username, "username"),
+    subject_type: subjectType,
+    subject_id: subjectId,
+  };
+}
+
+export type GitHubEmail = {
+  email?: string;
+  primary?: boolean;
+  verified?: boolean;
+  visibility?: string | null;
+  [key: string]: unknown;
+};
+
+export type NormalizedEmail = {
+  email: string;
+  primary: boolean;
+  verified: boolean;
+  visibility: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeGitHubEmail(item: GitHubEmail): NormalizedEmail {
+  return {
+    email: typeof item.email === "string" ? item.email : "",
+    primary: item.primary === true,
+    verified: item.verified === true,
+    visibility: typeof item.visibility === "string" ? item.visibility : "",
+    modelVersion: "2026-05-16",
+    raw: item as unknown as Record<string, unknown>,
+  };
+}
+
+export function validateListUserEmailsInput(input: unknown): AuthenticatedPageInput {
+  const record = optionalObject(input, "user.emails.list");
+  return {
+    perPage: optionalPage(record.perPage, "perPage"),
+    page: optionalPage(record.page, "page", 1_000_000),
+  };
+}
+
+export function validateListUserEventsInput(input: unknown): UsernamePageInput {
+  return validateUsernamePage(input, "users.events.list");
+}
+
+export function validateListUserReceivedEventsInput(input: unknown): UsernamePageInput {
+  return validateUsernamePage(input, "users.received_events.list");
+}
+
+export type GitHubGpgKey = {
+  id?: number;
+  name?: string | null;
+  primary_key_id?: number | null;
+  key_id?: string;
+  public_key?: string;
+  created_at?: string;
+  emails?: Array<{ email?: string; verified?: boolean }>;
+  [key: string]: unknown;
+};
+
+export type NormalizedGpgKey = {
+  id: string;
+  provider: "github";
+  gpgKeyId: number;
+  keyId: string;
+  publicKey: string;
+  name: string;
+  createdAt: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeGitHubGpgKey(key: GitHubGpgKey): NormalizedGpgKey {
+  const gpgKeyId = typeof key.id === "number" ? key.id : 0;
+  return {
+    id: `gh-gpg-key:${gpgKeyId}`,
+    provider: "github",
+    gpgKeyId,
+    keyId: typeof key.key_id === "string" ? key.key_id : "",
+    publicKey: typeof key.public_key === "string" ? key.public_key : "",
+    name: typeof key.name === "string" ? key.name : "",
+    createdAt: typeof key.created_at === "string" ? key.created_at : "",
+    modelVersion: "2026-05-16",
+    raw: key as unknown as Record<string, unknown>,
+  };
+}
+
+export function validateListUserGpgKeysInput(input: unknown): UsernamePageInput {
+  return validateUsernamePage(input, "users.gpg_keys.list");
+}
+
+export type GitHubMarketplacePurchase = {
+  billing_cycle?: string;
+  next_billing_date?: string | null;
+  unit_count?: number | null;
+  on_free_trial?: boolean;
+  free_trial_ends_on?: string | null;
+  updated_at?: string | null;
+  account?: { login?: string; id?: number; type?: string };
+  plan?: { id?: number; name?: string; price_model?: string; state?: string };
+  [key: string]: unknown;
+};
+
+export type NormalizedMarketplacePurchase = {
+  billingCycle: string;
+  nextBillingDate: string;
+  unitCount: number | null;
+  onFreeTrial: boolean;
+  freeTrialEndsOn: string;
+  updatedAt: string;
+  accountLogin: string;
+  accountId: number;
+  accountType: string;
+  planId: number;
+  planName: string;
+  priceModel: string;
+  planState: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeGitHubMarketplacePurchase(item: GitHubMarketplacePurchase): NormalizedMarketplacePurchase {
+  const account = item.account ?? {};
+  const plan = item.plan ?? {};
+  return {
+    billingCycle: typeof item.billing_cycle === "string" ? item.billing_cycle : "",
+    nextBillingDate: typeof item.next_billing_date === "string" ? item.next_billing_date : "",
+    unitCount: typeof item.unit_count === "number" ? item.unit_count : null,
+    onFreeTrial: item.on_free_trial === true,
+    freeTrialEndsOn: typeof item.free_trial_ends_on === "string" ? item.free_trial_ends_on : "",
+    updatedAt: typeof item.updated_at === "string" ? item.updated_at : "",
+    accountLogin: typeof account.login === "string" ? account.login : "",
+    accountId: typeof account.id === "number" ? account.id : 0,
+    accountType: typeof account.type === "string" ? account.type : "",
+    planId: typeof plan.id === "number" ? plan.id : 0,
+    planName: typeof plan.name === "string" ? plan.name : "",
+    priceModel: typeof plan.price_model === "string" ? plan.price_model : "",
+    planState: typeof plan.state === "string" ? plan.state : "",
+    modelVersion: "2026-05-16",
+    raw: item as unknown as Record<string, unknown>,
+  };
+}
+
+export function validateListMarketplacePurchasesInput(input: unknown): AuthenticatedPageInput {
+  const record = optionalObject(input, "user.marketplace_purchases.list");
+  return {
+    perPage: optionalPage(record.perPage, "perPage"),
+    page: optionalPage(record.page, "page", 1_000_000),
+  };
+}
+
+export function validateListMarketplacePurchasesStubbedInput(input: unknown): AuthenticatedPageInput {
+  const record = optionalObject(input, "user.marketplace_purchases.stubbed.list");
+  return {
+    perPage: optionalPage(record.perPage, "perPage"),
+    page: optionalPage(record.page, "page", 1_000_000),
+  };
+}
+
+export type NormalizedBlockedUser = {
+  id: string;
+  provider: "github";
+  providerUserId: number;
+  login: string;
+  url: string;
+  type: string;
+  avatarUrl: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeGitHubBlockedUser(user: GitHubUser): NormalizedBlockedUser {
+  return {
+    id: `gh-user:${user.id}`,
+    provider: "github",
+    providerUserId: typeof user.id === "number" ? user.id : 0,
+    login: typeof user.login === "string" ? user.login : "",
+    url: typeof user.html_url === "string" ? user.html_url : "",
+    type: typeof user.type === "string" ? user.type : "",
+    avatarUrl: typeof user.avatar_url === "string" ? user.avatar_url : "",
+    modelVersion: "2026-05-16",
+    raw: user as unknown as Record<string, unknown>,
+  };
+}
+
+export function validateListUserBlocksInput(input: unknown): AuthenticatedPageInput {
+  const record = optionalObject(input, "user.blocks.list");
+  return {
+    perPage: optionalPage(record.perPage, "perPage"),
+    page: optionalPage(record.page, "page", 1_000_000),
+  };
+}
+
 export function createUsersClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const base = options.githubClient;
   const clientFor = (operation: string) => base ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation });
@@ -427,6 +658,72 @@ export function createUsersClient(options: { accessToken: string; fetch?: typeof
       const result = await fetchList(clientFor("users.ssh_signing_keys.list"), "users.ssh_signing_keys.list", `/users/${encodeURIComponent(payload.username)}/ssh_signing_keys${pageQuery(payload)}`);
       if (!result.ok) return result;
       return { ok: true as const, keys: (result.body as GitHubPublicKey[]).map(normalizeGitHubSshSigningKey) };
+    },
+
+    async getHovercard(input: unknown) {
+      const payload = validateUsersHovercardGetInput(input);
+      const client = clientFor("users.hovercard.get");
+      const params = new URLSearchParams();
+      if (payload.subject_type) params.set("subject_type", payload.subject_type);
+      if (payload.subject_id) params.set("subject_id", payload.subject_id);
+      const qs = params.toString();
+      const path = `/users/${encodeURIComponent(payload.username)}/hovercard${qs ? `?${qs}` : ""}`;
+      const response = await client.fetchJSON(path);
+      const rate = parseGitHubRateLimit(response.status, response.headers);
+      if (rate.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded", retryAfterSeconds: rate.retryAfterSeconds } };
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, hovercard: normalizeGitHubHovercard(response.body) };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: `GitHub users.hovercard.get failed with status ${response.status}`, retryAfterSeconds: undefined as number | undefined } };
+    },
+
+    async listEmails(input: unknown) {
+      const payload = validateListUserEmailsInput(input);
+      const result = await fetchList(clientFor("user.emails.list"), "user.emails.list", `/user/emails${pageQuery(payload)}`);
+      if (!result.ok) return result;
+      return { ok: true as const, emails: (result.body as GitHubEmail[]).map(normalizeGitHubEmail) };
+    },
+
+    async listEvents(input: unknown) {
+      const payload = validateListUserEventsInput(input);
+      const result = await fetchList(clientFor("users.events.list"), "users.events.list", `/users/${encodeURIComponent(payload.username)}/events${pageQuery(payload)}`);
+      if (!result.ok) return result;
+      return { ok: true as const, events: (result.body as GitHubEvent[]).map(normalizeGitHubEvent) };
+    },
+
+    async listReceivedEvents(input: unknown) {
+      const payload = validateListUserReceivedEventsInput(input);
+      const result = await fetchList(clientFor("users.received_events.list"), "users.received_events.list", `/users/${encodeURIComponent(payload.username)}/received_events${pageQuery(payload)}`);
+      if (!result.ok) return result;
+      return { ok: true as const, events: (result.body as GitHubEvent[]).map(normalizeGitHubEvent) };
+    },
+
+    async listGpgKeys(input: unknown) {
+      const payload = validateListUserGpgKeysInput(input);
+      const result = await fetchList(clientFor("users.gpg_keys.list"), "users.gpg_keys.list", `/users/${encodeURIComponent(payload.username)}/gpg_keys${pageQuery(payload)}`);
+      if (!result.ok) return result;
+      return { ok: true as const, keys: (result.body as GitHubGpgKey[]).map(normalizeGitHubGpgKey) };
+    },
+
+    async listMarketplacePurchases(input: unknown) {
+      const payload = validateListMarketplacePurchasesInput(input);
+      const result = await fetchList(clientFor("user.marketplace_purchases.list"), "user.marketplace_purchases.list", `/user/marketplace_purchases${pageQuery(payload)}`);
+      if (!result.ok) return result;
+      return { ok: true as const, purchases: (result.body as GitHubMarketplacePurchase[]).map(normalizeGitHubMarketplacePurchase) };
+    },
+
+    async listMarketplacePurchasesStubbed(input: unknown) {
+      const payload = validateListMarketplacePurchasesStubbedInput(input);
+      const result = await fetchList(clientFor("user.marketplace_purchases.stubbed.list"), "user.marketplace_purchases.stubbed.list", `/user/marketplace_purchases/stubbed${pageQuery(payload)}`);
+      if (!result.ok) return result;
+      return { ok: true as const, purchases: (result.body as GitHubMarketplacePurchase[]).map(normalizeGitHubMarketplacePurchase) };
+    },
+
+    async listBlocks(input: unknown) {
+      const payload = validateListUserBlocksInput(input);
+      const result = await fetchList(clientFor("user.blocks.list"), "user.blocks.list", `/user/blocks${pageQuery(payload)}`);
+      if (!result.ok) return result;
+      return { ok: true as const, users: (result.body as GitHubUser[]).map(normalizeGitHubBlockedUser) };
     },
   };
 }
