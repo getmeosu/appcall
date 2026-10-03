@@ -463,6 +463,15 @@ import {
   getZen as ghGetZen,
   getLicense as ghGetLicense,
   getGitignoreTemplate as ghGetGitignoreTemplate,
+  getRepoPagesBuild as ghGetRepoPagesBuild,
+  getLatestRepoPagesBuild as ghGetLatestRepoPagesBuild,
+  getRepoPagesDeployment as ghGetRepoPagesDeployment,
+  listRepoPagesBuilds as ghListRepoPagesBuilds,
+  getCodeScanningSarif as ghGetCodeScanningSarif,
+  listCodeqlDatabases as ghListCodeqlDatabases,
+  listOrgCodeScanningAlerts as ghListOrgCodeScanningAlerts,
+  getGlobalAdvisory as ghGetGlobalAdvisory,
+  listGlobalAdvisories as ghListGlobalAdvisories,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1535,6 +1544,15 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "meta.zen.get": ghGetZen,
       "licenses.get": ghGetLicense,
       "gitignore.templates.get": ghGetGitignoreTemplate,
+      "repos.pages.builds.get": ghGetRepoPagesBuild,
+      "repos.pages.builds.latest.get": ghGetLatestRepoPagesBuild,
+      "repos.pages.deployments.get": ghGetRepoPagesDeployment,
+      "repos.pages.builds.list": ghListRepoPagesBuilds,
+      "code_scanning.sarifs.get": ghGetCodeScanningSarif,
+      "code_scanning.codeql.databases.list": ghListCodeqlDatabases,
+      "orgs.code_scanning.alerts.list": ghListOrgCodeScanningAlerts,
+      "advisories.get": ghGetGlobalAdvisory,
+      "advisories.list": ghListGlobalAdvisories,
     },
     salesforce: {
       "contacts.create": createContact,

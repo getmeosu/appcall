@@ -386,6 +386,18 @@ import {
   validateGetRunTimingInput,
   validateGetWorkflowTimingInput,
 } from "./card13_reads";
+import {
+  createCard16ReadsClient,
+  validateGetPagesBuildInput,
+  validateGetLatestPagesBuildInput,
+  validateGetPagesDeploymentInput,
+  validateListPagesBuildsInput,
+  validateGetSarifUploadInput,
+  validateListCodeqlDatabasesInput,
+  validateListOrgCodeScanningAlertsInput,
+  validateGetGlobalAdvisoryInput,
+  validateListGlobalAdvisoriesInput,
+} from "./card16_reads";
 
 import {
   createCard14ReadsClient,
@@ -6069,6 +6081,17 @@ function liveCard14ReadsClient(input: Record<string, unknown>, operation: string
   });
 }
 
+// ─── card 16: pages, code-scanning, and advisory reads ───────────────────────
+
+function liveCard16Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard16ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
 export function getZen(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return liveCard14ReadsClient(input, "meta.zen.get").getZen(input).then((result) => {
@@ -6099,6 +6122,95 @@ export function getGitignoreTemplate(input: unknown): Record<string, unknown> | 
   return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
 }
 
+export function getRepoPagesBuild(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard16Client(input, "repos.pages.builds.get").getPagesBuild(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.builds.get", source: "connector", build: result.build };
+    });
+  }
+  return { connector: "github", action: "repos.pages.builds.get", source: "connector", validated: validateGetPagesBuildInput(input) };
+}
+
+export function getLatestRepoPagesBuild(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard16Client(input, "repos.pages.builds.latest.get").getLatestPagesBuild(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.builds.latest.get", source: "connector", build: result.build };
+    });
+  }
+  return { connector: "github", action: "repos.pages.builds.latest.get", source: "connector", validated: validateGetLatestPagesBuildInput(input) };
+}
+
+export function getRepoPagesDeployment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard16Client(input, "repos.pages.deployments.get").getPagesDeployment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.deployments.get", source: "connector", deployment: result.deployment };
+    });
+  }
+  return { connector: "github", action: "repos.pages.deployments.get", source: "connector", validated: validateGetPagesDeploymentInput(input) };
+}
+
+export function listRepoPagesBuilds(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard16Client(input, "repos.pages.builds.list").listPagesBuilds(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.builds.list", source: "connector", builds: result.builds };
+    });
+  }
+  return { connector: "github", action: "repos.pages.builds.list", source: "connector", validated: validateListPagesBuildsInput(input) };
+}
+
+export function getCodeScanningSarif(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard16Client(input, "code_scanning.sarifs.get").getSarifUpload(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "code_scanning.sarifs.get", source: "connector", sarif: result.sarif };
+    });
+  }
+  return { connector: "github", action: "code_scanning.sarifs.get", source: "connector", validated: validateGetSarifUploadInput(input) };
+}
+
+export function listCodeqlDatabases(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard16Client(input, "code_scanning.codeql.databases.list").listCodeqlDatabases(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "code_scanning.codeql.databases.list", source: "connector", databases: result.databases };
+    });
+  }
+  return { connector: "github", action: "code_scanning.codeql.databases.list", source: "connector", validated: validateListCodeqlDatabasesInput(input) };
+}
+
+export function listOrgCodeScanningAlerts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard16Client(input, "orgs.code_scanning.alerts.list").listOrgCodeScanningAlerts(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.code_scanning.alerts.list", source: "connector", alerts: result.alerts };
+    });
+  }
+  return { connector: "github", action: "orgs.code_scanning.alerts.list", source: "connector", validated: validateListOrgCodeScanningAlertsInput(input) };
+}
+
+export function getGlobalAdvisory(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard16Client(input, "advisories.get").getGlobalAdvisory(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "advisories.get", source: "connector", advisory: result.advisory };
+    });
+  }
+  return { connector: "github", action: "advisories.get", source: "connector", validated: validateGetGlobalAdvisoryInput(input) };
+}
+
+export function listGlobalAdvisories(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard16Client(input, "advisories.list").listGlobalAdvisories(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "advisories.list", source: "connector", advisories: result.advisories };
+    });
+  }
+  return { connector: "github", action: "advisories.list", source: "connector", validated: validateListGlobalAdvisoriesInput(input) };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
