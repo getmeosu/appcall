@@ -514,6 +514,97 @@ function requireSafeId(value: unknown, field: string): number {
   return value;
 }
 
+
+export type ListWorkflowRunsInput = ListRunsInput & { workflowId: string };
+export function validateListWorkflowRunsInput(input: unknown): ListWorkflowRunsInput {
+  if (!isRecord(input)) throw new Error("list workflow runs input must be an object");
+  return {
+    ...validateListRunsInput(input),
+    workflowId: requireWorkflowId(input.workflowId),
+  };
+}
+
+export type ListCachesInput = {
+  owner: string;
+  repo: string;
+  key?: string;
+  ref?: string;
+  perPage?: number;
+  page?: number;
+};
+export function validateListCachesInput(input: unknown): ListCachesInput {
+  if (!isRecord(input)) throw new Error("list caches input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    key: typeof input.key === "string" && input.key.length > 0 ? input.key : undefined,
+    ref: typeof input.ref === "string" && input.ref.length > 0 ? input.ref : undefined,
+    perPage: optionalPage(input.perPage, "perPage"),
+    page: optionalPage(input.page, "page", 1_000_000),
+  };
+}
+
+export type DeleteCacheInput = { owner: string; repo: string; cacheId: number };
+export function validateDeleteCacheInput(input: unknown): DeleteCacheInput {
+  if (!isRecord(input)) throw new Error("delete cache input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    cacheId: requireSafeId(input.cacheId, "cacheId"),
+  };
+}
+
+export type DeleteCachesByKeyInput = { owner: string; repo: string; key: string; ref?: string };
+export function validateDeleteCachesByKeyInput(input: unknown): DeleteCachesByKeyInput {
+  if (!isRecord(input)) throw new Error("delete caches by key input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    key: requireString(input.key, "key"),
+    ref: typeof input.ref === "string" && input.ref.length > 0 ? input.ref : undefined,
+  };
+}
+
+export type RerunJobInput = { owner: string; repo: string; jobId: number };
+export function validateRerunJobInput(input: unknown): RerunJobInput {
+  if (!isRecord(input)) throw new Error("rerun job input must be an object");
+  return validateGetJobInput(input);
+}
+
+export type DeleteRunInput = { owner: string; repo: string; runId: number };
+export function validateDeleteRunInput(input: unknown): DeleteRunInput {
+  if (!isRecord(input)) throw new Error("delete run input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    runId: requireSafeId(input.runId, "runId"),
+  };
+}
+
+export type ApproveRunInput = { owner: string; repo: string; runId: number };
+export function validateApproveRunInput(input: unknown): ApproveRunInput {
+  if (!isRecord(input)) throw new Error("approve run input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    runId: requireSafeId(input.runId, "runId"),
+  };
+}
+
+function normalizeCache(item: Record<string, unknown>) {
+  return {
+    id: typeof item.id === "number" ? item.id : 0,
+    ref: typeof item.ref === "string" ? item.ref : "",
+    key: typeof item.key === "string" ? item.key : "",
+    version: typeof item.version === "string" ? item.version : "",
+    lastAccessedAt: typeof item.last_accessed_at === "string" ? item.last_accessed_at : "",
+    createdAt: typeof item.created_at === "string" ? item.created_at : "",
+    sizeInBytes: typeof item.size_in_bytes === "number" ? item.size_in_bytes : 0,
+    modelVersion: "2026-05-16" as const,
+    raw: item,
+  };
+}
+
 // ─── Error helpers ────────────────────────────────────────────────────────────
 
 function rateLimited(status: number, headers: Record<string, string>) {
@@ -1065,5 +1156,166 @@ export function createWorkflowsClient(options: {
       if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
       return upstream("GitHub rejected the force cancel request.");
     },
+
+    async listWorkflowRuns(input: unknown) {
+      const payload = validateListWorkflowRunsInput(input);
+      const client = clientFor("actions.workflows.runs.list");
+      const path =
+        `/repos/${payload.owner}/${payload.repo}/actions/workflows/${encodeURIComponent(payload.workflowId)}/runs` +
+        qs({
+          actor: payload.actor,
+          branch: payload.branch,
+          event: payload.event,
+          status: payload.status,
+          head_sha: payload.headSha,
+          per_page: payload.perPage ? String(payload.perPage) : undefined,
+          page: payload.page ? String(payload.page) : undefined,
+        });
+      const response = await client.fetchJSON(path);
+      if (response.status === 200 && isRecord(response.body)) {
+        const raw = Array.isArray(response.body.workflow_runs) ? response.body.workflow_runs : [];
+        const runs = raw.filter(isRecord).map(normalizeWorkflowRun);
+        return {
+          ok: true as const,
+          totalCount: typeof response.body.total_count === "number" ? response.body.total_count : runs.length,
+          runs,
+        };
+      }
+      if (response.status === 404) return upstream("Workflow not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the list workflow runs request.");
+    },
+
+    async listCaches(input: unknown) {
+      const payload = validateListCachesInput(input);
+      const client = clientFor("actions.caches.list");
+      const path =
+        `/repos/${payload.owner}/${payload.repo}/actions/caches` +
+        qs({
+          key: payload.key,
+          ref: payload.ref,
+          per_page: payload.perPage ? String(payload.perPage) : undefined,
+          page: payload.page ? String(payload.page) : undefined,
+        });
+      const response = await client.fetchJSON(path);
+      if (response.status === 200 && isRecord(response.body)) {
+        const raw = Array.isArray(response.body.actions_caches) ? response.body.actions_caches : [];
+        const caches = raw.filter(isRecord).map(normalizeCache);
+        return {
+          ok: true as const,
+          totalCount: typeof response.body.total_count === "number" ? response.body.total_count : caches.length,
+          caches,
+        };
+      }
+      if (response.status === 404) return upstream("Repository not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the list caches request.");
+    },
+
+    async deleteCache(input: unknown) {
+      const payload = validateDeleteCacheInput(input);
+      const client = clientFor("actions.caches.delete");
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/caches/${payload.cacheId}`,
+        { method: "DELETE" },
+      );
+      // No get-by-id. A missing cache is already gone.
+      if (response.status === 204 || response.status === 404) {
+        return { ok: true as const, deleted: true as const, cacheId: payload.cacheId };
+      }
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the delete cache request.");
+    },
+
+    async deleteCachesByKey(input: unknown) {
+      const payload = validateDeleteCachesByKeyInput(input);
+      const client = clientFor("actions.caches.delete_by_key");
+      const path =
+        `/repos/${payload.owner}/${payload.repo}/actions/caches` +
+        qs({ key: payload.key, ref: payload.ref });
+      const response = await client.fetchJSON(path, { method: "DELETE" });
+      if (response.status === 200 && isRecord(response.body)) {
+        const raw = Array.isArray(response.body.actions_caches) ? response.body.actions_caches : [];
+        const caches = raw.filter(isRecord).map(normalizeCache);
+        return {
+          ok: true as const,
+          deleted: true as const,
+          key: payload.key,
+          ref: payload.ref ?? "",
+          totalCount: typeof response.body.total_count === "number" ? response.body.total_count : caches.length,
+          caches,
+        };
+      }
+      // Idempotent: a key that matches nothing is already gone.
+      if (response.status === 404) {
+        return { ok: true as const, deleted: true as const, key: payload.key, ref: payload.ref ?? "", totalCount: 0, caches: [] };
+      }
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the delete caches by key request.");
+    },
+
+    async rerunJob(input: unknown) {
+      const payload = validateRerunJobInput(input);
+      const client = clientFor("actions.jobs.rerun");
+      // Pre-check actions.jobs.get for status. Not a retry key and not desired state.
+      const lookedUp = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/actions/jobs/${payload.jobId}`);
+      if (!(lookedUp.status === 200 && isRecord(lookedUp.body))) {
+        if (lookedUp.status === 404) return upstream("Workflow job not found.");
+        if (isRateLimited(lookedUp.status, lookedUp.headers)) return rateLimited(lookedUp.status, lookedUp.headers);
+        return upstream("GitHub rejected the get job request.");
+      }
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/jobs/${payload.jobId}/rerun`,
+        { method: "POST" },
+      );
+      if (response.status === 201) {
+        return { ok: true as const, rerun: true as const, jobId: payload.jobId };
+      }
+      // A repeat is 403. That is not success and is not retried.
+      if (response.status === 403) return upstream("Forbidden to rerun workflow job. A repeat rerun returns 403 and is not success.");
+      if (response.status === 404) return upstream("Workflow job not found.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the rerun job request.");
+    },
+
+    async deleteRun(input: unknown) {
+      const payload = validateDeleteRunInput(input);
+      const client = clientFor("actions.runs.delete");
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}`,
+        { method: "DELETE" },
+      );
+      // GitHub also deletes this run's artifacts. A missing run is already gone.
+      if (response.status === 204 || response.status === 404) {
+        return { ok: true as const, deleted: true as const, runId: payload.runId };
+      }
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the delete run request.");
+    },
+
+    async approveRun(input: unknown) {
+      const payload = validateApproveRunInput(input);
+      const client = clientFor("actions.runs.approve");
+      // Pre-check actions.runs.get for status. Not a retry key and not desired state.
+      const lookedUp = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}`);
+      if (!(lookedUp.status === 200 && isRecord(lookedUp.body))) {
+        if (lookedUp.status === 404) return upstream("Workflow run not found.");
+        if (isRateLimited(lookedUp.status, lookedUp.headers)) return rateLimited(lookedUp.status, lookedUp.headers);
+        return upstream("GitHub rejected the get run request.");
+      }
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/actions/runs/${payload.runId}/approve`,
+        { method: "POST" },
+      );
+      if (response.status === 201) {
+        return { ok: true as const, approved: true as const, runId: payload.runId };
+      }
+      if (response.status === 403) return upstream("Forbidden to approve workflow run.");
+      if (response.status === 404) return upstream("Workflow run not found.");
+      if (response.status === 422) return upstream("Workflow run could not be approved.");
+      if (isRateLimited(response.status, response.headers)) return rateLimited(response.status, response.headers);
+      return upstream("GitHub rejected the approve run request.");
+    },
+
   };
 }
