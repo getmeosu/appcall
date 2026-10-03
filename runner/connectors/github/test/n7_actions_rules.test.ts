@@ -34,8 +34,8 @@ const N7_READS = [
 
 describe("github N7 actions rules", () => {
   test("manifest is v0.25.0 with 251 ops and the N7 policies", () => {
-    expect(manifest.version).toBe("0.25.0");
-    expect(Object.keys(manifest.operations).length).toBe(262);
+    expect(manifest.version).toBe("0.26.0");
+    expect(Object.keys(manifest.operations).length).toBe(271);
     for (const key of N7_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.sideEffect).toBe("read");

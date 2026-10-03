@@ -301,6 +301,15 @@ import {
   getCodeScanningAnalysis as ghGetCodeScanningAnalysis,
   getDeploymentStatus as ghGetDeploymentStatus,
   listCheckRunsForSuite as ghListCheckRunsForSuite,
+  getRepoAutolink as ghGetRepoAutolink,
+  getRepoReadme as ghGetRepoReadme,
+  getRepoReadmeForDir as ghGetRepoReadmeForDir,
+  getRepoSubscription as ghGetRepoSubscription,
+  getRepoCommunityProfile as ghGetRepoCommunityProfile,
+  getRepoInteractionLimits as ghGetRepoInteractionLimits,
+  getRepoSecurityAdvisory as ghGetRepoSecurityAdvisory,
+  getRepoLicense as ghGetRepoLicense,
+  listOrgAttestationRepositories as ghListOrgAttestationRepositories,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1211,6 +1220,15 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "code_scanning.analyses.get": ghGetCodeScanningAnalysis,
       "deployments.statuses.get": ghGetDeploymentStatus,
       "checks.runs.list_for_suite": ghListCheckRunsForSuite,
+      "repos.autolinks.get": ghGetRepoAutolink,
+      "repos.readme.get": ghGetRepoReadme,
+      "repos.readme.get_for_dir": ghGetRepoReadmeForDir,
+      "repos.subscription.get": ghGetRepoSubscription,
+      "repos.community.profile.get": ghGetRepoCommunityProfile,
+      "repos.interaction_limits.get": ghGetRepoInteractionLimits,
+      "repos.security_advisories.get": ghGetRepoSecurityAdvisory,
+      "repos.license.get": ghGetRepoLicense,
+      "orgs.attestations.repositories.list": ghListOrgAttestationRepositories,
     },
     salesforce: {
       "contacts.create": createContact,
