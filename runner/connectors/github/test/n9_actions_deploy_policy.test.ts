@@ -75,9 +75,9 @@ describe("github N9 actions permissions and deployment branch policies", () => {
     expect(validateSetSelectedActionsInput({
       owner: "acme", repo: "app", github_owned_allowed: false, verified_allowed: false, patterns_allowed: ["docker/*"],
     }).patternsAllowed).toEqual(["docker/*"]);
-    expect(() => validateSetSelectedActionsInput({
+    expect(validateSetSelectedActionsInput({
       owner: "acme", repo: "app", github_owned_allowed: false, verified_allowed: false,
-    })).toThrow(/patterns_allowed/);
+    }).patternsAllowed).toEqual([]);
     expect(validateCreateBranchPolicyInput({
       owner: "acme", repo: "app", environment_name: "prod/us", name: "release/*", type: "branch",
     }).environmentName).toBe("prod/us");
@@ -249,6 +249,7 @@ describe("github N9 actions permissions and deployment branch policies", () => {
     });
     expect(posts).toBe(1);
     expect(already.created).toBe(false);
+    expect((already.policy as Record<string, unknown>).id).toBe(3);
 
     await expect(createDeploymentBranchPolicy({
       accessToken: "t", owner: "acme", repo: "app", environment_name: "missing", name: "main", type: "branch",

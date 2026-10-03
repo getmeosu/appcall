@@ -75,16 +75,10 @@ export function validateSetActionsPermissionsInput(input: unknown): ActionsPermi
   const raw = record(input);
   if (typeof raw.enabled !== "boolean") throw new Error("enabled must be a boolean");
   const allowed = raw.allowed_actions;
-  if (raw.enabled) {
-    if (allowed !== "all" && allowed !== "local_only" && allowed !== "selected") {
-      throw new Error("allowed_actions must be all, local_only, or selected when enabled is true");
-    }
-    return { ...scope, enabled: true, allowedActions: allowed };
-  }
-  if (allowed !== undefined && allowed !== "all" && allowed !== "local_only" && allowed !== "selected") {
+  if (allowed !== "all" && allowed !== "local_only" && allowed !== "selected") {
     throw new Error("allowed_actions must be all, local_only, or selected");
   }
-  return { ...scope, enabled: false, allowedActions: allowed };
+  return { ...scope, enabled: raw.enabled, allowedActions: allowed };
 }
 
 export function validateGetSelectedActionsInput(input: unknown): RepoScope {
@@ -98,9 +92,6 @@ export function validateSetSelectedActionsInput(input: unknown): SelectedActions
   if (typeof raw.github_owned_allowed !== "boolean") throw new Error("github_owned_allowed must be a boolean");
   if (typeof raw.verified_allowed !== "boolean") throw new Error("verified_allowed must be a boolean");
   const patterns = raw.patterns_allowed === undefined ? [] : stringList(raw.patterns_allowed, "patterns_allowed");
-  if (!raw.github_owned_allowed && !raw.verified_allowed && patterns.length === 0) {
-    throw new Error("selected actions require github_owned_allowed, verified_allowed, or patterns_allowed");
-  }
   return {
     ...scope,
     githubOwnedAllowed: raw.github_owned_allowed,
@@ -357,7 +348,9 @@ export function createActionsDeployPolicyClient(options: { accessToken: string; 
         return { ok: true as const, policy: normalizeBranchPolicy({}, payload), created: true as const };
       }
       if (response.status === 303) {
-        const policy = isRecord(response.body) ? normalizeBranchPolicy(response.body, payload) : normalizeBranchPolicy({}, payload);
+        const fromBody = isRecord(response.body) ? normalizeBranchPolicy(response.body, payload) : normalizeBranchPolicy({}, payload);
+        const located = policyIdFromLocation(response.headers);
+        const policy = fromBody.id > 0 || located === undefined ? fromBody : { ...fromBody, id: located };
         return { ok: true as const, policy, created: false as const, alreadyExisted: true as const };
       }
       if (response.status === 404) {
@@ -443,11 +436,24 @@ async function postPolicy(fetchImpl: typeof fetch, accessToken: string, path: st
   let parsed: unknown = null;
   if (response.status !== 303 && response.status !== 204) {
     const text = await response.text();
+    const maxBytes = (manifest.operations as Record<string, { maxResponseBytes?: number }>)["deployments.branch_policies.create"]?.maxResponseBytes ?? 1048576;
+    if (text.length > maxBytes) {
+      return { status: 413, headers, body: null };
+    }
     if (text.length > 0) {
       try { parsed = JSON.parse(text); } catch { parsed = text; }
     }
   }
   return { status: response.status, headers, body: parsed };
+}
+
+
+function policyIdFromLocation(headers: Record<string, string>): number | undefined {
+  const location = headers.location ?? headers.Location ?? "";
+  const match = location.match(/\/deployment-branch-policies\/(\d+)(?:$|[?#])/);
+  if (!match) return undefined;
+  const id = Number(match[1]);
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
 }
 
 function policyBody(input: Record<string, unknown>): { name: string; type: "branch" | "tag" } {
