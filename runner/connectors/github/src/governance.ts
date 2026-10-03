@@ -27,6 +27,79 @@ export type NormalizedHook = {
   raw: GitHubHook;
 };
 
+export type GitHubHookConfig = {
+  url?: string;
+  content_type?: string;
+  insecure_ssl?: string | number;
+  [key: string]: unknown;
+};
+
+export type NormalizedHookConfig = {
+  url: string;
+  contentType: string;
+  insecureSsl: string;
+  modelVersion: "2026-05-16";
+  raw: Record<string, unknown>;
+};
+
+export function normalizeGitHubHookConfig(config: GitHubHookConfig): NormalizedHookConfig {
+  const insecure = config.insecure_ssl;
+  return {
+    url: typeof config.url === "string" ? config.url : "",
+    contentType: typeof config.content_type === "string" ? config.content_type : "",
+    insecureSsl: insecure === undefined || insecure === null ? "" : String(insecure),
+    modelVersion: "2026-05-16",
+    raw: config as unknown as Record<string, unknown>,
+  };
+}
+
+export type GitHubHookDelivery = {
+  id: number;
+  guid?: string;
+  delivered_at?: string;
+  redelivery?: boolean;
+  duration?: number;
+  status?: string;
+  status_code?: number;
+  event?: string;
+  action?: string | null;
+  [key: string]: unknown;
+};
+
+export type NormalizedHookDelivery = {
+  id: string;
+  provider: "github";
+  deliveryId: number;
+  guid: string;
+  deliveredAt: string;
+  redelivery: boolean;
+  duration: number;
+  status: string;
+  statusCode: number;
+  event: string;
+  action: string;
+  modelVersion: "2026-05-16";
+  raw: GitHubHookDelivery;
+};
+
+export function normalizeGitHubHookDelivery(delivery: GitHubHookDelivery): NormalizedHookDelivery {
+  return {
+    id: `gh-hook-delivery:${delivery.id}`,
+    provider: "github",
+    deliveryId: delivery.id,
+    guid: typeof delivery.guid === "string" ? delivery.guid : "",
+    deliveredAt: typeof delivery.delivered_at === "string" ? delivery.delivered_at : "",
+    redelivery: delivery.redelivery === true,
+    duration: typeof delivery.duration === "number" ? delivery.duration : 0,
+    status: typeof delivery.status === "string" ? delivery.status : "",
+    statusCode: typeof delivery.status_code === "number" ? delivery.status_code : 0,
+    event: typeof delivery.event === "string" ? delivery.event : "",
+    action: typeof delivery.action === "string" ? delivery.action : "",
+    modelVersion: "2026-05-16",
+    raw: delivery,
+  };
+}
+
 export function normalizeGitHubHook(hook: GitHubHook): NormalizedHook {
   const config = hook.config ?? {};
   return {
@@ -213,6 +286,75 @@ export function validateListRepoHooksInput(input: unknown): ListRepoHooksInput {
   return { ...repoScope(input), ...pageInput(input) };
 }
 
+export type GetOrgHookInput = { org: string; hookId: number };
+export function validateGetOrgHookInput(input: unknown): GetOrgHookInput {
+  if (!isRecord(input)) throw new Error("orgs.hooks.get input must be an object");
+  return { org: requireString(input.org, "org"), hookId: requirePositive(input.hookId, "hookId") };
+}
+
+export type GetRepoHookInput = RepoScope & { hookId: number };
+export function validateGetRepoHookInput(input: unknown): GetRepoHookInput {
+  if (!isRecord(input)) throw new Error("repos.hooks.get input must be an object");
+  return { ...repoScope(input), hookId: requirePositive(input.hookId, "hookId") };
+}
+
+export function validateGetOrgHookConfigInput(input: unknown): GetOrgHookInput {
+  if (!isRecord(input)) throw new Error("orgs.hooks.config.get input must be an object");
+  return { org: requireString(input.org, "org"), hookId: requirePositive(input.hookId, "hookId") };
+}
+
+export function validateGetRepoHookConfigInput(input: unknown): GetRepoHookInput {
+  if (!isRecord(input)) throw new Error("repos.hooks.config.get input must be an object");
+  return { ...repoScope(input), hookId: requirePositive(input.hookId, "hookId") };
+}
+
+export type GetOrgHookDeliveryInput = { org: string; hookId: number; deliveryId: number };
+export function validateGetOrgHookDeliveryInput(input: unknown): GetOrgHookDeliveryInput {
+  if (!isRecord(input)) throw new Error("orgs.hooks.deliveries.get input must be an object");
+  return {
+    org: requireString(input.org, "org"),
+    hookId: requirePositive(input.hookId, "hookId"),
+    deliveryId: requirePositive(input.deliveryId, "deliveryId"),
+  };
+}
+
+export type GetRepoHookDeliveryInput = RepoScope & { hookId: number; deliveryId: number };
+export function validateGetRepoHookDeliveryInput(input: unknown): GetRepoHookDeliveryInput {
+  if (!isRecord(input)) throw new Error("repos.hooks.deliveries.get input must be an object");
+  return {
+    ...repoScope(input),
+    hookId: requirePositive(input.hookId, "hookId"),
+    deliveryId: requirePositive(input.deliveryId, "deliveryId"),
+  };
+}
+
+export type ListHookDeliveriesInput = { hookId: number; perPage?: number; cursor?: string; status?: string };
+export type ListOrgHookDeliveriesInput = ListHookDeliveriesInput & { org: string };
+export type ListRepoHookDeliveriesInput = ListHookDeliveriesInput & RepoScope;
+
+function deliveryListInput(input: Record<string, unknown>): ListHookDeliveriesInput {
+  const status = optionalString(input.status, "status");
+  if (status !== undefined && status !== "success" && status !== "failure") {
+    throw new Error("status must be success or failure");
+  }
+  return {
+    hookId: requirePositive(input.hookId, "hookId"),
+    perPage: optionalPage(input.perPage, "perPage"),
+    cursor: optionalString(input.cursor, "cursor"),
+    status,
+  };
+}
+
+export function validateListOrgHookDeliveriesInput(input: unknown): ListOrgHookDeliveriesInput {
+  if (!isRecord(input)) throw new Error("orgs.hooks.deliveries.list input must be an object");
+  return { org: requireString(input.org, "org"), ...deliveryListInput(input) };
+}
+
+export function validateListRepoHookDeliveriesInput(input: unknown): ListRepoHookDeliveriesInput {
+  if (!isRecord(input)) throw new Error("repos.hooks.deliveries.list input must be an object");
+  return { ...repoScope(input), ...deliveryListInput(input) };
+}
+
 export type GetTeamMembershipInput = { org: string; teamSlug: string; username: string };
 export function validateGetTeamMembershipInput(input: unknown): GetTeamMembershipInput {
   if (!isRecord(input)) throw new Error("teams.membership.get input must be an object");
@@ -379,6 +521,15 @@ function pageQuery(perPage?: number, page?: number): string {
   return qs ? `?${qs}` : "";
 }
 
+function deliveryQuery(payload: { perPage?: number; cursor?: string; status?: string }): string {
+  const params = new URLSearchParams();
+  if (payload.perPage) params.set("per_page", String(payload.perPage));
+  if (payload.cursor) params.set("cursor", payload.cursor);
+  if (payload.status) params.set("status", payload.status);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
 function repoPath(owner: string, repo: string): string {
   return `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
 }
@@ -456,6 +607,86 @@ export function createGovernanceClient(options: { accessToken: string; fetch?: t
         return { ok: true as const, hooks: (response.body as GitHubHook[]).map(normalizeGitHubHook) };
       }
       return mapError(response.status, response.headers, "repos.hooks.list");
+    },
+
+    async getOrgHook(input: unknown) {
+      const payload = validateGetOrgHookInput(input);
+      const client = clientFor(options, base, "orgs.hooks.get");
+      const response = await client.fetchJSON(`/orgs/${encodeURIComponent(payload.org)}/hooks/${payload.hookId}`);
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, hook: normalizeGitHubHook(response.body as GitHubHook) };
+      }
+      return mapError(response.status, response.headers, "orgs.hooks.get");
+    },
+
+    async getRepoHook(input: unknown) {
+      const payload = validateGetRepoHookInput(input);
+      const client = clientFor(options, base, "repos.hooks.get");
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/hooks/${payload.hookId}`);
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, hook: normalizeGitHubHook(response.body as GitHubHook) };
+      }
+      return mapError(response.status, response.headers, "repos.hooks.get");
+    },
+
+    async getOrgHookConfig(input: unknown) {
+      const payload = validateGetOrgHookConfigInput(input);
+      const client = clientFor(options, base, "orgs.hooks.config.get");
+      const response = await client.fetchJSON(`/orgs/${encodeURIComponent(payload.org)}/hooks/${payload.hookId}/config`);
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, config: normalizeGitHubHookConfig(response.body) };
+      }
+      return mapError(response.status, response.headers, "orgs.hooks.config.get");
+    },
+
+    async getRepoHookConfig(input: unknown) {
+      const payload = validateGetRepoHookConfigInput(input);
+      const client = clientFor(options, base, "repos.hooks.config.get");
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/hooks/${payload.hookId}/config`);
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, config: normalizeGitHubHookConfig(response.body) };
+      }
+      return mapError(response.status, response.headers, "repos.hooks.config.get");
+    },
+
+    async getOrgHookDelivery(input: unknown) {
+      const payload = validateGetOrgHookDeliveryInput(input);
+      const client = clientFor(options, base, "orgs.hooks.deliveries.get");
+      const response = await client.fetchJSON(`/orgs/${encodeURIComponent(payload.org)}/hooks/${payload.hookId}/deliveries/${payload.deliveryId}`);
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, delivery: normalizeGitHubHookDelivery(response.body as GitHubHookDelivery) };
+      }
+      return mapError(response.status, response.headers, "orgs.hooks.deliveries.get");
+    },
+
+    async getRepoHookDelivery(input: unknown) {
+      const payload = validateGetRepoHookDeliveryInput(input);
+      const client = clientFor(options, base, "repos.hooks.deliveries.get");
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/hooks/${payload.hookId}/deliveries/${payload.deliveryId}`);
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, delivery: normalizeGitHubHookDelivery(response.body as GitHubHookDelivery) };
+      }
+      return mapError(response.status, response.headers, "repos.hooks.deliveries.get");
+    },
+
+    async listOrgHookDeliveries(input: unknown) {
+      const payload = validateListOrgHookDeliveriesInput(input);
+      const client = clientFor(options, base, "orgs.hooks.deliveries.list");
+      const response = await client.fetchJSON(`/orgs/${encodeURIComponent(payload.org)}/hooks/${payload.hookId}/deliveries${deliveryQuery(payload)}`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, deliveries: (response.body as GitHubHookDelivery[]).map(normalizeGitHubHookDelivery) };
+      }
+      return mapError(response.status, response.headers, "orgs.hooks.deliveries.list");
+    },
+
+    async listRepoHookDeliveries(input: unknown) {
+      const payload = validateListRepoHookDeliveriesInput(input);
+      const client = clientFor(options, base, "repos.hooks.deliveries.list");
+      const response = await client.fetchJSON(`${repoPath(payload.owner, payload.repo)}/hooks/${payload.hookId}/deliveries${deliveryQuery(payload)}`);
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, deliveries: (response.body as GitHubHookDelivery[]).map(normalizeGitHubHookDelivery) };
+      }
+      return mapError(response.status, response.headers, "repos.hooks.deliveries.list");
     },
 
     async getTeamMembership(input: unknown) {
