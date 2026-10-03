@@ -500,15 +500,17 @@ export function createReleasesClient(options: { accessToken: string; fetch?: typ
         }
         return mapReleaseError(response.status, response.headers, "releases.assets.get");
       }
-      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/releases/${payload.releaseId}/assets?per_page=100`);
-      if (response.status === 200 && Array.isArray(response.body)) {
-        const match = (response.body as GitHubReleaseAsset[]).find((asset) => asset.name === payload.name);
-        if (!match) {
-          return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Not found for releases.assets.get." } };
+      for (let page = 1; page <= 10; page++) {
+        const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/releases/${payload.releaseId}/assets?per_page=100&page=${page}`);
+        if (response.status !== 200 || !Array.isArray(response.body)) {
+          return mapReleaseError(response.status, response.headers, "releases.assets.get");
         }
-        return { ok: true as const, asset: normalizeGitHubReleaseAsset(match) };
+        const assets = response.body as GitHubReleaseAsset[];
+        const match = assets.find((asset) => asset.name === payload.name);
+        if (match) return { ok: true as const, asset: normalizeGitHubReleaseAsset(match) };
+        if (assets.length < 100) break;
       }
-      return mapReleaseError(response.status, response.headers, "releases.assets.get");
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Not found for releases.assets.get." } };
     },
 
     async uploadAsset(input: unknown) {
@@ -553,8 +555,15 @@ function optionalPlain(value: unknown, field: string): string | undefined {
 
 function optionalPositive(value: unknown, field: string): number | undefined {
   if (value === undefined || value === null) return undefined;
-  if (typeof value === "number" && Number.isInteger(value) && value >= 1) return value;
-  if (typeof value === "string" && /^[1-9]\d*$/.test(value)) return Number(value);
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${field} must be a positive integer`);
+    return value;
+  }
+  if (typeof value === "string" && /^[1-9]\d*$/.test(value)) {
+    const asBig = BigInt(value);
+    if (asBig > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error(`${field} must be a positive integer`);
+    return Number(asBig);
+  }
   throw new Error(`${field} must be a positive integer`);
 }
 
@@ -576,7 +585,7 @@ function optionalPage(value: unknown, field: string, max = 100): number | undefi
 }
 
 function requireNumber(value: unknown, field: string): number {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) throw new Error(`${field} is required`);
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) throw new Error(`${field} is required`);
   return value;
 }
 

@@ -1,4 +1,6 @@
 import { createGitHubClient, parseGitHubRateLimit, type GitHubClient } from "./http";
+import { executionContext } from "../../../bun/src/execution";
+import manifest from "../manifest.json";
 
 // ─── Types / normalizers ──────────────────────────────────────────────────────
 
@@ -447,15 +449,33 @@ export function createWorkflowsClient(options: {
    * Capture it with redirect:manual and do not follow the URL outbound.
    */
   async function captureRedirect(url: string, label: string) {
-    const response = await fetchImpl(url, {
-      method: "GET",
-      redirect: "manual",
-      headers: {
-        Authorization: `Bearer ${options.accessToken}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
+    const spec = (manifest.operations as Record<string, { timeoutMs?: number }>)["actions.runs.logs.download"];
+    const timeoutMs = spec?.timeoutMs ?? 15000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const parent = executionContext()?.signal;
+    const onParentAbort = () => controller.abort();
+    if (parent) {
+      if (parent.aborted) controller.abort();
+      else parent.addEventListener("abort", onParentAbort, { once: true });
+    }
+    let response: Response;
+    try {
+      response = await fetchImpl(url, {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${options.accessToken}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      });
+    } finally {
+      clearTimeout(timer);
+      parent?.removeEventListener("abort", onParentAbort);
+    }
+    // Do not read the body. The archive/log bytes live behind Location and must not be followed.
     const headers: Record<string, string> = {};
     response.headers.forEach((v, k) => {
       headers[k] = v;
