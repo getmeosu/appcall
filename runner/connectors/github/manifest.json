@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -11544,6 +11544,735 @@
           }
         }
       }
+    },
+    "checks.runs.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Check Run",
+      "description": "Update a check run via PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}. GitHub App only, same auth path as checks.runs.create. EffectPolicy Reconcile observes via checks.runs.get. Annotations are append-only: the request never sends an annotations array, and reconcile does not replay one.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "checkRunId": {
+            "type": "number",
+            "description": "Check run ID. Reconcile observes this id via checks.runs.get."
+          },
+          "name": {
+            "type": "string",
+            "description": "Check run name."
+          },
+          "status": {
+            "type": "string",
+            "description": "Check run status.",
+            "enum": [
+              "queued",
+              "in_progress",
+              "completed",
+              "waiting",
+              "requested",
+              "pending"
+            ]
+          },
+          "conclusion": {
+            "type": "string",
+            "description": "Check run conclusion.",
+            "enum": [
+              "action_required",
+              "cancelled",
+              "failure",
+              "neutral",
+              "success",
+              "skipped",
+              "stale",
+              "timed_out"
+            ]
+          },
+          "detailsUrl": {
+            "type": "string",
+            "description": "URL of the integrator's site."
+          },
+          "externalId": {
+            "type": "string",
+            "description": "External reference id."
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "ISO 8601 start time."
+          },
+          "completedAt": {
+            "type": "string",
+            "description": "ISO 8601 completion time."
+          },
+          "output": {
+            "type": "object",
+            "description": "Check run output. Annotations are not accepted; GitHub appends them and this update does not send an annotations array.",
+            "properties": {
+              "title": {
+                "type": "string",
+                "description": "Output title."
+              },
+              "summary": {
+                "type": "string",
+                "description": "Output summary."
+              },
+              "text": {
+                "type": "string",
+                "description": "Optional output text."
+              }
+            },
+            "required": [
+              "title",
+              "summary"
+            ]
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "checkRunId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Updated check run id."
+          },
+          "checkRun": {
+            "type": "object"
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "checks.runs.get"
+    },
+    "checks.runs.rerequest": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Rerequest Check Run",
+      "description": "Rerequest a check run via POST /repos/{owner}/{repo}/check-runs/{check_run_id}/rerequest. One-shot. GitHub App only, same auth path as checks.runs.create. No EffectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "checkRunId": {
+            "type": "number",
+            "description": "Check run ID."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "checkRunId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rerequested": {
+            "type": "boolean"
+          },
+          "checkRunId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "checks.suites.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Check Suite",
+      "description": "Retrieve a check suite via GET /repos/{owner}/{repo}/check-suites/{check_suite_id}. Same auth path as checks.runs.get. Returns the official rerequestable field.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "checkSuiteId": {
+            "type": "number",
+            "description": "Check suite ID."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "checkSuiteId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "checkSuite": {
+            "type": "object"
+          },
+          "rerequestable": {
+            "type": "boolean",
+            "description": "True only when the check suite payload has rerequestable set to true."
+          }
+        }
+      }
+    },
+    "checks.suites.rerequest": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Rerequest Check Suite",
+      "description": "Rerequest a check suite via POST /repos/{owner}/{repo}/check-suites/{check_suite_id}/rerequest. One-shot. GitHub App only, same auth path as checks.runs.create. Calls checks.suites.get first and POSTs only when the official rerequestable field is true. No EffectPolicy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "checkSuiteId": {
+            "type": "number",
+            "description": "Check suite ID."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "checkSuiteId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rerequested": {
+            "type": "boolean"
+          },
+          "checkSuiteId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "pull_requests.requested_reviewers.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Requested Reviewers",
+      "description": "List requested reviewers via GET /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "pull_requests.review_comments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Pull Request Review Comment",
+      "description": "Get a review comment via GET /repos/{owner}/{repo}/pulls/comments/{comment_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "commentId": {
+            "type": "number",
+            "description": "Review comment ID."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "pull_requests.reviews.comments.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Review Comments for a Review",
+      "description": "List comments on a pull request review via GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "reviewId": {
+            "type": "number",
+            "description": "Review ID."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber",
+          "reviewId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "issues.comments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Issue Comment",
+      "description": "Get an issue comment via GET /repos/{owner}/{repo}/issues/comments/{comment_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "commentId": {
+            "type": "number",
+            "description": "Issue comment ID."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "issues.labels.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Issue Labels",
+      "description": "List labels on an issue via GET /repos/{owner}/{repo}/issues/{issue_number}/labels.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "issueNumber": {
+            "type": "number",
+            "description": "Issue number."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "issueNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "commits.comments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Commit Comment",
+      "description": "Get a commit comment via GET /repos/{owner}/{repo}/comments/{comment_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "commentId": {
+            "type": "number",
+            "description": "Commit comment ID."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "actions.variables.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Actions Variable",
+      "description": "Get a repository Actions variable via GET /repos/{owner}/{repo}/actions/variables/{name}. Repository scope uses owner and repo. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions.variables.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Create Actions Variable",
+      "description": "Create a repository Actions variable via POST /repos/{owner}/{repo}/actions/variables. EffectPolicy Idempotent on name: GET actions.variables.get first and skip POST when the name already exists (a POST of an existing name is 422). Not Reconcile. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name."
+          },
+          "value": {
+            "type": "string",
+            "description": "Actions variable value."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "name",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            }
+          },
+          "created": {
+            "type": "boolean",
+            "description": "False when the name already existed and POST was skipped."
+          }
+        }
+      },
+      "effectPolicy": "Idempotent"
+    },
+    "actions.variables.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Actions Variable",
+      "description": "Update a repository Actions variable via PATCH /repos/{owner}/{repo}/actions/variables/{name}. EffectPolicy Reconcile observes via actions.variables.get. The body name stays the path name so the same input satisfies the observe call. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name. Reconcile observes this name via actions.variables.get."
+          },
+          "value": {
+            "type": "string",
+            "description": "Actions variable value."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "name",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "actions.variables.get"
+    },
+    "actions.variables.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "title": "Delete Actions Variable",
+      "description": "Delete a repository Actions variable via DELETE /repos/{owner}/{repo}/actions/variables/{name}. EffectPolicy Idempotent. This is a variable, not a secret.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "name": {
+            "type": "string",
+            "description": "Actions variable name."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "effectPolicy": "Idempotent"
     }
   },
   "models": [
