@@ -79,12 +79,35 @@ export function validateListBranchesInput(input: unknown): ListBranchesInput {
   };
 }
 
+export type MergeUpstreamInput = { owner: string; repo: string; branch: string };
+
+export function validateMergeUpstreamInput(input: unknown): MergeUpstreamInput {
+  if (!isRecord(input)) throw new Error("repos.merge_upstream input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    branch: requireString(input.branch, "branch"),
+  };
+}
+
+export type RenameBranchInput = { owner: string; repo: string; branch: string; newName: string };
+
+export function validateRenameBranchInput(input: unknown): RenameBranchInput {
+  if (!isRecord(input)) throw new Error("branches.rename input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    branch: requireString(input.branch, "branch"),
+    newName: requireString(input.newName, "newName"),
+  };
+}
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 export function createBranchesClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
   const client = options.githubClient ?? createGitHubClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "branches.get" });
 
-  return {
+  const api = {
     async list(input: unknown) {
       const payload = validateListBranchesInput(input);
       const params = new URLSearchParams();
@@ -183,7 +206,73 @@ export function createBranchesClient(options: { accessToken: string; fetch?: typ
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the delete branch request." } };
     },
+
+    async mergeUpstream(input: unknown) {
+      const payload = validateMergeUpstreamInput(input);
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/merge-upstream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch: payload.branch }),
+      });
+      // 409 does not converge. Do not retry it as success.
+      if (response.status === 409) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Merge conflict. A conflict does not converge." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "The branch could not be synced." } };
+      }
+      if (response.status === 200 && isRecord(response.body)) {
+        // Handler read of the tip via branches.get. Not a retry key and not desired state.
+        const tip = await api.get({ owner: payload.owner, repo: payload.repo, branch: payload.branch });
+        const sha = tip.ok && tip.found && tip.branch ? tip.branch.sha : "";
+        return {
+          ok: true as const,
+          synced: true as const,
+          message: typeof response.body.message === "string" ? response.body.message : "",
+          mergeType: typeof response.body.merge_type === "string" ? response.body.merge_type : "",
+          baseBranch: typeof response.body.base_branch === "string" ? response.body.base_branch : "",
+          sha,
+        };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the merge upstream request." } };
+    },
+
+    async rename(input: unknown) {
+      const payload = validateRenameBranchInput(input);
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/branches/${encodeURIComponent(payload.branch)}/rename`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ new_name: payload.newName }),
+        },
+      );
+      // A second POST on the old name is 404, not a no-op.
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Branch not found." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for rename branch." } };
+      }
+      if (response.status === 201) {
+        const created = isRecord(response.body) ? normalizeGitHubBranch(response.body as GitHubBranch) : null;
+        // branches.get of the new name stays in the handler only.
+        const tip = await api.get({ owner: payload.owner, repo: payload.repo, branch: payload.newName });
+        const sha = tip.ok && tip.found && tip.branch ? tip.branch.sha : (created?.sha ?? "");
+        return { ok: true as const, renamed: true as const, name: payload.newName, sha };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the rename branch request." } };
+    },
   };
+  return api;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

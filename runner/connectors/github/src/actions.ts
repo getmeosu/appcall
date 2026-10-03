@@ -63,6 +63,7 @@ import {
   validateUpdatePullRequestBranchInput,
   validateListConversationCommentsInput,
   validateGetReviewInput,
+  validateUpdateReviewInput,
   validateSubmitReviewInput,
   validateUpdateReviewCommentInput,
   validateDeleteReviewCommentInput,
@@ -117,10 +118,10 @@ import {
   validateRemoveCollaboratorInput,
   validateCheckCollaboratorInput,
 } from "./labels_milestones";
-import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateUpdateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput, validateGetRepoTreeInput } from "./repos";
+import { createReposClient, validateGetRepoInput, validateCreateRepoInput, validateUpdateRepoInput, validateListReposInput, validateGetRepoContentsInput, validateCompareCommitsInput, validateMergeBranchesInput, validateListCodeownersErrorsInput, validateCompareDependencyGraphInput, validateGetRepoTreeInput } from "./repos";
 import { createContentsClient, validatePutContentsInput, validateDeleteContentsInput, validatePushFilesInput } from "./contents";
 import { createGitClient, validateCreateBlobInput, validateGetBlobInput, validateCreateTreeInput, validateGetTreeInput, validateCreateRefInput, validateUpdateRefInput, validateGetRefInput, validateListRefsInput, validateDeleteRefInput, validateGetTagInput, validateCreateTagInput, validateCreateGitCommitInput, validateGetGitCommitInput } from "./git";
-import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput, validateDeleteBranchInput, validateListBranchesInput } from "./branches";
+import { createBranchesClient, validateGetBranchInput, validateCreateBranchInput, validateDeleteBranchInput, validateListBranchesInput, validateMergeUpstreamInput, validateRenameBranchInput } from "./branches";
 import {
   createReleasesClient,
   validateCreateReleaseInput,
@@ -141,6 +142,7 @@ import {
   validateGetDeploymentInput,
   validateCreateDeploymentInput,
   validateListDeploymentStatusesInput,
+  validateGetDeploymentStatusInput,
   validateCreateDeploymentStatusInput,
   validateListEnvironmentsInput,
   validateGetEnvironmentInput,
@@ -162,6 +164,9 @@ import {
   validateListCodeScanningAlertsInput,
   validateGetCodeScanningAlertInput,
   validateUpdateCodeScanningAlertInput,
+  validateListCodeScanningInstancesInput,
+  validateListCodeScanningAnalysesInput,
+  validateGetCodeScanningAnalysisInput,
   validateListSecretScanningAlertsInput,
   validateListActionsVariablesInput,
   validateListActionsSecretsInput,
@@ -180,7 +185,7 @@ import {
   validateStarRepoInput,
   validateUnstarRepoInput,
 } from "./notifications_social";
-import { createChecksClient, validateListCheckRunsForRefInput, validateGetCheckRunInput, validateListCheckSuitesForRefInput, validateListCheckAnnotationsInput, validateCreateCheckRunInput, validateUpdateCheckRunInput, validateRerequestCheckRunInput, validateGetCheckSuiteInput, validateRerequestCheckSuiteInput } from "./checks";
+import { createChecksClient, validateListCheckRunsForRefInput, validateListCheckRunsForSuiteInput, validateGetCheckRunInput, validateListCheckSuitesForRefInput, validateListCheckAnnotationsInput, validateCreateCheckRunInput, validateUpdateCheckRunInput, validateRerequestCheckRunInput, validateGetCheckSuiteInput, validateRerequestCheckSuiteInput } from "./checks";
 import {
   createActionsVariablesClient,
   validateGetActionsVariableInput,
@@ -3847,6 +3852,144 @@ export function deleteDeploymentBranchPolicy(input: unknown): Record<string, unk
   return { connector: "github", action: "deployments.branch_policies.delete", source: "connector", validated: validateDeleteBranchPolicyInput(input) };
 }
 
+// ─── N10: fork sync and scan ────────────────────────────────────────────────
+
+export function mergeUpstream(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createBranchesClient({ accessToken: input.accessToken, fetch: fetchFn }).mergeUpstream(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.merge_upstream", source: "connector", synced: result.synced, message: result.message, mergeType: result.mergeType, baseBranch: result.baseBranch, sha: result.sha };
+    });
+  }
+  return { connector: "github", action: "repos.merge_upstream", source: "connector", validated: validateMergeUpstreamInput(input) };
+}
+
+export function renameBranch(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createBranchesClient({ accessToken: input.accessToken, fetch: fetchFn }).rename(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "branches.rename", source: "connector", renamed: result.renamed, name: result.name, sha: result.sha };
+    });
+  }
+  return { connector: "github", action: "branches.rename", source: "connector", validated: validateRenameBranchInput(input) };
+}
+
+export function mergeBranches(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createReposClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "repos.merges" }),
+    }).mergeBranches(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.merges", source: "connector", merged: result.merged, created: result.created, sha: result.sha, base: result.base, head: result.head };
+    });
+  }
+  return { connector: "github", action: "repos.merges", source: "connector", validated: validateMergeBranchesInput(input) };
+}
+
+export function updatePullRequestReview(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createPullRequestsClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "pull_requests.reviews.update" }),
+    }).updateReview(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "pull_requests.reviews.update", source: "connector", review: result.review };
+    });
+  }
+  return { connector: "github", action: "pull_requests.reviews.update", source: "connector", validated: validateUpdateReviewInput(input) };
+}
+
+export function listCodeownersErrors(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createReposClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "repos.codeowners.errors.list" }),
+    }).listCodeownersErrors(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "repos.codeowners.errors.list", source: "connector", errors: result.errors };
+    });
+  }
+  return { connector: "github", action: "repos.codeowners.errors.list", source: "connector", validated: validateListCodeownersErrorsInput(input) };
+}
+
+export function compareDependencyGraph(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createReposClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "dependency_graph.compare" }),
+    }).compareDependencyGraph(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "dependency_graph.compare", source: "connector", changes: result.changes };
+    });
+  }
+  return { connector: "github", action: "dependency_graph.compare", source: "connector", validated: validateCompareDependencyGraphInput(input) };
+}
+
+export function listCodeScanningAlertInstances(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).listCodeScanningInstances(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "code_scanning.alerts.instances.list", source: "connector", instances: result.instances };
+    });
+  }
+  return { connector: "github", action: "code_scanning.alerts.instances.list", source: "connector", validated: validateListCodeScanningInstancesInput(input) };
+}
+
+export function listCodeScanningAnalyses(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).listCodeScanningAnalyses(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "code_scanning.analyses.list", source: "connector", analyses: result.analyses };
+    });
+  }
+  return { connector: "github", action: "code_scanning.analyses.list", source: "connector", validated: validateListCodeScanningAnalysesInput(input) };
+}
+
+export function getCodeScanningAnalysis(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAlertsClient({ accessToken: input.accessToken, fetch: liveFetch(input) }).getCodeScanningAnalysis(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "code_scanning.analyses.get", source: "connector", analysis: result.analysis };
+    });
+  }
+  return { connector: "github", action: "code_scanning.analyses.get", source: "connector", validated: validateGetCodeScanningAnalysisInput(input) };
+}
+
+export function getDeploymentStatus(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createDeploymentsClient({ accessToken: input.accessToken, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined }).getStatus(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "deployments.statuses.get", source: "connector", status: result.status };
+    });
+  }
+  return { connector: "github", action: "deployments.statuses.get", source: "connector", validated: validateGetDeploymentStatusInput(input) };
+}
+
+export function listCheckRunsForSuite(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createChecksClient({
+      accessToken: input.accessToken,
+      fetch: fetchFn,
+      githubClient: createGitHubClient({ accessToken: input.accessToken, fetch: fetchFn, operation: "checks.runs.list_for_suite" }),
+    }).listRunsForSuite(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "checks.runs.list_for_suite", source: "connector", totalCount: result.totalCount, checkRuns: result.checkRuns };
+    });
+  }
+  return { connector: "github", action: "checks.runs.list_for_suite", source: "connector", validated: validateListCheckRunsForSuiteInput(input) };
+}
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isRecord(value: unknown): value is Record<string, unknown> {
