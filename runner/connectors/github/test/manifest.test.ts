@@ -297,8 +297,8 @@ describe("github connector manifest", () => {
     }
   });
 
-  test("manifest version is 0.37.0", () => {
-    expect(manifest.version).toBe("0.37.0");
+  test("manifest version is 0.38.0", () => {
+    expect(manifest.version).toBe("0.38.0");
     expect(manifest.version).not.toBe("0.19.0");
   });
 
@@ -419,7 +419,7 @@ describe("github connector manifest", () => {
     expect(comment.sideEffect).toBe("write");
     expect(comment.effectPolicy).toBe("Reconcile");
     expect(comment.reconcile).toBe("commits.get");
-    expect(Object.keys(manifest.operations).length).toBe(358);
+    expect(Object.keys(manifest.operations).length).toBe(370);
   });
 
   test("manifest declares S12 refs search user reads", () => {
@@ -494,7 +494,7 @@ describe("github connector manifest", () => {
     expect(notes.sideEffect).toBe("write");
     expect(notes.effectPolicy).toBeUndefined();
     expect(notes.reconcile).toBeUndefined();
-    expect(Object.keys(manifest.operations).length).toBe(358);
+    expect(Object.keys(manifest.operations).length).toBe(370);
     expect(manifest.network.allowedHosts).toContain("uploads.github.com");
   });
 

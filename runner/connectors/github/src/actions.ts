@@ -293,6 +293,21 @@ import {
   validateGetUserPackageInput,
 } from "./card8_reads";
 import {
+  createCard9ReadsClient,
+  validateGetUserPackageVersionInput,
+  validateGetAuthenticatedPackageVersionInput,
+  validateListOrgPackagesInput,
+  validateListUserPackagesInput,
+  validateListUserPackageVersionsInput,
+  validateGetRepoCodespaceDefaultsInput,
+  validateGetCodespaceExportInput,
+  validateListRepoCodespaceMachinesInput,
+  validateListOrgMemberCodespacesInput,
+  validateListUserCodespacesInput,
+  validateListOrgCodespacesInput,
+  validateListCodespaceMachinesInput,
+} from "./card9_reads";
+import {
   createCard6ReadsClient,
   validateGetCodeOfConductInput,
   validateListRepoAssigneesInput,
@@ -5280,6 +5295,135 @@ export function getOrgPackageVersion(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "orgs.packages.versions.get", source: "connector", validated: validateGetOrgPackageVersionInput(input) };
+}
+
+function liveCard9Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard9ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getUserPackageVersion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "users.packages.versions.get").getUserPackageVersion(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.packages.versions.get", source: "connector", packageVersion: result.packageVersion };
+    });
+  }
+  return { connector: "github", action: "users.packages.versions.get", source: "connector", validated: validateGetUserPackageVersionInput(input) };
+}
+
+export function getAuthenticatedPackageVersion(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "user.packages.versions.get").getAuthenticatedPackageVersion(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.packages.versions.get", source: "connector", packageVersion: result.packageVersion };
+    });
+  }
+  return { connector: "github", action: "user.packages.versions.get", source: "connector", validated: validateGetAuthenticatedPackageVersionInput(input) };
+}
+
+export function listOrgPackages(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "orgs.packages.list").listOrgPackages(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.packages.list", source: "connector", packages: result.packages };
+    });
+  }
+  return { connector: "github", action: "orgs.packages.list", source: "connector", validated: validateListOrgPackagesInput(input) };
+}
+
+export function listUserPackages(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "users.packages.list").listUserPackages(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.packages.list", source: "connector", packages: result.packages };
+    });
+  }
+  return { connector: "github", action: "users.packages.list", source: "connector", validated: validateListUserPackagesInput(input) };
+}
+
+export function listUserPackageVersions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "users.packages.versions.list").listUserPackageVersions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "users.packages.versions.list", source: "connector", versions: result.versions };
+    });
+  }
+  return { connector: "github", action: "users.packages.versions.list", source: "connector", validated: validateListUserPackageVersionsInput(input) };
+}
+
+export function getRepoCodespaceDefaults(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "repos.codespaces.new.get").getRepoCodespaceDefaults(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.codespaces.new.get", source: "connector", defaults: result.defaults };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.new.get", source: "connector", validated: validateGetRepoCodespaceDefaultsInput(input) };
+}
+
+export function getCodespaceExport(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "user.codespaces.exports.get").getCodespaceExport(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.codespaces.exports.get", source: "connector", export: result.export };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.exports.get", source: "connector", validated: validateGetCodespaceExportInput(input) };
+}
+
+export function listRepoCodespaceMachines(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "repos.codespaces.machines.list").listRepoCodespaceMachines(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "repos.codespaces.machines.list", source: "connector", machines: result.machines };
+    });
+  }
+  return { connector: "github", action: "repos.codespaces.machines.list", source: "connector", validated: validateListRepoCodespaceMachinesInput(input) };
+}
+
+export function listOrgMemberCodespaces(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "orgs.members.codespaces.list").listOrgMemberCodespaces(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.members.codespaces.list", source: "connector", codespaces: result.codespaces };
+    });
+  }
+  return { connector: "github", action: "orgs.members.codespaces.list", source: "connector", validated: validateListOrgMemberCodespacesInput(input) };
+}
+
+export function listUserCodespaces(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "user.codespaces.list").listUserCodespaces(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.codespaces.list", source: "connector", codespaces: result.codespaces };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.list", source: "connector", validated: validateListUserCodespacesInput(input) };
+}
+
+export function listOrgCodespaces(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "orgs.codespaces.list").listOrgCodespaces(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.codespaces.list", source: "connector", codespaces: result.codespaces };
+    });
+  }
+  return { connector: "github", action: "orgs.codespaces.list", source: "connector", validated: validateListOrgCodespacesInput(input) };
+}
+
+export function listCodespaceMachines(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard9Client(input, "user.codespaces.machines.list").listCodespaceMachines(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "user.codespaces.machines.list", source: "connector", machines: result.machines };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.machines.list", source: "connector", validated: validateListCodespaceMachinesInput(input) };
 }
 
 

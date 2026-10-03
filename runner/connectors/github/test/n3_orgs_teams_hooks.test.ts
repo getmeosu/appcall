@@ -47,9 +47,9 @@ const N3_READS = [
 ] as const;
 
 describe("github N3 orgs teams hooks", () => {
-  test("manifest is v0.37.0 with 358 ops and the N3 effect policies", () => {
-    expect(manifest.version).toBe("0.37.0");
-    expect(Object.keys(manifest.operations).length).toBe(358);
+  test("manifest is v0.38.0 with 370 ops and the N3 effect policies", () => {
+    expect(manifest.version).toBe("0.38.0");
+    expect(Object.keys(manifest.operations).length).toBe(370);
     for (const key of N3_READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
