@@ -115,6 +115,31 @@ export function validateListCheckRunsForRefInput(input: unknown): ListCheckRunsF
   };
 }
 
+export type ListCheckRunsForSuiteInput = {
+  owner: string;
+  repo: string;
+  checkSuiteId: number;
+  checkName?: string;
+  status?: string;
+  filter?: string;
+  perPage?: number;
+  page?: number;
+};
+
+export function validateListCheckRunsForSuiteInput(input: unknown): ListCheckRunsForSuiteInput {
+  if (!isRecord(input)) throw new Error("list check runs for suite input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    checkSuiteId: requireNumber(input.checkSuiteId, "checkSuiteId"),
+    checkName: typeof input.checkName === "string" ? input.checkName : undefined,
+    status: typeof input.status === "string" ? input.status : undefined,
+    filter: typeof input.filter === "string" ? input.filter : undefined,
+    perPage: typeof input.perPage === "number" ? input.perPage : undefined,
+    page: typeof input.page === "number" ? input.page : undefined,
+  };
+}
+
 export type GetCheckRunInput = { owner: string; repo: string; checkRunId: number };
 
 export function validateGetCheckRunInput(input: unknown): GetCheckRunInput {
@@ -365,6 +390,32 @@ export function createChecksClient(options: { accessToken: string; fetch?: typeo
         return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository or ref not found." } };
       }
       return mapRateOrUpstream(response, "GitHub rejected the list check runs request.");
+    },
+
+    async listRunsForSuite(input: unknown) {
+      const payload = validateListCheckRunsForSuiteInput(input);
+      const params = new URLSearchParams();
+      if (payload.checkName) params.set("check_name", payload.checkName);
+      if (payload.status) params.set("status", payload.status);
+      if (payload.filter) params.set("filter", payload.filter);
+      if (payload.perPage) params.set("per_page", String(payload.perPage));
+      if (payload.page) params.set("page", String(payload.page));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/check-suites/${payload.checkSuiteId}/check-runs${qs}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        const runs = Array.isArray(response.body.check_runs) ? (response.body.check_runs as GitHubCheckRun[]).map(normalizeGitHubCheckRun) : [];
+        return {
+          ok: true as const,
+          totalCount: typeof response.body.total_count === "number" ? response.body.total_count : runs.length,
+          checkRuns: runs,
+        };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository or check suite not found." } };
+      }
+      return mapRateOrUpstream(response, "GitHub rejected the list check runs for suite request.");
     },
 
     async getRun(input: unknown) {

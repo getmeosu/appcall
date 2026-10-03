@@ -253,6 +253,22 @@ export function validateListDeploymentStatusesInput(input: unknown): ListDeploym
   };
 }
 
+export type GetDeploymentStatusInput = { owner: string; repo: string; deploymentId: number; statusId: number };
+
+export function validateGetDeploymentStatusInput(input: unknown): GetDeploymentStatusInput {
+  if (!isRecord(input)) throw new Error("deployments.statuses.get input must be an object");
+  const deploymentId = optionalId(input.deploymentId, "deploymentId");
+  if (deploymentId === undefined) throw new Error("deploymentId is required");
+  const statusId = optionalId(input.statusId, "statusId");
+  if (statusId === undefined) throw new Error("statusId is required");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    deploymentId,
+    statusId,
+  };
+}
+
 export type CreateDeploymentStatusInput = {
   owner: string;
   repo: string;
@@ -491,6 +507,17 @@ export function createDeploymentsClient(options: { accessToken: string; fetch?: 
         return { ok: true as const, statuses: (response.body as GitHubDeploymentStatus[]).map(normalizeGitHubDeploymentStatus) };
       }
       return mapError(response.status, response.headers, "deployments.statuses.list");
+    },
+
+    async getStatus(input: unknown) {
+      const payload = validateGetDeploymentStatusInput(input);
+      const response = await clientFor("deployments.statuses.get").fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/deployments/${payload.deploymentId}/statuses/${payload.statusId}`,
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, status: normalizeGitHubDeploymentStatus(response.body as GitHubDeploymentStatus) };
+      }
+      return mapError(response.status, response.headers, "deployments.statuses.get");
     },
 
     async createStatus(input: unknown) {

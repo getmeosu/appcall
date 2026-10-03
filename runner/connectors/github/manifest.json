@@ -14189,6 +14189,778 @@
           }
         }
       }
+    },
+    "repos.merge_upstream": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Sync Fork Branch With Upstream",
+      "description": "Sync a fork branch with its upstream via POST /repos/{owner}/{repo}/merge-upstream. One-shot: no EffectPolicy. 200 is synced, 409 is a merge conflict and does not converge, 422 is any other failure. Do not retry 409 as success. The handler reads the branch tip via branches.get after 200. That read is not a retry key. This op is grouped with branches, not forks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch which should be updated to match upstream."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "branch"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "synced": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "mergeType": {
+            "type": "string"
+          },
+          "baseBranch": {
+            "type": "string"
+          },
+          "sha": {
+            "type": "string",
+            "description": "Tip SHA from the handler's branches.get read. Not a retry key."
+          }
+        }
+      }
+    },
+    "pull_requests.reviews.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Update Pull Request Review",
+      "description": "Update a pending pull request review summary via PUT /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}. EffectPolicy Reconcile observes via pull_requests.reviews.get. 422 means the review is not pending: stop, do not retry.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "pullNumber": {
+            "type": "number",
+            "description": "Pull request number."
+          },
+          "reviewId": {
+            "type": "number",
+            "description": "Review id."
+          },
+          "body": {
+            "type": "string",
+            "description": "The body text of the pull request review."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "pullNumber",
+          "reviewId",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "review": {
+            "type": "object",
+            "properties": {
+              "providerReviewId": {
+                "type": "number"
+              },
+              "state": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              },
+              "author": {
+                "type": "string"
+              },
+              "htmlUrl": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "effectPolicy": "Reconcile",
+      "reconcile": "pull_requests.reviews.get"
+    },
+    "repos.merges": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Merge a Branch",
+      "description": "Merge a branch via POST /repos/{owner}/{repo}/merges. EffectPolicy Idempotent. Reconcile observes via repos.compare. 201 is the merge commit. A repeat after 201 is 204, not a second commit. Do not retry 409. This is not pull_requests.merge.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "base": {
+            "type": "string",
+            "description": "Base branch that the head will be merged into."
+          },
+          "head": {
+            "type": "string",
+            "description": "Head to merge. Branch name or commit SHA."
+          },
+          "commitMessage": {
+            "type": "string",
+            "description": "Commit message for the merge commit. Omitted when unset."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "base",
+          "head"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "merged": {
+            "type": "boolean"
+          },
+          "created": {
+            "type": "boolean",
+            "description": "False when GitHub returns 204 because the branch was already merged."
+          },
+          "sha": {
+            "type": "string"
+          },
+          "base": {
+            "type": "string"
+          },
+          "head": {
+            "type": "string"
+          }
+        }
+      },
+      "effectPolicy": "Idempotent",
+      "reconcile": "repos.compare"
+    },
+    "branches.rename": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "title": "Rename a Branch",
+      "description": "Rename a branch via POST /repos/{owner}/{repo}/branches/{branch}/rename. One-shot: no EffectPolicy. A second POST on the old name is 404, not a no-op. The handler reads branches.get of the new name only. That read is not a reconcile key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Current branch name."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New branch name."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "branch",
+          "newName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "renamed": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sha": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "repos.codeowners.errors.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List CODEOWNERS Errors",
+      "description": "List CODEOWNERS syntax errors via GET /repos/{owner}/{repo}/codeowners/errors. The response object is errors, not a bare array.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Branch, tag, or commit used to choose the CODEOWNERS file. Defaults to the repository default branch."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "number"
+                },
+                "column": {
+                  "type": "number"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "suggestion": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "dependency_graph.compare": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Compare Dependency Graph",
+      "description": "Diff dependency changes between two commits via GET /repos/{owner}/{repo}/dependency-graph/compare/{basehead}. basehead is {base}...{head}. This is not repos.compare.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "base": {
+            "type": "string",
+            "description": "Base Git revision."
+          },
+          "head": {
+            "type": "string",
+            "description": "Head Git revision."
+          },
+          "name": {
+            "type": "string",
+            "description": "Full path, relative to the repository root, of the dependency manifest file."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "base",
+          "head"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "changeType": {
+                  "type": "string"
+                },
+                "manifest": {
+                  "type": "string"
+                },
+                "ecosystem": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "packageUrl": {
+                  "type": "string"
+                },
+                "license": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "code_scanning.alerts.instances.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Code Scanning Alert Instances",
+      "description": "List instances of a code scanning alert via GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "alertNumber": {
+            "type": "number",
+            "description": "Code scanning alert number."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number of results."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Git reference for the instances to list."
+          },
+          "pr": {
+            "type": "number",
+            "description": "Pull request number for the instances to list."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "alertNumber"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "instances": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ref": {
+                  "type": "string"
+                },
+                "analysisKey": {
+                  "type": "string"
+                },
+                "environment": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "commitSha": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "htmlUrl": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "code_scanning.analyses.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Code Scanning Analyses",
+      "description": "List code scanning analyses via GET /repos/{owner}/{repo}/code-scanning/analyses. tool_name on this list response is closing down. Each analysis keeps the tool object. tool_name is not the identity.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "toolName": {
+            "type": "string",
+            "description": "Filter by code scanning tool name. Query only. Not the analysis identity."
+          },
+          "toolGuid": {
+            "type": "string",
+            "description": "Filter by code scanning tool GUID. Not both toolName and toolGuid."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number of results."
+          },
+          "pr": {
+            "type": "number",
+            "description": "Pull request number for the analyses to list."
+          },
+          "ref": {
+            "type": "string",
+            "description": "Git reference for the analyses to list."
+          },
+          "sarifId": {
+            "type": "string",
+            "description": "Filter analyses belonging to the same SARIF upload."
+          },
+          "direction": {
+            "type": "string",
+            "description": "Sort direction: asc or desc."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort property. created."
+          }
+        },
+        "required": [
+          "owner",
+          "repo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "analyses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "number"
+                },
+                "ref": {
+                  "type": "string"
+                },
+                "commitSha": {
+                  "type": "string"
+                },
+                "analysisKey": {
+                  "type": "string"
+                },
+                "tool": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "guid": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "code_scanning.analyses.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Code Scanning Analysis",
+      "description": "Get one code scanning analysis via GET /repos/{owner}/{repo}/code-scanning/analyses/{analysis_id}. Identity is analysis_id. The tool object is kept.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "analysisId": {
+            "type": "number",
+            "description": "Analysis id returned by code_scanning.analyses.list."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "analysisId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "analysis": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "ref": {
+                "type": "string"
+              },
+              "commitSha": {
+                "type": "string"
+              },
+              "resultsCount": {
+                "type": "number"
+              },
+              "rulesCount": {
+                "type": "number"
+              },
+              "tool": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "string"
+                  },
+                  "guid": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "deployments.statuses.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Deployment Status",
+      "description": "Get one deployment status via GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses/{status_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "deploymentId": {
+            "type": "number",
+            "description": "Deployment id."
+          },
+          "statusId": {
+            "type": "number",
+            "description": "Deployment status id."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "deploymentId",
+          "statusId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "object",
+            "properties": {
+              "providerStatusId": {
+                "type": "number"
+              },
+              "state": {
+                "type": "string"
+              },
+              "environment": {
+                "type": "string"
+              },
+              "logUrl": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "checks.runs.list_for_suite": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Check Runs For Suite",
+      "description": "List check runs in a check suite via GET /repos/{owner}/{repo}/check-suites/{check_suite_id}/check-runs. This is not checks.runs.list_for_ref.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string",
+            "description": "Repository owner (user or organization login)."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Repository name."
+          },
+          "checkSuiteId": {
+            "type": "number",
+            "description": "Check suite id."
+          },
+          "checkName": {
+            "type": "string",
+            "description": "Filter by check run name."
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by status (queued, in_progress, completed)."
+          },
+          "filter": {
+            "type": "string",
+            "description": "latest (default) or all check runs."
+          },
+          "perPage": {
+            "type": "number",
+            "description": "Results per page (max 100)."
+          },
+          "page": {
+            "type": "number",
+            "description": "Page number of results."
+          }
+        },
+        "required": [
+          "owner",
+          "repo",
+          "checkSuiteId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "type": "number"
+          },
+          "checkRuns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "number"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "conclusion": {
+                  "type": "string"
+                },
+                "headSha": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "models": [

@@ -254,6 +254,16 @@ export function validateGetReviewInput(input: unknown): GetReviewInput {
   };
 }
 
+export type UpdateReviewInput = GetReviewInput & { body: string };
+
+export function validateUpdateReviewInput(input: unknown): UpdateReviewInput {
+  if (!isRecord(input)) throw new Error("update review input must be an object");
+  return {
+    ...validateGetReviewInput(input),
+    body: requireString(input.body, "body"),
+  };
+}
+
 const SUBMIT_REVIEW_EVENTS = ["APPROVE", "REQUEST_CHANGES", "COMMENT"] as const;
 
 export type SubmitReviewInput = {
@@ -1122,6 +1132,26 @@ export function createPullRequestsClient(options: { accessToken: string; fetch?:
         return { ok: true as const, comments };
       }
       return mapGithubError(response, "list review comments for review");
+    },
+
+    async updateReview(input: unknown) {
+      const payload = validateUpdateReviewInput(input);
+      const response = await client.fetchJSON(
+        `${repoPath(payload.owner, payload.repo)}/pulls/${payload.pullNumber}/reviews/${payload.reviewId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: payload.body }),
+        },
+      );
+      if (response.status === 200 && isRecord(response.body)) {
+        return { ok: true as const, review: normalizeGitHubReview(response.body) };
+      }
+      // 422 means the review is not pending. Stop. Do not retry.
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Review is not pending." } };
+      }
+      return mapGithubError(response, "update review");
     },
   };
 }

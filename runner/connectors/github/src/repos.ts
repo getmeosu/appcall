@@ -215,6 +215,89 @@ export function validateCompareCommitsInput(input: unknown): CompareCommitsInput
   };
 }
 
+export type MergeBranchesInput = { owner: string; repo: string; base: string; head: string; commitMessage?: string };
+
+export function validateMergeBranchesInput(input: unknown): MergeBranchesInput {
+  if (!isRecord(input)) throw new Error("repos.merges input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    base: requireString(input.base, "base"),
+    head: requireString(input.head, "head"),
+    commitMessage: typeof input.commitMessage === "string" ? input.commitMessage : undefined,
+  };
+}
+
+export type ListCodeownersErrorsInput = { owner: string; repo: string; ref?: string };
+
+export function validateListCodeownersErrorsInput(input: unknown): ListCodeownersErrorsInput {
+  if (!isRecord(input)) throw new Error("repos.codeowners.errors.list input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    ref: typeof input.ref === "string" ? input.ref : undefined,
+  };
+}
+
+export type CompareDependencyGraphInput = { owner: string; repo: string; base: string; head: string; name?: string };
+
+export function validateCompareDependencyGraphInput(input: unknown): CompareDependencyGraphInput {
+  if (!isRecord(input)) throw new Error("dependency_graph.compare input must be an object");
+  return {
+    owner: requireString(input.owner, "owner"),
+    repo: requireString(input.repo, "repo"),
+    base: requireString(input.base, "base"),
+    head: requireString(input.head, "head"),
+    name: typeof input.name === "string" ? input.name : undefined,
+  };
+}
+
+export type NormalizedCodeownersError = {
+  line: number;
+  column: number;
+  kind: string;
+  source: string;
+  suggestion: string;
+  message: string;
+  path: string;
+};
+
+export function normalizeCodeownersError(item: Record<string, unknown>): NormalizedCodeownersError {
+  return {
+    line: typeof item.line === "number" ? item.line : 0,
+    column: typeof item.column === "number" ? item.column : 0,
+    kind: typeof item.kind === "string" ? item.kind : "",
+    source: typeof item.source === "string" ? item.source : "",
+    suggestion: typeof item.suggestion === "string" ? item.suggestion : "",
+    message: typeof item.message === "string" ? item.message : "",
+    path: typeof item.path === "string" ? item.path : "",
+  };
+}
+
+export type NormalizedDependencyChange = {
+  changeType: string;
+  manifest: string;
+  ecosystem: string;
+  name: string;
+  version: string;
+  packageUrl: string;
+  license: string;
+  scope: string;
+};
+
+export function normalizeDependencyChange(item: Record<string, unknown>): NormalizedDependencyChange {
+  return {
+    changeType: typeof item.change_type === "string" ? item.change_type : "",
+    manifest: typeof item.manifest === "string" ? item.manifest : "",
+    ecosystem: typeof item.ecosystem === "string" ? item.ecosystem : "",
+    name: typeof item.name === "string" ? item.name : "",
+    version: typeof item.version === "string" ? item.version : "",
+    packageUrl: typeof item.package_url === "string" ? item.package_url : "",
+    license: typeof item.license === "string" ? item.license : "",
+    scope: typeof item.scope === "string" ? item.scope : "",
+  };
+}
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 export function createReposClient(options: { accessToken: string; fetch?: typeof fetch; githubClient?: GitHubClient }) {
@@ -414,6 +497,88 @@ export function createReposClient(options: { accessToken: string; fetch?: typeof
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the get tree request." } };
+    },
+
+    async mergeBranches(input: unknown) {
+      const payload = validateMergeBranchesInput(input);
+      const body: Record<string, unknown> = { base: payload.base, head: payload.head };
+      if (payload.commitMessage !== undefined) body.commit_message = payload.commitMessage;
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/merges`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 201 && isRecord(response.body)) {
+        return {
+          ok: true as const,
+          merged: true as const,
+          created: true as const,
+          sha: typeof response.body.sha === "string" ? response.body.sha : "",
+          base: payload.base,
+          head: payload.head,
+        };
+      }
+      // A repeat after 201 is 204, not a second commit.
+      if (response.status === 204) {
+        return { ok: true as const, merged: true as const, created: false as const, sha: "", base: payload.base, head: payload.head };
+      }
+      // Do not retry 409 as success.
+      if (response.status === 409) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Merge conflict." } };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Base or head not found." } };
+      }
+      if (response.status === 422) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Validation failed for merge branch." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the merge branch request." } };
+    },
+
+    async listCodeownersErrors(input: unknown) {
+      const payload = validateListCodeownersErrorsInput(input);
+      const params = new URLSearchParams();
+      if (payload.ref) params.set("ref", payload.ref);
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await client.fetchJSON(`/repos/${payload.owner}/${payload.repo}/codeowners/errors${qs}`);
+      // Official body is { errors: [...] }. A bare array is not this response.
+      if (response.status === 200 && isRecord(response.body) && Array.isArray(response.body.errors)) {
+        return { ok: true as const, errors: response.body.errors.filter(isRecord).map(normalizeCodeownersError) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the list codeowners errors request." } };
+    },
+
+    async compareDependencyGraph(input: unknown) {
+      const payload = validateCompareDependencyGraphInput(input);
+      const params = new URLSearchParams();
+      if (payload.name) params.set("name", payload.name);
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const basehead = `${encodeURIComponent(payload.base)}...${encodeURIComponent(payload.head)}`;
+      const response = await client.fetchJSON(
+        `/repos/${payload.owner}/${payload.repo}/dependency-graph/compare/${basehead}${qs}`,
+      );
+      if (response.status === 200 && Array.isArray(response.body)) {
+        return { ok: true as const, changes: response.body.filter(isRecord).map(normalizeDependencyChange) };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Repository or comparison refs not found." } };
+      }
+      if (response.status === 429 || (response.status === 403 && parseGitHubRateLimit(response.status, response.headers).limited)) {
+        const rateLimit = parseGitHubRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "GitHub rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "GitHub rejected the dependency graph compare request." } };
     },
   };
 }
