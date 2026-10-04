@@ -725,11 +725,20 @@ describe("curated recipe install", () => {
       expect(recipe.manifest.evidence).toEqual(manifest.evidence);
       expect(recipe.manifest.provenance).toEqual(manifest.provenance);
       if (key === "pagerduty") expect(manifest.auth.setup.fields[0].label).toContain("personal user token");
-      for (const operation of Object.values(manifest.operations) as Array<Record<string, unknown>>) {
+      const httpKeys: string[] = [];
+      for (const [operationKey, operation] of Object.entries(manifest.operations) as Array<[string, Record<string, unknown>]>) {
+        if (operation.kind === "webhook") {
+          expect(operation.sideEffect).toBe("read");
+          expect(operation.title).toBeTruthy();
+          expect(operation.description).toBeTruthy();
+          continue;
+        }
+        httpKeys.push(operationKey);
         expect(operation.enforceOutputSchema).toBe(true);
         expect(operation.responseFormat).toBe("json");
         expect(operation.validationMode).toBe("strict-generated");
       }
+      expect(httpKeys.length).toBeGreaterThan(0);
     }
   });
 
@@ -739,10 +748,13 @@ describe("curated recipe install", () => {
       const dir = `runner/connectors/${key}`;
       const cases = loadFixtureCases(`${dir}/fixtures/cases`);
       const runs = await runCandidateFixtures(JSON.stringify(manifest), cases);
+      const httpKeys = Object.entries(manifest.operations)
+        .filter(([, operation]) => (operation as { kind?: string }).kind !== "webhook")
+        .map(([operationKey]) => operationKey);
       expect(runs.length).toBeGreaterThan(0);
       expect(runs.every((run) => run.status === "passed")).toBe(true);
-      expect(new Set(cases.map((fixture) => fixture.operation))).toEqual(new Set(Object.keys(manifest.operations)));
+      expect(new Set(cases.map((fixture) => fixture.operation))).toEqual(new Set(httpKeys));
       expect(recipeKey).toBeTruthy();
     }
-  });
+  }, 180000);
 });

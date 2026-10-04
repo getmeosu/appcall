@@ -1,7 +1,17 @@
 {
+  "key": "needle",
+  "name": "Needle",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,132 +19,155 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "productivity"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "needle.app",
+      "search.needle.app"
+    ]
+  },
+  "models": [
+    "collection",
+    "file",
+    "stats",
+    "search-result"
+  ],
   "http": {
+    "baseUrl": "https://needle.app",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "x-api-key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://needle.app",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error.message",
         "message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "needle",
-  "models": [
-    "collection",
-    "file",
-    "stats"
-  ],
-  "name": "Needle",
-  "network": {
-    "allowedHosts": [
-      "needle.app"
-    ]
-  },
   "operations": {
-    "collections.files.list": {
-      "description": "List files attached to a Needle collection.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "collection_id": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "collection_id"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Needle API key with GET /api/v1/collections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/api/v1/collections/{{collection_id}}/files",
+        "path": "/api/v1/collections",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List collection files",
-      "validationMode": "strict-generated"
-    },
-    "collections.get": {
-      "description": "Get one Needle collection by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "collection_id": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "collection_id"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List collections",
+      "description": "List Needle collections visible to the API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/collections",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get collection",
+      "description": "Get one Needle collection by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collection_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -143,78 +176,211 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get collection",
-      "validationMode": "strict-generated"
-    },
-    "collections.list": {
-      "description": "List Needle collections visible to the API key.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.create": {
       "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create collection",
+      "description": "Create a Needle RAG collection.",
+      "inputSchema": {
+        "type": "object",
         "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection name."
+          },
+          "file_ids": {
+            "type": "array",
+            "description": "Optional file ids to attach.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        }
       },
       "request": {
-        "method": "GET",
+        "method": "POST",
         "path": "/api/v1/collections",
         "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List collections",
-      "validationMode": "strict-generated"
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "file_ids": "{{file_ids}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
     },
-    "collections.stats.get": {
-      "description": "Get indexing and storage statistics for a Needle collection.",
+    "collections.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Update collection",
+      "description": "Rename a Needle collection.",
       "inputSchema": {
+        "type": "object",
         "additionalProperties": false,
         "properties": {
           "collection_id": {
+            "type": "string",
             "minLength": 1,
-            "type": "string"
+            "description": "Needle collection id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection name."
+          }
+        },
+        "required": [
+          "collection_id",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/collections/{{collection_id}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "collections.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Delete collection",
+      "description": "Delete a Needle collection.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Needle collection id."
           }
         },
         "required": [
           "collection_id"
-        ],
-        "type": "object"
+        ]
       },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/collections/{{collection_id}}",
+        "success": [
+          200,
+          201,
+          204
+        ]
+      }
+    },
+    "collections.stats.get": {
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "Get collection stats",
+      "description": "Get indexing and storage statistics for a Needle collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "collection_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -223,56 +389,493 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.files.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get collection stats",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Needle API key with GET /api/v1/collections.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List collection files",
+      "description": "List files attached to a Needle collection.",
       "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collection_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "additionalProperties": false,
-        "properties": {},
-        "type": "object"
+        "required": [
+          "collection_id"
+        ]
       },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/api/v1/collections",
+        "path": "/api/v1/collections/{{collection_id}}/files",
         "success": [
           200
         ]
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.files.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
       "responseFormat": "json",
+      "title": "Add collection file",
+      "description": "Add a file URL to a Needle collection for indexing.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Needle collection id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "File name."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 8,
+            "description": "Public file URL."
+          }
+        },
+        "required": [
+          "collection_id",
+          "name",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/collections/{{collection_id}}/files",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "files": [
+            {
+              "name": "{{name}}",
+              "url": "{{url}}"
+            }
+          ]
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "collections.files.get": {
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get collection file",
+      "description": "Get one file in a Needle collection.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Needle collection id."
+          },
+          "file_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Needle file id."
+          }
+        },
+        "required": [
+          "collection_id",
+          "file_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/collections/{{collection_id}}/files/{{file_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "collections.files.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Delete collection files",
+      "description": "Remove files from a Needle collection.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Needle collection id."
+          },
+          "file_ids": {
+            "type": "array",
+            "description": "File ids to remove.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "collection_id",
+          "file_ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/collections/{{collection_id}}/files",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "file_ids": "{{file_ids}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "collections.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Search collection",
+      "description": "Semantic search across indexed files in a Needle collection.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "collection_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Needle collection id."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Natural-language search query."
+          },
+          "top_k": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum passages to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Result offset."
+          }
+        },
+        "required": [
+          "collection_id",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/collections/{{collection_id}}/search",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "body": {
+          "text": "{{text}}",
+          "top_k": "{{top_k}}",
+          "offset": "{{offset}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "baseUrl": "https://search.needle.app"
+      }
+    },
+    "files.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get file",
+      "description": "Get a Needle file by id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Needle file id."
+          }
+        },
+        "required": [
+          "file_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/files/{{file_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "files.download_url": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get file download URL",
+      "description": "Get a short-lived download URL for a Needle file.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Needle file id."
+          }
+        },
+        "required": [
+          "file_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/files/{{file_id}}/download_url",
+        "success": [
+          200
+        ]
+      }
+    },
+    "files.upload_url": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get file upload URL",
+      "description": "Get a signed upload URL for ingesting a file into Needle.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/files/upload-url",
+        "success": [
+          200
+        ]
+      }
+    },
+    "files.get_download_url": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get download URL",
+      "description": "Get a signed download URL from Needle file storage.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Needle file id."
+          }
+        },
+        "required": [
+          "file_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/files/download-url",
+        "success": [
+          200
+        ],
+        "query": {
+          "file_id": "{{file_id}}"
+        }
+      }
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
