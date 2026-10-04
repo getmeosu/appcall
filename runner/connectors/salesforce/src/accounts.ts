@@ -145,6 +145,13 @@ export type UpdateAccountInput = {
   annualRevenue?: number;
 };
 
+export type DeleteAccountInput = { id: string };
+
+export function validateDeleteAccountInput(input: unknown): DeleteAccountInput {
+  if (!isRecord(input)) throw new Error("delete account input must be an object");
+  return { id: requireString(input.id, "id") };
+}
+
 export function validateUpdateAccountInput(input: unknown): UpdateAccountInput {
   if (!isRecord(input)) throw new Error("update account input must be an object");
   return {

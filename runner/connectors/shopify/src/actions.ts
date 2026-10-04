@@ -1,6 +1,7 @@
-import { createProductsClient, validateGetProductInput, validateCreateProductInput, validateUpdateProductInput, validateDeleteProductInput } from "./products";
-import { createOrdersClient, validateGetOrderInput, validateUpdateOrderInput, validateCloseOrderInput, validateCancelOrderInput } from "./orders";
-import { createCustomersClient, validateGetCustomerInput, validateCreateCustomerInput, validateUpdateCustomerInput } from "./customers";
+import { createProductsClient, validateGetProductInput, validateCreateProductInput, validateUpdateProductInput, validateDeleteProductInput, validateUpdateProductVariantInput } from "./products";
+import { createOrdersClient, validateGetOrderInput, validateCreateOrderInput, validateUpdateOrderInput, validateCloseOrderInput, validateCancelOrderInput } from "./orders";
+import { createCustomersClient, validateGetCustomerInput, validateCreateCustomerInput, validateUpdateCustomerInput, validateSearchCustomersInput } from "./customers";
+import { createInventoryClient, validateSetInventoryLevelInput } from "./inventory";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -157,4 +158,48 @@ export function updateCustomer(input: unknown): Record<string, unknown> | Promis
       });
   }
   return { connector: "shopify", action: "customers.update", source: "connector", validated: validateUpdateCustomerInput(input) };
+}
+
+export function createOrder(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.shopDomain === "string") {
+    return createOrdersClient({ accessToken: input.accessToken, shopDomain: input.shopDomain, fetch: getFetch(input) })
+      .create(input).then((result) => {
+        if (!result.ok) throwOnError(result);
+        return { connector: "shopify", action: "orders.create", source: "connector", order: result.order };
+      });
+  }
+  return { connector: "shopify", action: "orders.create", source: "connector", validated: validateCreateOrderInput(input) };
+}
+
+export function updateProductVariant(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.shopDomain === "string") {
+    return createProductsClient({ accessToken: input.accessToken, shopDomain: input.shopDomain, fetch: getFetch(input) })
+      .updateVariant(input).then((result) => {
+        if (!result.ok) throwOnError(result);
+        return { connector: "shopify", action: "products.variants.update", source: "connector", variant: result.variant };
+      });
+  }
+  return { connector: "shopify", action: "products.variants.update", source: "connector", validated: validateUpdateProductVariantInput(input) };
+}
+
+export function setInventoryLevel(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.shopDomain === "string") {
+    return createInventoryClient({ accessToken: input.accessToken, shopDomain: input.shopDomain, fetch: getFetch(input) })
+      .set(input).then((result) => {
+        if (!result.ok) throwOnError(result);
+        return { connector: "shopify", action: "inventory.levels.set", source: "connector", inventoryLevel: result.inventoryLevel };
+      });
+  }
+  return { connector: "shopify", action: "inventory.levels.set", source: "connector", validated: validateSetInventoryLevelInput(input) };
+}
+
+export function searchCustomers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.shopDomain === "string") {
+    return createCustomersClient({ accessToken: input.accessToken, shopDomain: input.shopDomain, fetch: getFetch(input) })
+      .search(input).then((result) => {
+        if (!result.ok) throwOnError(result);
+        return { connector: "shopify", action: "customers.search", source: "connector", customers: result.customers };
+      });
+  }
+  return { connector: "shopify", action: "customers.search", source: "connector", validated: validateSearchCustomersInput(input) };
 }

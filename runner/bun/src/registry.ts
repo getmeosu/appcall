@@ -491,10 +491,13 @@ import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync 
 import salesforceManifest from "../../connectors/salesforce/manifest.json";
 import {
   createContact, createLead, createOpportunity, createCase,
-  createAccount as sfCreateAccount, getAccount as sfGetAccount, updateAccount as sfUpdateAccount,
+  createAccount as sfCreateAccount, getAccount as sfGetAccount, updateAccount as sfUpdateAccount, deleteAccount as sfDeleteAccount,
   getContact as sfGetContact, updateContact as sfUpdateContact, deleteContact as sfDeleteContact,
-  updateLead as sfUpdateLead, getOpportunity as sfGetOpportunity,
-  querySobjects as sfQuery, searchSobjects as sfSearch,
+  updateLead as sfUpdateLead, deleteLead as sfDeleteLead, getOpportunity as sfGetOpportunity,
+  updateOpportunity as sfUpdateOpportunity, deleteOpportunity as sfDeleteOpportunity,
+  getCase as sfGetCase, updateCase as sfUpdateCase, deleteCase as sfDeleteCase,
+  querySobjects as sfQuery, searchSobjects as sfSearch, describeSobject as sfDescribe,
+  getCurrentUser as sfGetCurrentUser,
 } from "../../connectors/salesforce/src/actions";
 import { healthcheck as salesforceHealthcheck } from "../../connectors/salesforce/src/healthcheck";
 import { executeContactsListSync as listSFContacts, executeLeadsListSync as listSFLeads, executeAccountsListSync as listSFAccounts, executeOpportunitiesListSync as listSFOpportunities, executeCasesListSync as listSFCases } from "../../connectors/salesforce/src/sync";
@@ -578,8 +581,10 @@ import { healthcheck as shopifyHealthcheck } from "../../connectors/shopify/src/
 import { executeProductsListSync as listShopifyProducts, executeOrdersListSync as listShopifyOrders, executeCustomersListSync as listShopifyCustomers } from "../../connectors/shopify/src/sync";
 import {
   getProduct as shopifyGetProduct, createProduct as shopifyCreateProduct, updateProduct as shopifyUpdateProduct, deleteProduct as shopifyDeleteProduct,
-  getOrder as shopifyGetOrder, updateOrder as shopifyUpdateOrder, closeOrder as shopifyCloseOrder, cancelOrder as shopifyCancelOrder,
-  getCustomer as shopifyGetCustomer, createCustomer as shopifyCreateCustomer, updateCustomer as shopifyUpdateCustomer,
+  updateProductVariant as shopifyUpdateProductVariant,
+  getOrder as shopifyGetOrder, createOrder as shopifyCreateOrder, updateOrder as shopifyUpdateOrder, closeOrder as shopifyCloseOrder, cancelOrder as shopifyCancelOrder,
+  getCustomer as shopifyGetCustomer, createCustomer as shopifyCreateCustomer, updateCustomer as shopifyUpdateCustomer, searchCustomers as shopifySearchCustomers,
+  setInventoryLevel as shopifySetInventoryLevel,
 } from "../../connectors/shopify/src/actions";
 import woocommerceManifest from "../../connectors/woocommerce/manifest.json";
 import { healthcheck as woocommerceHealthcheck } from "../../connectors/woocommerce/src/healthcheck";
@@ -1619,13 +1624,22 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "accounts.create": sfCreateAccount,
       "accounts.get": sfGetAccount,
       "accounts.update": sfUpdateAccount,
+      "accounts.delete": sfDeleteAccount,
       "contacts.get": sfGetContact,
       "contacts.update": sfUpdateContact,
       "contacts.delete": sfDeleteContact,
       "leads.update": sfUpdateLead,
+      "leads.delete": sfDeleteLead,
       "opportunities.get": sfGetOpportunity,
+      "opportunities.update": sfUpdateOpportunity,
+      "opportunities.delete": sfDeleteOpportunity,
+      "cases.get": sfGetCase,
+      "cases.update": sfUpdateCase,
+      "cases.delete": sfDeleteCase,
       "sobjects.query": sfQuery,
       "sobjects.search": sfSearch,
+      "sobjects.describe": sfDescribe,
+      "users.me": sfGetCurrentUser,
     },
     hubspot: {
       "contacts.create": createHubSpotContact,
@@ -1826,13 +1840,17 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "products.create": shopifyCreateProduct,
       "products.update": shopifyUpdateProduct,
       "products.delete": shopifyDeleteProduct,
+      "products.variants.update": shopifyUpdateProductVariant,
       "orders.get": shopifyGetOrder,
+      "orders.create": shopifyCreateOrder,
       "orders.update": shopifyUpdateOrder,
       "orders.close": shopifyCloseOrder,
       "orders.cancel": shopifyCancelOrder,
       "customers.get": shopifyGetCustomer,
       "customers.create": shopifyCreateCustomer,
       "customers.update": shopifyUpdateCustomer,
+      "customers.search": shopifySearchCustomers,
+      "inventory.levels.set": shopifySetInventoryLevel,
     },
     woocommerce: {
       "products.create": wooCreateProduct,

@@ -1,5 +1,5 @@
 import { createShopifyClient, parseShopifyRateLimit, isRecord, prop, propNum } from "./http";
-import { normalizeProduct } from "./objects";
+import { normalizeProduct, normalizeVariant } from "./objects";
 import type { NormalizedProduct } from "./objects";
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
@@ -73,6 +73,31 @@ export function validateUpdateProductInput(input: unknown): Omit<UpdateProductIn
 
 export type DeleteProductInput = { accessToken: string; shopDomain: string; productId: number };
 
+export type UpdateProductVariantInput = {
+  accessToken: string;
+  shopDomain: string;
+  variantId: number;
+  price?: string;
+  sku?: string;
+  title?: string;
+  barcode?: string;
+  compareAtPrice?: string;
+};
+
+export function validateUpdateProductVariantInput(input: unknown): Omit<UpdateProductVariantInput, "accessToken" | "shopDomain"> & { accessToken?: string; shopDomain?: string } {
+  if (!isRecord(input)) throw new Error("update variant input must be an object");
+  return {
+    accessToken: typeof input.accessToken === "string" ? input.accessToken : undefined,
+    shopDomain: typeof input.shopDomain === "string" ? input.shopDomain : undefined,
+    variantId: requireNumber(input.variantId, "variantId"),
+    price: typeof input.price === "string" ? input.price : undefined,
+    sku: typeof input.sku === "string" ? input.sku : undefined,
+    title: typeof input.title === "string" ? input.title : undefined,
+    barcode: typeof input.barcode === "string" ? input.barcode : undefined,
+    compareAtPrice: typeof input.compareAtPrice === "string" ? input.compareAtPrice : undefined,
+  };
+}
+
 export function validateDeleteProductInput(input: unknown): Omit<DeleteProductInput, "accessToken" | "shopDomain"> & { accessToken?: string; shopDomain?: string } {
   if (!isRecord(input)) throw new Error("delete product input must be an object");
   return {
@@ -126,6 +151,22 @@ export function createProductsClient(options: { accessToken: string; shopDomain:
       }
       if (response.status === 404) return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Product not found." } };
       return mapError(response.status, response.headers, "Shopify rejected the update product request.");
+    },
+
+    async updateVariant(input: unknown) {
+      const payload = validateUpdateProductVariantInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.price !== undefined) body.price = payload.price;
+      if (payload.sku !== undefined) body.sku = payload.sku;
+      if (payload.title !== undefined) body.title = payload.title;
+      if (payload.barcode !== undefined) body.barcode = payload.barcode;
+      if (payload.compareAtPrice !== undefined) body.compare_at_price = payload.compareAtPrice;
+      const response = await client.fetchJSON(`/variants/${payload.variantId}.json`, { method: "PUT", body: JSON.stringify({ variant: body }) });
+      if (response.status === 200 && isRecord(response.body) && isRecord(response.body.variant)) {
+        return { ok: true as const, variant: normalizeVariant(response.body.variant as Record<string, unknown>) };
+      }
+      if (response.status === 404) return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Variant not found." } };
+      return mapError(response.status, response.headers, "Shopify rejected the update variant request.");
     },
 
     async delete(input: unknown) {

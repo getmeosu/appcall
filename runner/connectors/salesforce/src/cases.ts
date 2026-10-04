@@ -100,6 +100,45 @@ export function parseCasesResponse(response: unknown): { cases: SalesforceCase[]
 
 export type CreateCaseInput = { subject: string; description?: string; status?: string; priority?: string; origin?: string; accountId?: string; contactId?: string };
 
+export type GetCaseInput = { id: string };
+
+export function validateGetCaseInput(input: unknown): GetCaseInput {
+  if (!isRecord(input)) throw new Error("get case input must be an object");
+  return { id: requireString(input.id, "id") };
+}
+
+export type UpdateCaseInput = {
+  id: string;
+  subject?: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  origin?: string;
+  accountId?: string;
+  contactId?: string;
+};
+
+export function validateUpdateCaseInput(input: unknown): UpdateCaseInput {
+  if (!isRecord(input)) throw new Error("update case input must be an object");
+  return {
+    id: requireString(input.id, "id"),
+    subject: typeof input.subject === "string" ? input.subject : undefined,
+    description: typeof input.description === "string" ? input.description : undefined,
+    status: typeof input.status === "string" ? input.status : undefined,
+    priority: typeof input.priority === "string" ? input.priority : undefined,
+    origin: typeof input.origin === "string" ? input.origin : undefined,
+    accountId: typeof input.accountId === "string" ? input.accountId : undefined,
+    contactId: typeof input.contactId === "string" ? input.contactId : undefined,
+  };
+}
+
+export type DeleteCaseInput = { id: string };
+
+export function validateDeleteCaseInput(input: unknown): DeleteCaseInput {
+  if (!isRecord(input)) throw new Error("delete case input must be an object");
+  return { id: requireString(input.id, "id") };
+}
+
 export function validateCreateCaseInput(input: unknown): CreateCaseInput {
   if (!isRecord(input)) throw new Error("create case input must be an object");
   return {

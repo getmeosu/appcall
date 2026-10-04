@@ -5,7 +5,7 @@ describe("shopify connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("shopify");
     expect(manifest.name).toBe("Shopify");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -31,17 +31,22 @@ describe("shopify connector manifest", () => {
 
   test("new action operations are declared with correct kind", () => {
     const actionOps = ["products.get", "products.create", "products.update", "products.delete",
-      "orders.get", "orders.update", "orders.close", "orders.cancel",
-      "customers.get", "customers.create", "customers.update"];
+      "orders.get", "orders.create", "orders.update", "orders.close", "orders.cancel",
+      "products.variants.update", "inventory.levels.set",
+      "customers.get", "customers.create", "customers.update", "customers.search"];
     for (const op of actionOps) {
       expect((manifest.operations as Record<string, { kind: string }>)[op].kind).toBe("action");
     }
+    expect((manifest.operations as Record<string, { kind: string }>)["webhook.orders.create"].kind).toBe("webhook");
+    expect((manifest.operations as Record<string, { kind: string }>)["webhook.products.update"].kind).toBe("webhook");
+    expect((manifest.operations as Record<string, { kind: string }>)["webhook.customers.create"].kind).toBe("webhook");
   });
 
   test("new action operations have required fields", () => {
     const actionOps = ["products.get", "products.create", "products.update", "products.delete",
-      "orders.get", "orders.update", "orders.close", "orders.cancel",
-      "customers.get", "customers.create", "customers.update"];
+      "orders.get", "orders.create", "orders.update", "orders.close", "orders.cancel",
+      "products.variants.update", "inventory.levels.set",
+      "customers.get", "customers.create", "customers.update", "customers.search"];
     for (const op of actionOps) {
       const o = (manifest.operations as Record<string, Record<string, unknown>>)[op];
       expect(typeof o.title).toBe("string");

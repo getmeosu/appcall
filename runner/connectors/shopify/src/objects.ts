@@ -78,6 +78,39 @@ export function parseCustomersResponse(response: unknown): { customers: Normaliz
   return { customers: customers.filter(isRecord).map(normalizeCustomer) };
 }
 
+export type NormalizedVariant = {
+  id: string; provider: "shopify"; providerVariantId: number;
+  productId: number; title: string; sku: string; price: string;
+  barcode: string; compareAtPrice: string; inventoryQuantity: number;
+  modelVersion: "2026-05-17"; raw: Record<string, unknown>;
+};
+
+export function normalizeVariant(v: Record<string, unknown>): NormalizedVariant {
+  return {
+    id: `sp-variant:${propNum(v, "id")}`, provider: "shopify", providerVariantId: propNum(v, "id"),
+    productId: propNum(v, "product_id"), title: prop(v, "title"), sku: prop(v, "sku"),
+    price: prop(v, "price"), barcode: prop(v, "barcode"), compareAtPrice: prop(v, "compare_at_price"),
+    inventoryQuantity: propNum(v, "inventory_quantity"),
+    modelVersion: "2026-05-17", raw: v,
+  };
+}
+
+export type NormalizedInventoryLevel = {
+  inventoryItemId: number; locationId: number; available: number;
+  updatedAt: string; modelVersion: "2026-05-17"; raw: Record<string, unknown>;
+};
+
+export function normalizeInventoryLevel(level: Record<string, unknown>): NormalizedInventoryLevel {
+  return {
+    inventoryItemId: propNum(level, "inventory_item_id"),
+    locationId: propNum(level, "location_id"),
+    available: propNum(level, "available"),
+    updatedAt: prop(level, "updated_at"),
+    modelVersion: "2026-05-17",
+    raw: level,
+  };
+}
+
 export function extractNextPageToken(headers: Record<string, string>): string | null {
   const link = headers["link"] ?? headers["Link"] ?? "";
   const match = link.match(/<[^>]*[?&]page_info=([^&>]+)/);
