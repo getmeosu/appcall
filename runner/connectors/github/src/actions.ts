@@ -394,6 +394,16 @@ import {
   validateGetZenInput,
 } from "./card14_reads";
 
+import {
+  createSecretScanningClient,
+  validateCreateSecretScanningPatternsInput,
+  validateGetSecretScanningAlertInput,
+  validateListOrgSecretScanningAlertsInput,
+  validateListSecretScanningAlertLocationsInput,
+  validateListSecretScanningPatternsInput,
+  validateUpdateSecretScanningAlertInput,
+} from "./card_secret_scanning";
+
 
 
 import {
@@ -6097,6 +6107,77 @@ export function getGitignoreTemplate(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
+}
+
+// ─── secret scanning alerts and custom patterns ──────────────────────────────
+
+function liveSecretScanningClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createSecretScanningClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getSecretScanningAlert(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveSecretScanningClient(input, "secret_scanning.alerts.get").getAlert(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "secret_scanning.alerts.get", source: "connector", alert: result.alert };
+    });
+  }
+  return { connector: "github", action: "secret_scanning.alerts.get", source: "connector", validated: validateGetSecretScanningAlertInput(input) };
+}
+
+export function listSecretScanningAlertLocations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveSecretScanningClient(input, "secret_scanning.alerts.locations.list").listAlertLocations(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "secret_scanning.alerts.locations.list", source: "connector", locations: result.locations };
+    });
+  }
+  return { connector: "github", action: "secret_scanning.alerts.locations.list", source: "connector", validated: validateListSecretScanningAlertLocationsInput(input) };
+}
+
+export function listOrgSecretScanningAlerts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveSecretScanningClient(input, "orgs.secret_scanning.alerts.list").listOrgAlerts(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.secret_scanning.alerts.list", source: "connector", alerts: result.alerts };
+    });
+  }
+  return { connector: "github", action: "orgs.secret_scanning.alerts.list", source: "connector", validated: validateListOrgSecretScanningAlertsInput(input) };
+}
+
+export function listSecretScanningPatterns(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveSecretScanningClient(input, "secret_scanning.patterns.list").listPatterns(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "secret_scanning.patterns.list", source: "connector", patterns: result.patterns };
+    });
+  }
+  return { connector: "github", action: "secret_scanning.patterns.list", source: "connector", validated: validateListSecretScanningPatternsInput(input) };
+}
+
+export function updateSecretScanningAlert(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveSecretScanningClient(input, "secret_scanning.alerts.update").updateAlert(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "secret_scanning.alerts.update", source: "connector", alert: result.alert };
+    });
+  }
+  return { connector: "github", action: "secret_scanning.alerts.update", source: "connector", validated: validateUpdateSecretScanningAlertInput(input) };
+}
+
+export function createSecretScanningPatterns(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveSecretScanningClient(input, "secret_scanning.patterns.create").createPatterns(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "secret_scanning.patterns.create", source: "connector", patterns: result.patterns };
+    });
+  }
+  return { connector: "github", action: "secret_scanning.patterns.create", source: "connector", validated: validateCreateSecretScanningPatternsInput(input) };
 }
 
 
