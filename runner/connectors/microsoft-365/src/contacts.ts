@@ -97,6 +97,36 @@ export function validateListContactsInput(input: unknown): ListContactsInput {
   return {};
 }
 
+export type GetContactInput = { contactId: string };
+
+export function validateGetContactInput(input: unknown): GetContactInput {
+  if (!isRecord(input)) throw new Error("get contact input must be an object");
+  return { contactId: requireString(input.contactId, "contactId") };
+}
+
+export type UpdateContactInput = {
+  contactId: string;
+  givenName?: string;
+  surname?: string;
+  emailAddresses?: string[];
+  mobilePhone?: string;
+  jobTitle?: string;
+  companyName?: string;
+};
+
+export function validateUpdateContactInput(input: unknown): UpdateContactInput {
+  if (!isRecord(input)) throw new Error("update contact input must be an object");
+  return {
+    contactId: requireString(input.contactId, "contactId"),
+    givenName: typeof input.givenName === "string" ? input.givenName : undefined,
+    surname: typeof input.surname === "string" ? input.surname : undefined,
+    emailAddresses: Array.isArray(input.emailAddresses) ? (input.emailAddresses as unknown[]).filter((e): e is string => typeof e === "string") : undefined,
+    mobilePhone: typeof input.mobilePhone === "string" ? input.mobilePhone : undefined,
+    jobTitle: typeof input.jobTitle === "string" ? input.jobTitle : undefined,
+    companyName: typeof input.companyName === "string" ? input.companyName : undefined,
+  };
+}
+
 export function createContactsClient(options: { accessToken: string; fetch?: typeof fetch; graphClient?: GraphClient }) {
   const client = options.graphClient ?? createGraphClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "contacts.create" });
 
@@ -136,6 +166,43 @@ export function createContactsClient(options: { accessToken: string; fetch?: typ
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Graph rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Graph rejected the list contacts request." } };
+    },
+
+    async get(input: unknown) {
+      const payload = validateGetContactInput(input);
+      const response = await client.fetchJSON(`/v1.0/me/contacts/${encodeURIComponent(payload.contactId)}`);
+      if (response.status === 200) {
+        return { ok: true as const, contact: normalizeContact(response.body as Contact) };
+      }
+      if (response.status === 429) {
+        const rateLimit = parseGraphRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Graph rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Graph rejected the get contact request." } };
+    },
+
+    async update(input: unknown) {
+      const payload = validateUpdateContactInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.givenName) body.givenName = payload.givenName;
+      if (payload.surname) body.surname = payload.surname;
+      if (payload.emailAddresses) body.emailAddresses = payload.emailAddresses.map((a) => ({ address: a, name: a }));
+      if (payload.mobilePhone) body.mobilePhone = payload.mobilePhone;
+      if (payload.jobTitle) body.jobTitle = payload.jobTitle;
+      if (payload.companyName) body.companyName = payload.companyName;
+      const response = await client.fetchJSON(`/v1.0/me/contacts/${encodeURIComponent(payload.contactId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 200) {
+        return { ok: true as const, contact: normalizeContact(response.body as Contact) };
+      }
+      if (response.status === 429) {
+        const rateLimit = parseGraphRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Graph rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Graph rejected the update contact request." } };
     },
   };
 }

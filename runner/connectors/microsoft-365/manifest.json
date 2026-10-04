@@ -1,7 +1,7 @@
 {
   "key": "microsoft-365",
   "name": "Microsoft 365",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["productivity"],
   "auth": {
@@ -170,6 +170,49 @@
         }
       }
     },
+    "messages.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Email Draft",
+      "description": "Create a draft email in the authenticated user's Outlook mailbox via Microsoft Graph. The draft is saved, not sent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "array",
+            "description": "Recipient email addresses. Each item may be a plain address string, an object with an 'address' field, or an object with an 'emailAddress.address' field.",
+            "items": {
+              "type": ["string", "object"]
+            }
+          },
+          "subject": {
+            "type": "string",
+            "description": "Subject line of the draft."
+          },
+          "body": {
+            "type": "string",
+            "description": "Body content of the draft."
+          },
+          "contentType": {
+            "type": "string",
+            "description": "Format of the body content. Defaults to 'text'.",
+            "enum": ["text", "html"]
+          }
+        },
+        "required": ["subject"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "message": { "type": "object", "description": "The created draft message." }
+        }
+      }
+    },
     "messages.delete": {
       "kind": "action",
       "timeoutMs": 15000,
@@ -216,6 +259,33 @@
           "action": { "type": "string" },
           "source": { "type": "string" },
           "folders": { "type": "array", "items": { "type": "object" } }
+        }
+      }
+    },
+    "mailFolders.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Mail Folder",
+      "description": "Retrieve a specific Outlook mail folder by ID, or a well-known name such as inbox, drafts, sentItems, or deletedItems.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string",
+            "description": "The unique identifier of the mail folder, or a well-known name like 'inbox'."
+          }
+        },
+        "required": ["folderId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "folder": { "type": "object" }
         }
       }
     },
@@ -402,6 +472,33 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576
     },
+    "calendars.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Calendar",
+      "description": "Retrieve a specific Outlook calendar by ID from the authenticated user's mailbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string",
+            "description": "The unique identifier of the calendar to retrieve."
+          }
+        },
+        "required": ["calendarId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "calendar": { "type": "object" }
+        }
+      }
+    },
     "files.list": {
       "kind": "sync",
       "timeoutMs": 30000,
@@ -497,6 +594,41 @@
         }
       }
     },
+    "drive.items.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update OneDrive Item",
+      "description": "Update metadata for a file or folder in the authenticated user's OneDrive, such as its name or description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "description": "The unique identifier of the drive item to update."
+          },
+          "name": {
+            "type": "string",
+            "description": "New name for the item."
+          },
+          "description": {
+            "type": "string",
+            "description": "New description for the item."
+          }
+        },
+        "required": ["itemId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "item": { "type": "object" }
+        }
+      }
+    },
     "contacts.create": {
       "kind": "action",
       "timeoutMs": 15000,
@@ -566,6 +698,128 @@
           "contacts": { "type": "array", "items": { "type": "object" } }
         }
       }
+    },
+    "contacts.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Contact",
+      "description": "Retrieve a specific contact by ID from the authenticated user's Outlook personal contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "The unique identifier of the contact to retrieve."
+          }
+        },
+        "required": ["contactId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contact": { "type": "object" }
+        }
+      }
+    },
+    "contacts.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Contact",
+      "description": "Update an existing contact in the authenticated user's Outlook personal contacts. Only supplied fields are changed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "The unique identifier of the contact to update."
+          },
+          "givenName": {
+            "type": "string",
+            "description": "First name of the contact."
+          },
+          "surname": {
+            "type": "string",
+            "description": "Last name of the contact."
+          },
+          "emailAddresses": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Email addresses for the contact."
+          },
+          "mobilePhone": {
+            "type": "string",
+            "description": "Mobile phone number."
+          },
+          "jobTitle": {
+            "type": "string",
+            "description": "Job title of the contact."
+          },
+          "companyName": {
+            "type": "string",
+            "description": "Company or organization name."
+          }
+        },
+        "required": ["contactId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contact": { "type": "object" }
+        }
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Signed-In User",
+      "description": "Retrieve the authenticated Microsoft 365 user's profile from Microsoft Graph GET /me, including display name, mail, and user principal name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "user": { "type": "object" }
+        }
+      }
+    },
+    "webhook.message.created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880
+    },
+    "webhook.event.created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880
+    },
+    "webhook.event.updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880
     },
     "teams_meetings.create": {
       "kind": "action",
@@ -836,6 +1090,7 @@
     "calendar",
     "drive_file",
     "contact",
-    "teams_meeting"
+    "teams_meeting",
+    "user"
   ]
 }

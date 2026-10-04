@@ -11,6 +11,7 @@ import taskFixture from "../fixtures/task.json";
 import tasksFixture from "../fixtures/tasks.json";
 import commentsFixture from "../fixtures/comments.json";
 import commentFixture from "../fixtures/comment.json";
+import membersFixture from "../fixtures/members.json";
 import timeEntryFixture from "../fixtures/time_entry.json";
 import unauthorizedFixture from "../fixtures/error_unauthorized.json";
 
@@ -35,8 +36,12 @@ function auth(calls: Call[]): string {
 }
 
 describe("clickup connector surface", () => {
-  it("compiles one handler per declared operation", () => {
-    expect(Object.keys(actions).sort()).toEqual(Object.keys(manifest.operations).sort());
+  it("compiles one handler per declared action", () => {
+    const actionKeys = Object.entries(manifest.operations)
+      .filter(([, operation]) => (operation as { kind?: string }).kind === "action")
+      .map(([key]) => key)
+      .sort();
+    expect(Object.keys(actions).sort()).toEqual(actionKeys);
   });
 });
 
@@ -298,6 +303,19 @@ describe("comments", () => {
       notify_all: false,
     });
     expect((result.comment as Record<string, unknown>).id).toBe("459");
+  });
+});
+
+describe("members", () => {
+  it("members.list reads a workspace's members", async () => {
+    const { calls, fetchFn } = mock(membersFixture);
+    const result = await actions["members.list"]!({ apiKey: "pk_x", teamId: "1234", fetch: fetchFn }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://api.clickup.com/api/v2/team/1234/member");
+    expect(result.members).toEqual(membersFixture.members);
+  });
+
+  it("members.list requires teamId", () => {
+    expect(() => actions["members.list"]!({})).toThrow("teamId is required");
   });
 });
 
