@@ -54,6 +54,28 @@ export async function getSegmentFromClient(
   return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the get segment request." } };
 }
 
+export function validateListSegmentsInput(input: unknown): Record<string, never> {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return {};
+}
+
+export async function listSegmentsFromClient(
+  options: { apiKey: string; fetch?: typeof fetch },
+  input: unknown
+): Promise<{ ok: true; segments: NormalizedSegment[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+  validateListSegmentsInput(input);
+  const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "segments.list" });
+  const result = await client.fetchJSON("/segments");
+  if (result.status === 200) {
+    const body = result.body as Record<string, unknown>;
+    const data = Array.isArray(body.data) ? body.data.filter(isRecord) : [];
+    return { ok: true, segments: data.map(normalizeSegment) };
+  }
+  const rl = parseKlaviyoRateLimit(result.status, result.headers);
+  if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+  return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the list segments request." } };
+}
+
 function requireString(v: unknown, f: string): string {
   if (typeof v !== "string" || !v.length) throw new Error(`${f} is required`);
   return v;

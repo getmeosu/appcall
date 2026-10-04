@@ -17,6 +17,10 @@ export type CreateCampaignInput = {
 export type GetCampaignInput = { campaignId: string };
 
 export type SendCampaignInput = { campaignId: string };
+export type UnscheduleCampaignInput = { campaignId: string };
+export type ScheduleCampaignInput = { campaignId: string; scheduleTime: string };
+export type DeleteCampaignInput = { campaignId: string };
+export type ReplicateCampaignInput = { campaignId: string };
 
 // ─── Validators ──────────────────────────────────────────────────────────────
 
@@ -39,6 +43,29 @@ export function validateGetCampaignInput(input: unknown): GetCampaignInput {
 }
 
 export function validateSendCampaignInput(input: unknown): SendCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { campaignId: requireString(input.campaignId, "campaignId") };
+}
+
+export function validateUnscheduleCampaignInput(input: unknown): UnscheduleCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { campaignId: requireString(input.campaignId, "campaignId") };
+}
+
+export function validateScheduleCampaignInput(input: unknown): ScheduleCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return {
+    campaignId: requireString(input.campaignId, "campaignId"),
+    scheduleTime: requireString(input.scheduleTime, "scheduleTime"),
+  };
+}
+
+export function validateDeleteCampaignInput(input: unknown): DeleteCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { campaignId: requireString(input.campaignId, "campaignId") };
+}
+
+export function validateReplicateCampaignInput(input: unknown): ReplicateCampaignInput {
   if (!isRecord(input)) throw new Error("input must be an object");
   return { campaignId: requireString(input.campaignId, "campaignId") };
 }
@@ -87,6 +114,49 @@ export function createCampaignsClient(options: { apiKey: string; fetch?: typeof 
       const rl = parseMailchimpRateLimit(response.status, response.headers);
       if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Mailchimp rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
       return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the send campaign request." } };
+    },
+
+    async unscheduleCampaign(input: unknown): Promise<{ ok: true; unscheduled: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+      const payload = validateUnscheduleCampaignInput(input);
+      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}/actions/unschedule`, { method: "POST" });
+      if (response.status === 204) return { ok: true, unscheduled: true };
+      if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
+      const rl = parseMailchimpRateLimit(response.status, response.headers);
+      if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Mailchimp rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the unschedule campaign request." } };
+    },
+
+    async scheduleCampaign(input: unknown): Promise<{ ok: true; scheduled: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+      const payload = validateScheduleCampaignInput(input);
+      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}/actions/schedule`, {
+        method: "POST",
+        body: JSON.stringify({ schedule_time: payload.scheduleTime }),
+      });
+      if (response.status === 204) return { ok: true, scheduled: true };
+      if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
+      const rl = parseMailchimpRateLimit(response.status, response.headers);
+      if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Mailchimp rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the schedule campaign request." } };
+    },
+
+    async deleteCampaign(input: unknown): Promise<{ ok: true; deleted: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+      const payload = validateDeleteCampaignInput(input);
+      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}`, { method: "DELETE" });
+      if (response.status === 204) return { ok: true, deleted: true };
+      if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
+      const rl = parseMailchimpRateLimit(response.status, response.headers);
+      if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Mailchimp rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the delete campaign request." } };
+    },
+
+    async replicateCampaign(input: unknown): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+      const payload = validateReplicateCampaignInput(input);
+      const response = await client.fetchJSON(`/campaigns/${payload.campaignId}/actions/replicate`, { method: "POST" });
+      if (response.status === 200) return { ok: true, campaign: normalizeCampaign(response.body as Record<string, unknown>) };
+      if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
+      const rl = parseMailchimpRateLimit(response.status, response.headers);
+      if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Mailchimp rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the replicate campaign request." } };
     },
   };
 }

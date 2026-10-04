@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("klaviyo manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("klaviyo");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -38,6 +38,21 @@ describe("klaviyo manifest", () => {
     expect(ops).toContain("events.create");
     expect(ops).toContain("segments.get");
     expect(ops).toContain("campaigns.create");
+    expect(ops).toContain("profiles.delete");
+    expect(ops).toContain("events.get");
+    expect(ops).toContain("events.list");
+    expect(ops).toContain("campaigns.get");
+    expect(ops).toContain("campaigns.update");
+    expect(ops).toContain("campaigns.send");
+    expect(ops).toContain("metrics.list");
+    expect(ops).toContain("metrics.get");
+    expect(ops).toContain("catalog.items.list");
+    expect(ops).toContain("catalog.items.get");
+    expect(ops).toContain("segments.list");
+    expect(ops).toContain("templates.list");
+    expect(ops).toContain("templates.get");
+    expect(ops).toContain("flows.list");
+    expect(ops).toContain("profiles.subscribe");
   });
 
   it("has correct models", () => {
@@ -47,6 +62,10 @@ describe("klaviyo manifest", () => {
     expect(manifest.models).toContain("profile");
     expect(manifest.models).toContain("event");
     expect(manifest.models).toContain("segment");
+    expect(manifest.models).toContain("metric");
+    expect(manifest.models).toContain("catalog-item");
+    expect(manifest.models).toContain("template");
+    expect(manifest.models).toContain("flow");
   });
 
   it("has sync operations with correct kinds", () => {
@@ -71,7 +90,10 @@ describe("klaviyo manifest", () => {
 
   it("all new actions have title, description, and object inputSchema", () => {
     const newOps = ["profiles.get", "profiles.update", "lists.create", "lists.get",
-      "profiles.addToList", "profiles.removeFromList", "events.create", "segments.get", "campaigns.create"];
+      "profiles.addToList", "profiles.removeFromList", "events.create", "segments.get", "campaigns.create",
+      "profiles.delete", "events.get", "events.list", "campaigns.get", "campaigns.update", "campaigns.send",
+      "metrics.list", "metrics.get", "catalog.items.list", "catalog.items.get", "segments.list",
+      "templates.list", "templates.get", "flows.list", "profiles.subscribe"];
     for (const op of newOps) {
       const operation = (manifest.operations as any)[op];
       expect(operation.title).toBeTruthy();

@@ -96,3 +96,148 @@ export function parseCampaignsResponse(response: unknown): { campaigns: Normaliz
   if (!Array.isArray(campaigns)) return { campaigns: [] };
   return { campaigns: campaigns.filter(isRecord).map(normalizeCampaign) };
 }
+
+export type NormalizedTemplate = {
+  id: string; provider: "mailchimp"; providerTemplateId: string;
+  name: string; type: string; active: boolean;
+  createdAt: string; updatedAt: string;
+  modelVersion: "2026-05-16"; raw: Record<string, unknown>;
+};
+
+export function normalizeTemplate(t: Record<string, unknown>): NormalizedTemplate {
+  const id = t.id == null ? "" : String(t.id);
+  return {
+    id: `mc-template:${id}`,
+    provider: "mailchimp",
+    providerTemplateId: id,
+    name: prop(t, "name"),
+    type: prop(t, "type"),
+    active: t.active === true,
+    createdAt: prop(t, "date_created"),
+    updatedAt: prop(t, "date_edited"),
+    modelVersion: "2026-05-16",
+    raw: t,
+  };
+}
+
+export function parseTemplatesResponse(response: unknown): { templates: NormalizedTemplate[]; total: number } {
+  if (!isRecord(response)) return { templates: [], total: 0 };
+  const templates = response.templates;
+  if (!Array.isArray(templates)) return { templates: [], total: typeof response.total_items === "number" ? response.total_items : 0 };
+  return {
+    templates: templates.filter(isRecord).map(normalizeTemplate),
+    total: typeof response.total_items === "number" ? response.total_items : 0,
+  };
+}
+
+export type NormalizedReport = {
+  id: string; provider: "mailchimp"; providerCampaignId: string;
+  title: string; emailsSent: number; unsubscribed: number;
+  openRate: number; clickRate: number; uniqueOpens: number; uniqueClicks: number;
+  sendTime: string;
+  modelVersion: "2026-05-16"; raw: Record<string, unknown>;
+};
+
+export function normalizeReport(r: Record<string, unknown>): NormalizedReport {
+  const opens = isRecord(r.opens) ? r.opens : {};
+  const clicks = isRecord(r.clicks) ? r.clicks : {};
+  return {
+    id: `mc-report:${prop(r, "id")}`,
+    provider: "mailchimp",
+    providerCampaignId: prop(r, "id"),
+    title: prop(r, "campaign_title"),
+    emailsSent: typeof r.emails_sent === "number" ? r.emails_sent : 0,
+    unsubscribed: typeof r.unsubscribed === "number" ? r.unsubscribed : 0,
+    openRate: typeof opens.open_rate === "number" ? opens.open_rate : 0,
+    clickRate: typeof clicks.click_rate === "number" ? clicks.click_rate : 0,
+    uniqueOpens: typeof opens.unique_opens === "number" ? opens.unique_opens : 0,
+    uniqueClicks: typeof clicks.unique_clicks === "number" ? clicks.unique_clicks : 0,
+    sendTime: prop(r, "send_time"),
+    modelVersion: "2026-05-16",
+    raw: r,
+  };
+}
+
+export type NormalizedOpen = { email: string; opensCount: number };
+export function parseOpensResponse(response: unknown): { opens: NormalizedOpen[] } {
+  if (!isRecord(response) || !Array.isArray(response.members)) return { opens: [] };
+  return {
+    opens: response.members.filter(isRecord).map((m) => ({
+      email: prop(m, "email_address"),
+      opensCount: typeof m.opens_count === "number" ? m.opens_count : 0,
+    })),
+  };
+}
+
+export type NormalizedClick = { url: string; totalClicks: number; uniqueClicks: number };
+export function parseClicksResponse(response: unknown): { clicks: NormalizedClick[] } {
+  if (!isRecord(response) || !Array.isArray(response.urls_clicked)) return { clicks: [] };
+  return {
+    clicks: response.urls_clicked.filter(isRecord).map((u) => ({
+      url: prop(u, "url"),
+      totalClicks: typeof u.total_clicks === "number" ? u.total_clicks : 0,
+      uniqueClicks: typeof u.unique_clicks === "number" ? u.unique_clicks : 0,
+    })),
+  };
+}
+
+export type NormalizedUnsubscribe = { email: string; timestamp: string; reason: string };
+export function parseUnsubscribedResponse(response: unknown): { unsubscribed: NormalizedUnsubscribe[] } {
+  if (!isRecord(response) || !Array.isArray(response.unsubscribes)) return { unsubscribed: [] };
+  return {
+    unsubscribed: response.unsubscribes.filter(isRecord).map((u) => ({
+      email: prop(u, "email_address"),
+      timestamp: prop(u, "timestamp"),
+      reason: prop(u, "reason"),
+    })),
+  };
+}
+
+export type NormalizedAutomation = {
+  id: string; provider: "mailchimp"; providerAutomationId: string;
+  title: string; status: string; emailsSent: number; audienceId: string;
+  createdAt: string;
+  modelVersion: "2026-05-16"; raw: Record<string, unknown>;
+};
+
+export function normalizeAutomation(a: Record<string, unknown>): NormalizedAutomation {
+  const settings = isRecord(a.settings) ? a.settings : {};
+  const recipients = isRecord(a.recipients) ? a.recipients : {};
+  return {
+    id: `mc-automation:${prop(a, "id")}`,
+    provider: "mailchimp",
+    providerAutomationId: prop(a, "id"),
+    title: prop(settings, "title"),
+    status: prop(a, "status"),
+    emailsSent: typeof a.emails_sent === "number" ? a.emails_sent : 0,
+    audienceId: prop(recipients, "list_id"),
+    createdAt: prop(a, "create_time"),
+    modelVersion: "2026-05-16",
+    raw: a,
+  };
+}
+
+export function parseAutomationsResponse(response: unknown): { automations: NormalizedAutomation[] } {
+  if (!isRecord(response) || !Array.isArray(response.automations)) return { automations: [] };
+  return { automations: response.automations.filter(isRecord).map(normalizeAutomation) };
+}
+
+export type NormalizedMemberNote = {
+  id: string; provider: "mailchimp"; providerNoteId: string;
+  note: string; listId: string; createdAt: string;
+  modelVersion: "2026-05-16"; raw: Record<string, unknown>;
+};
+
+export function normalizeMemberNote(n: Record<string, unknown>): NormalizedMemberNote {
+  const id = n.id == null ? "" : String(n.id);
+  return {
+    id: `mc-note:${id}`,
+    provider: "mailchimp",
+    providerNoteId: id,
+    note: prop(n, "note"),
+    listId: prop(n, "list_id"),
+    createdAt: prop(n, "created_at"),
+    modelVersion: "2026-05-16",
+    raw: n,
+  };
+}

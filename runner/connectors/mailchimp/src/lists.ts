@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { createMailchimpClient, parseMailchimpRateLimit, prop, isRecord } from "./http";
-import { normalizeContact, normalizeAudience } from "./objects";
-import type { NormalizedContact, NormalizedAudience } from "./objects";
+import { normalizeContact, normalizeAudience, normalizeMemberNote } from "./objects";
+import type { NormalizedContact, NormalizedAudience, NormalizedMemberNote } from "./objects";
 
 // ─── MD5 subscriber hash helper ──────────────────────────────────────────────
 // Mailchimp identifies members by MD5 hash of lowercased email address.
@@ -32,6 +32,9 @@ export type CreateListInput = {
 };
 
 export type GetListInput = { listId: string };
+export type UpdateListInput = { listId: string; name?: string; permissionReminder?: string };
+export type DeleteListInput = { listId: string };
+export type CreateMemberNoteInput = { listId: string; email: string; note: string };
 
 // ─── Validators ──────────────────────────────────────────────────────────────
 
@@ -105,6 +108,29 @@ export function validateCreateListInput(input: unknown): CreateListInput {
 export function validateGetListInput(input: unknown): GetListInput {
   if (!isRecord(input)) throw new Error("input must be an object");
   return { listId: requireString(input.listId, "listId") };
+}
+
+export function validateUpdateListInput(input: unknown): UpdateListInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return {
+    listId: requireString(input.listId, "listId"),
+    name: typeof input.name === "string" ? input.name : undefined,
+    permissionReminder: typeof input.permissionReminder === "string" ? input.permissionReminder : undefined,
+  };
+}
+
+export function validateDeleteListInput(input: unknown): DeleteListInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { listId: requireString(input.listId, "listId") };
+}
+
+export function validateCreateMemberNoteInput(input: unknown): CreateMemberNoteInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return {
+    listId: requireString(input.listId, "listId"),
+    email: requireString(input.email, "email"),
+    note: requireString(input.note, "note"),
+  };
 }
 
 // ─── Client ──────────────────────────────────────────────────────────────────
@@ -225,6 +251,43 @@ export function createListsClient(options: { apiKey: string; fetch?: typeof fetc
       const rl = parseMailchimpRateLimit(response.status, response.headers);
       if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Mailchimp rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
       return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the get list request." } };
+    },
+
+    async updateList(input: unknown): Promise<{ ok: true; audience: NormalizedAudience } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+      const payload = validateUpdateListInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.name !== undefined) body.name = payload.name;
+      if (payload.permissionReminder !== undefined) body.permission_reminder = payload.permissionReminder;
+      const response = await client.fetchJSON(`/lists/${payload.listId}`, { method: "PATCH", body: JSON.stringify(body) });
+      if (response.status === 200) return { ok: true, audience: normalizeAudience(response.body as Record<string, unknown>) };
+      if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "List not found." } };
+      const rl = parseMailchimpRateLimit(response.status, response.headers);
+      if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Mailchimp rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the update list request." } };
+    },
+
+    async deleteList(input: unknown): Promise<{ ok: true; deleted: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+      const payload = validateDeleteListInput(input);
+      const response = await client.fetchJSON(`/lists/${payload.listId}`, { method: "DELETE" });
+      if (response.status === 204) return { ok: true, deleted: true };
+      if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "List not found." } };
+      const rl = parseMailchimpRateLimit(response.status, response.headers);
+      if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Mailchimp rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the delete list request." } };
+    },
+
+    async createMemberNote(input: unknown): Promise<{ ok: true; note: NormalizedMemberNote } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+      const payload = validateCreateMemberNoteInput(input);
+      const hash = md5Hash(payload.email);
+      const response = await client.fetchJSON(`/lists/${payload.listId}/members/${hash}/notes`, {
+        method: "POST",
+        body: JSON.stringify({ note: payload.note }),
+      });
+      if (response.status === 200) return { ok: true, note: normalizeMemberNote(response.body as Record<string, unknown>) };
+      if (response.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Member not found." } };
+      const rl = parseMailchimpRateLimit(response.status, response.headers);
+      if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Mailchimp rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Mailchimp rejected the create member note request." } };
     },
   };
 }

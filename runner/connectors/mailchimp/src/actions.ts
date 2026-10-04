@@ -8,14 +8,24 @@ import {
   validateAddMemberTagsInput,
   validateCreateListInput,
   validateGetListInput,
+  validateUpdateListInput,
+  validateDeleteListInput,
+  validateCreateMemberNoteInput,
   createListsClient,
 } from "./lists";
 import {
   validateCreateCampaignInput,
   validateGetCampaignInput,
   validateSendCampaignInput,
+  validateUnscheduleCampaignInput,
+  validateScheduleCampaignInput,
+  validateDeleteCampaignInput,
+  validateReplicateCampaignInput,
   createCampaignsClient,
 } from "./campaigns";
+import { validateListTemplatesInput, validateGetTemplateInput, createTemplatesClient } from "./templates";
+import { validateCampaignReportInput, createReportsClient } from "./reports";
+import { validateListAutomationsInput, validateGetAutomationInput, createAutomationsClient } from "./automations";
 
 // ─── Existing: contacts.create ────────────────────────────────────────────────
 
@@ -215,7 +225,209 @@ export function sendCampaign(input: unknown): Record<string, unknown> | Promise<
   return { connector: "mailchimp", action: "campaigns.send", source: "connector", validated: validateSendCampaignInput(input) };
 }
 
+export function unscheduleCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.unschedule" })
+      .unscheduleCampaign(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "campaigns.unschedule", source: "connector", unscheduled: true };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "campaigns.unschedule", source: "connector", validated: validateUnscheduleCampaignInput(input) };
+}
+
+export function scheduleCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.schedule" })
+      .scheduleCampaign(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "campaigns.schedule", source: "connector", scheduled: true };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "campaigns.schedule", source: "connector", validated: validateScheduleCampaignInput(input) };
+}
+
+export function deleteCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.delete" })
+      .deleteCampaign(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "campaigns.delete", source: "connector", deleted: true };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "campaigns.delete", source: "connector", validated: validateDeleteCampaignInput(input) };
+}
+
+export function replicateCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createCampaignsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "campaigns.replicate" })
+      .replicateCampaign(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "campaigns.replicate", source: "connector", campaign: result.campaign };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "campaigns.replicate", source: "connector", validated: validateReplicateCampaignInput(input) };
+}
+
+export function updateList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.update" })
+      .updateList(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "lists.update", source: "connector", audience: result.audience };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "lists.update", source: "connector", validated: validateUpdateListInput(input) };
+}
+
+export function deleteList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "lists.delete" })
+      .deleteList(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "lists.delete", source: "connector", deleted: true };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "lists.delete", source: "connector", validated: validateDeleteListInput(input) };
+}
+
+export function createMemberNote(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createListsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "members.notes.create" })
+      .createMemberNote(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "members.notes.create", source: "connector", note: result.note };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "members.notes.create", source: "connector", validated: validateCreateMemberNoteInput(input) };
+}
+
+export function listTemplates(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createTemplatesClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "templates.list" })
+      .listTemplates(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "templates.list", source: "connector", templates: result.templates };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "templates.list", source: "connector", validated: validateListTemplatesInput(input) };
+}
+
+export function getTemplate(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createTemplatesClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "templates.get" })
+      .getTemplate(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "templates.get", source: "connector", template: result.template };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "templates.get", source: "connector", validated: validateGetTemplateInput(input) };
+}
+
+export function getReportSummary(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createReportsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "reports.summary" })
+      .getSummary(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "reports.summary", source: "connector", report: result.report };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "reports.summary", source: "connector", validated: validateCampaignReportInput(input) };
+}
+
+export function getReportOpens(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createReportsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "reports.opens" })
+      .getOpens(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "reports.opens", source: "connector", opens: result.opens };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "reports.opens", source: "connector", validated: validateCampaignReportInput(input) };
+}
+
+export function getReportClicks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createReportsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "reports.clicks" })
+      .getClicks(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "reports.clicks", source: "connector", clicks: result.clicks };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "reports.clicks", source: "connector", validated: validateCampaignReportInput(input) };
+}
+
+export function getReportUnsubscribed(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createReportsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "reports.unsubscribed" })
+      .getUnsubscribed(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "reports.unsubscribed", source: "connector", unsubscribed: result.unsubscribed };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "reports.unsubscribed", source: "connector", validated: validateCampaignReportInput(input) };
+}
+
+export function listAutomations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createAutomationsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "automations.list" })
+      .listAutomations(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "automations.list", source: "connector", automations: result.automations };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "automations.list", source: "connector", validated: validateListAutomationsInput(input) };
+}
+
+export function getAutomation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return createAutomationsClient({ apiKey: input.apiKey, fetch: fetchFn, operation: "automations.get" })
+      .getAutomation(input)
+      .then((result) => {
+        if (result.ok) return { connector: "mailchimp", action: "automations.get", source: "connector", automation: result.automation };
+        throwConnectorError(result.error);
+      });
+  }
+  return { connector: "mailchimp", action: "automations.get", source: "connector", validated: validateGetAutomationInput(input) };
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function throwConnectorError(error: { code: string; message: string; retryAfterSeconds?: number }): never {
+  if (error.code === "CONNECTOR_RATE_LIMITED") {
+    throw { ok: false, code: error.code, message: error.message, retryAfterSeconds: error.retryAfterSeconds };
+  }
+  throw { ok: false, code: error.code, message: error.message };
+}
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);

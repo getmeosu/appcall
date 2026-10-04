@@ -83,6 +83,54 @@ export async function createEventFromClient(
   return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the create event request." } };
 }
 
+export type GetEventInput = { eventId: string };
+export type ListEventsInput = Record<string, never>;
+
+export function validateGetEventInput(input: unknown): GetEventInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { eventId: requireString(input.eventId, "eventId") };
+}
+
+export function validateListEventsInput(input: unknown): ListEventsInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return {};
+}
+
+export async function getEventFromClient(
+  options: { apiKey: string; fetch?: typeof fetch },
+  input: unknown
+): Promise<{ ok: true; event: NormalizedEvent } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+  const payload = validateGetEventInput(input);
+  const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "events.get" });
+  const result = await client.fetchJSON(`/events/${payload.eventId}`);
+  if (result.status === 200) {
+    const body = result.body as Record<string, unknown>;
+    const data = isRecord(body.data) ? body.data : { id: payload.eventId, attributes: {} };
+    return { ok: true, event: normalizeEvent(data) };
+  }
+  const rl = parseKlaviyoRateLimit(result.status, result.headers);
+  if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+  if (result.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Event not found." } };
+  return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the get event request." } };
+}
+
+export async function listEventsFromClient(
+  options: { apiKey: string; fetch?: typeof fetch },
+  input: unknown
+): Promise<{ ok: true; events: NormalizedEvent[] } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+  validateListEventsInput(input);
+  const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "events.list" });
+  const result = await client.fetchJSON("/events");
+  if (result.status === 200) {
+    const body = result.body as Record<string, unknown>;
+    const data = Array.isArray(body.data) ? body.data.filter(isRecord) : [];
+    return { ok: true, events: data.map(normalizeEvent) };
+  }
+  const rl = parseKlaviyoRateLimit(result.status, result.headers);
+  if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+  return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the list events request." } };
+}
+
 function requireString(v: unknown, f: string): string {
   if (typeof v !== "string" || !v.length) throw new Error(`${f} is required`);
   return v;

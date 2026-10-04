@@ -69,6 +69,91 @@ export async function createCampaignFromClient(
   return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the create campaign request." } };
 }
 
+export type GetCampaignInput = { campaignId: string };
+export type UpdateCampaignInput = { campaignId: string; name?: string };
+export type SendCampaignInput = { campaignId: string };
+
+export function validateGetCampaignInput(input: unknown): GetCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { campaignId: requireString(input.campaignId, "campaignId") };
+}
+
+export function validateUpdateCampaignInput(input: unknown): UpdateCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return {
+    campaignId: requireString(input.campaignId, "campaignId"),
+    name: typeof input.name === "string" ? input.name : undefined,
+  };
+}
+
+export function validateSendCampaignInput(input: unknown): SendCampaignInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { campaignId: requireString(input.campaignId, "campaignId") };
+}
+
+export async function getCampaignFromClient(
+  options: { apiKey: string; fetch?: typeof fetch },
+  input: unknown
+): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+  const payload = validateGetCampaignInput(input);
+  const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "campaigns.get" });
+  const result = await client.fetchJSON(`/campaigns/${payload.campaignId}`);
+  if (result.status === 200) {
+    const body = result.body as Record<string, unknown>;
+    const data = isRecord(body.data) ? body.data : { id: payload.campaignId, attributes: {} };
+    return { ok: true, campaign: normalizeCampaign(data) };
+  }
+  const rl = parseKlaviyoRateLimit(result.status, result.headers);
+  if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+  if (result.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
+  return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the get campaign request." } };
+}
+
+export async function updateCampaignFromClient(
+  options: { apiKey: string; fetch?: typeof fetch },
+  input: unknown
+): Promise<{ ok: true; campaign: NormalizedCampaign } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+  const payload = validateUpdateCampaignInput(input);
+  const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "campaigns.update" });
+  const attrs: Record<string, unknown> = {};
+  if (payload.name !== undefined) attrs.name = payload.name;
+  const result = await client.fetchJSON(`/campaigns/${payload.campaignId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ data: { type: "campaign", id: payload.campaignId, attributes: attrs } }),
+  });
+  if (result.status === 200) {
+    const body = result.body as Record<string, unknown>;
+    const data = isRecord(body.data) ? body.data : { id: payload.campaignId, attributes: attrs };
+    return { ok: true, campaign: normalizeCampaign(data) };
+  }
+  const rl = parseKlaviyoRateLimit(result.status, result.headers);
+  if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+  if (result.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
+  return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the update campaign request." } };
+}
+
+export async function sendCampaignFromClient(
+  options: { apiKey: string; fetch?: typeof fetch },
+  input: unknown
+): Promise<{ ok: true; job: { id: string; status: string } } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+  const payload = validateSendCampaignInput(input);
+  const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "campaigns.send" });
+  const result = await client.fetchJSON("/campaign-send-jobs", {
+    method: "POST",
+    body: JSON.stringify({ data: { type: "campaign-send-job", id: payload.campaignId } }),
+  });
+  if (result.status === 202 || result.status === 201 || result.status === 200) {
+    const body = result.body as Record<string, unknown>;
+    const data = isRecord(body.data) ? body.data : { id: payload.campaignId, attributes: {} };
+    const attrs = isRecord(data.attributes) ? data.attributes : {};
+    return { ok: true, job: { id: typeof data.id === "string" ? data.id : payload.campaignId, status: typeof attrs.status === "string" ? attrs.status : "" } };
+  }
+  const rl = parseKlaviyoRateLimit(result.status, result.headers);
+  if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+  if (result.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Campaign not found." } };
+  return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the send campaign request." } };
+}
+
 function requireString(v: unknown, f: string): string {
   if (typeof v !== "string" || !v.length) throw new Error(`${f} is required`);
   return v;

@@ -144,6 +144,80 @@ export async function removeProfilesFromListFromClient(
   return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the remove profiles from list request." } };
 }
 
+export type DeleteProfileInput = { profileId: string };
+
+export function validateDeleteProfileInput(input: unknown): DeleteProfileInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { profileId: requireString(input.profileId, "profileId") };
+}
+
+export async function deleteProfileFromClient(
+  options: { apiKey: string; fetch?: typeof fetch },
+  input: unknown
+): Promise<{ ok: true; deleted: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+  const payload = validateDeleteProfileInput(input);
+  const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "profiles.delete" });
+  const result = await client.fetchJSON(`/profiles/${payload.profileId}`, { method: "DELETE" });
+  if (result.status === 204 || result.status === 200) return { ok: true, deleted: true };
+  const rl = parseKlaviyoRateLimit(result.status, result.headers);
+  if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+  if (result.status === 404) return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Profile not found." } };
+  return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the delete profile request." } };
+}
+
+export type SubscribeProfilesInput = { email: string; listId?: string };
+
+export function validateSubscribeProfilesInput(input: unknown): SubscribeProfilesInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return {
+    email: requireString(input.email, "email"),
+    listId: typeof input.listId === "string" ? input.listId : undefined,
+  };
+}
+
+export async function subscribeProfilesFromClient(
+  options: { apiKey: string; fetch?: typeof fetch },
+  input: unknown
+): Promise<{ ok: true; job: { id: string; status: string } } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }> {
+  const payload = validateSubscribeProfilesInput(input);
+  const client = createKlaviyoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "profiles.subscribe" });
+  const body: Record<string, unknown> = {
+    data: {
+      type: "profile-subscription-bulk-create-job",
+      attributes: {
+        profiles: {
+          data: [{
+            type: "profile",
+            attributes: {
+              email: payload.email,
+              subscriptions: { email: { marketing: { consent: "SUBSCRIBED" } } },
+            },
+          }],
+        },
+      },
+    },
+  };
+  if (payload.listId) {
+    (body.data as Record<string, unknown>).relationships = {
+      list: { data: { type: "list", id: payload.listId } },
+    };
+  }
+  const result = await client.fetchJSON("/profile-subscription-bulk-create-jobs", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  if (result.status === 202 || result.status === 201 || result.status === 200) {
+    const data = isRecord(result.body as Record<string, unknown>) && isRecord((result.body as Record<string, unknown>).data)
+      ? (result.body as Record<string, unknown>).data as Record<string, unknown>
+      : { id: "", attributes: {} };
+    const attrs = isRecord(data.attributes) ? data.attributes : {};
+    return { ok: true, job: { id: prop(data, "id"), status: prop(attrs, "status") } };
+  }
+  const rl = parseKlaviyoRateLimit(result.status, result.headers);
+  if (rl.limited) return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Klaviyo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+  return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Klaviyo rejected the subscribe profiles request." } };
+}
+
 function requireString(v: unknown, f: string): string {
   if (typeof v !== "string" || !v.length) throw new Error(`${f} is required`);
   return v;

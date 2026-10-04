@@ -7,15 +7,23 @@ export {
   validateUpdateProfileInput,
   validateAddProfilesToListInput,
   validateRemoveProfilesFromListInput,
+  validateDeleteProfileInput,
+  validateSubscribeProfilesInput,
   getProfileFromClient,
   updateProfileFromClient,
   addProfilesToListFromClient,
   removeProfilesFromListFromClient,
+  deleteProfileFromClient,
+  subscribeProfilesFromClient,
 } from "./profiles";
 export { validateCreateListInput, validateGetListInput, createListFromClient, getListFromClient } from "./lists_actions";
-export { validateCreateEventInput, createEventFromClient, normalizeEvent } from "./events_actions";
-export { validateGetSegmentInput, getSegmentFromClient, normalizeSegment } from "./segments_actions";
-export { validateCreateCampaignInput, createCampaignFromClient } from "./campaigns_actions";
+export { validateCreateEventInput, validateGetEventInput, validateListEventsInput, createEventFromClient, getEventFromClient, listEventsFromClient, normalizeEvent } from "./events_actions";
+export { validateGetSegmentInput, validateListSegmentsInput, getSegmentFromClient, listSegmentsFromClient, normalizeSegment } from "./segments_actions";
+export { validateCreateCampaignInput, validateGetCampaignInput, validateUpdateCampaignInput, validateSendCampaignInput, createCampaignFromClient, getCampaignFromClient, updateCampaignFromClient, sendCampaignFromClient } from "./campaigns_actions";
+export { validateListMetricsInput, validateGetMetricInput, listMetricsFromClient, getMetricFromClient } from "./metrics_actions";
+export { validateListCatalogItemsInput, validateGetCatalogItemInput, listCatalogItemsFromClient, getCatalogItemFromClient } from "./catalog_actions";
+export { validateListTemplatesInput, validateGetTemplateInput, listTemplatesFromClient, getTemplateFromClient } from "./templates_actions";
+export { validateListFlowsInput, listFlowsFromClient } from "./flows_actions";
 
 // ─── contacts.create (existing) ───────────────────────────────────────────────
 
@@ -187,6 +195,183 @@ export async function createCampaign(input: unknown): Promise<Record<string, unk
   }
   const { validateCreateCampaignInput } = await import("./campaigns_actions");
   return { connector: "klaviyo", action: "campaigns.create", source: "connector", validated: validateCreateCampaignInput(input) };
+}
+
+function throwKlaviyo(err: { code: string; message: string; retryAfterSeconds?: number }): never {
+  throw { ok: false, code: err.code, message: err.message, ...(err.retryAfterSeconds !== undefined ? { retryAfterSeconds: err.retryAfterSeconds } : {}) };
+}
+
+function credentialed(input: unknown): input is Record<string, unknown> & { apiKey: string } {
+  return isRecord(input) && typeof input.apiKey === "string";
+}
+
+function fetchFrom(input: Record<string, unknown>): typeof fetch | undefined {
+  return typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+}
+
+export async function deleteProfile(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { deleteProfileFromClient } = await import("./profiles");
+    const result = await deleteProfileFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "profiles.delete", source: "connector", deleted: true };
+    throwKlaviyo(result.error);
+  }
+  const { validateDeleteProfileInput } = await import("./profiles");
+  return { connector: "klaviyo", action: "profiles.delete", source: "connector", validated: validateDeleteProfileInput(input) };
+}
+
+export async function getEvent(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { getEventFromClient } = await import("./events_actions");
+    const result = await getEventFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "events.get", source: "connector", event: result.event };
+    throwKlaviyo(result.error);
+  }
+  const { validateGetEventInput } = await import("./events_actions");
+  return { connector: "klaviyo", action: "events.get", source: "connector", validated: validateGetEventInput(input) };
+}
+
+export async function listEvents(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { listEventsFromClient } = await import("./events_actions");
+    const result = await listEventsFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "events.list", source: "connector", events: result.events };
+    throwKlaviyo(result.error);
+  }
+  const { validateListEventsInput } = await import("./events_actions");
+  return { connector: "klaviyo", action: "events.list", source: "connector", validated: validateListEventsInput(input) };
+}
+
+export async function getCampaign(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { getCampaignFromClient } = await import("./campaigns_actions");
+    const result = await getCampaignFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "campaigns.get", source: "connector", campaign: result.campaign };
+    throwKlaviyo(result.error);
+  }
+  const { validateGetCampaignInput } = await import("./campaigns_actions");
+  return { connector: "klaviyo", action: "campaigns.get", source: "connector", validated: validateGetCampaignInput(input) };
+}
+
+export async function updateCampaign(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { updateCampaignFromClient } = await import("./campaigns_actions");
+    const result = await updateCampaignFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "campaigns.update", source: "connector", campaign: result.campaign };
+    throwKlaviyo(result.error);
+  }
+  const { validateUpdateCampaignInput } = await import("./campaigns_actions");
+  return { connector: "klaviyo", action: "campaigns.update", source: "connector", validated: validateUpdateCampaignInput(input) };
+}
+
+export async function sendCampaign(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { sendCampaignFromClient } = await import("./campaigns_actions");
+    const result = await sendCampaignFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "campaigns.send", source: "connector", job: result.job };
+    throwKlaviyo(result.error);
+  }
+  const { validateSendCampaignInput } = await import("./campaigns_actions");
+  return { connector: "klaviyo", action: "campaigns.send", source: "connector", validated: validateSendCampaignInput(input) };
+}
+
+export async function listMetrics(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { listMetricsFromClient } = await import("./metrics_actions");
+    const result = await listMetricsFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "metrics.list", source: "connector", metrics: result.metrics };
+    throwKlaviyo(result.error);
+  }
+  const { validateListMetricsInput } = await import("./metrics_actions");
+  return { connector: "klaviyo", action: "metrics.list", source: "connector", validated: validateListMetricsInput(input) };
+}
+
+export async function getMetric(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { getMetricFromClient } = await import("./metrics_actions");
+    const result = await getMetricFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "metrics.get", source: "connector", metric: result.metric };
+    throwKlaviyo(result.error);
+  }
+  const { validateGetMetricInput } = await import("./metrics_actions");
+  return { connector: "klaviyo", action: "metrics.get", source: "connector", validated: validateGetMetricInput(input) };
+}
+
+export async function listCatalogItems(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { listCatalogItemsFromClient } = await import("./catalog_actions");
+    const result = await listCatalogItemsFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "catalog.items.list", source: "connector", items: result.items };
+    throwKlaviyo(result.error);
+  }
+  const { validateListCatalogItemsInput } = await import("./catalog_actions");
+  return { connector: "klaviyo", action: "catalog.items.list", source: "connector", validated: validateListCatalogItemsInput(input) };
+}
+
+export async function getCatalogItem(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { getCatalogItemFromClient } = await import("./catalog_actions");
+    const result = await getCatalogItemFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "catalog.items.get", source: "connector", item: result.item };
+    throwKlaviyo(result.error);
+  }
+  const { validateGetCatalogItemInput } = await import("./catalog_actions");
+  return { connector: "klaviyo", action: "catalog.items.get", source: "connector", validated: validateGetCatalogItemInput(input) };
+}
+
+export async function listSegments(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { listSegmentsFromClient } = await import("./segments_actions");
+    const result = await listSegmentsFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "segments.list", source: "connector", segments: result.segments };
+    throwKlaviyo(result.error);
+  }
+  const { validateListSegmentsInput } = await import("./segments_actions");
+  return { connector: "klaviyo", action: "segments.list", source: "connector", validated: validateListSegmentsInput(input) };
+}
+
+export async function listTemplates(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { listTemplatesFromClient } = await import("./templates_actions");
+    const result = await listTemplatesFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "templates.list", source: "connector", templates: result.templates };
+    throwKlaviyo(result.error);
+  }
+  const { validateListTemplatesInput } = await import("./templates_actions");
+  return { connector: "klaviyo", action: "templates.list", source: "connector", validated: validateListTemplatesInput(input) };
+}
+
+export async function getTemplate(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { getTemplateFromClient } = await import("./templates_actions");
+    const result = await getTemplateFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "templates.get", source: "connector", template: result.template };
+    throwKlaviyo(result.error);
+  }
+  const { validateGetTemplateInput } = await import("./templates_actions");
+  return { connector: "klaviyo", action: "templates.get", source: "connector", validated: validateGetTemplateInput(input) };
+}
+
+export async function listFlows(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { listFlowsFromClient } = await import("./flows_actions");
+    const result = await listFlowsFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "flows.list", source: "connector", flows: result.flows };
+    throwKlaviyo(result.error);
+  }
+  const { validateListFlowsInput } = await import("./flows_actions");
+  return { connector: "klaviyo", action: "flows.list", source: "connector", validated: validateListFlowsInput(input) };
+}
+
+export async function subscribeProfiles(input: unknown): Promise<Record<string, unknown>> {
+  if (credentialed(input)) {
+    const { subscribeProfilesFromClient } = await import("./profiles");
+    const result = await subscribeProfilesFromClient({ apiKey: input.apiKey, fetch: fetchFrom(input) }, input);
+    if (result.ok) return { connector: "klaviyo", action: "profiles.subscribe", source: "connector", job: result.job };
+    throwKlaviyo(result.error);
+  }
+  const { validateSubscribeProfilesInput } = await import("./profiles");
+  return { connector: "klaviyo", action: "profiles.subscribe", source: "connector", validated: validateSubscribeProfilesInput(input) };
 }
 
 function requireString(v: unknown, f: string): string {

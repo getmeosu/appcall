@@ -1,7 +1,7 @@
 {
   "key": "mailchimp",
   "name": "Mailchimp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["email-marketing"],
   "auth": {
@@ -377,11 +377,401 @@
           "sent": { "type": "boolean", "description": "True when the campaign was successfully sent." }
         }
       }
+    },
+    "campaigns.unschedule": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Unschedule Campaign",
+      "description": "Cancel a previously scheduled Mailchimp campaign so it is no longer queued to send.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID to unschedule." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "unscheduled": { "type": "boolean" }
+        }
+      }
+    },
+    "campaigns.schedule": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Schedule Campaign",
+      "description": "Schedule a Mailchimp campaign to send at a specific UTC time.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID to schedule." },
+          "scheduleTime": { "type": "string", "description": "ISO 8601 UTC datetime when the campaign should send." }
+        },
+        "required": ["campaignId", "scheduleTime"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "scheduled": { "type": "boolean" }
+        }
+      }
+    },
+    "campaigns.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Campaign",
+      "description": "Permanently delete a Mailchimp campaign by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID to delete." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "campaigns.replicate": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Replicate Campaign",
+      "description": "Create a draft copy of an existing Mailchimp campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID to replicate." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "campaign": { "type": "object" }
+        }
+      }
+    },
+    "lists.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Update Audience List",
+      "description": "Update a Mailchimp audience list name or permission reminder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string", "description": "The Mailchimp audience (list) ID to update." },
+          "name": { "type": "string", "description": "Updated audience name." },
+          "permissionReminder": { "type": "string", "description": "Updated permission reminder shown to subscribers." }
+        },
+        "required": ["listId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "audience": { "type": "object" }
+        }
+      }
+    },
+    "lists.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Audience List",
+      "description": "Permanently delete a Mailchimp audience (list) by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string", "description": "The Mailchimp audience (list) ID to delete." }
+        },
+        "required": ["listId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "members.notes.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Member Note",
+      "description": "Add a note to a Mailchimp audience member identified by email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "string", "description": "The Mailchimp audience (list) ID." },
+          "email": { "type": "string", "description": "Email address of the member." },
+          "note": { "type": "string", "description": "Note text to attach to the member." }
+        },
+        "required": ["listId", "email", "note"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "note": { "type": "object" }
+        }
+      }
+    },
+    "templates.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Templates",
+      "description": "List Mailchimp email templates available in the connected account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "count": { "type": "number", "description": "Optional page size." },
+          "offset": { "type": "number", "description": "Optional pagination offset." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "templates": { "type": "array" }
+        }
+      }
+    },
+    "templates.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Template",
+      "description": "Retrieve a Mailchimp email template by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateId": { "type": "string", "description": "The Mailchimp template ID." }
+        },
+        "required": ["templateId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "template": { "type": "object" }
+        }
+      }
+    },
+    "reports.summary": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Campaign Report Summary",
+      "description": "Retrieve aggregate send, open, click, bounce, and unsubscribe stats for a sent Mailchimp campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID whose report to retrieve." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "report": { "type": "object" }
+        }
+      }
+    },
+    "reports.opens": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Campaign Open Details",
+      "description": "List members who opened a sent Mailchimp campaign and how many times they opened it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "opens": { "type": "array" }
+        }
+      }
+    },
+    "reports.clicks": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Campaign Click Details",
+      "description": "List URLs clicked in a sent Mailchimp campaign with total and unique click counts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "clicks": { "type": "array" }
+        }
+      }
+    },
+    "reports.unsubscribed": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Campaign Unsubscribes",
+      "description": "List members who unsubscribed from a sent Mailchimp campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "description": "The Mailchimp campaign ID." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "unsubscribed": { "type": "array" }
+        }
+      }
+    },
+    "automations.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Automations",
+      "description": "List Mailchimp automation workflows in the connected account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "automations": { "type": "array" }
+        }
+      }
+    },
+    "automations.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Automation",
+      "description": "Retrieve a Mailchimp automation workflow by ID, including status and send stats.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "automationId": { "type": "string", "description": "The Mailchimp automation workflow ID." }
+        },
+        "required": ["automationId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "automation": { "type": "object" }
+        }
+      }
+    },
+    "webhook.subscribe": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
+    },
+    "webhook.unsubscribe": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
+    },
+    "webhook.campaign_sent": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
+    },
+    "webhook.cleaned": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
     }
   },
   "models": [
     "contact",
     "audience",
-    "campaign"
+    "campaign",
+    "template",
+    "report",
+    "automation",
+    "note"
   ]
 }
