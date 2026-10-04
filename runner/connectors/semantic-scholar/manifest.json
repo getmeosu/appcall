@@ -1,1 +1,1230 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Semantic Scholar API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["utility"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"x-api-key","value":"{{apiKey}}"},"baseUrl":"https://api.semanticscholar.org","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["error","message","detail"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"semantic-scholar","models":["paper","author"],"name":"Semantic Scholar","network":{"allowedHosts":["api.semanticscholar.org"]},"operations":{"authors.get":{"description":"Get a Semantic Scholar author by author ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"authorId":{"minLength":1,"type":"string"},"fields":{"minLength":1,"type":"string"}},"required":["authorId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/graph/v1/author/{{authorId}}","query":{"fields":"{{fields}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get author","validationMode":"strict-generated"},"authors.papers.list":{"description":"List papers written by a Semantic Scholar author.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"authorId":{"minLength":1,"type":"string"},"fields":{"minLength":1,"type":"string"},"limit":{"maximum":100,"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"}},"required":["authorId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/graph/v1/author/{{authorId}}/papers","query":{"fields":"{{fields}}","limit":"{{limit}}","offset":"{{offset}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List author papers","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Semantic Scholar API key with the documented example paper lookup.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/graph/v1/paper/649def34f8be52c8b66281af98ae884c09aef38b","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"papers.authors.list":{"description":"List authors for a Semantic Scholar paper.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"fields":{"minLength":1,"type":"string"},"limit":{"maximum":100,"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"},"paperId":{"minLength":1,"type":"string"}},"required":["paperId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/graph/v1/paper/{{paperId}}/authors","query":{"fields":"{{fields}}","limit":"{{limit}}","offset":"{{offset}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List paper authors","validationMode":"strict-generated"},"papers.get":{"description":"Get a Semantic Scholar paper by paper ID or external identifier.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"fields":{"minLength":1,"type":"string"},"paperId":{"minLength":1,"type":"string"}},"required":["paperId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/graph/v1/paper/{{paperId}}","query":{"fields":"{{fields}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get paper","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "semantic-scholar",
+  "name": "Semantic Scholar",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Semantic Scholar API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.semanticscholar.org"
+    ]
+  },
+  "models": [
+    "paper",
+    "author",
+    "snippet",
+    "dataset",
+    "recommendation"
+  ],
+  "http": {
+    "baseUrl": "https://api.semanticscholar.org",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "x-api-key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message",
+        "detail"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Semantic Scholar API key with the documented example paper lookup.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/paper/649def34f8be52c8b66281af98ae884c09aef38b",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "papers.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get paper",
+      "description": "Get a Semantic Scholar paper by paper ID or external identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paperId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "paperId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/paper/{{paperId}}",
+        "query": {
+          "fields": "{{fields}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "authors.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get author",
+      "description": "Get a Semantic Scholar author by author ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "authorId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "authorId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/author/{{authorId}}",
+        "query": {
+          "fields": "{{fields}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "papers.authors.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List paper authors",
+      "description": "List authors for a Semantic Scholar paper.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paperId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "paperId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/paper/{{paperId}}/authors",
+        "query": {
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "authors.papers.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List author papers",
+      "description": "List papers written by a Semantic Scholar author.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "authorId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "authorId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/author/{{authorId}}/papers",
+        "query": {
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "papers.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search papers",
+      "description": "Search Semantic Scholar papers by relevance query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query.",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum results.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Result offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/paper/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "papers.search.bulk": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Bulk search papers",
+      "description": "Bulk-search Semantic Scholar papers with a match query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Bulk match query.",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          },
+          "token": {
+            "type": "string",
+            "description": "Continuation token."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort as field:order."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/paper/search/bulk",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "fields": "{{fields}}",
+          "token": "{{token}}",
+          "sort": "{{sort}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "papers.search.match": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Match paper title",
+      "description": "Find the Semantic Scholar paper that best matches a title query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Title query.",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/paper/search/match",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "fields": "{{fields}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "papers.autocomplete": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Autocomplete papers",
+      "description": "Suggest Semantic Scholar paper completions for a partial query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Partial paper query.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/paper/autocomplete",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "papers.citations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List paper citations",
+      "description": "List papers that cite a Semantic Scholar paper.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paperId": {
+            "type": "string",
+            "description": "Paper ID or external identifier.",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum results.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Result offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "paperId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/paper/{{paperId}}/citations",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "papers.references.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List paper references",
+      "description": "List papers referenced by a Semantic Scholar paper.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paperId": {
+            "type": "string",
+            "description": "Paper ID or external identifier.",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum results.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Result offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "paperId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/paper/{{paperId}}/references",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "papers.batch": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get papers batch",
+      "description": "Get details for multiple Semantic Scholar papers by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "description": "Paper IDs to fetch.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graph/v1/paper/batch",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        },
+        "body": {
+          "ids": "{{ids}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "authors.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search authors",
+      "description": "Search Semantic Scholar authors by name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query.",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum results.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Result offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/author/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "authors.batch": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get authors batch",
+      "description": "Get details for multiple Semantic Scholar authors by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "description": "Author IDs to fetch.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/graph/v1/author/batch",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}"
+        },
+        "body": {
+          "ids": "{{ids}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "snippets.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search snippets",
+      "description": "Search Semantic Scholar paper snippets matching a query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Snippet search query.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum results.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Result offset.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/graph/v1/snippet/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recommendations.forpaper": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Recommend papers for paper",
+      "description": "Get Semantic Scholar paper recommendations from a single seed paper.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paperId": {
+            "type": "string",
+            "description": "Paper ID or external identifier.",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum recommendations.",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "from": {
+            "type": "string",
+            "enum": [
+              "recent",
+              "all-cs"
+            ],
+            "description": "Recommendation pool."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "paperId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/recommendations/v1/papers/forpaper/{{paperId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "limit": "{{limit}}",
+          "from": "{{from}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recommendations.papers": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Recommend papers from lists",
+      "description": "Get Semantic Scholar recommendations from positive and negative example papers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "positivePaperIds": {
+            "type": "array",
+            "description": "Positive example paper IDs.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "negativePaperIds": {
+            "type": "array",
+            "description": "Negative example paper IDs.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated fields to return."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum recommendations.",
+            "minimum": 1,
+            "maximum": 500
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "positivePaperIds"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/recommendations/v1/papers",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "{{fields}}",
+          "limit": "{{limit}}"
+        },
+        "body": {
+          "positivePaperIds": "{{positivePaperIds}}",
+          "negativePaperIds": "{{negativePaperIds}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.releases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List dataset releases",
+      "description": "List available Semantic Scholar Academic Graph dataset releases.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/v1/release",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.release.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get dataset release",
+      "description": "Get a Semantic Scholar dataset release and its dataset catalog.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "releaseId": {
+            "type": "string",
+            "description": "Release ID or latest.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "releaseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/v1/release/{{releaseId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datasets.dataset.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get dataset files",
+      "description": "Get download links for one dataset within a Semantic Scholar release.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "releaseId": {
+            "type": "string",
+            "description": "Release ID or latest.",
+            "minLength": 1
+          },
+          "datasetName": {
+            "type": "string",
+            "description": "Dataset name.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "releaseId",
+          "datasetName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasets/v1/release/{{releaseId}}/dataset/{{datasetName}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

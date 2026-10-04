@@ -14,7 +14,7 @@ Successful responses are raw TaxJar JSON under AppCall `data`. Writes, `POST /ta
 
 ## Adaptations
 
-Pinned source and official docs agree on Bearer auth, `/v2`, and `x-api-version: 2022-01-24`. Native category is `accounting` (source Finance/Data are not in the Rust CATEGORIES allowlist). The upstream user-agent and GET `Content-Type` are not sent. Historical 2022 HackerOne account-takeover bugs on `app.taxjar.com` are recorded as remediated.
+Version 0.2.0 deepens customers, order transactions, and refund transactions to list/get/create/update/delete, plus address validation, VAT validation, and summarized rates. TaxJar has no vendor webhooks. Billed `POST /taxes` and `GET /rates/{zip}` remain omitted. Pinned source and official docs agree on Bearer auth, `/v2`, and `x-api-version: 2022-01-24`.
 
 ## License and evidence
 
