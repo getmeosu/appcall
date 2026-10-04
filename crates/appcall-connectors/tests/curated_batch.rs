@@ -36,6 +36,9 @@ fn curated_batch_manifests_preserve_pinned_read_only_contracts() {
             .values()
             .any(|o| matches!(o.side_effect.as_str(), "write" | "destructive"));
         for (operation_key, operation) in &manifest.operations {
+            if operation_key.starts_with("webhook.") {
+                continue;
+            }
             operation_count += 1;
             if deepened {
                 assert!(

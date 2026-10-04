@@ -1,7 +1,17 @@
 {
+  "key": "altoviz",
+  "name": "Altoviz",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "accounting"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,138 +19,169 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "accounting"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.altoviz.com"
+    ]
+  },
+  "models": [
+    "customer",
+    "product",
+    "invoice",
+    "quote",
+    "contact",
+    "supplier"
+  ],
   "http": {
+    "baseUrl": "https://api.altoviz.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "x-api-key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.altoviz.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "errors"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "altoviz",
-  "models": [
-    "customer"
-  ],
-  "name": "Altoviz",
-  "network": {
-    "allowedHosts": [
-      "api.altoviz.com"
-    ]
-  },
   "operations": {
-    "customers.find": {
-      "description": "Find Altoviz customers by email, internal id, or customer number.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "email": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "internalId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "number": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
+    "healthcheck": {
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Altoviz API key with a one-row customer list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1/customers/find",
-        "query": {
-          "email": "{{email}}",
-          "internalId": "{{internalId}}",
-          "number": "{{number}}"
-        },
+        "path": "/v1/customers",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "PageIndex": 1,
+          "PageSize": 1
+        }
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Find customers",
-      "validationMode": "strict-generated"
-    },
-    "customers.get": {
-      "description": "Retrieve one Altoviz customer by numeric id.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "customerId": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "customerId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List customers",
+      "description": "List Altoviz customers with optional page index, page size, and order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/customers",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get customer",
+      "description": "Retrieve one Altoviz customer by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -149,111 +190,1021 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.find": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get customer",
-      "validationMode": "strict-generated"
-    },
-    "customers.list": {
-      "description": "List Altoviz customers with optional page index, page size, and order.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "orderBy": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "pageIndex": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "pageSize": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
+      "title": "Find customers",
+      "description": "Find Altoviz customers by email, internal id, or customer number.",
+      "inputSchema": {
+        "type": "object",
         "properties": {
-          "data": {}
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "internalId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "number": {
+            "type": "string",
+            "minLength": 1
+          }
         },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1/customers",
-        "query": {
-          "OrderBy": "{{orderBy}}",
-          "PageIndex": "{{pageIndex}}",
-          "PageSize": "{{pageSize}}"
-        },
+        "path": "/v1/customers/find",
         "success": [
           200
+        ],
+        "query": {
+          "email": "{{email}}",
+          "internalId": "{{internalId}}",
+          "number": "{{number}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create customer",
+      "description": "Create an Altoviz customer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 0,
+            "description": "Customer type."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/customers",
+        "success": [
+          200
+        ],
+        "body": {
+          "companyName": "{{companyName}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "email": "{{email}}",
+          "type": "{{type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update customer",
+      "description": "Update an Altoviz customer by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric resource id."
+          },
+          "companyName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId"
         ]
       },
-      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/customers/{{customerId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "companyName": "{{companyName}}",
+          "email": "{{email}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete customer",
+      "description": "Delete an Altoviz customer by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric resource id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {},
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "profileId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/customers/{{customerId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.customerId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List customers",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Altoviz API key with a one-row customer list.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List products",
+      "description": "List Altoviz products with optional paging.",
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
-          "data": {}
+          "pageIndex": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page index."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order-by expression."
+          }
         },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1/customers",
+        "path": "/v1/products",
+        "success": [
+          200
+        ],
         "query": {
-          "PageIndex": 1,
-          "PageSize": 1
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get product",
+      "description": "Retrieve one Altoviz product by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric resource id."
+          }
         },
+        "additionalProperties": false,
+        "required": [
+          "productId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/products/{{productId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create product",
+      "description": "Create an Altoviz product.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product name."
+          },
+          "unitPrice": {
+            "type": "number",
+            "description": "Tax-excluded unit price."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/products",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "unitPrice": "{{unitPrice}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update product",
+      "description": "Update an Altoviz product by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric resource id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product name."
+          },
+          "unitPrice": {
+            "type": "number",
+            "description": "Tax-excluded unit price."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/products/{{productId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "unitPrice": "{{unitPrice}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.list": {
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List invoices",
+      "description": "List Altoviz sales invoices with optional paging.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page index."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order-by expression."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/salesinvoices",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get invoice",
+      "description": "Retrieve one Altoviz sales invoice by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric resource id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "invoiceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/salesinvoices/{{invoiceId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create invoice",
+      "description": "Create a draft Altoviz sales invoice.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric resource id."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Invoice date (YYYY-MM-DD)."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Invoice subject."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/salesinvoices",
+        "success": [
+          200
+        ],
+        "body": {
+          "customerId": "{{customerId}}",
+          "date": "{{date}}",
+          "subject": "{{subject}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quotes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List quotes",
+      "description": "List Altoviz sales quotes with optional paging.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page index."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order-by expression."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/salesquotes",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quotes.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get quote",
+      "description": "Retrieve one Altoviz sales quote by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "quoteId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric resource id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "quoteId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/salesquotes/{{quoteId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quotes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create quote",
+      "description": "Create an Altoviz sales quote.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric resource id."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Quote date (YYYY-MM-DD)."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Quote subject."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/salesquotes",
+        "success": [
+          200
+        ],
+        "body": {
+          "customerId": "{{customerId}}",
+          "date": "{{date}}",
+          "subject": "{{subject}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contacts",
+      "description": "List Altoviz contacts with optional paging.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page index."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order-by expression."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get contact",
+      "description": "Retrieve one Altoviz contact by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric resource id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/contacts/{{contactId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suppliers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List suppliers",
+      "description": "List Altoviz suppliers with optional paging.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageIndex": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page index."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          },
+          "orderBy": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order-by expression."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/suppliers",
+        "success": [
+          200
+        ],
+        "query": {
+          "PageIndex": "{{pageIndex}}",
+          "PageSize": "{{pageSize}}",
+          "OrderBy": "{{orderBy}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.customer.created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Customer created",
+      "description": "Altoviz webhook. Fires when a customer is created. Maps types=CustomerCreated."
+    },
+    "webhook.customer.updated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Customer updated",
+      "description": "Altoviz webhook. Fires when a customer is updated. Maps types=CustomerUpdated."
+    },
+    "webhook.invoice.created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Invoice created",
+      "description": "Altoviz webhook. Fires when a sales invoice is created. Maps types=InvoiceCreated."
+    },
+    "webhook.invoice.updated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Invoice updated",
+      "description": "Altoviz webhook. Fires when a sales invoice is updated. Maps types=InvoiceUpdated."
+    },
+    "webhook.quote.created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Quote created",
+      "description": "Altoviz webhook. Fires when a sales quote is created. Maps types=QuoteCreated."
+    },
+    "webhook.product.created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Product created",
+      "description": "Altoviz webhook. Fires when a product is created. Maps types=ProductCreated."
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
