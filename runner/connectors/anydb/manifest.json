@@ -1,7 +1,7 @@
 {
   "key": "anydb",
   "name": "AnyDB",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -35,7 +35,10 @@
   },
   "models": [
     "team",
-    "database"
+    "database",
+    "record",
+    "share",
+    "webhook"
   ],
   "http": {
     "baseUrl": "https://app.anydb.com/api",
@@ -229,6 +232,1134 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "records.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List records",
+      "description": "List records in an AnyDB database with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "parentid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional parent record ID."
+          },
+          "pagesize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "lastmarker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination marker from a previous page."
+          }
+        },
+        "required": [
+          "teamid",
+          "adbid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations/ext/list",
+        "success": [
+          200
+        ],
+        "query": {
+          "teamid": "{{teamid}}",
+          "adbid": "{{adbid}}",
+          "parentid": "{{parentid}}",
+          "pagesize": "{{pagesize}}",
+          "lastmarker": "{{lastmarker}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get record",
+      "description": "Fetch one AnyDB record by team, database, and record ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "adoid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          }
+        },
+        "required": [
+          "teamid",
+          "adbid",
+          "adoid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations/ext/record",
+        "success": [
+          200
+        ],
+        "query": {
+          "teamid": "{{teamid}}",
+          "adbid": "{{adbid}}",
+          "adoid": "{{adoid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create record",
+      "description": "Create a record in an AnyDB database.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record name."
+          }
+        },
+        "required": [
+          "teamid",
+          "adbid",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/integrations/ext/createrecord",
+        "success": [
+          201,
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "adbid": "{{adbid}}",
+          "teamid": "{{teamid}}",
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update record",
+      "description": "Update an AnyDB record's metadata.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "adoid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "icon": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record icon key required by AnyDB."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated record name."
+          }
+        },
+        "required": [
+          "adoid",
+          "adbid",
+          "teamid",
+          "icon"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/integrations/ext/updaterecord",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "meta": {
+            "adoid": "{{adoid}}",
+            "adbid": "{{adbid}}",
+            "teamid": "{{teamid}}",
+            "icon": "{{icon}}",
+            "name": "{{name}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search records",
+      "description": "Search AnyDB records by keyword.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search text."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum results.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "teamid",
+          "adbid",
+          "search"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations/ext/search",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "teamid": "{{teamid}}",
+          "adbid": "{{adbid}}",
+          "search": "{{search}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.remove": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove record",
+      "description": "Remove an AnyDB record from one or more parents.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "adoid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "removefromids": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated parent IDs to detach from."
+          }
+        },
+        "required": [
+          "adoid",
+          "adbid",
+          "teamid",
+          "removefromids"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/integrations/ext/remove",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "adoid": "{{adoid}}",
+          "adbid": "{{adbid}}",
+          "teamid": "{{teamid}}",
+          "removefromids": "{{removefromids}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.copy": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Copy record",
+      "description": "Duplicate an AnyDB record.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "adoid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source record ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          }
+        },
+        "required": [
+          "adoid",
+          "adbid",
+          "teamid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/integrations/ext/copyrecord",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "adoid": "{{adoid}}",
+          "adbid": "{{adbid}}",
+          "teamid": "{{teamid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "records.share": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Share record",
+      "description": "Create a share for an AnyDB record.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "adoid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "editor"
+            ],
+            "description": "Share role."
+          },
+          "withattachments": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Whether to include attachments."
+          }
+        },
+        "required": [
+          "teamid",
+          "adbid",
+          "adoid",
+          "role",
+          "withattachments"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/integrations/ext/share",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "teamid": "{{teamid}}",
+          "adbid": "{{adbid}}",
+          "adoid": "{{adoid}}",
+          "role": "{{role}}",
+          "withattachments": "{{withattachments}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "shares.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete share",
+      "description": "Remove an AnyDB record share.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "shareid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Share ID."
+          },
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "sharetype": {
+            "type": "string",
+            "enum": [
+              "form",
+              "item"
+            ],
+            "description": "Share type."
+          }
+        },
+        "required": [
+          "shareid",
+          "teamid",
+          "sharetype"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/integrations/ext/share/{{shareid}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "teamid": "{{teamid}}",
+          "sharetype": "{{sharetype}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "uploads.url": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get upload URL",
+      "description": "Get a direct upload URL for a file on an AnyDB record.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "description": "File name."
+          },
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "adoid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          },
+          "filesize": {
+            "type": "integer",
+            "description": "File size in bytes.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "filename",
+          "teamid",
+          "adbid",
+          "adoid",
+          "filesize"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations/ext/getuploadurl",
+        "success": [
+          200
+        ],
+        "query": {
+          "filename": "{{filename}}",
+          "teamid": "{{teamid}}",
+          "adbid": "{{adbid}}",
+          "adoid": "{{adoid}}",
+          "filesize": "{{filesize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "uploads.complete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Complete upload",
+      "description": "Mark an AnyDB file upload as complete.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filesize": {
+            "type": "integer",
+            "description": "File size in bytes.",
+            "minimum": 1
+          },
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "adoid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          }
+        },
+        "required": [
+          "filesize",
+          "teamid",
+          "adbid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/integrations/ext/completeupload",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "filesize": "{{filesize}}",
+          "teamid": "{{teamid}}",
+          "adbid": "{{adbid}}",
+          "adoid": "{{adoid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "downloads.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get download URL",
+      "description": "Get a download URL for a file cell on an AnyDB record.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "adbid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Database ID."
+          },
+          "adoid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record ID."
+          },
+          "cellpos": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cell position, for example A1."
+          }
+        },
+        "required": [
+          "teamid",
+          "adbid",
+          "adoid",
+          "cellpos"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations/ext/download",
+        "success": [
+          200
+        ],
+        "query": {
+          "teamid": "{{teamid}}",
+          "adbid": "{{adbid}}",
+          "adoid": "{{adoid}}",
+          "cellpos": "{{cellpos}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.register": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Register webhook",
+      "description": "Register an AnyDB webhook endpoint for a team.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team ID."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS webhook URL."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook name."
+          }
+        },
+        "required": [
+          "teamid",
+          "url",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/integrations/ext/register",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "teamid": "{{teamid}}",
+          "url": "{{url}}",
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.subscribe": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Subscribe webhook",
+      "description": "Subscribe an AnyDB webhook to a record event.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook ID returned by register."
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "RECORD_CREATE",
+              "RECORD_UPDATE",
+              "RECORD_DELETE"
+            ],
+            "description": "Record event."
+          }
+        },
+        "required": [
+          "webhookId",
+          "event"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/integrations/ext/subscribe",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "webhookId": "{{webhookId}}",
+          "event": "{{event}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.unsubscribe": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Unsubscribe webhook",
+      "description": "Unsubscribe an AnyDB webhook from a record event.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook ID."
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "RECORD_CREATE",
+              "RECORD_UPDATE",
+              "RECORD_DELETE"
+            ],
+            "description": "Record event."
+          }
+        },
+        "required": [
+          "webhookId",
+          "event"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/integrations/ext/unsubscribe",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "webhookId": "{{webhookId}}",
+          "event": "{{event}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete webhook",
+      "description": "Delete an AnyDB webhook endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook ID."
+          }
+        },
+        "required": [
+          "webhookId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/integrations/ext/{{webhookId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.record_create": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Record created",
+      "description": "AnyDB webhook when a record is created. Maps event=RECORD_CREATE."
+    },
+    "webhook.record_update": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Record updated",
+      "description": "AnyDB webhook when a record is updated. Maps event=RECORD_UPDATE."
+    },
+    "webhook.record_delete": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Record deleted",
+      "description": "AnyDB webhook when a record is deleted. Maps event=RECORD_DELETE."
     }
   },
   "evidence": {
