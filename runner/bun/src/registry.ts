@@ -463,6 +463,16 @@ import {
   getZen as ghGetZen,
   getLicense as ghGetLicense,
   getGitignoreTemplate as ghGetGitignoreTemplate,
+  createCommitCommentReaction as ghCreateCommitCommentReaction,
+  deleteCommitCommentReaction as ghDeleteCommitCommentReaction,
+  createIssueCommentReaction as ghCreateIssueCommentReaction,
+  deleteIssueCommentReaction as ghDeleteIssueCommentReaction,
+  createIssueReaction as ghCreateIssueReaction,
+  deleteIssueReaction as ghDeleteIssueReaction,
+  createPullRequestCommentReaction as ghCreatePullRequestCommentReaction,
+  deletePullRequestCommentReaction as ghDeletePullRequestCommentReaction,
+  createReleaseReaction as ghCreateReleaseReaction,
+  deleteReleaseReaction as ghDeleteReleaseReaction,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1535,6 +1545,16 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "meta.zen.get": ghGetZen,
       "licenses.get": ghGetLicense,
       "gitignore.templates.get": ghGetGitignoreTemplate,
+      "reactions.commit_comment.create": ghCreateCommitCommentReaction,
+      "reactions.commit_comment.delete": ghDeleteCommitCommentReaction,
+      "reactions.issue_comment.create": ghCreateIssueCommentReaction,
+      "reactions.issue_comment.delete": ghDeleteIssueCommentReaction,
+      "reactions.issue.create": ghCreateIssueReaction,
+      "reactions.issue.delete": ghDeleteIssueReaction,
+      "reactions.pull_request_comment.create": ghCreatePullRequestCommentReaction,
+      "reactions.pull_request_comment.delete": ghDeletePullRequestCommentReaction,
+      "reactions.release.create": ghCreateReleaseReaction,
+      "reactions.release.delete": ghDeleteReleaseReaction,
     },
     salesforce: {
       "contacts.create": createContact,

@@ -393,6 +393,19 @@ import {
   validateGetLicenseInput,
   validateGetZenInput,
 } from "./card14_reads";
+import {
+  createCardReactionsClient,
+  validateCreateCommitCommentReactionInput,
+  validateDeleteCommitCommentReactionInput,
+  validateCreateIssueCommentReactionInput,
+  validateDeleteIssueCommentReactionInput,
+  validateCreateIssueReactionInput,
+  validateDeleteIssueReactionInput,
+  validateCreatePullRequestCommentReactionInput,
+  validateDeletePullRequestCommentReactionInput,
+  validateCreateReleaseReactionInput,
+  validateDeleteReleaseReactionInput,
+} from "./card_reactions";
 
 
 
@@ -6097,6 +6110,118 @@ export function getGitignoreTemplate(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
+}
+
+
+// ─── card-reactions: create and delete reactions ─────────────────────────────
+
+function liveCardReactionsClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCardReactionsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function createCommitCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.commit_comment.create").createCommitCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.commit_comment.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "reactions.commit_comment.create", source: "connector", validated: validateCreateCommitCommentReactionInput(input) };
+}
+
+export function deleteCommitCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.commit_comment.delete").deleteCommitCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.commit_comment.delete", source: "connector", deleted: result.deleted, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "reactions.commit_comment.delete", source: "connector", validated: validateDeleteCommitCommentReactionInput(input) };
+}
+
+export function createIssueCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.issue_comment.create").createIssueCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.issue_comment.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "reactions.issue_comment.create", source: "connector", validated: validateCreateIssueCommentReactionInput(input) };
+}
+
+export function deleteIssueCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.issue_comment.delete").deleteIssueCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.issue_comment.delete", source: "connector", deleted: result.deleted, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "reactions.issue_comment.delete", source: "connector", validated: validateDeleteIssueCommentReactionInput(input) };
+}
+
+export function createIssueReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.issue.create").createIssueReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.issue.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "reactions.issue.create", source: "connector", validated: validateCreateIssueReactionInput(input) };
+}
+
+export function deleteIssueReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.issue.delete").deleteIssueReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.issue.delete", source: "connector", deleted: result.deleted, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "reactions.issue.delete", source: "connector", validated: validateDeleteIssueReactionInput(input) };
+}
+
+export function createPullRequestCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.pull_request_comment.create").createPullRequestCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.pull_request_comment.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "reactions.pull_request_comment.create", source: "connector", validated: validateCreatePullRequestCommentReactionInput(input) };
+}
+
+export function deletePullRequestCommentReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.pull_request_comment.delete").deletePullRequestCommentReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.pull_request_comment.delete", source: "connector", deleted: result.deleted, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "reactions.pull_request_comment.delete", source: "connector", validated: validateDeletePullRequestCommentReactionInput(input) };
+}
+
+export function createReleaseReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.release.create").createReleaseReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.release.create", source: "connector", reaction: result.reaction };
+    });
+  }
+  return { connector: "github", action: "reactions.release.create", source: "connector", validated: validateCreateReleaseReactionInput(input) };
+}
+
+export function deleteReleaseReaction(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardReactionsClient(input, "reactions.release.delete").deleteReleaseReaction(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "reactions.release.delete", source: "connector", deleted: result.deleted, reactionId: result.reactionId };
+    });
+  }
+  return { connector: "github", action: "reactions.release.delete", source: "connector", validated: validateDeleteReleaseReactionInput(input) };
 }
 
 
