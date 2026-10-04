@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("sendgrid manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("sendgrid");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -42,6 +42,21 @@ describe("sendgrid manifest", () => {
     expect(ops).toContain("templates.create");
     expect(ops).toContain("templates.get");
     expect(ops).toContain("suppression.bounces.list");
+    expect(ops).toContain("contacts.get");
+    expect(ops).toContain("lists.list.action");
+    expect(ops).toContain("lists.contacts.list");
+    expect(ops).toContain("lists.contacts.add");
+    expect(ops).toContain("lists.contacts.remove");
+    expect(ops).toContain("templates.list");
+    expect(ops).toContain("templates.update");
+    expect(ops).toContain("templates.delete");
+    expect(ops).toContain("stats.global.get");
+    expect(ops).toContain("suppression.blocks.list");
+    expect(ops).toContain("suppression.spam_reports.list");
+    expect(ops).toContain("suppression.unsubscribes.list");
+    expect(ops).toContain("suppression.invalid_emails.list");
+    expect(ops).toContain("api_keys.list");
+    expect(ops).toContain("alerts.list");
   });
 
   it("has correct models", () => {
@@ -64,6 +79,21 @@ describe("sendgrid manifest", () => {
     expect(manifest.operations["templates.create"].kind).toBe("action");
     expect(manifest.operations["templates.get"].kind).toBe("action");
     expect(manifest.operations["suppression.bounces.list"].kind).toBe("action");
+    expect(manifest.operations["contacts.get"].kind).toBe("action");
+    expect(manifest.operations["lists.list.action"].kind).toBe("action");
+    expect(manifest.operations["lists.contacts.list"].kind).toBe("action");
+    expect(manifest.operations["lists.contacts.add"].kind).toBe("action");
+    expect(manifest.operations["lists.contacts.remove"].kind).toBe("action");
+    expect(manifest.operations["templates.list"].kind).toBe("action");
+    expect(manifest.operations["templates.update"].kind).toBe("action");
+    expect(manifest.operations["templates.delete"].kind).toBe("action");
+    expect(manifest.operations["stats.global.get"].kind).toBe("action");
+    expect(manifest.operations["suppression.blocks.list"].kind).toBe("action");
+    expect(manifest.operations["suppression.spam_reports.list"].kind).toBe("action");
+    expect(manifest.operations["suppression.unsubscribes.list"].kind).toBe("action");
+    expect(manifest.operations["suppression.invalid_emails.list"].kind).toBe("action");
+    expect(manifest.operations["api_keys.list"].kind).toBe("action");
+    expect(manifest.operations["alerts.list"].kind).toBe("action");
   });
 
   it("operations have timeout constraints", () => {

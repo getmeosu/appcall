@@ -10,6 +10,21 @@ import {
   createTemplate,
   getTemplate,
   listBounces,
+  getContact,
+  listLists,
+  listListContacts,
+  addListContacts,
+  removeListContacts,
+  listTemplates,
+  updateTemplate,
+  deleteTemplate,
+  getGlobalStats,
+  listBlocks,
+  listSpamReports,
+  listUnsubscribes,
+  listInvalidEmails,
+  listApiKeys,
+  listAlerts,
 } from "../src/actions";
 import contactsSearchFixture from "../fixtures/contacts_search.json";
 import contactsUpsertFixture from "../fixtures/contacts_upsert.json";
@@ -19,6 +34,20 @@ import listGetFixture from "../fixtures/list_get.json";
 import templateCreateFixture from "../fixtures/template_create.json";
 import templateGetFixture from "../fixtures/template_get.json";
 import bouncesListFixture from "../fixtures/bounces_list.json";
+import contactsGetFixture from "../fixtures/contacts_get.json";
+import listsListActionFixture from "../fixtures/lists_list_action.json";
+import listsContactsListFixture from "../fixtures/lists_contacts_list.json";
+import listsContactsAddFixture from "../fixtures/lists_contacts_add.json";
+import listsContactsRemoveFixture from "../fixtures/lists_contacts_remove.json";
+import templatesListFixture from "../fixtures/templates_list.json";
+import templateUpdateFixture from "../fixtures/template_update.json";
+import statsGlobalFixture from "../fixtures/stats_global.json";
+import blocksListFixture from "../fixtures/blocks_list.json";
+import spamReportsListFixture from "../fixtures/spam_reports_list.json";
+import unsubscribesListFixture from "../fixtures/unsubscribes_list.json";
+import invalidEmailsListFixture from "../fixtures/invalid_emails_list.json";
+import apiKeysListFixture from "../fixtures/api_keys_list.json";
+import alertsListFixture from "../fixtures/alerts_list.json";
 
 // ─── mail.send ────────────────────────────────────────────────────────────────
 
@@ -689,6 +718,534 @@ describe("listBounces", () => {
       expect(true).toBe(false);
     } catch (e: any) {
       expect(e.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+    }
+  });
+});
+
+// ─── contacts.get ─────────────────────────────────────────────────────────────
+
+describe("getContact", () => {
+  it("validates input without apiKey", () => {
+    const result = getContact({ contactId: "c-get-001" }) as Record<string, unknown>;
+    expect(result.action).toBe("contacts.get");
+    expect((result.validated as Record<string, unknown>).contactId).toBe("c-get-001");
+  });
+
+  it("throws when contactId is missing", () => {
+    expect(() => getContact({})).toThrow("contactId is required");
+  });
+
+  it("gets a contact via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await getContact({
+      apiKey: "SG.test-key",
+      contactId: "c-get-001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(contactsGetFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/marketing/contacts/c-get-001");
+    expect(requests[0].method).toBe("GET");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer SG.test-key");
+    const contact = result.contact as Record<string, unknown>;
+    expect(contact.id).toBe("sg-contact:c-get-001");
+    expect(contact.email).toBe("ada@example.com");
+  });
+
+  it("throws upstream error on 404", async () => {
+    try {
+      await getContact({
+        apiKey: "SG.test-key",
+        contactId: "missing",
+        fetch: async () => new Response("{}", { status: 404 }),
+      });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+    }
+  });
+});
+
+// ─── lists.list.action ────────────────────────────────────────────────────────
+
+describe("listLists", () => {
+  it("validates input without apiKey", () => {
+    const result = listLists({ pageSize: 50 }) as Record<string, unknown>;
+    expect(result.action).toBe("lists.list.action");
+    expect((result.validated as Record<string, unknown>).pageSize).toBe(50);
+  });
+
+  it("lists marketing lists via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await listLists({
+      apiKey: "SG.test-key",
+      pageSize: 25,
+      pageToken: "tok-1",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(listsListActionFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toContain("https://api.sendgrid.com/v3/marketing/lists?");
+    expect(requests[0].url).toContain("page_size=25");
+    expect(requests[0].url).toContain("page_token=tok-1");
+    expect(requests[0].method).toBe("GET");
+    const lists = result.lists as Record<string, unknown>[];
+    expect(lists).toHaveLength(2);
+    expect(lists[0].id).toBe("sg-list:list-1");
+    expect(lists[0].name).toBe("Newsletter Subscribers");
+  });
+
+  it("throws rate limit on 429", async () => {
+    try {
+      await listLists({
+        apiKey: "SG.test-key",
+        fetch: async () => new Response("", { status: 429, headers: { "retry-after": "8" } }),
+      });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.code).toBe("CONNECTOR_RATE_LIMITED");
+      expect(e.retryAfterSeconds).toBe(8);
+    }
+  });
+});
+
+// ─── lists.contacts.list ──────────────────────────────────────────────────────
+
+describe("listListContacts", () => {
+  it("validates input without apiKey", () => {
+    const result = listListContacts({ listId: "list-001" }) as Record<string, unknown>;
+    expect(result.action).toBe("lists.contacts.list");
+    expect((result.validated as Record<string, unknown>).listId).toBe("list-001");
+  });
+
+  it("throws when listId is missing", () => {
+    expect(() => listListContacts({})).toThrow("listId is required");
+  });
+
+  it("searches contacts on a list via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await listListContacts({
+      apiKey: "SG.test-key",
+      listId: "list-001",
+      pageSize: 10,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(listsContactsListFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/marketing/contacts/search");
+    expect(requests[0].method).toBe("POST");
+    const body = JSON.parse(await requests[0].text());
+    expect(body.query).toBe("CONTAINS(list_ids, 'list-001')");
+    expect(body.page_size).toBe(10);
+    const contacts = result.contacts as Record<string, unknown>[];
+    expect(contacts[0].email).toBe("member@example.com");
+    expect(contacts[0].id).toBe("sg-contact:c-list-001");
+  });
+});
+
+// ─── lists.contacts.add ───────────────────────────────────────────────────────
+
+describe("addListContacts", () => {
+  it("validates input without apiKey", () => {
+    const result = addListContacts({ listId: "list-001", emails: ["a@b.com"] }) as Record<string, unknown>;
+    expect(result.action).toBe("lists.contacts.add");
+    const v = result.validated as Record<string, unknown>;
+    expect(v.listId).toBe("list-001");
+    expect(v.emails).toEqual(["a@b.com"]);
+  });
+
+  it("throws when listId is missing", () => {
+    expect(() => addListContacts({ emails: ["a@b.com"] })).toThrow("listId is required");
+  });
+
+  it("throws when emails and contactIds are both missing", () => {
+    expect(() => addListContacts({ listId: "list-001" })).toThrow("emails or contactIds is required");
+  });
+
+  it("adds contacts by email via mock fetch (202)", async () => {
+    const requests: Request[] = [];
+    const result = await addListContacts({
+      apiKey: "SG.test-key",
+      listId: "list-001",
+      emails: ["new@example.com"],
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(listsContactsAddFixture), { status: 202, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/marketing/contacts");
+    expect(requests[0].method).toBe("PUT");
+    const body = JSON.parse(await requests[0].text());
+    expect(body.list_ids).toEqual(["list-001"]);
+    expect(body.contacts).toEqual([{ email: "new@example.com" }]);
+    expect(result.jobId).toBe("job-list-add-001");
+  });
+
+  it("adds contacts by id via mock fetch (202)", async () => {
+    const requests: Request[] = [];
+    await addListContacts({
+      apiKey: "SG.test-key",
+      listId: "list-001",
+      contactIds: ["c-001"],
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(listsContactsAddFixture), { status: 202, headers: { "Content-Type": "application/json" } });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/marketing/lists/list-001/contacts");
+    expect(requests[0].method).toBe("PUT");
+    expect(JSON.parse(await requests[0].text())).toEqual({ contact_ids: ["c-001"] });
+  });
+});
+
+// ─── lists.contacts.remove ────────────────────────────────────────────────────
+
+describe("removeListContacts", () => {
+  it("validates input without apiKey", () => {
+    const result = removeListContacts({ listId: "list-001", contactIds: ["c-001"] }) as Record<string, unknown>;
+    expect(result.action).toBe("lists.contacts.remove");
+  });
+
+  it("throws when contactIds is missing", () => {
+    expect(() => removeListContacts({ listId: "list-001" })).toThrow("contactIds must be a non-empty array");
+  });
+
+  it("removes contacts via mock fetch (202)", async () => {
+    const requests: Request[] = [];
+    const result = await removeListContacts({
+      apiKey: "SG.test-key",
+      listId: "list-001",
+      contactIds: ["c-001", "c-002"],
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(listsContactsRemoveFixture), { status: 202, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].method).toBe("DELETE");
+    expect(requests[0].url).toContain("/v3/marketing/lists/list-001/contacts?");
+    expect(requests[0].url).toContain("contact_ids=");
+    expect(decodeURIComponent(requests[0].url)).toContain("c-001,c-002");
+    expect(result.jobId).toBe("job-list-remove-001");
+  });
+});
+
+// ─── templates.list ───────────────────────────────────────────────────────────
+
+describe("listTemplates", () => {
+  it("validates input without apiKey and defaults generation", () => {
+    const result = listTemplates({}) as Record<string, unknown>;
+    expect(result.action).toBe("templates.list");
+    const v = result.validated as Record<string, unknown>;
+    expect(v.generations).toBe("legacy,dynamic");
+    expect(v.pageSize).toBe(100);
+  });
+
+  it("lists templates via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await listTemplates({
+      apiKey: "SG.test-key",
+      generations: "dynamic",
+      pageSize: 20,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(templatesListFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toContain("/v3/templates?");
+    expect(requests[0].url).toContain("generations=dynamic");
+    expect(requests[0].url).toContain("page_size=20");
+    expect(requests[0].method).toBe("GET");
+    const templates = result.templates as Record<string, unknown>[];
+    expect(templates).toHaveLength(2);
+    expect(templates[0].id).toBe("sg-template:d-template-001");
+  });
+});
+
+// ─── templates.update ─────────────────────────────────────────────────────────
+
+describe("updateTemplate", () => {
+  it("validates input without apiKey", () => {
+    const result = updateTemplate({ templateId: "d-template-001", name: "Welcome Email Updated" }) as Record<string, unknown>;
+    expect(result.action).toBe("templates.update");
+  });
+
+  it("throws when name is missing", () => {
+    expect(() => updateTemplate({ templateId: "d-template-001" })).toThrow("name is required");
+  });
+
+  it("updates template via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await updateTemplate({
+      apiKey: "SG.test-key",
+      templateId: "d-template-001",
+      name: "Welcome Email Updated",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(templateUpdateFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/templates/d-template-001");
+    expect(requests[0].method).toBe("PATCH");
+    expect(JSON.parse(await requests[0].text())).toEqual({ name: "Welcome Email Updated" });
+    const tmpl = result.template as Record<string, unknown>;
+    expect(tmpl.name).toBe("Welcome Email Updated");
+  });
+});
+
+// ─── templates.delete ─────────────────────────────────────────────────────────
+
+describe("deleteTemplate", () => {
+  it("validates input without apiKey", () => {
+    const result = deleteTemplate({ templateId: "d-template-001" }) as Record<string, unknown>;
+    expect(result.action).toBe("templates.delete");
+  });
+
+  it("throws when templateId is missing", () => {
+    expect(() => deleteTemplate({})).toThrow("templateId is required");
+  });
+
+  it("deletes template via mock fetch (204)", async () => {
+    const requests: Request[] = [];
+    const result = await deleteTemplate({
+      apiKey: "SG.test-key",
+      templateId: "d-template-001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 204 });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/templates/d-template-001");
+    expect(requests[0].method).toBe("DELETE");
+    expect(result.deleted).toBe(true);
+  });
+
+  it("throws upstream error on 404", async () => {
+    try {
+      await deleteTemplate({
+        apiKey: "SG.test-key",
+        templateId: "missing",
+        fetch: async () => new Response("{}", { status: 404 }),
+      });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+    }
+  });
+});
+
+// ─── stats.global.get ─────────────────────────────────────────────────────────
+
+describe("getGlobalStats", () => {
+  it("validates input without apiKey", () => {
+    const result = getGlobalStats({ startDate: "2025-01-01" }) as Record<string, unknown>;
+    expect(result.action).toBe("stats.global.get");
+    expect((result.validated as Record<string, unknown>).startDate).toBe("2025-01-01");
+  });
+
+  it("throws when startDate is missing", () => {
+    expect(() => getGlobalStats({})).toThrow("startDate is required");
+  });
+
+  it("gets global stats via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await getGlobalStats({
+      apiKey: "SG.test-key",
+      startDate: "2025-01-01",
+      endDate: "2025-01-31",
+      aggregatedBy: "day",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(statsGlobalFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toContain("/v3/stats?");
+    expect(requests[0].url).toContain("start_date=2025-01-01");
+    expect(requests[0].url).toContain("end_date=2025-01-31");
+    expect(requests[0].url).toContain("aggregated_by=day");
+    expect(requests[0].method).toBe("GET");
+    const stats = result.stats as Record<string, unknown>[];
+    expect(stats[0].date).toBe("2025-01-01");
+    expect((stats[0].metrics as Record<string, unknown>).delivered).toBe(90);
+  });
+});
+
+// ─── suppression.blocks.list ──────────────────────────────────────────────────
+
+describe("listBlocks", () => {
+  it("validates input without apiKey", () => {
+    const result = listBlocks({}) as Record<string, unknown>;
+    expect(result.action).toBe("suppression.blocks.list");
+  });
+
+  it("lists blocks via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await listBlocks({
+      apiKey: "SG.test-key",
+      limit: 10,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(blocksListFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toContain("/v3/suppression/blocks");
+    expect(requests[0].url).toContain("limit=10");
+    const blocks = result.blocks as Record<string, unknown>[];
+    expect(blocks[0].email).toBe("blocked@example.com");
+    expect(blocks[0].status).toBe("5.7.1");
+  });
+});
+
+// ─── suppression.spam_reports.list ────────────────────────────────────────────
+
+describe("listSpamReports", () => {
+  it("validates input without apiKey", () => {
+    const result = listSpamReports({}) as Record<string, unknown>;
+    expect(result.action).toBe("suppression.spam_reports.list");
+  });
+
+  it("lists spam reports via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await listSpamReports({
+      apiKey: "SG.test-key",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(spamReportsListFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/suppression/spam_reports");
+    const reports = result.spamReports as Record<string, unknown>[];
+    expect(reports[0].email).toBe("spam@example.com");
+    expect(reports[0].ip).toBe("10.0.0.1");
+  });
+});
+
+// ─── suppression.unsubscribes.list ────────────────────────────────────────────
+
+describe("listUnsubscribes", () => {
+  it("validates input without apiKey", () => {
+    const result = listUnsubscribes({ email: "unsub" }) as Record<string, unknown>;
+    expect(result.action).toBe("suppression.unsubscribes.list");
+    expect((result.validated as Record<string, unknown>).email).toBe("unsub");
+  });
+
+  it("lists unsubscribes via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await listUnsubscribes({
+      apiKey: "SG.test-key",
+      email: "unsub",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(unsubscribesListFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toContain("/v3/suppression/unsubscribes");
+    expect(requests[0].url).toContain("email=unsub");
+    const unsubscribes = result.unsubscribes as Record<string, unknown>[];
+    expect(unsubscribes[0].email).toBe("unsub@example.com");
+  });
+});
+
+// ─── suppression.invalid_emails.list ──────────────────────────────────────────
+
+describe("listInvalidEmails", () => {
+  it("lists invalid emails via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await listInvalidEmails({
+      apiKey: "SG.test-key",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(invalidEmailsListFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/suppression/invalid_emails");
+    const invalid = result.invalidEmails as Record<string, unknown>[];
+    expect(invalid[0].email).toBe("bad@example.com");
+    expect(invalid[0].reason).toContain("unknown");
+  });
+});
+
+// ─── api_keys.list ────────────────────────────────────────────────────────────
+
+describe("listApiKeys", () => {
+  it("validates input without apiKey", () => {
+    const result = listApiKeys({ limit: 10 }) as Record<string, unknown>;
+    expect(result.action).toBe("api_keys.list");
+    expect((result.validated as Record<string, unknown>).limit).toBe(10);
+  });
+
+  it("lists api keys via mock fetch (200) without returning secret values", async () => {
+    const requests: Request[] = [];
+    const result = await listApiKeys({
+      apiKey: "SG.test-key",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(apiKeysListFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/api_keys");
+    expect(requests[0].method).toBe("GET");
+    const keys = result.apiKeys as Record<string, unknown>[];
+    expect(keys).toHaveLength(2);
+    expect(keys[0].apiKeyId).toBe("key-001");
+    expect(keys[0].name).toBe("Mail Send");
+    expect(JSON.stringify(result)).not.toContain("SG.");
+  });
+});
+
+// ─── alerts.list ──────────────────────────────────────────────────────────────
+
+describe("listAlerts", () => {
+  it("validates input without apiKey", () => {
+    const result = listAlerts({}) as Record<string, unknown>;
+    expect(result.action).toBe("alerts.list");
+  });
+
+  it("lists alerts via mock fetch (200)", async () => {
+    const requests: Request[] = [];
+    const result = await listAlerts({
+      apiKey: "SG.test-key",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(alertsListFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    }) as Record<string, unknown>;
+
+    expect(requests[0].url).toBe("https://api.sendgrid.com/v3/alerts");
+    expect(requests[0].method).toBe("GET");
+    const alerts = result.alerts as Record<string, unknown>[];
+    expect(alerts).toHaveLength(2);
+    expect(alerts[0].id).toBe(46);
+    expect(alerts[0].type).toBe("usage_limit");
+    expect(alerts[1].frequency).toBe("daily");
+  });
+
+  it("throws rate limit on 429", async () => {
+    try {
+      await listAlerts({
+        apiKey: "SG.test-key",
+        fetch: async () => new Response("", { status: 429, headers: { "retry-after": "12" } }),
+      });
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e.code).toBe("CONNECTOR_RATE_LIMITED");
+      expect(e.retryAfterSeconds).toBe(12);
     }
   });
 });
