@@ -38,28 +38,44 @@ describe("figma manifest", () => {
     expect(manifest.network.allowedHosts).toEqual(["api.figma.com"]);
   });
 
-  it("declares exactly the 12 operations the brief lists", () => {
-    expect(Object.keys(operations).sort()).toEqual(
-      [
-        "healthcheck",
-        "file.get",
-        "file.getNodes",
-        "file.getMeta",
-        "file.listVersions",
-        "image.render",
-        "image.listFills",
-        "comment.list",
-        "comment.create",
-        "comment.delete",
-        "folder.listForTeam",
-        "folder.listFiles",
-      ].sort(),
-    );
+  it("keeps the original 12 operations and adds the Composio-parity depth slice", () => {
+    const keys = Object.keys(operations);
+    for (const key of [
+      "healthcheck",
+      "file.get",
+      "file.getNodes",
+      "file.getMeta",
+      "file.listVersions",
+      "image.render",
+      "image.listFills",
+      "comment.list",
+      "comment.create",
+      "comment.delete",
+      "folder.listForTeam",
+      "folder.listFiles",
+      "comment.listReactions",
+      "comment.createReaction",
+      "comment.deleteReaction",
+      "file.listComponents",
+      "file.listComponentSets",
+      "file.listStyles",
+      "component.get",
+      "componentSet.get",
+      "style.get",
+      "team.listComponents",
+      "team.listStyles",
+      "variables.listLocal",
+      "devResources.list",
+      "devResources.create",
+    ]) {
+      expect(keys, `missing ${key}`).toContain(key);
+    }
   });
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
     for (const [key, operation] of Object.entries(operations)) {
-      expect(operation.kind).toBe("action");
+      expect(["action", "webhook"]).toContain(operation.kind);
+      if (operation.kind !== "action") continue;
       expect(operation.timeoutMs as number).toBeGreaterThan(0);
       expect(operation.maxInputBytes as number).toBeGreaterThan(0);
       expect(operation.maxResponseBytes as number).toBeGreaterThan(0);
@@ -74,6 +90,7 @@ describe("figma manifest", () => {
 
   it("classifies every mutating operation as a write — a safety control, not metadata", () => {
     const writes = Object.entries(operations)
+      .filter(([, operation]) => operation.kind === "action")
       .filter(([, operation]) => ["POST", "PUT", "PATCH", "DELETE"].includes(String((operation.request as Record<string, unknown>).method)))
       .map(([key]) => key);
     expect(writes.length).toBeGreaterThan(0);
@@ -84,6 +101,7 @@ describe("figma manifest", () => {
 
   it("keeps every request inside the declared outbound host", () => {
     for (const operation of Object.values(operations)) {
+      if (operation.kind !== "action") continue;
       const request = operation.request as Record<string, unknown>;
       const baseUrl = String(request.baseUrl ?? manifest.http.baseUrl);
       expect(new URL(baseUrl).hostname).toBe("api.figma.com");
@@ -92,6 +110,7 @@ describe("figma manifest", () => {
 
   it("only interpolates path placeholders the operation's schema requires", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind !== "action") continue;
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { required?: string[] };
       const placeholders = [...String(request.path ?? "").matchAll(/\{\{\s*([A-Za-z0-9_.$-]+)\s*\}\}/g)].map((match) => match[1]);
@@ -103,6 +122,7 @@ describe("figma manifest", () => {
 
   it("templates every query and body value from a declared input", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind !== "action") continue;
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { properties?: Record<string, unknown> };
       const declared = Object.keys(schema.properties ?? {});
@@ -132,11 +152,17 @@ describe("figma manifest", () => {
     expect(manifest.http.errors.messagePaths).toEqual(["err", "message"]);
   });
 
-  it("does not claim a design-write surface Figma's REST API does not have", () => {
+  it("does not claim a canvas-edit surface Figma's REST API does not have", () => {
     const writes = Object.entries(operations)
       .filter(([, op]) => op.sideEffect === "write")
       .map(([key]) => key);
-    expect(writes.sort()).toEqual(["comment.create", "comment.delete"]);
+    expect(writes.sort()).toEqual([
+      "comment.create",
+      "comment.createReaction",
+      "comment.delete",
+      "comment.deleteReaction",
+      "devResources.create",
+    ]);
   });
 
   it("never allowlists the undocumented image CDN", () => {
@@ -169,6 +195,7 @@ describe("figma manifest", () => {
 
   it("builds folders only against the v2 folder surface, never the deprecated v1 projects endpoints", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind !== "action") continue;
       const request = operation.request as Record<string, unknown>;
       const path = String(request.path ?? "");
       expect(path, `${key} must not call the deprecated projects endpoint`).not.toContain("/projects");

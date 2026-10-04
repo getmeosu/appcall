@@ -33,6 +33,7 @@ describe("todoist manifest", () => {
   it("targets the unified v1 API rather than the retired REST v2", () => {
     expect(manifest.http.baseUrl).toBe("https://api.todoist.com");
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind !== "action") continue;
       const path = String((operation.request as Record<string, unknown>).path ?? "");
       expect(path, `${key} must call /api/v1`).toStartWith("/api/v1/");
     }
@@ -40,7 +41,8 @@ describe("todoist manifest", () => {
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
     for (const [key, operation] of Object.entries(operations)) {
-      expect(operation.kind).toBe("action");
+      expect(["action", "webhook"]).toContain(operation.kind);
+      if (operation.kind !== "action") continue;
       expect(operation.timeoutMs as number).toBeGreaterThan(0);
       expect(operation.maxInputBytes as number).toBeGreaterThan(0);
       expect(operation.maxResponseBytes as number).toBeGreaterThan(0);
@@ -54,6 +56,7 @@ describe("todoist manifest", () => {
 
   it("classifies every mutating operation as a write", () => {
     const writes = Object.entries(operations)
+      .filter(([, operation]) => operation.kind === "action")
       .filter(([, operation]) => ["POST", "PUT", "PATCH", "DELETE"].includes(String((operation.request as Record<string, unknown>).method)))
       .map(([key]) => key);
     for (const key of writes) {
@@ -63,6 +66,7 @@ describe("todoist manifest", () => {
 
   it("keeps every request inside the declared outbound host", () => {
     for (const operation of Object.values(operations)) {
+      if (operation.kind !== "action") continue;
       const request = operation.request as Record<string, unknown>;
       const baseUrl = String(request.baseUrl ?? manifest.http.baseUrl);
       expect(new URL(baseUrl).hostname).toBe("api.todoist.com");
@@ -72,6 +76,7 @@ describe("todoist manifest", () => {
 
   it("only interpolates path placeholders the operation's schema requires", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind !== "action") continue;
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { required?: string[] };
       const placeholders = [...String(request.path ?? "").matchAll(/\{\{\s*([A-Za-z0-9_.$-]+)\s*\}\}/g)].map((match) => match[1]);
@@ -83,6 +88,7 @@ describe("todoist manifest", () => {
 
   it("templates every query and body value from a declared input", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind !== "action") continue;
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { properties?: Record<string, unknown> };
       const declared = Object.keys(schema.properties ?? {});
@@ -94,12 +100,21 @@ describe("todoist manifest", () => {
     }
   });
 
+  it("declares item-completed as an EventOnly webhook like apollo.phone_revealed", () => {
+    const webhook = operations["webhook.item_completed"]!;
+    expect(webhook.kind).toBe("webhook");
+    expect(webhook.request).toBeUndefined();
+    expect(webhook.title ?? "").toBe("");
+    expect(webhook.inputSchema).toBeUndefined();
+  });
+
   it("hands the caller a cursor on every paginated list", () => {
     // Every /api/v1 collection endpoint answers {results, next_cursor}, so an operation
     // that reads one must both accept a cursor and return the next one, or the caller
     // can never reach page two.
     const paginated = Object.entries(operations).filter(([, operation]) =>
-      Object.prototype.hasOwnProperty.call((operation.request as Record<string, unknown>).result ?? {}, "nextCursor"),
+      operation.kind === "action"
+      && Object.prototype.hasOwnProperty.call((operation.request as Record<string, unknown>).result ?? {}, "nextCursor"),
     );
     expect(paginated.length).toBeGreaterThan(0);
     for (const [key, operation] of paginated) {
