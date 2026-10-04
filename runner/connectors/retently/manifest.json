@@ -1,1 +1,1374 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Retently API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["crm"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"X-Api-Key","value":"{{apiKey}}"},"baseUrl":"https://app.retently.com","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["message","error","error.message"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"retently","models":["account","customer","feedback","template"],"name":"Retently","network":{"allowedHosts":["app.retently.com"]},"operations":{"customers.get":{"description":"Get a Retently customer by customer ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"customerId":{"minLength":1,"type":"string"}},"required":["customerId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v2/customers/{{customerId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get customer","validationMode":"strict-generated"},"customers.list":{"description":"List Retently customers with optional email, pagination, sorting, and date filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"email":{"minLength":1,"type":"string"},"endDate":{"minLength":1,"type":"string"},"limit":{"maximum":1000,"minimum":1,"type":"integer"},"match":{"enum":["all","any"],"type":"string"},"page":{"minimum":1,"type":"integer"},"sort":{"minLength":1,"type":"string"},"startDate":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v2/customers","query":{"email":"{{email}}","endDate":"{{endDate}}","limit":"{{limit}}","match":"{{match}}","page":"{{page}}","sort":"{{sort}}","startDate":"{{startDate}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List customers","validationMode":"strict-generated"},"feedback.list":{"description":"List Retently survey feedback responses with optional customer, campaign, pagination, and date filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"campaignId":{"minLength":1,"type":"string"},"customerId":{"minLength":1,"type":"string"},"email":{"minLength":1,"type":"string"},"endDate":{"minLength":1,"type":"string"},"limit":{"maximum":1000,"minimum":1,"type":"integer"},"match":{"enum":["all","any"],"type":"string"},"page":{"minimum":1,"type":"integer"},"sort":{"minLength":1,"type":"string"},"startDate":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v2/feedback","query":{"campaignId":"{{campaignId}}","customerId":"{{customerId}}","email":"{{email}}","endDate":"{{endDate}}","limit":"{{limit}}","match":"{{match}}","page":"{{page}}","sort":"{{sort}}","startDate":"{{startDate}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List feedback","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Retently API key with GET /api/v2/ping.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v2/ping","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"templates.list":{"description":"List Retently survey templates.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v2/templates","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List templates","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "retently",
+  "name": "Retently",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Retently API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.retently.com"
+    ]
+  },
+  "models": [
+    "account",
+    "customer",
+    "company",
+    "campaign",
+    "template",
+    "feedback",
+    "outbox",
+    "report",
+    "score",
+    "trend"
+  ],
+  "http": {
+    "baseUrl": "https://app.retently.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Api-Key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "error.message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Retently API key with GET /api/v2/ping.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/ping",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List customers",
+      "description": "List Retently customers with optional email, pagination, sorting, and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1
+          },
+          "startDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "endDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "match": {
+            "type": "string",
+            "enum": [
+              "all",
+              "any"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/customers",
+        "query": {
+          "email": "{{email}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "sort": "{{sort}}",
+          "startDate": "{{startDate}}",
+          "endDate": "{{endDate}}",
+          "match": "{{match}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get customer",
+      "description": "Get a Retently customer by customer ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "customerId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/customers/{{customerId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "feedback.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List feedback",
+      "description": "List Retently survey feedback responses with optional customer, campaign, pagination, and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "campaignId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1
+          },
+          "startDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "endDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "match": {
+            "type": "string",
+            "enum": [
+              "all",
+              "any"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/feedback",
+        "query": {
+          "email": "{{email}}",
+          "customerId": "{{customerId}}",
+          "campaignId": "{{campaignId}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "sort": "{{sort}}",
+          "startDate": "{{startDate}}",
+          "endDate": "{{endDate}}",
+          "match": "{{match}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List templates",
+      "description": "List Retently survey templates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/templates",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create or update customers",
+      "description": "Create or update Retently customers in bulk via POST /api/v2/customers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subscribers": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Customers to upsert.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subscribers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/customers",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "subscribers": "{{subscribers}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.unsubscribe": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Unsubscribe customers",
+      "description": "Unsubscribe customers from future surveys via POST /api/v2/customers/unsubscribe.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subscribers": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Customer emails or objects to unsubscribe.",
+            "items": {
+              "type": [
+                "string",
+                "object"
+              ]
+            }
+          },
+          "message": {
+            "type": "string",
+            "description": "Optional opt-out message.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subscribers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/customers/unsubscribe",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "subscribers": "{{subscribers}}",
+          "message": "{{message}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete customers",
+      "description": "Delete Retently customers via DELETE /api/v2/customers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subscribers": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Customers to delete.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subscribers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v2/customers",
+        "success": [
+          200,
+          202
+        ],
+        "body": {
+          "subscribers": "{{subscribers}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List companies",
+      "description": "List Retently companies via GET /api/v2/companies.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort field. Prefix with - for descending.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/companies",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "sort": "{{sort}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get company",
+      "description": "Get a Retently company by ID or domain via GET /api/v2/companies/{companyId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "description": "Company ID or domain.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "companyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/companies/{{companyId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List campaigns",
+      "description": "List Retently survey campaigns via GET /api/v2/campaigns.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/campaigns",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get template",
+      "description": "Get a Retently survey template by ID via GET /api/v2/templates/{templateId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "type": "string",
+            "description": "Template ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/templates/{{templateId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "feedback.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get feedback",
+      "description": "Get a Retently survey response by ID via GET /api/v2/feedback/{feedbackId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "feedbackId": {
+            "type": "string",
+            "description": "Feedback ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "feedbackId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/feedback/{{feedbackId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "feedback.tags": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add feedback tags",
+      "description": "Add or replace tags on a survey response via POST /api/v2/response/tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Feedback ID.",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Tags to apply.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "op": {
+            "type": "string",
+            "description": "append to add, omit to replace.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "tags"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/response/tags",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "id": "{{id}}",
+          "tags": "{{tags}}",
+          "op": "{{op}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "feedback.topics": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add feedback topics",
+      "description": "Add or replace topics on a survey response via POST /api/v2/response/topics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "feedback_id": {
+            "type": "string",
+            "description": "Feedback ID.",
+            "minLength": 1
+          },
+          "topics": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Topics to apply.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "append",
+              "override"
+            ],
+            "description": "append or override."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "feedback_id",
+          "topics"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/response/topics",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "feedback_id": "{{feedback_id}}",
+          "topics": "{{topics}}",
+          "operation": "{{operation}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "outbox.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List outbox",
+      "description": "List sent surveys via GET /api/v2/outbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Page size."
+          },
+          "sort": {
+            "type": "string",
+            "description": "Sort field. Prefix with - for descending.",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "description": "Filter by customer email.",
+            "minLength": 1
+          },
+          "campaignId": {
+            "type": "string",
+            "description": "Filter by campaign ID.",
+            "minLength": 1
+          },
+          "channel": {
+            "type": "string",
+            "description": "email, link, inapp, intercom, or embed.",
+            "minLength": 1
+          },
+          "sentBy": {
+            "type": "string",
+            "description": "campaign, reminder, manual, test, or imported.",
+            "minLength": 1
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start instant.",
+            "minLength": 1
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End instant.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/outbox",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "sort": "{{sort}}",
+          "email": "{{email}}",
+          "campaignId": "{{campaignId}}",
+          "channel": "{{channel}}",
+          "sentBy": "{{sentBy}}",
+          "startDate": "{{startDate}}",
+          "endDate": "{{endDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reports.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List reports",
+      "description": "List Retently campaign reports via GET /api/v2/reports.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "description": "Start date YYYY-MM-DD.",
+            "minLength": 1
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date YYYY-MM-DD.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/reports",
+        "success": [
+          200
+        ],
+        "query": {
+          "startDate": "{{startDate}}",
+          "endDate": "{{endDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "reports.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get campaign report",
+      "description": "Get a Retently campaign report via GET /api/v2/reports/{campaignId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "description": "Campaign ID.",
+            "minLength": 1
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date YYYY-MM-DD.",
+            "minLength": 1
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date YYYY-MM-DD.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaignId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/reports/{{campaignId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "startDate": "{{startDate}}",
+          "endDate": "{{endDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scores.nps": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get NPS score",
+      "description": "Get the latest NPS score via GET /api/v2/nps/score.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/nps/score",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scores.csat": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get CSAT score",
+      "description": "Get the latest CSAT score via GET /api/v2/csat/score.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/csat/score",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trends.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List trend groups",
+      "description": "List Retently trend groups via GET /api/v2/trends.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/trends",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trends.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get trend group",
+      "description": "Get trends for a group via GET /api/v2/trends/{groupId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "description": "Trend group ID or default.",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "description": "Date range preset.",
+            "minLength": 1
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Custom start date.",
+            "minLength": 1
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Custom end date.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/trends/{{groupId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "date": "{{date}}",
+          "startDate": "{{startDate}}",
+          "endDate": "{{endDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Send transactional survey",
+      "description": "Queue a transactional survey via POST /api/v2/survey.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "description": "Campaign ID.",
+            "minLength": 1
+          },
+          "subscribers": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Customers to survey.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "delay": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Delay in days."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign",
+          "subscribers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/survey",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "campaign": "{{campaign}}",
+          "subscribers": "{{subscribers}}",
+          "delay": "{{delay}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.survey_response": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Survey response",
+      "description": "Retently webhook for a new survey response. Fires when a customer submits NPS, CSAT, CES, or STAR feedback."
+    },
+    "webhook.customer_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Customer created",
+      "description": "Retently webhook for a new customer. Fires when a customer is created in the account."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
