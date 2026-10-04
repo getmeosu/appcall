@@ -5,7 +5,7 @@ describe("tiktok-ads manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("tiktok-ads");
     expect(manifest.name).toBe("TikTok Ads");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -32,8 +32,24 @@ describe("tiktok-ads manifest", () => {
     expect(ops).toContain("ad_groups.get");
     expect(ops).toContain("ads.get");
     expect(ops).toContain("pixels.list");
+    expect(ops).toContain("campaigns.create");
+    expect(ops).toContain("campaigns.update");
+    expect(ops).toContain("campaigns.status.update");
+    expect(ops).toContain("ad_groups.create");
+    expect(ops).toContain("ad_groups.update");
+    expect(ops).toContain("ad_groups.status.update");
+    expect(ops).toContain("ads.create");
+    expect(ops).toContain("ads.update");
+    expect(ops).toContain("ads.status.update");
+    expect(ops).toContain("advertisers.get");
+    expect(ops).toContain("reports.get");
+    expect(ops).toContain("identities.list");
+    expect(ops).toContain("videos.list");
+    expect(ops).toContain("images.list");
+    expect(ops).toContain("custom_audiences.list");
+    expect(ops).toContain("pixels.get");
     expect(ops).toContain("healthcheck");
-    expect(ops).toHaveLength(10);
+    expect(ops).toHaveLength(26);
   });
 
   it("has correct operation kinds", () => {
@@ -51,6 +67,22 @@ describe("tiktok-ads manifest", () => {
       "ad_groups.get",
       "ads.get",
       "pixels.list",
+      "campaigns.create",
+      "campaigns.update",
+      "campaigns.status.update",
+      "ad_groups.create",
+      "ad_groups.update",
+      "ad_groups.status.update",
+      "ads.create",
+      "ads.update",
+      "ads.status.update",
+      "advertisers.get",
+      "reports.get",
+      "identities.list",
+      "videos.list",
+      "images.list",
+      "custom_audiences.list",
+      "pixels.get",
     ] as const) {
       const op = manifest.operations[key];
       expect(op.kind).toBe("action");
@@ -67,6 +99,10 @@ describe("tiktok-ads manifest", () => {
       "advertiser",
       "pixel",
       "analytics_result",
+      "identity",
+      "video",
+      "image",
+      "custom_audience",
     ]);
   });
 });
