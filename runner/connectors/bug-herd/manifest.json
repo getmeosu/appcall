@@ -1,1 +1,1247 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"BugHerd API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["dev-tools"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"basic":{"password":"x","username":"{{apiKey}}"},"field":"apiKey","in":"header","name":"Authorization"},"baseUrl":"https://www.bugherd.com","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["error","message","errors","meta.error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"bug-herd","models":["organization","project","task"],"name":"BugHerd","network":{"allowedHosts":["www.bugherd.com"]},"operations":{"healthcheck":{"description":"Validate the BugHerd API key by retrieving the authenticated organization.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api_v2/organization.json","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Healthcheck","validationMode":"strict-generated"},"projects.get":{"description":"Retrieve one BugHerd project by identifier.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"project_id":{"minimum":1,"type":"integer"}},"required":["project_id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api_v2/projects/{{project_id}}.json","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get project","validationMode":"strict-generated"},"projects.list":{"description":"List BugHerd projects in the authenticated organization.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"page":{"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api_v2/projects.json","query":{"page":"{{page}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List projects","validationMode":"strict-generated"},"tasks.get":{"description":"Retrieve one BugHerd task by project identifier and global task identifier.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"project_id":{"minimum":1,"type":"integer"},"task_id":{"minimum":1,"type":"integer"}},"required":["project_id","task_id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api_v2/projects/{{project_id}}/tasks/{{task_id}}.json","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get task","validationMode":"strict-generated"},"tasks.list":{"description":"List BugHerd tasks for a project with optional page, status, and priority filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"page":{"minimum":1,"type":"integer"},"priority":{"enum":["not set","critical","important","normal","minor"],"type":"string"},"project_id":{"minimum":1,"type":"integer"},"status":{"minLength":1,"type":"string"}},"required":["project_id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api_v2/projects/{{project_id}}/tasks.json","query":{"page":"{{page}}","priority":"{{priority}}","status":"{{status}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List project tasks","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "bug-herd",
+  "name": "BugHerd",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "BugHerd API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "www.bugherd.com"
+    ]
+  },
+  "models": [
+    "organization",
+    "project",
+    "task",
+    "comment",
+    "user",
+    "column",
+    "attachment",
+    "webhook"
+  ],
+  "http": {
+    "baseUrl": "https://www.bugherd.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": "x"
+      }
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message",
+        "errors",
+        "meta.error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the BugHerd API key by retrieving the authenticated organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/organization.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List projects",
+      "description": "List BugHerd projects in the authenticated organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/projects.json",
+        "query": {
+          "page": "{{page}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project",
+      "description": "Retrieve one BugHerd project by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/projects/{{project_id}}.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List project tasks",
+      "description": "List BugHerd tasks for a project with optional page, status, and priority filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "not set",
+              "critical",
+              "important",
+              "normal",
+              "minor"
+            ]
+          }
+        },
+        "required": [
+          "project_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/projects/{{project_id}}/tasks.json",
+        "query": {
+          "page": "{{page}}",
+          "status": "{{status}}",
+          "priority": "{{priority}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get task",
+      "description": "Retrieve one BugHerd task by project identifier and global task identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "task_id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "project_id",
+          "task_id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/projects/{{project_id}}/tasks/{{task_id}}.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.listActive": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List active projects",
+      "description": "List active BugHerd projects in the authenticated organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "One-based list page.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/projects/active.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create project",
+      "description": "Create a BugHerd project. The project initially has no members.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Project name.",
+            "minLength": 1
+          },
+          "devurl": {
+            "type": "string",
+            "description": "Development site URL."
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Whether the project is active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api_v2/projects.json",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "project": {
+            "name": "{{name}}",
+            "devurl": "{{devurl}}",
+            "is_active": "{{is_active}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update project",
+      "description": "Update a BugHerd project's name, development URL, or active flag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "description": "Project identifier.",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Project name.",
+            "minLength": 1
+          },
+          "devurl": {
+            "type": "string",
+            "description": "Development site URL."
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Whether the project is active."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api_v2/projects/{{project_id}}.json",
+        "success": [
+          200
+        ],
+        "body": {
+          "project": {
+            "name": "{{name}}",
+            "devurl": "{{devurl}}",
+            "is_active": "{{is_active}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete project",
+      "description": "Permanently delete a BugHerd project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "description": "Project identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api_v2/projects/{{project_id}}.json",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create task",
+      "description": "Create a BugHerd task in a project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "description": "Project identifier.",
+            "minimum": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Task description.",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "string",
+            "description": "Task priority.",
+            "enum": [
+              "not set",
+              "critical",
+              "important",
+              "normal",
+              "minor"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Task status.",
+            "minLength": 1
+          },
+          "assigned_to_id": {
+            "type": "integer",
+            "description": "Assignee user identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "description"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api_v2/projects/{{project_id}}/tasks.json",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "task": {
+            "description": "{{description}}",
+            "priority": "{{priority}}",
+            "status": "{{status}}",
+            "assigned_to_id": "{{assigned_to_id}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update task",
+      "description": "Update a BugHerd task's description, status, priority, or assignee.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "description": "Project identifier.",
+            "minimum": 1
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "Global task identifier.",
+            "minimum": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Task description."
+          },
+          "priority": {
+            "type": "string",
+            "description": "Task priority.",
+            "enum": [
+              "not set",
+              "critical",
+              "important",
+              "normal",
+              "minor"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Task status.",
+            "minLength": 1
+          },
+          "assigned_to_id": {
+            "type": "integer",
+            "description": "Assignee user identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "task_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api_v2/projects/{{project_id}}/tasks/{{task_id}}.json",
+        "success": [
+          200
+        ],
+        "body": {
+          "task": {
+            "description": "{{description}}",
+            "priority": "{{priority}}",
+            "status": "{{status}}",
+            "assigned_to_id": "{{assigned_to_id}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List comments",
+      "description": "List comments on a BugHerd task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "description": "Project identifier.",
+            "minimum": 1
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "Global task identifier.",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "One-based list page.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "task_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/projects/{{project_id}}/tasks/{{task_id}}/comments.json",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create comment",
+      "description": "Add a comment to a BugHerd task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "description": "Project identifier.",
+            "minimum": 1
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "Global task identifier.",
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "description": "Comment body.",
+            "minLength": 1
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "Commenting user identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "task_id",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api_v2/projects/{{project_id}}/tasks/{{task_id}}/comments.json",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "comment": {
+            "text": "{{text}}",
+            "user_id": "{{user_id}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List BugHerd members and guests in the organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/users.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.members": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List members",
+      "description": "List BugHerd organization members.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/users/members.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.guests": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List guests",
+      "description": "List BugHerd guest users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/users/guests.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "columns.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List columns",
+      "description": "List Kanban columns for a BugHerd project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "description": "Project identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/projects/{{project_id}}/columns.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "attachments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List attachments",
+      "description": "List file attachments on a BugHerd task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "integer",
+            "description": "Project identifier.",
+            "minimum": 1
+          },
+          "task_id": {
+            "type": "integer",
+            "description": "Global task identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "task_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/projects/{{project_id}}/tasks/{{task_id}}/attachments.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhooks",
+      "description": "List installed BugHerd webhooks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api_v2/webhooks.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create webhook",
+      "description": "Install a BugHerd webhook for a project, task, or comment event.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target_url": {
+            "type": "string",
+            "description": "HTTPS endpoint that receives the event.",
+            "minLength": 8
+          },
+          "event": {
+            "type": "string",
+            "description": "Event to subscribe to.",
+            "enum": [
+              "project_create",
+              "task_create",
+              "task_update",
+              "comment",
+              "task_destroy"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "target_url",
+          "event"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api_v2/webhooks.json",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "webhook": {
+            "target_url": "{{target_url}}",
+            "event": "{{event}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete webhook",
+      "description": "Remove an installed BugHerd webhook.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "webhook_id": {
+            "type": "integer",
+            "description": "Webhook identifier.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "webhook_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api_v2/webhooks/{{webhook_id}}.json",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.task_create": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Task created",
+      "description": "BugHerd webhook for task_create. Fires when a task is created.",
+      "sideEffect": "read"
+    },
+    "webhook.task_update": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Task updated",
+      "description": "BugHerd webhook for task_update. Fires when a task is updated.",
+      "sideEffect": "read"
+    },
+    "webhook.task_destroy": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Task destroyed",
+      "description": "BugHerd webhook for task_destroy. Fires when a task is deleted.",
+      "sideEffect": "read"
+    },
+    "webhook.comment": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Comment created",
+      "description": "BugHerd webhook for comment. Fires when a comment is added to a task.",
+      "sideEffect": "read"
+    },
+    "webhook.project_create": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Project created",
+      "description": "BugHerd webhook for project_create. Fires when a project is created.",
+      "sideEffect": "read"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  }
+}
