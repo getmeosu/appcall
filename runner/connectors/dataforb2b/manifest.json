@@ -54,7 +54,13 @@
   "models": [
     "account",
     "search-count",
-    "typeahead"
+    "typeahead",
+    "person",
+    "company",
+    "job",
+    "post",
+    "monitor",
+    "signal"
   ],
   "name": "DataForB2B",
   "network": {
@@ -99,6 +105,209 @@
       "title": "Get account",
       "validationMode": "strict-generated"
     },
+    "companies.enrich": {
+      "description": "Enrich a company from a slug, domain, LinkedIn URL, or org_ id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "companyIdentifier": {
+            "description": "Slug, URL, handle, or org_ id.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "companyIdentifier"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "company_identifier": "{{companyIdentifier}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/enrich/company",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Enrich company",
+      "validationMode": "strict-generated"
+    },
+    "companies.search": {
+      "description": "Search companies with DataForB2B FilterGroup conditions.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "description": "Page size.",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "filters": {
+            "additionalProperties": false,
+            "description": "Company search filters.",
+            "properties": {
+              "conditions": {
+                "description": "Filter conditions or nested groups.",
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "op": {
+                "description": "Logical operator.",
+                "enum": [
+                  "and",
+                  "or"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "op",
+              "conditions"
+            ],
+            "type": "object"
+          },
+          "offset": {
+            "description": "Pagination offset.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filters"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "count": "{{count}}",
+          "filters": "{{filters}}",
+          "offset": "{{offset}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/search/companies",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search companies",
+      "validationMode": "strict-generated"
+    },
+    "filters.from_text": {
+      "description": "Convert a natural-language query into DataForB2B FilterGroup JSON.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "people",
+              "company",
+              "companies"
+            ],
+            "type": "string"
+          },
+          "query": {
+            "description": "Natural language query.",
+            "minLength": 3,
+            "type": "string"
+          },
+          "withTotal": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query",
+          "category"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "category": "{{category}}",
+          "query": "{{query}}",
+          "with_total": "{{withTotal}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/search/llm/filters",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Text to filters",
+      "validationMode": "strict-generated"
+    },
     "healthcheck": {
       "description": "Validate the DataForB2B API key by reading account status and remaining credits.",
       "enforceOutputSchema": true,
@@ -133,6 +342,593 @@
       "sideEffect": "read",
       "timeoutMs": 5000,
       "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "jobs.search": {
+      "description": "Search LinkedIn or Indeed job postings by keyword, location, and filters.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "datePosted": {
+            "enum": [
+              "past_24h",
+              "past_week",
+              "past_month"
+            ],
+            "type": "string"
+          },
+          "jobType": {
+            "enum": [
+              "fulltime",
+              "parttime",
+              "contract",
+              "temporary",
+              "internship"
+            ],
+            "type": "string"
+          },
+          "keyword": {
+            "description": "Job title, skill, or company.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "location": {
+            "description": "Location query.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "platform": {
+            "description": "Job board.",
+            "enum": [
+              "linkedin",
+              "indeed"
+            ],
+            "type": "string"
+          },
+          "workType": {
+            "enum": [
+              "onsite",
+              "remote",
+              "hybrid"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "keyword"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "count": "{{count}}",
+          "date_posted": "{{datePosted}}",
+          "job_type": "{{jobType}}",
+          "keyword": "{{keyword}}",
+          "location": "{{location}}",
+          "platform": "{{platform}}",
+          "work_type": "{{workType}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/search/jobs",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search jobs",
+      "validationMode": "strict-generated"
+    },
+    "monitors.add_targets": {
+      "description": "Add watch values to an existing DataForB2B signal monitor.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "monitorId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "monitorId",
+          "targets"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "targets": "{{targets}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/monitors/{{monitorId}}/targets",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Add monitor targets",
+      "validationMode": "strict-generated"
+    },
+    "monitors.create": {
+      "description": "Create a DataForB2B signal monitor with a delivery webhook URL.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "signal": {
+            "description": "Signal key from GET /signals.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "targets": {
+            "description": "Values to watch.",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "webhookUrl": {
+            "description": "HTTPS delivery URL.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal",
+          "webhookUrl"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "signal": "{{signal}}",
+          "targets": "{{targets}}",
+          "webhook_url": "{{webhookUrl}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/monitors",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "title": "Create monitor",
+      "validationMode": "strict-generated"
+    },
+    "monitors.delete": {
+      "description": "Delete a DataForB2B signal monitor and stop deliveries.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "monitorId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "monitorId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/monitors/{{monitorId}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "title": "Delete monitor",
+      "validationMode": "strict-generated"
+    },
+    "monitors.events": {
+      "description": "List recent events delivered for a DataForB2B signal monitor.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "monitorId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "monitorId"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/monitors/{{monitorId}}/events",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List monitor events",
+      "validationMode": "strict-generated"
+    },
+    "monitors.list": {
+      "description": "List DataForB2B signal monitors for the connected account.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/monitors",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List monitors",
+      "validationMode": "strict-generated"
+    },
+    "people.enrich": {
+      "description": "Enrich a person from a profile URL, public ID, or encoded prof_ id.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "enrichGithub": {
+            "type": "boolean"
+          },
+          "enrichPersonalEmail": {
+            "type": "boolean"
+          },
+          "enrichPhone": {
+            "type": "boolean"
+          },
+          "enrichProfile": {
+            "description": "Return full profile data.",
+            "type": "boolean"
+          },
+          "enrichWorkEmail": {
+            "type": "boolean"
+          },
+          "profileIdentifier": {
+            "description": "Profile URL, public ID, or prof_ id.",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "profileIdentifier"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "enrich_github": "{{enrichGithub}}",
+          "enrich_personal_email": "{{enrichPersonalEmail}}",
+          "enrich_phone": "{{enrichPhone}}",
+          "enrich_profile": "{{enrichProfile}}",
+          "enrich_work_email": "{{enrichWorkEmail}}",
+          "profile_identifier": "{{profileIdentifier}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/enrich/profile",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Enrich profile",
+      "validationMode": "strict-generated"
+    },
+    "people.search": {
+      "description": "Search professional profiles with DataForB2B FilterGroup conditions.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "description": "Page size.",
+            "maximum": 5000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "filters": {
+            "additionalProperties": false,
+            "description": "People search filters.",
+            "properties": {
+              "conditions": {
+                "description": "Filter conditions or nested groups.",
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "op": {
+                "description": "Logical operator.",
+                "enum": [
+                  "and",
+                  "or"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "op",
+              "conditions"
+            ],
+            "type": "object"
+          },
+          "offset": {
+            "description": "Pagination offset.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filters"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "count": "{{count}}",
+          "filters": "{{filters}}",
+          "offset": "{{offset}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/search/people",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search people",
+      "validationMode": "strict-generated"
+    },
+    "posts.search": {
+      "description": "Search LinkedIn, Twitter/X, or Reddit posts and optional engagers.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "datePosted": {
+            "enum": [
+              "past_24h",
+              "past_week",
+              "past_month"
+            ],
+            "type": "string"
+          },
+          "keyword": {
+            "description": "Post keyword or phrase.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "platform": {
+            "enum": [
+              "linkedin",
+              "twitter",
+              "reddit"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "keyword"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "count": "{{count}}",
+          "date_posted": "{{datePosted}}",
+          "keyword": "{{keyword}}",
+          "platform": "{{platform}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/search/posts",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Search posts",
       "validationMode": "strict-generated"
     },
     "results.count": {
@@ -215,6 +1011,174 @@
       "title": "Count results",
       "validationMode": "strict-generated"
     },
+    "search.llm": {
+      "description": "Run a natural-language people or company search in one call.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "people",
+              "company",
+              "companies"
+            ],
+            "type": "string"
+          },
+          "count": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query": {
+            "minLength": 3,
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "category"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "category": "{{category}}",
+          "count": "{{count}}",
+          "query": "{{query}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/search/llm",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "One-shot LLM search",
+      "validationMode": "strict-generated"
+    },
+    "search.reasoning": {
+      "description": "Run the multi-turn reasoning agent that builds and executes a search.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "people",
+              "companies"
+            ],
+            "type": "string"
+          },
+          "maxResults": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "query": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "sessionId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "body": {
+          "category": "{{category}}",
+          "max_results": "{{maxResults}}",
+          "query": "{{query}}",
+          "session_id": "{{sessionId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST",
+        "path": "/search/reasoning",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Reasoning search",
+      "validationMode": "strict-generated"
+    },
+    "signals.list": {
+      "description": "List the DataForB2B signal catalog and allowed monitor targets.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/signals",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List signals",
+      "validationMode": "strict-generated"
+    },
     "typeahead": {
       "description": "Autocomplete values for DataForB2B people and company search filters.",
       "enforceOutputSchema": true,
@@ -285,6 +1249,42 @@
       "timeoutMs": 15000,
       "title": "Typeahead",
       "validationMode": "strict-generated"
+    },
+    "webhook.founder_move": {
+      "description": "DataForB2B signal webhook. Fires when a founder or operator movement is detected.",
+      "kind": "webhook",
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Founder move"
+    },
+    "webhook.funding": {
+      "description": "DataForB2B signal webhook. Fires when a watched company raises a funding round.",
+      "kind": "webhook",
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Funding"
+    },
+    "webhook.job_change": {
+      "description": "DataForB2B signal webhook. Fires when a watched person changes role or employer.",
+      "kind": "webhook",
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Job change"
+    },
+    "webhook.post_engagement": {
+      "description": "DataForB2B signal webhook. Fires when new reactions or comments appear on watched posts.",
+      "kind": "webhook",
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "title": "Post engagement"
     }
   },
   "provenance": {
@@ -294,6 +1294,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }
