@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("jira manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("jira");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -41,6 +41,15 @@ describe("jira manifest", () => {
     expect(ops).toContain("issues.assign");
     expect(ops).toContain("projects.get");
     expect(ops).toContain("users.get");
+    expect(ops).toContain("issues.changelog.get");
+    expect(ops).toContain("issues.watchers.add");
+    expect(ops).toContain("issues.links.create");
+    expect(ops).toContain("worklogs.add");
+    expect(ops).toContain("myself.get");
+    expect(ops).toContain("fields.list");
+    expect(ops).toContain("webhook.jira.issue_created");
+    expect(ops).toContain("webhook.jira.issue_updated");
+    expect(ops).toContain("webhook.comment_created");
   });
 
   it("has at least 15 operations total", () => {

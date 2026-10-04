@@ -2,23 +2,31 @@ import { createConnectorHttpClient, type ConnectorHttpClient } from "../../../bu
 import manifest from "../manifest.json";
 import {
   appendDocumentTextBlock,
+  deleteNotionBlock,
   listBlockChildren,
   validateBlocksAppendInput,
+  validateBlocksDeleteInput,
   validateBlocksListInput,
   type BlocksAppendInput,
   type BlocksAppendResult,
+  type BlocksDeleteInput,
+  type BlocksDeleteResult,
   type BlocksListInput,
   type BlocksListResult,
 } from "./block_actions";
 import {
   createNotionComment,
   listNotionComments,
+  retrieveNotionComment,
   validateCommentsCreateInput,
   validateCommentsListInput,
+  validateCommentsRetrieveInput,
   type CommentsCreateInput,
   type CommentsCreateResult,
   type CommentsListInput,
   type CommentsListResult,
+  type CommentsRetrieveInput,
+  type CommentsRetrieveResult,
 } from "./comment_actions";
 import {
   hasLiveCredentialValidation,
@@ -26,6 +34,7 @@ import {
   validateCredentialsLive,
 } from "./credentials";
 import {
+  createNotionDatabase,
   createNotionDatabaseItem,
   getNotionDatabase,
   getNotionDatabaseItem,
@@ -35,6 +44,7 @@ import {
   validateDatabaseItemsGetInput,
   validateDatabaseItemsQueryInput,
   validateDatabaseItemsUpdateInput,
+  validateDatabasesCreateInput,
   validateDatabasesGetInput,
   type DatabaseItemsCreateResult,
   type DatabaseItemsCreateInput,
@@ -44,18 +54,22 @@ import {
   type DatabaseItemsQueryResult,
   type DatabaseItemsUpdateInput,
   type DatabaseItemsUpdateResult,
+  type DatabasesCreateInput,
+  type DatabasesCreateResult,
   type DatabasesGetResult,
   type DatabasesGetInput,
 } from "./database_actions";
 import {
   createNotionDocument,
   getNotionDocument,
+  getNotionPageProperty,
   searchNotionDocuments,
   updatePageTrashState,
   validateDocumentsCreateInput,
   validateDocumentsGetInput,
   validateDocumentsSearchInput,
   validateDocumentsTrashInput,
+  validatePagePropertyGetInput,
   type DocumentsCreateInput,
   type DocumentsCreateResult,
   type DocumentsGetInput,
@@ -64,7 +78,19 @@ import {
   type DocumentsSearchResult,
   type DocumentsTrashInput,
   type DocumentsTrashResult,
+  type PagePropertyGetInput,
+  type PagePropertyGetResult,
 } from "./document_actions";
+import {
+  getNotionCurrentUser,
+  getNotionUser,
+  validateUsersGetInput,
+  validateUsersMeInput,
+  type UsersGetInput,
+  type UsersGetResult,
+  type UsersMeInput,
+  type UsersMeResult,
+} from "./user_actions";
 import { isConnectorHttpClient, isRecord, requireNonEmptyString } from "./http";
 
 export { validateCredentialsLive } from "./credentials";
@@ -84,6 +110,12 @@ export type NotionDocumentsClient = {
   appendText(input: BlocksAppendInput): Promise<BlocksAppendResult>;
   listComments(input: CommentsListInput): Promise<CommentsListResult>;
   createComment(input: CommentsCreateInput): Promise<CommentsCreateResult>;
+  retrieveComment(input: CommentsRetrieveInput): Promise<CommentsRetrieveResult>;
+  getCurrentUser(input?: UsersMeInput): Promise<UsersMeResult>;
+  getUser(input: UsersGetInput): Promise<UsersGetResult>;
+  createDatabase(input: DatabasesCreateInput): Promise<DatabasesCreateResult>;
+  deleteBlock(input: BlocksDeleteInput): Promise<BlocksDeleteResult>;
+  getPageProperty(input: PagePropertyGetInput): Promise<PagePropertyGetResult>;
 };
 
 
@@ -405,6 +437,144 @@ export function listComments(input: unknown): Record<string, unknown> | Promise<
   };
 }
 
+export function getCurrentUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.notionToken === "string") {
+    const { notionToken } = validateCredentialInput(input);
+    return createNotionDocumentsClient({
+      notionToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      httpClient: isConnectorHttpClient(input.httpClient) ? input.httpClient : undefined,
+    }).getCurrentUser(validateUsersMeInput(input)).then((result) => ({
+      connector: "notion",
+      action: "users.me",
+      source: "connector",
+      ...result,
+    }));
+  }
+
+  return {
+    connector: "notion",
+    action: "users.me",
+    source: "connector",
+    validated: validateUsersMeInput(input),
+  };
+}
+
+export function getUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.notionToken === "string") {
+    const { notionToken } = validateCredentialInput(input);
+    return createNotionDocumentsClient({
+      notionToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      httpClient: isConnectorHttpClient(input.httpClient) ? input.httpClient : undefined,
+    }).getUser(validateUsersGetInput(input)).then((result) => ({
+      connector: "notion",
+      action: "users.get",
+      source: "connector",
+      ...result,
+    }));
+  }
+
+  return {
+    connector: "notion",
+    action: "users.get",
+    source: "connector",
+    validated: validateUsersGetInput(input),
+  };
+}
+
+export function createDatabase(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.notionToken === "string") {
+    const { notionToken } = validateCredentialInput(input);
+    return createNotionDocumentsClient({
+      notionToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      httpClient: isConnectorHttpClient(input.httpClient) ? input.httpClient : undefined,
+    }).createDatabase(validateDatabasesCreateInput(input)).then((result) => ({
+      connector: "notion",
+      action: "databases.create",
+      source: "connector",
+      ...result,
+    }));
+  }
+
+  return {
+    connector: "notion",
+    action: "databases.create",
+    source: "connector",
+    validated: validateDatabasesCreateInput(input),
+  };
+}
+
+export function retrieveComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.notionToken === "string") {
+    const { notionToken } = validateCredentialInput(input);
+    return createNotionDocumentsClient({
+      notionToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      httpClient: isConnectorHttpClient(input.httpClient) ? input.httpClient : undefined,
+    }).retrieveComment(validateCommentsRetrieveInput(input)).then((result) => ({
+      connector: "notion",
+      action: "comments.retrieve",
+      source: "connector",
+      ...result,
+    }));
+  }
+
+  return {
+    connector: "notion",
+    action: "comments.retrieve",
+    source: "connector",
+    validated: validateCommentsRetrieveInput(input),
+  };
+}
+
+export function deleteBlock(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.notionToken === "string") {
+    const { notionToken } = validateCredentialInput(input);
+    return createNotionDocumentsClient({
+      notionToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      httpClient: isConnectorHttpClient(input.httpClient) ? input.httpClient : undefined,
+    }).deleteBlock(validateBlocksDeleteInput(input)).then((result) => ({
+      connector: "notion",
+      action: "blocks.delete",
+      source: "connector",
+      ...result,
+    }));
+  }
+
+  return {
+    connector: "notion",
+    action: "blocks.delete",
+    source: "connector",
+    validated: validateBlocksDeleteInput(input),
+  };
+}
+
+export function getPageProperty(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.notionToken === "string") {
+    const { notionToken } = validateCredentialInput(input);
+    return createNotionDocumentsClient({
+      notionToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      httpClient: isConnectorHttpClient(input.httpClient) ? input.httpClient : undefined,
+    }).getPageProperty(validatePagePropertyGetInput(input)).then((result) => ({
+      connector: "notion",
+      action: "pages.properties.get",
+      source: "connector",
+      ...result,
+    }));
+  }
+
+  return {
+    connector: "notion",
+    action: "pages.properties.get",
+    source: "connector",
+    validated: validatePagePropertyGetInput(input),
+  };
+}
+
 export function createComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.notionToken === "string") {
     const { notionToken } = validateCredentialInput(input);
@@ -490,6 +660,30 @@ export function createNotionDocumentsClient(options: NotionDocumentsClientOption
     async createComment(input: CommentsCreateInput): Promise<CommentsCreateResult> {
       const commentInput = validateCommentsCreateInput(input);
       return createNotionComment(httpClient, notionToken, commentInput);
+    },
+    async retrieveComment(input: CommentsRetrieveInput): Promise<CommentsRetrieveResult> {
+      const commentInput = validateCommentsRetrieveInput(input);
+      return retrieveNotionComment(httpClient, notionToken, commentInput);
+    },
+    async getCurrentUser(input: UsersMeInput = {}): Promise<UsersMeResult> {
+      validateUsersMeInput(input);
+      return getNotionCurrentUser(httpClient, notionToken);
+    },
+    async getUser(input: UsersGetInput): Promise<UsersGetResult> {
+      const userInput = validateUsersGetInput(input);
+      return getNotionUser(httpClient, notionToken, userInput);
+    },
+    async createDatabase(input: DatabasesCreateInput): Promise<DatabasesCreateResult> {
+      const databaseInput = validateDatabasesCreateInput(input);
+      return createNotionDatabase(httpClient, notionToken, databaseInput);
+    },
+    async deleteBlock(input: BlocksDeleteInput): Promise<BlocksDeleteResult> {
+      const blockInput = validateBlocksDeleteInput(input);
+      return deleteNotionBlock(httpClient, notionToken, blockInput);
+    },
+    async getPageProperty(input: PagePropertyGetInput): Promise<PagePropertyGetResult> {
+      const propertyInput = validatePagePropertyGetInput(input);
+      return getNotionPageProperty(httpClient, notionToken, propertyInput);
     },
   };
 }

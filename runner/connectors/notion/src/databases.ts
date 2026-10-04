@@ -4,6 +4,16 @@ export type DatabasesGetInput = {
   databaseId: string;
 };
 
+export type DatabasesCreatePropertyInput = {
+  type: string;
+};
+
+export type DatabasesCreateInput = {
+  parentPageId: string;
+  title: string;
+  properties: Record<string, DatabasesCreatePropertyInput>;
+};
+
 export type DatabaseItemsQueryInput = {
   databaseId: string;
   filters?: DatabaseItemFilter[];
@@ -97,6 +107,31 @@ export function validateDatabasesGetInput(input: unknown): DatabasesGetInput {
   }
   const databaseId = requireNonEmptyString(input.databaseId, "databaseId");
   return { databaseId };
+}
+
+export function validateDatabasesCreateInput(input: unknown): DatabasesCreateInput {
+  if (!isRecord(input)) {
+    throw new Error("databases create input must be an object");
+  }
+  const parentPageId = requireNonEmptyString(input.parentPageId, "parentPageId");
+  const title = requireNonEmptyString(input.title, "title");
+  const properties = readDatabaseCreateProperties(input.properties);
+  return { parentPageId, title, properties };
+}
+
+export function buildDatabaseCreatePayload(input: DatabasesCreateInput): Record<string, unknown> {
+  const properties: Record<string, unknown> = {};
+  for (const [name, spec] of Object.entries(input.properties)) {
+    properties[name] = { [spec.type]: {} };
+  }
+  return {
+    parent: {
+      type: "page_id",
+      page_id: input.parentPageId,
+    },
+    title: [{ type: "text", text: { content: input.title } }],
+    properties,
+  };
 }
 
 export function validateDatabaseItemsQueryInput(input: unknown): DatabaseItemsQueryInput {
@@ -344,6 +379,48 @@ function readFilterPrimitive(value: unknown, field: string): string | number | b
     return value;
   }
   throw new Error(`filter.${field} must be a string, number, or boolean`);
+}
+
+const DATABASE_CREATE_PROPERTY_TYPES = new Set([
+  "checkbox",
+  "date",
+  "email",
+  "files",
+  "multi_select",
+  "number",
+  "people",
+  "phone_number",
+  "rich_text",
+  "select",
+  "status",
+  "title",
+  "url",
+]);
+
+function readDatabaseCreateProperties(value: unknown): Record<string, DatabasesCreatePropertyInput> {
+  if (value === undefined) {
+    return { Name: { type: "title" } };
+  }
+  if (!isRecord(value) || Object.keys(value).length === 0) {
+    throw new Error("properties must include at least one Notion property");
+  }
+  const properties: Record<string, DatabasesCreatePropertyInput> = {};
+  let hasTitle = false;
+  for (const [name, spec] of Object.entries(value)) {
+    if (!isRecord(spec)) {
+      throw new Error("database property must be an object");
+    }
+    const type = requireNonEmptyString(spec.type, "property.type");
+    if (!DATABASE_CREATE_PROPERTY_TYPES.has(type)) {
+      throw new Error(`unsupported database property type: ${type}`);
+    }
+    if (type === "title") hasTitle = true;
+    properties[name] = { type };
+  }
+  if (!hasTitle) {
+    properties.Name = { type: "title" };
+  }
+  return properties;
 }
 
 function buildDatabaseItemFilter(filter: DatabaseItemFilter): Record<string, unknown> {

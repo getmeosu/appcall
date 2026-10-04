@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("hubspot manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("hubspot");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -53,6 +53,19 @@ describe("hubspot manifest", () => {
     expect(ops).toContain("deals.delete");
     expect(ops).toContain("tickets.get");
     expect(ops).toContain("tickets.update");
+    expect(ops).toContain("companies.search");
+    expect(ops).toContain("deals.search");
+    expect(ops).toContain("tickets.search");
+    expect(ops).toContain("engagements.notes.create");
+    expect(ops).toContain("engagements.meetings.create");
+    expect(ops).toContain("engagements.calls.create");
+    expect(ops).toContain("engagements.tasks.create");
+    expect(ops).toContain("owners.list");
+    expect(ops).toContain("pipelines.deals.list");
+    expect(ops).toContain("associations.create");
+    expect(ops).toContain("webhook.contact.creation");
+    expect(ops).toContain("webhook.deal.creation");
+    expect(ops).toContain("webhook.ticket.creation");
   });
 
   it("all action operations have required fields", () => {

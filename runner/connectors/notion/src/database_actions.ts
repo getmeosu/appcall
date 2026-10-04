@@ -1,5 +1,6 @@
 import { type ConnectorHttpClient } from "../../../bun/src/http";
 import {
+  buildDatabaseCreatePayload,
   buildDatabaseItemCreatePayload,
   buildDatabaseItemsQueryPayload,
   buildDatabaseItemUpdatePayload,
@@ -9,17 +10,20 @@ import {
   validateDatabaseItemsGetInput,
   validateDatabaseItemsQueryInput,
   validateDatabaseItemsUpdateInput,
+  validateDatabasesCreateInput,
   validateDatabasesGetInput,
   type DatabaseItemsCreateInput,
   type DatabaseItemsGetInput,
   type DatabaseItemsQueryInput,
   type DatabaseItemsUpdateInput,
   type DatabaseSummary,
+  type DatabasesCreateInput,
   type DatabasesGetInput,
   type NormalizedDatabase,
 } from "./databases";
 import { normalizeDocument, parseNextCursor, type NormalizedDocument, type NotionPage } from "./documents";
 import {
+  mapNotionCreateDatabaseError,
   mapNotionCreatePageError,
   mapNotionDatabaseError,
   mapNotionPageError,
@@ -30,6 +34,10 @@ import {
 } from "./http";
 
 export type DatabasesGetResult =
+  | { ok: true; database: NormalizedDatabase; summary: DatabaseSummary }
+  | { ok: false; error: Record<string, unknown> };
+
+export type DatabasesCreateResult =
   | { ok: true; database: NormalizedDatabase; summary: DatabaseSummary }
   | { ok: false; error: Record<string, unknown> };
 
@@ -54,13 +62,41 @@ export {
   validateDatabaseItemsGetInput,
   validateDatabaseItemsQueryInput,
   validateDatabaseItemsUpdateInput,
+  validateDatabasesCreateInput,
   validateDatabasesGetInput,
   type DatabaseItemsCreateInput,
   type DatabaseItemsGetInput,
   type DatabaseItemsQueryInput,
   type DatabaseItemsUpdateInput,
+  type DatabasesCreateInput,
   type DatabasesGetInput,
 };
+
+export async function createNotionDatabase(
+  httpClient: ConnectorHttpClient,
+  notionToken: string,
+  input: DatabasesCreateInput,
+): Promise<DatabasesCreateResult> {
+  const response = await httpClient.fetchText("https://api.notion.com/v1/databases", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionToken}`,
+      "Content-Type": "application/json",
+      "Notion-Version": notionVersion,
+    },
+    body: JSON.stringify(buildDatabaseCreatePayload(input)),
+  });
+  const body = readJsonObject(response.body);
+  if (response.status < 200 || response.status >= 300) {
+    return { ok: false, error: mapNotionCreateDatabaseError(response.status, response.headers, body) };
+  }
+  const database = normalizeDatabase(body);
+  return {
+    ok: true,
+    database,
+    summary: summarizeDatabase(database),
+  };
+}
 
 export async function getNotionDatabase(
   httpClient: ConnectorHttpClient,

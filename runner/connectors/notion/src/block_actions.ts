@@ -3,6 +3,7 @@ import { normalizeBlock, parseNextCursor as parseBlocksNextCursor, type Normaliz
 import {
   isRecord,
   mapNotionAppendBlocksError,
+  mapNotionDeleteBlockError,
   mapNotionPageError,
   notionVersion,
   readDepth,
@@ -24,12 +25,20 @@ export type BlocksAppendInput = {
   text: string;
 };
 
+export type BlocksDeleteInput = {
+  blockId: string;
+};
+
 export type BlocksListResult =
   | { ok: true; blocks: NormalizedBlock[]; cursor: string | null }
   | { ok: false; error: Record<string, unknown> };
 
 export type BlocksAppendResult =
   | { ok: true; blocks: NormalizedBlock[]; cursor: string | null }
+  | { ok: false; error: Record<string, unknown> };
+
+export type BlocksDeleteResult =
+  | { ok: true; block: NormalizedBlock; deleted: true }
   | { ok: false; error: Record<string, unknown> };
 
 export function validateBlocksListInput(input: unknown): BlocksListInput {
@@ -41,6 +50,13 @@ export function validateBlocksListInput(input: unknown): BlocksListInput {
   const pageSize = input.pageSize === undefined ? undefined : readPageSize(input.pageSize);
   const depth = input.depth === undefined ? 1 : readDepth(input.depth);
   return { blockId, cursor, depth, pageSize };
+}
+
+export function validateBlocksDeleteInput(input: unknown): BlocksDeleteInput {
+  if (!isRecord(input)) {
+    throw new Error("blocks delete input must be an object");
+  }
+  return { blockId: requireNonEmptyString(input.blockId, "blockId") };
 }
 
 export function validateBlocksAppendInput(input: unknown): BlocksAppendInput {
@@ -122,6 +138,25 @@ export async function appendDocumentTextBlock(
     blocks: blocks.map((block) => normalizeBlock(block)),
     cursor: parseBlocksNextCursor(body),
   };
+}
+
+export async function deleteNotionBlock(
+  httpClient: ConnectorHttpClient,
+  notionToken: string,
+  input: BlocksDeleteInput,
+): Promise<BlocksDeleteResult> {
+  const response = await httpClient.fetchText(`https://api.notion.com/v1/blocks/${encodeURIComponent(input.blockId)}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${notionToken}`,
+      "Notion-Version": notionVersion,
+    },
+  });
+  const body = readJsonObject(response.body);
+  if (response.status < 200 || response.status >= 300) {
+    return { ok: false, error: mapNotionDeleteBlockError(response.status, response.headers, body) };
+  }
+  return { ok: true, block: normalizeBlock(body as NotionBlock), deleted: true };
 }
 
 function buildBlockChildrenURL(input: BlocksListInput): string {

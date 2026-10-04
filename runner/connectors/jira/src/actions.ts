@@ -431,3 +431,225 @@ export function getUser(input: unknown): Record<string, unknown> | Promise<Recor
   }
   return { connector: "jira", action: "users.get", source: "connector", validated: validateGetUserInput(input) };
 }
+
+function adfParagraph(text: string): Record<string, unknown> {
+  return { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text }] }] };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// issues.changelog.get
+// ────────────────────────────────────────────────────────────────────────────
+
+export type GetIssueChangelogInput = { issueKey: string; startAt?: number; maxResults?: number };
+
+export function validateGetIssueChangelogInput(input: unknown): GetIssueChangelogInput {
+  if (!isRecord(input)) throw new Error("get changelog input must be an object");
+  return {
+    issueKey: requireString(input.issueKey, "issueKey"),
+    startAt: typeof input.startAt === "number" ? input.startAt : 0,
+    maxResults: typeof input.maxResults === "number" ? input.maxResults : 50,
+  };
+}
+
+export function getIssueChangelog(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (hasAuth(input)) {
+    const payload = validateGetIssueChangelogInput(input);
+    const qs = `?startAt=${payload.startAt}&maxResults=${payload.maxResults}`;
+    return getClient(input, "issues.changelog.get")
+      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/changelog${qs}`)
+      .then((result) => {
+        if (result.status === 200) {
+          const r = isRecord(result.body) ? result.body : {};
+          const values = Array.isArray(r.values) ? r.values.filter(isRecord) : [];
+          return {
+            connector: "jira",
+            action: "issues.changelog.get",
+            source: "connector",
+            values,
+            total: typeof r.total === "number" ? r.total : values.length,
+            startAt: typeof r.startAt === "number" ? r.startAt : payload.startAt,
+            maxResults: typeof r.maxResults === "number" ? r.maxResults : payload.maxResults,
+          };
+        }
+        throw handleError(result);
+      });
+  }
+  return { connector: "jira", action: "issues.changelog.get", source: "connector", validated: validateGetIssueChangelogInput(input) };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// issues.watchers.add
+// ────────────────────────────────────────────────────────────────────────────
+
+export type AddWatcherInput = { issueKey: string; accountId: string };
+
+export function validateAddWatcherInput(input: unknown): AddWatcherInput {
+  if (!isRecord(input)) throw new Error("add watcher input must be an object");
+  return {
+    issueKey: requireString(input.issueKey, "issueKey"),
+    accountId: requireString(input.accountId, "accountId"),
+  };
+}
+
+export function addWatcher(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (hasAuth(input)) {
+    const payload = validateAddWatcherInput(input);
+    return getClient(input, "issues.watchers.add")
+      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/watchers`, { method: "POST", body: JSON.stringify(payload.accountId) })
+      .then((result) => {
+        if (result.status === 204 || result.status === 201) return { connector: "jira", action: "issues.watchers.add", source: "connector", added: true };
+        throw handleError(result);
+      });
+  }
+  return { connector: "jira", action: "issues.watchers.add", source: "connector", validated: validateAddWatcherInput(input) };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// issues.links.create
+// ────────────────────────────────────────────────────────────────────────────
+
+export type CreateIssueLinkInput = { inwardIssueKey: string; outwardIssueKey: string; type: string; comment?: string };
+
+export function validateCreateIssueLinkInput(input: unknown): CreateIssueLinkInput {
+  if (!isRecord(input)) throw new Error("create issue link input must be an object");
+  return {
+    inwardIssueKey: requireString(input.inwardIssueKey, "inwardIssueKey"),
+    outwardIssueKey: requireString(input.outwardIssueKey, "outwardIssueKey"),
+    type: requireString(input.type, "type"),
+    comment: typeof input.comment === "string" ? input.comment : undefined,
+  };
+}
+
+export function createIssueLink(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (hasAuth(input)) {
+    const payload = validateCreateIssueLinkInput(input);
+    const body: Record<string, unknown> = {
+      type: { name: payload.type },
+      inwardIssue: { key: payload.inwardIssueKey },
+      outwardIssue: { key: payload.outwardIssueKey },
+    };
+    if (payload.comment) body.comment = { body: adfParagraph(payload.comment) };
+    return getClient(input, "issues.links.create")
+      .fetchJSON("/issueLink", { method: "POST", body: JSON.stringify(body) })
+      .then((result) => {
+        if (result.status === 201 || result.status === 200) return { connector: "jira", action: "issues.links.create", source: "connector", created: true, link: result.body };
+        throw handleError(result);
+      });
+  }
+  return { connector: "jira", action: "issues.links.create", source: "connector", validated: validateCreateIssueLinkInput(input) };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// worklogs.add
+// ────────────────────────────────────────────────────────────────────────────
+
+export type AddWorklogInput = { issueKey: string; timeSpent: string; started?: string; comment?: string };
+
+export function validateAddWorklogInput(input: unknown): AddWorklogInput {
+  if (!isRecord(input)) throw new Error("add worklog input must be an object");
+  return {
+    issueKey: requireString(input.issueKey, "issueKey"),
+    timeSpent: requireString(input.timeSpent, "timeSpent"),
+    started: typeof input.started === "string" ? input.started : undefined,
+    comment: typeof input.comment === "string" ? input.comment : undefined,
+  };
+}
+
+function normalizeWorklog(data: Record<string, unknown>, issueKey: string): Record<string, unknown> {
+  const author = isRecord(data.author) ? data.author : {};
+  return {
+    id: `jira-worklog:${typeof data.id === "string" ? data.id : ""}`,
+    provider: "jira",
+    providerWorklogId: typeof data.id === "string" ? data.id : "",
+    issueKey,
+    timeSpent: typeof data.timeSpent === "string" ? data.timeSpent : "",
+    timeSpentSeconds: typeof data.timeSpentSeconds === "number" ? data.timeSpentSeconds : 0,
+    started: typeof data.started === "string" ? data.started : "",
+    authorId: typeof author.accountId === "string" ? author.accountId : "",
+    authorName: typeof author.displayName === "string" ? author.displayName : "",
+    comment: typeof data.comment === "string" ? data.comment : "",
+    raw: data,
+  };
+}
+
+export function addWorklog(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (hasAuth(input)) {
+    const payload = validateAddWorklogInput(input);
+    const body: Record<string, unknown> = { timeSpent: payload.timeSpent };
+    if (payload.started) body.started = payload.started;
+    if (payload.comment) body.comment = adfParagraph(payload.comment);
+    return getClient(input, "worklogs.add")
+      .fetchJSON(`/issue/${encodeURIComponent(payload.issueKey)}/worklog`, { method: "POST", body: JSON.stringify(body) })
+      .then((result) => {
+        if (result.status === 201 || result.status === 200) {
+          return {
+            connector: "jira",
+            action: "worklogs.add",
+            source: "connector",
+            worklog: normalizeWorklog(isRecord(result.body) ? result.body : {}, payload.issueKey),
+          };
+        }
+        throw handleError(result);
+      });
+  }
+  return { connector: "jira", action: "worklogs.add", source: "connector", validated: validateAddWorklogInput(input) };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// myself.get
+// ────────────────────────────────────────────────────────────────────────────
+
+export type GetMyselfInput = Record<string, never>;
+
+export function validateGetMyselfInput(input: unknown): GetMyselfInput {
+  if (!isRecord(input)) throw new Error("get myself input must be an object");
+  return {};
+}
+
+export function getMyself(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (hasAuth(input)) {
+    validateGetMyselfInput(input);
+    return getClient(input, "myself.get")
+      .fetchJSON("/myself")
+      .then((result) => {
+        if (result.status === 200) return { connector: "jira", action: "myself.get", source: "connector", user: normalizeUser(result.body as any) };
+        throw handleError(result);
+      });
+  }
+  return { connector: "jira", action: "myself.get", source: "connector", validated: validateGetMyselfInput(input) };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// fields.list
+// ────────────────────────────────────────────────────────────────────────────
+
+export type ListFieldsInput = Record<string, never>;
+
+export function validateListFieldsInput(input: unknown): ListFieldsInput {
+  if (!isRecord(input)) throw new Error("list fields input must be an object");
+  return {};
+}
+
+export function listFields(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (hasAuth(input)) {
+    validateListFieldsInput(input);
+    return getClient(input, "fields.list")
+      .fetchJSON("/field")
+      .then((result) => {
+        if (result.status === 200) {
+          const raw = Array.isArray(result.body) ? result.body : [];
+          const fields = raw.filter(isRecord).map((field) => ({
+            id: typeof field.id === "string" ? field.id : "",
+            key: typeof field.key === "string" ? field.key : "",
+            name: typeof field.name === "string" ? field.name : "",
+            custom: field.custom === true,
+            schema: isRecord(field.schema) ? field.schema : {},
+            raw: field,
+          }));
+          return { connector: "jira", action: "fields.list", source: "connector", fields };
+        }
+        throw handleError(result);
+      });
+  }
+  return { connector: "jira", action: "fields.list", source: "connector", validated: validateListFieldsInput(input) };
+}

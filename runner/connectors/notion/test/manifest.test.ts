@@ -30,6 +30,14 @@ describe("notion connector manifest", () => {
     expect(manifest.operations["documents.search"].kind).toBe("action");
     expect(manifest.operations["documents.trash"].kind).toBe("action");
     expect(manifest.operations["users.list"].kind).toBe("sync");
+    expect(manifest.operations["users.me"].kind).toBe("action");
+    expect(manifest.operations["users.get"].kind).toBe("action");
+    expect(manifest.operations["databases.create"].kind).toBe("action");
+    expect(manifest.operations["comments.retrieve"].kind).toBe("action");
+    expect(manifest.operations["blocks.delete"].kind).toBe("action");
+    expect(manifest.operations["pages.properties.get"].kind).toBe("action");
+    expect(manifest.operations["webhook.page.updated"].kind).toBe("webhook");
+    expect(manifest.operations["webhook.database.updated"].kind).toBe("webhook");
     expect(manifest.operations.healthcheck.kind).toBe("action");
     expect(manifest.models).toContain("document");
     expect(manifest.models).toContain("user");

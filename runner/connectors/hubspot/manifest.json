@@ -1,7 +1,7 @@
 {
   "key": "hubspot",
   "name": "HubSpot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["crm"],
   "auth": {
@@ -15,6 +15,15 @@
       "crm.objects.deals.write",
       "crm.objects.tickets.read",
       "crm.objects.tickets.write",
+      "crm.objects.notes.read",
+      "crm.objects.notes.write",
+      "crm.objects.meetings.read",
+      "crm.objects.meetings.write",
+      "crm.objects.calls.read",
+      "crm.objects.calls.write",
+      "crm.objects.tasks.read",
+      "crm.objects.tasks.write",
+      "crm.objects.owners.read",
       "oauth"
     ],
     "setup": {
@@ -633,6 +642,308 @@
           "ticket": { "type": "object", "description": "The normalized updated ticket." }
         }
       }
+    },
+    "companies.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Search Companies",
+      "description": "Search for companies in HubSpot CRM using filters, sorts, and property projections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Full-text search query string." },
+          "filterGroups": { "type": "array", "description": "Filter groups (OR between groups, AND within a group).", "items": { "type": "object" } },
+          "sorts": { "type": "array", "description": "Sort order objects with propertyName and direction.", "items": { "type": "object" } },
+          "properties": { "type": "array", "description": "Property names to return.", "items": { "type": "string" } },
+          "limit": { "type": "number", "description": "Maximum number of results to return (default 10, max 100)." },
+          "after": { "type": "string", "description": "Pagination cursor from a previous search response." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "companies": { "type": "array", "description": "Normalized company records." },
+          "total": { "type": "number" },
+          "nextCursor": { "type": "string" }
+        }
+      }
+    },
+    "deals.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Search Deals",
+      "description": "Search for deals in HubSpot CRM using filters, sorts, and property projections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Full-text search query string." },
+          "filterGroups": { "type": "array", "description": "Filter groups (OR between groups, AND within a group).", "items": { "type": "object" } },
+          "sorts": { "type": "array", "description": "Sort order objects with propertyName and direction.", "items": { "type": "object" } },
+          "properties": { "type": "array", "description": "Property names to return.", "items": { "type": "string" } },
+          "limit": { "type": "number", "description": "Maximum number of results to return (default 10, max 100)." },
+          "after": { "type": "string", "description": "Pagination cursor from a previous search response." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deals": { "type": "array", "description": "Normalized deal records." },
+          "total": { "type": "number" },
+          "nextCursor": { "type": "string" }
+        }
+      }
+    },
+    "tickets.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Search Tickets",
+      "description": "Search for support tickets in HubSpot CRM using filters, sorts, and property projections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Full-text search query string." },
+          "filterGroups": { "type": "array", "description": "Filter groups (OR between groups, AND within a group).", "items": { "type": "object" } },
+          "sorts": { "type": "array", "description": "Sort order objects with propertyName and direction.", "items": { "type": "object" } },
+          "properties": { "type": "array", "description": "Property names to return.", "items": { "type": "string" } },
+          "limit": { "type": "number", "description": "Maximum number of results to return (default 10, max 100)." },
+          "after": { "type": "string", "description": "Pagination cursor from a previous search response." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "tickets": { "type": "array", "description": "Normalized ticket records." },
+          "total": { "type": "number" },
+          "nextCursor": { "type": "string" }
+        }
+      }
+    },
+    "engagements.notes.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Note",
+      "description": "Create a CRM note engagement in HubSpot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "body": { "type": "string", "description": "Note body text (hs_note_body)." },
+          "timestamp": { "type": "string", "description": "Engagement timestamp as epoch milliseconds or ISO-8601." },
+          "ownerId": { "type": "string", "description": "HubSpot owner ID for the note." }
+        },
+        "required": ["body"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "note": { "type": "object", "description": "The created note." }
+        }
+      }
+    },
+    "engagements.meetings.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Meeting",
+      "description": "Create a CRM meeting engagement in HubSpot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "Meeting title." },
+          "body": { "type": "string", "description": "Meeting body or agenda." },
+          "timestamp": { "type": "string", "description": "Engagement timestamp as epoch milliseconds or ISO-8601." },
+          "startTime": { "type": "string", "description": "Meeting start time as epoch milliseconds or ISO-8601." },
+          "endTime": { "type": "string", "description": "Meeting end time as epoch milliseconds or ISO-8601." },
+          "outcome": { "type": "string", "description": "Meeting outcome, e.g. SCHEDULED or COMPLETED." },
+          "ownerId": { "type": "string", "description": "HubSpot owner ID for the meeting." }
+        },
+        "required": ["title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "meeting": { "type": "object", "description": "The created meeting." }
+        }
+      }
+    },
+    "engagements.calls.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Call",
+      "description": "Create a CRM call engagement in HubSpot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "Call title." },
+          "body": { "type": "string", "description": "Call notes." },
+          "timestamp": { "type": "string", "description": "Engagement timestamp as epoch milliseconds or ISO-8601." },
+          "durationMs": { "type": "number", "description": "Call duration in milliseconds." },
+          "status": { "type": "string", "description": "Call status, e.g. COMPLETED or CANCELED." },
+          "direction": { "type": "string", "description": "Call direction, INBOUND or OUTBOUND." },
+          "ownerId": { "type": "string", "description": "HubSpot owner ID for the call." }
+        },
+        "required": ["title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "call": { "type": "object", "description": "The created call." }
+        }
+      }
+    },
+    "engagements.tasks.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Task",
+      "description": "Create a CRM task engagement in HubSpot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": { "type": "string", "description": "Task subject." },
+          "body": { "type": "string", "description": "Task notes." },
+          "timestamp": { "type": "string", "description": "Due timestamp as epoch milliseconds or ISO-8601." },
+          "status": { "type": "string", "description": "Task status, e.g. NOT_STARTED or COMPLETED." },
+          "priority": { "type": "string", "description": "Task priority, e.g. LOW, MEDIUM, HIGH." },
+          "type": { "type": "string", "description": "Task type, e.g. TODO, EMAIL, CALL." },
+          "ownerId": { "type": "string", "description": "HubSpot owner ID for the task." }
+        },
+        "required": ["subject"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "task": { "type": "object", "description": "The created task." }
+        }
+      }
+    },
+    "owners.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Owners",
+      "description": "List HubSpot CRM owners, optionally filtered by email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "description": "Filter owners by email address." },
+          "after": { "type": "string", "description": "Pagination cursor from a previous response." },
+          "limit": { "type": "number", "description": "Maximum number of owners to return." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "owners": { "type": "array", "description": "Normalized owner records." },
+          "nextCursor": { "type": "string" }
+        }
+      }
+    },
+    "pipelines.deals.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "List Deal Pipelines",
+      "description": "List HubSpot deal pipelines and their stages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "pipelines": { "type": "array", "description": "Deal pipelines with stages." }
+        }
+      }
+    },
+    "associations.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Association",
+      "description": "Create a CRM v4 association between two HubSpot objects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromObjectType": { "type": "string", "description": "Source object type, e.g. contacts or companies." },
+          "fromId": { "type": "string", "description": "Source object ID." },
+          "toObjectType": { "type": "string", "description": "Target object type." },
+          "toId": { "type": "string", "description": "Target object ID." },
+          "associationTypeId": { "type": "number", "description": "HubSpot association type ID." },
+          "associationCategory": { "type": "string", "description": "Association category. Defaults to HUBSPOT_DEFINED." }
+        },
+        "required": ["fromObjectType", "fromId", "toObjectType", "toId", "associationTypeId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "association": { "type": "object", "description": "The created association." }
+        }
+      }
+    },
+    "webhook.contact.creation": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
+    },
+    "webhook.deal.creation": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
+    },
+    "webhook.ticket.creation": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
     },
     "healthcheck": {
       "kind": "action",
