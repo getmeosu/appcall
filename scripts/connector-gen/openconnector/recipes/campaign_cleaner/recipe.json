@@ -82,7 +82,14 @@
       "healthcheck",
       "campaigns.list",
       "campaigns.status.get",
-      "campaigns.get"
+      "campaigns.get",
+      "credits.get",
+      "campaigns.send",
+      "campaigns.delete",
+      "inboxTests.create",
+      "inboxTests.results.get",
+      "campaigns.export",
+      "webhook.campaign_completed"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -205,12 +212,111 @@
       "adaptations": [
         "POST JSON body is {campaign:{id,minimize_html?}} matching official OpenAPI and pinned source. Optional minimizeHtml maps to minimize_html."
       ]
+    },
+    "credits.get": {
+      "upstreamActionId": "get_credits",
+      "sourceRefs": [
+        "handler-get-credits",
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.campaigncleaner.com/api-reference/endpoint/get-credits"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Calls official GET /v1/get_credits. Same path as healthcheck, exposed as a first-class credit read."
+      ]
+    },
+    "campaigns.send": {
+      "upstreamActionId": "send_campaign",
+      "sourceRefs": [
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.campaigncleaner.com/api-reference/endpoint/send-campaign"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Calls official POST /v1/send_campaign. Optional sanitizer flags map onto send_campaign fields."
+      ]
+    },
+    "campaigns.delete": {
+      "upstreamActionId": "delete_campaign",
+      "sourceRefs": [
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.campaigncleaner.com/api-reference/endpoint/delete-campaign"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Calls official POST /v1/delete_campaign with {campaign:{id}}."
+      ]
+    },
+    "inboxTests.create": {
+      "upstreamActionId": "create_inbox_test",
+      "sourceRefs": [
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.campaigncleaner.com/api-reference/endpoint/create-inbox-test"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Calls official POST /v1/create_inbox_test with test_name."
+      ]
+    },
+    "inboxTests.results.get": {
+      "upstreamActionId": "get_inbox_test_results",
+      "sourceRefs": [
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.campaigncleaner.com/api-reference/endpoint/get-inbox-test-results"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Calls official POST /v1/get_inbox_test_results with job_id."
+      ]
+    },
+    "campaigns.export": {
+      "upstreamActionId": "get_campaign",
+      "sourceRefs": [
+        "action-get-campaign",
+        "handler-get-campaign",
+        "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.campaigncleaner.com/api-reference/endpoint/get-campaign"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Calls official POST /v1/get_campaign with minimize_html forced true for compact export."
+      ]
+    },
+    "webhook.campaign_completed": {
+      "upstreamActionId": "send_campaign_webhook",
+      "sourceRefs": [
+        "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.campaigncleaner.com/api-reference/endpoint/send-campaign"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook for the send_campaign webhook_url callback. No HTTP request is issued."
+      ]
     }
   },
   "manifest": {
     "key": "campaign-cleaner",
     "name": "Campaign Cleaner",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -238,7 +344,8 @@
     },
     "models": [
       "campaign",
-      "credit"
+      "credit",
+      "inbox-test"
     ],
     "http": {
       "baseUrl": "https://api.campaigncleaner.com",
@@ -447,6 +554,352 @@
             200
           ]
         }
+      },
+      "credits.get": {
+        "timeoutMs": 5000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Get credits",
+        "description": "Get remaining Campaign Cleaner API credits.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/get_credits",
+          "success": [
+            200
+          ]
+        }
+      },
+      "campaigns.send": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Send campaign",
+        "description": "Submit HTML to Campaign Cleaner for processing and analysis.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "campaignHtml": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Full HTML of the campaign."
+            },
+            "campaignName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Campaign name."
+            },
+            "webhookUrl": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional webhook URL for completed results."
+            },
+            "inlineCss": {
+              "type": "boolean",
+              "description": "Inline CSS into HTML elements."
+            },
+            "removeComments": {
+              "type": "boolean",
+              "description": "Strip CSS and HTML comments."
+            },
+            "adjustFontColors": {
+              "type": "boolean",
+              "description": "Adjust bright font colors that trigger spam filters."
+            },
+            "resizeAndHost": {
+              "type": "boolean",
+              "description": "Resize and host eligible images on the CDN."
+            },
+            "customInfo": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional metadata stored with the campaign."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "campaignHtml",
+            "campaignName"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/send_campaign",
+          "success": [
+            200
+          ],
+          "body": {
+            "send_campaign": {
+              "campaign_html": "{{campaignHtml}}",
+              "campaign_name": "{{campaignName}}",
+              "webhook_url": "{{webhookUrl}}",
+              "inline_css": "{{inlineCss}}",
+              "remove_comments": "{{removeComments}}",
+              "adjust_font_colors": "{{adjustFontColors}}",
+              "resize_and_host": "{{resizeAndHost}}",
+              "custom_info": "{{customInfo}}"
+            }
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "campaigns.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Delete campaign",
+        "description": "Delete a saved Campaign Cleaner campaign.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "campaignId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Campaign id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "campaignId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/delete_campaign",
+          "success": [
+            200
+          ],
+          "body": {
+            "campaign": {
+              "id": "{{campaignId}}"
+            }
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "inboxTests.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Create inbox test",
+        "description": "Create a Campaign Cleaner inbox placement test and receive seed addresses.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "testName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox test name."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "testName"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/create_inbox_test",
+          "success": [
+            200
+          ],
+          "body": {
+            "test_name": "{{testName}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "inboxTests.results.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Get inbox test results",
+        "description": "Get placement results for a Campaign Cleaner inbox test.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "jobId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Inbox test job id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "jobId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/get_inbox_test_results",
+          "success": [
+            200
+          ],
+          "body": {
+            "job_id": "{{jobId}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "campaigns.export": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "title": "Export campaign analysis",
+        "description": "Retrieve a Campaign Cleaner campaign with HTML minimized for compact export.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "campaignId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Campaign id."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "campaignId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/get_campaign",
+          "success": [
+            200
+          ],
+          "body": {
+            "campaign": {
+              "id": "{{campaignId}}",
+              "minimize_html": true
+            }
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "webhook.campaign_completed": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "title": "Campaign completed",
+        "description": "Campaign Cleaner webhook fired when send_campaign finishes processing and posts results to webhook_url.",
+        "sideEffect": "read"
       }
     },
     "provenance": {

@@ -1,7 +1,17 @@
 {
+  "key": "zixflow",
+  "name": "Zixflow",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "crm"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,160 +19,73 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "crm"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.zixflow.com"
+    ]
+  },
+  "models": [
+    "collection",
+    "list",
+    "member",
+    "record",
+    "attribute",
+    "activity"
+  ],
   "http": {
+    "baseUrl": "https://api.zixflow.com/api/v1",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.zixflow.com/api/v1",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "zixflow",
-  "models": [
-    "collection",
-    "list",
-    "member"
-  ],
-  "name": "Zixflow",
-  "network": {
-    "allowedHosts": [
-      "api.zixflow.com"
-    ]
-  },
   "operations": {
-    "collections.get": {
-      "description": "Get one Zixflow collection by id.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "collectionId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "collectionId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/collections/{{collectionId}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get collection",
-      "validationMode": "strict-generated"
-    },
-    "collections.list": {
-      "description": "List system and custom collections in the Zixflow workspace.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/collections",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List collections",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate the Zixflow API token with GET /workspace-members.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Healthcheck",
+      "description": "Validate the Zixflow API token with GET /workspace-members.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -170,79 +93,115 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      }
     },
-    "lists.get": {
-      "description": "Get one Zixflow list by id.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "listId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "listId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+    "collections.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List collections",
+      "description": "List system and custom collections in the Zixflow workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/lists/{{listId}}",
+        "path": "/collections",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get list",
-      "validationMode": "strict-generated"
+      }
     },
-    "lists.list": {
-      "description": "List Zixflow lists in the workspace.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+    "collections.get": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get collection",
+      "description": "Get one Zixflow collection by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "collectionId"
+        ],
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collections/{{collectionId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "lists.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List lists",
+      "description": "List Zixflow lists in the workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -250,21 +209,1074 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      }
+    },
+    "lists.get": {
       "timeoutMs": 15000,
-      "title": "List lists",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get list",
+      "description": "Get one Zixflow list by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "listId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists/{{listId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "members.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get workspace member",
+      "description": "Get one Zixflow workspace member by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace member id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "memberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspace-members/{{memberId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "attributes.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List attributes",
+      "description": "List attributes for a Zixflow collection or list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target type.",
+            "enum": [
+              "collection",
+              "list"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection or list id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "targetId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/attributes/{{target}}/{{targetId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "attributes.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create attribute",
+      "description": "Create a custom attribute on a Zixflow collection or list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target type.",
+            "enum": [
+              "collection",
+              "list"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection or list id."
+          },
+          "apiKeyName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "API key name for the attribute."
+          },
+          "inputType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Attribute input type."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable attribute name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional attribute description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "targetId",
+          "apiKeyName",
+          "inputType",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/attributes/{{target}}/{{targetId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "apiKeyName": "{{apiKeyName}}",
+          "inputType": "{{inputType}}",
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "attributes.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Update attribute",
+      "description": "Update a custom attribute on a Zixflow collection or list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target type.",
+            "enum": [
+              "collection",
+              "list"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection or list id."
+          },
+          "attributeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Attribute id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated attribute name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "targetId",
+          "attributeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/attributes/{{target}}/{{targetId}}/{{attributeId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "attributes.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Delete attribute",
+      "description": "Delete a custom attribute from a Zixflow collection or list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target type.",
+            "enum": [
+              "collection",
+              "list"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection or list id."
+          },
+          "attributeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Attribute id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "targetId",
+          "attributeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/attributes/{{target}}/{{targetId}}/{{attributeId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "records.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List collection records",
+      "description": "Query records in a Zixflow collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection id."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Result offset."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectionId",
+          "limit",
+          "offset"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/collection-records/{{collectionId}}/query",
+        "success": [
+          200
+        ],
+        "body": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "records.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get collection record",
+      "description": "Get one Zixflow collection record by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection id."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectionId",
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collection-records/{{collectionId}}/{{recordId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "records.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create collection record",
+      "description": "Create a record in a Zixflow collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record name."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectionId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/collection-records/{{collectionId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "records.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Update collection record",
+      "description": "Update a Zixflow collection record.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection id."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated name."
+          },
+          "jobTitle": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated job title."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectionId",
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/collection-records/{{collectionId}}/{{recordId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "jobTitle": "{{jobTitle}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "records.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Delete collection record",
+      "description": "Delete a Zixflow collection record.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection id."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Record id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectionId",
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/collection-records/{{collectionId}}/{{recordId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "listEntries.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List list entries",
+      "description": "Query entries in a Zixflow list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "List id."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Result offset."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "listId",
+          "limit",
+          "offset"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/list-entries/{{listId}}/query",
+        "success": [
+          200
+        ],
+        "body": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "listEntries.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get list entry",
+      "description": "Get one Zixflow list entry by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "List id."
+          },
+          "entryId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "List entry id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "listId",
+          "entryId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/list-entries/{{listId}}/{{entryId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "listEntries.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create list entry",
+      "description": "Create an entry in a Zixflow list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "List id."
+          },
+          "recordId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collection record id to add."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "listId",
+          "recordId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/list-entries/{{listId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "recordId": "{{recordId}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "activities.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List activities",
+      "description": "Query Zixflow activities and tasks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Result offset."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "limit",
+          "offset"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/collection-records/activity-list/query",
+        "success": [
+          200
+        ],
+        "body": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "activities.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get activity",
+      "description": "Get one Zixflow activity by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "activityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Activity id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "activityId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/collection-records/activity-list/{{activityId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "activities.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create activity",
+      "description": "Create a Zixflow activity or task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "iconType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Icon type such as emoji or interaction."
+          },
+          "iconValue": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Icon value for the chosen type."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Activity name."
+          },
+          "scheduleAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 schedule time."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional activity description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "iconType",
+          "iconValue",
+          "name",
+          "scheduleAt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/collection-records/activity-list",
+        "success": [
+          200
+        ],
+        "body": {
+          "iconType": "{{iconType}}",
+          "iconValue": "{{iconValue}}",
+          "name": "{{name}}",
+          "scheduleAt": "{{scheduleAt}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "webhook.incoming_whatsapp_message": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Incoming WhatsApp message",
+      "description": "Zixflow incoming WhatsApp message webhook. Fires on event incoming.whatsapp.message.",
+      "sideEffect": "read"
+    },
+    "webhook.incoming_rcs_message": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Incoming RCS message",
+      "description": "Zixflow incoming RCS message webhook. Fires when an RCS message is received.",
+      "sideEffect": "read"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
