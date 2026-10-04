@@ -851,6 +851,8 @@ import {
   deleteMeeting as zoomDeleteMeeting, listMeetingRegistrants as zoomListRegistrants,
   addMeetingRegistrant as zoomAddRegistrant, listPastMeetingParticipants as zoomPastParticipants,
   createWebinar as zoomCreateWebinar, listWebinars as zoomListWebinars,
+  getUser as zoomGetUser, listRecordings as zoomListRecordings, getRecording as zoomGetRecording,
+  deleteRecording as zoomDeleteRecording, getWebinar as zoomGetWebinar,
 } from "../../connectors/zoom/src/actions";
 
 import saleshandyManifest from "../../connectors/saleshandy/manifest.json";
@@ -2016,6 +2018,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "past_meetings.participants": zoomPastParticipants,
       "webinars.create": zoomCreateWebinar,
       "webinars.list": zoomListWebinars,
+      "webinars.get": zoomGetWebinar,
+      "users.get": zoomGetUser,
+      "recordings.list": zoomListRecordings,
+      "recordings.get": zoomGetRecording,
+      "recordings.delete": zoomDeleteRecording,
     },
     saleshandy: {
       "sequences.list": shListSequences,

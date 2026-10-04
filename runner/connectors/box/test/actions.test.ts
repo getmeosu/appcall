@@ -19,7 +19,7 @@ for (const c of cases) describe(c.op, () => {
     let calls = 0;
     const result = await actions[c.op]!({...c.input, accessToken:"fixture-token", fetch:async(url:unknown, init?:RequestInit)=>{
       calls++;
-      expect(String(url)).toBe(manifest.http.baseUrl+c.path);
+      expect(String(url)).toBe(((c as {baseUrl?: string}).baseUrl ?? manifest.http.baseUrl)+c.path);
       expect(init?.method).toBe(c.method);
       const headers = new Headers(init?.headers);
       expect(headers.get("Authorization")).toBe("Bearer fixture-token");
@@ -38,6 +38,11 @@ for (const c of cases) describe(c.op, () => {
 it("honors Retry-After for throttling", async()=>{
   expect(actions.healthcheck).toBeFunction();
   await expect(actions.healthcheck!({accessToken:"fixture-token",fetch:async()=>new Response('{}',{status:429,headers:{"retry-after":"17"}})})).rejects.toMatchObject({code:"CONNECTOR_RATE_LIMITED",retryAfterSeconds:17});
+});
+it("does not compile EventOnly webhook operations into action handlers", () => {
+  expect(actions["webhook.file_uploaded"]).toBeUndefined();
+  expect(actions["webhook.file_downloaded"]).toBeUndefined();
+  expect(actions["webhook.folder_created"]).toBeUndefined();
 });
 it("rejects missing write identifiers before dispatch", async()=>{
   expect(actions["files.delete"]).toBeFunction();
