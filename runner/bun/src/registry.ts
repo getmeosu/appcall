@@ -501,6 +501,10 @@ import {
   getMeta as ghGetMeta,
   listMetaVersions as ghListMetaVersions,
   getOctocat as ghGetOctocat,
+  getRateLimit as ghGetRateLimit,
+  listRepoComments as ghListRepoComments,
+  getRepoKey as ghGetRepoKey,
+  listRepoKeys as ghListRepoKeys,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1770,6 +1774,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "meta.get": ghGetMeta,
       "meta.versions.list": ghListMetaVersions,
       "meta.octocat.get": ghGetOctocat,
+      "rate_limit.get": ghGetRateLimit,
+      "repos.comments.list": ghListRepoComments,
+      "repos.keys.get": ghGetRepoKey,
+      "repos.keys.list": ghListRepoKeys,
     },
     salesforce: {
       "contacts.create": createContact,
