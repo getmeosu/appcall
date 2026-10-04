@@ -1,1 +1,1292 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Dailybot API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"X-API-KEY","value":"{{apiKey}}"},"baseUrl":"https://api.dailybot.com","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["detail","message","errors.0.message","code"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json","Content-Type":"application/json"}},"key":"dailybot","models":["user","organization"],"name":"Dailybot","network":{"allowedHosts":["api.dailybot.com"]},"operations":{"healthcheck":{"description":"Validate the Dailybot API key by reading the authenticated user.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/me/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"me.get":{"description":"Get the authenticated Dailybot user context and linked organization.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/me/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get me","validationMode":"strict-generated"},"organization.get":{"description":"Get the Dailybot organization for the authenticated API key.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/organization/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get organization","validationMode":"strict-generated"},"users.get":{"description":"Get a specific user from the authenticated Dailybot organization.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"user_uuid":{"minLength":1,"type":"string"}},"required":["user_uuid"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/users/{{user_uuid}}/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get user","validationMode":"strict-generated"},"users.list":{"description":"List users in the authenticated Dailybot organization.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"is_active":{"type":"boolean"},"limit":{"maximum":250,"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"},"role":{"enum":["admin","member"],"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/users/","query":{"is_active":"{{is_active}}","limit":"{{limit}}","offset":"{{offset}}","role":"{{role}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List users","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "dailybot",
+  "name": "Dailybot",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Dailybot API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.dailybot.com"
+    ]
+  },
+  "models": [
+    "user",
+    "organization",
+    "team",
+    "checkin",
+    "form",
+    "kudos",
+    "template"
+  ],
+  "http": {
+    "baseUrl": "https://api.dailybot.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-KEY",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "errors.0.message",
+        "code"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Dailybot API key by reading the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/me/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "me.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get me",
+      "description": "Get the authenticated Dailybot user context and linked organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/me/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "organization.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get organization",
+      "description": "Get the Dailybot organization for the authenticated API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/organization/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "users.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List users",
+      "description": "List users in the authenticated Dailybot organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "is_active": {
+            "type": "boolean"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "member"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/users/",
+        "query": {
+          "is_active": "{{is_active}}",
+          "role": "{{role}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "users.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get user",
+      "description": "Get a specific user from the authenticated Dailybot organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_uuid": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "user_uuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/users/{{user_uuid}}/",
+        "success": [
+          200
+        ]
+      }
+    },
+    "teams.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List teams",
+      "description": "List teams in the authenticated Dailybot organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Pagination offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/teams/",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get team",
+      "description": "Get a Dailybot team by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "team_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "team_uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/teams/{{team_uuid}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.members.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List team members",
+      "description": "List members of a Dailybot team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "team_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "team_uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/teams/{{team_uuid}}/members/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.members.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add team member",
+      "description": "Add a user to a Dailybot team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "team_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team UUID."
+          },
+          "user_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID to add."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "member",
+              "lead"
+            ],
+            "description": "Team role."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "team_uuid",
+          "user_uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/teams/{{team_uuid}}/member/",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "user_uuid": "{{user_uuid}}",
+          "role": "{{role}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.members.remove": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove team member",
+      "description": "Remove a user from a Dailybot team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "team_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team UUID."
+          },
+          "user_uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID to remove."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "team_uuid",
+          "user_uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/teams/{{team_uuid}}/member/{{user_uuid}}/",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.user_uuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checkins.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List check-ins",
+      "description": "List Dailybot check-ins in the organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "search": {
+            "type": "string",
+            "description": "Case-insensitive name search."
+          },
+          "start_date": {
+            "type": "string",
+            "description": "Created on or after YYYY-MM-DD."
+          },
+          "end_date": {
+            "type": "string",
+            "description": "Created on or before YYYY-MM-DD."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/checkins/",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "search": "{{search}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checkins.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get check-in",
+      "description": "Get a Dailybot check-in by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check-in UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/checkins/{{uuid}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checkins.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create check-in",
+      "description": "Create a Dailybot check-in with questions and participants.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check-in name."
+          },
+          "questions": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Check-in questions.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Question type."
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Question label."
+                },
+                "short_question": {
+                  "type": "string",
+                  "description": "Short question text."
+                }
+              },
+              "required": [
+                "type",
+                "label"
+              ]
+            }
+          },
+          "participants": {
+            "type": "object",
+            "description": "Participants object with user_uuids.",
+            "additionalProperties": false,
+            "properties": {
+              "user_uuids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "team_uuids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "questions",
+          "participants"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/checkins/create/",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "questions": "{{questions}}",
+          "participants": "{{participants}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "checkins.responses.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List check-in responses",
+      "description": "List responses collected for a Dailybot check-in.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check-in UUID."
+          },
+          "start_date": {
+            "type": "string",
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "end_date": {
+            "type": "string",
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "user": {
+            "type": "string",
+            "description": "Filter to a participant UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/checkins/{{uuid}}/responses/",
+        "success": [
+          200
+        ],
+        "query": {
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "user": "{{user}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List forms",
+      "description": "List Dailybot forms in the organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string",
+            "description": "Search form name."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Scope filter such as all, public, workflow."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Pagination offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/forms/",
+        "success": [
+          200
+        ],
+        "query": {
+          "search": "{{search}}",
+          "filter": "{{filter}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get form",
+      "description": "Get a Dailybot form by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/forms/{{uuid}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.responses.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create form response",
+      "description": "Submit a response to a Dailybot form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form UUID."
+          },
+          "content": {
+            "type": "object",
+            "description": "Map of question UUID to answer."
+          },
+          "automation": {
+            "type": "boolean",
+            "description": "Mark the submission as automation."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uuid",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/forms/{{uuid}}/responses/",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "content": "{{content}}",
+          "automation": "{{automation}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "kudos.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List kudos",
+      "description": "List Dailybot kudos the caller can access.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string",
+            "enum": [
+              "kudos_received",
+              "kudos_given"
+            ],
+            "description": "Received or given."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Page size."
+          },
+          "start_date": {
+            "type": "string",
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "end_date": {
+            "type": "string",
+            "description": "Inclusive end date YYYY-MM-DD."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/kudos/",
+        "success": [
+          200
+        ],
+        "query": {
+          "filter": "{{filter}}",
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "start_date": "{{start_date}}",
+          "end_date": "{{end_date}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "kudos.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Give kudos",
+      "description": "Send kudos to Dailybot teammates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "receivers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            },
+            "description": "Receiver user identifiers."
+          },
+          "content": {
+            "type": "string",
+            "description": "Kudos message."
+          },
+          "is_anonymous": {
+            "type": "boolean",
+            "description": "Send anonymously."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "receivers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/kudos/",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "receivers": "{{receivers}}",
+          "content": "{{content}}",
+          "is_anonymous": "{{is_anonymous}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List templates",
+      "description": "List Dailybot check-in and form templates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "check_in",
+              "form"
+            ],
+            "description": "Template type filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/templates/",
+        "success": [
+          200
+        ],
+        "query": {
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.followups_response_completed": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Check-in response completed",
+      "description": "Dailybot webhook when a member completes a check-in response (followups.response.completed).",
+      "sideEffect": "read"
+    },
+    "webhook.followups_response_updated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Check-in response updated",
+      "description": "Dailybot webhook when a check-in response is modified (followups.response.updated).",
+      "sideEffect": "read"
+    },
+    "webhook.followups_response_deleted": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Check-in response deleted",
+      "description": "Dailybot webhook when a check-in response is deleted (followups.response.deleted).",
+      "sideEffect": "read"
+    },
+    "webhook.forms_response_created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Form response created",
+      "description": "Dailybot webhook when a form response is created (forms.response.created).",
+      "sideEffect": "read"
+    },
+    "webhook.forms_response_updated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Form response updated",
+      "description": "Dailybot webhook when a form response is updated (forms.response.updated).",
+      "sideEffect": "read"
+    },
+    "webhook.forms_response_deleted": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Form response deleted",
+      "description": "Dailybot webhook when a form response is deleted (forms.response.deleted).",
+      "sideEffect": "read"
+    },
+    "webhook.kudos_posted": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Kudos posted",
+      "description": "Dailybot webhook when kudos are posted (kudos.posted).",
+      "sideEffect": "read"
+    },
+    "webhook.organization_user_activated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Organization user activated",
+      "description": "Dailybot webhook when a user is activated (organization.user_activated).",
+      "sideEffect": "read"
+    },
+    "webhook.organization_user_deactivated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Organization user deactivated",
+      "description": "Dailybot webhook when a user is deactivated (organization.user_deactivated).",
+      "sideEffect": "read"
+    },
+    "webhook.organization_team_user_added": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Team user added",
+      "description": "Dailybot webhook when a user is added to a team (organization.team_user_added).",
+      "sideEffect": "read"
+    },
+    "webhook.organization_team_user_removed": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Team user removed",
+      "description": "Dailybot webhook when a user is removed from a team (organization.team_user_removed).",
+      "sideEffect": "read"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
