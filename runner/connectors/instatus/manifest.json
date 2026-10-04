@@ -1,1 +1,1705 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Instatus API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["dev-tools"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://api.instatus.com","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["error.message","message","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"instatus","models":["page","component","incident"],"name":"Instatus","network":{"allowedHosts":["api.instatus.com"]},"operations":{"components.get":{"description":"Get one Instatus component by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"componentId":{"minLength":1,"type":"string"},"pageId":{"minLength":1,"type":"string"}},"required":["pageId","componentId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v2/{{pageId}}/components/{{componentId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get component","validationMode":"strict-generated"},"components.list":{"description":"List components on an Instatus status page.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"page":{"minimum":1,"type":"integer"},"pageId":{"minLength":1,"type":"string"},"perPage":{"maximum":100,"minimum":1,"type":"integer"}},"required":["pageId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v2/{{pageId}}/components","query":{"page":"{{page}}","per_page":"{{perPage}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List components","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Instatus API key by listing status pages.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v2/pages","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Healthcheck","validationMode":"strict-generated"},"incidents.list":{"description":"List incidents on an Instatus status page.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"page":{"minimum":1,"type":"integer"},"pageId":{"minLength":1,"type":"string"},"perPage":{"maximum":100,"minimum":1,"type":"integer"}},"required":["pageId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/{{pageId}}/incidents","query":{"page":"{{page}}","per_page":"{{perPage}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List incidents","validationMode":"strict-generated"},"pages.list":{"description":"List Instatus status pages with optional pagination.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"page":{"minimum":1,"type":"integer"},"perPage":{"maximum":100,"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v2/pages","query":{"page":"{{page}}","per_page":"{{perPage}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List status pages","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "instatus",
+  "name": "Instatus",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Instatus API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.instatus.com"
+    ]
+  },
+  "models": [
+    "page",
+    "component",
+    "incident",
+    "incidentUpdate",
+    "maintenance",
+    "subscriber",
+    "metric",
+    "teammate",
+    "template"
+  ],
+  "http": {
+    "baseUrl": "https://api.instatus.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Instatus API key by listing status pages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/pages",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List status pages",
+      "description": "List Instatus status pages with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/pages",
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "components.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List components",
+      "description": "List components on an Instatus status page.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "pageId"
+        ],
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/{{pageId}}/components",
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "components.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get component",
+      "description": "Get one Instatus component by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "pageId",
+          "componentId"
+        ],
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "componentId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/{{pageId}}/components/{{componentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "incidents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List incidents",
+      "description": "List incidents on an Instatus status page.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "pageId"
+        ],
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/{{pageId}}/incidents",
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "incidents.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get incident",
+      "description": "Get one Instatus incident by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "incidentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "incidentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/{{pageId}}/incidents/{{incidentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "incidents.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create incident",
+      "description": "Create an Instatus incident on a status page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident name."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Initial incident message."
+          },
+          "status": {
+            "type": "string",
+            "description": "Incident status.",
+            "enum": [
+              "INVESTIGATING",
+              "IDENTIFIED",
+              "MONITORING",
+              "RESOLVED"
+            ]
+          },
+          "notify": {
+            "type": "boolean",
+            "description": "Notify subscribers."
+          },
+          "started": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident start time (ISO-8601)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "name",
+          "status"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/{{pageId}}/incidents",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "message": "{{message}}",
+          "status": "{{status}}",
+          "notify": "{{notify}}",
+          "started": "{{started}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "incidents.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update incident",
+      "description": "Update an Instatus incident.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "incidentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident name."
+          },
+          "status": {
+            "type": "string",
+            "description": "Incident status.",
+            "enum": [
+              "INVESTIGATING",
+              "IDENTIFIED",
+              "MONITORING",
+              "RESOLVED"
+            ]
+          },
+          "notify": {
+            "type": "boolean",
+            "description": "Notify subscribers."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "incidentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/{{pageId}}/incidents/{{incidentId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "status": "{{status}}",
+          "notify": "{{notify}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "incidents.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete incident",
+      "description": "Delete an Instatus incident.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "incidentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "incidentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/{{pageId}}/incidents/{{incidentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "incidentUpdates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add incident update",
+      "description": "Add an update to an Instatus incident.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "incidentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident ID."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Update message."
+          },
+          "status": {
+            "type": "string",
+            "description": "Incident status.",
+            "enum": [
+              "INVESTIGATING",
+              "IDENTIFIED",
+              "MONITORING",
+              "RESOLVED"
+            ]
+          },
+          "notify": {
+            "type": "boolean",
+            "description": "Notify subscribers."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "incidentId",
+          "message",
+          "status"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/{{pageId}}/incidents/{{incidentId}}/incident-updates",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "message": "{{message}}",
+          "status": "{{status}}",
+          "notify": "{{notify}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "components.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create component",
+      "description": "Create an Instatus component on a status page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Component name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Component description."
+          },
+          "status": {
+            "type": "string",
+            "description": "Component status.",
+            "enum": [
+              "OPERATIONAL",
+              "UNDERMAINTENANCE",
+              "DEGRADEDPERFORMANCE",
+              "PARTIALOUTAGE",
+              "MAJOROUTAGE"
+            ]
+          },
+          "showUptime": {
+            "type": "boolean",
+            "description": "Show uptime on the status page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/{{pageId}}/components",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "status": "{{status}}",
+          "showUptime": "{{showUptime}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "components.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update component",
+      "description": "Update an Instatus component.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "componentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Component ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Component name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Component description."
+          },
+          "status": {
+            "type": "string",
+            "description": "Component status.",
+            "enum": [
+              "OPERATIONAL",
+              "UNDERMAINTENANCE",
+              "DEGRADEDPERFORMANCE",
+              "PARTIALOUTAGE",
+              "MAJOROUTAGE"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "componentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/{{pageId}}/components/{{componentId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "components.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete component",
+      "description": "Delete an Instatus component. Child components are not deleted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "componentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Component ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "componentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/{{pageId}}/components/{{componentId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "maintenances.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List maintenances",
+      "description": "List scheduled maintenances on an Instatus status page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/{{pageId}}/maintenances",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "maintenances.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get maintenance",
+      "description": "Get one Instatus maintenance by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "maintenanceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Maintenance ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "maintenanceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/{{pageId}}/maintenances/{{maintenanceId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "maintenances.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create maintenance",
+      "description": "Schedule an Instatus maintenance window.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Maintenance name."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Maintenance message."
+          },
+          "status": {
+            "type": "string",
+            "description": "Maintenance status.",
+            "enum": [
+              "NOTSTARTEDYET",
+              "INPROGRESS",
+              "COMPLETED"
+            ]
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start time (ISO-8601 UTC)."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End time (ISO-8601 UTC)."
+          },
+          "autoStart": {
+            "type": "boolean",
+            "description": "Automatically start at the start time."
+          },
+          "autoEnd": {
+            "type": "boolean",
+            "description": "Automatically end at the end time."
+          },
+          "notify": {
+            "type": "boolean",
+            "description": "Notify subscribers."
+          },
+          "notifyStart": {
+            "type": "boolean",
+            "description": "Notify when maintenance starts."
+          },
+          "notifyEnd": {
+            "type": "boolean",
+            "description": "Notify when maintenance ends."
+          },
+          "notifyEarly": {
+            "type": "boolean",
+            "description": "Notify before maintenance starts."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "name",
+          "status",
+          "start",
+          "end",
+          "autoStart",
+          "autoEnd",
+          "notify",
+          "notifyStart",
+          "notifyEnd",
+          "notifyEarly"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/{{pageId}}/maintenances",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "message": "{{message}}",
+          "status": "{{status}}",
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "autoStart": "{{autoStart}}",
+          "autoEnd": "{{autoEnd}}",
+          "notify": "{{notify}}",
+          "notifyStart": "{{notifyStart}}",
+          "notifyEnd": "{{notifyEnd}}",
+          "notifyEarly": "{{notifyEarly}}",
+          "components": []
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "maintenances.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update maintenance",
+      "description": "Update an Instatus maintenance window.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "maintenanceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Maintenance ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Maintenance name."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Maintenance message."
+          },
+          "status": {
+            "type": "string",
+            "description": "Maintenance status.",
+            "enum": [
+              "NOTSTARTEDYET",
+              "INPROGRESS",
+              "COMPLETED"
+            ]
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start time (ISO-8601 UTC)."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End time (ISO-8601 UTC)."
+          },
+          "notify": {
+            "type": "boolean",
+            "description": "Notify subscribers."
+          },
+          "autoStart": {
+            "type": "boolean",
+            "description": "Automatically start at the start time."
+          },
+          "autoEnd": {
+            "type": "boolean",
+            "description": "Automatically end at the end time."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "maintenanceId",
+          "message",
+          "start",
+          "end",
+          "status",
+          "notify",
+          "autoStart",
+          "autoEnd"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/{{pageId}}/maintenances/{{maintenanceId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "message": "{{message}}",
+          "status": "{{status}}",
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "notify": "{{notify}}",
+          "autoStart": "{{autoStart}}",
+          "autoEnd": "{{autoEnd}}",
+          "components": []
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "maintenances.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete maintenance",
+      "description": "Delete an Instatus maintenance window.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "maintenanceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Maintenance ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "maintenanceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/{{pageId}}/maintenances/{{maintenanceId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List subscribers",
+      "description": "List subscribers on an Instatus status page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by email or phone."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/{{pageId}}/subscribers",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "search": "{{search}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add subscriber",
+      "description": "Add an email, SMS, or webhook subscriber to an Instatus status page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber email."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber phone number."
+          },
+          "webhook": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber webhook URL."
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Subscribe to all components."
+          },
+          "autoConfirm": {
+            "type": "boolean",
+            "description": "Skip confirmation email."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/{{pageId}}/subscribers",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "phone": "{{phone}}",
+          "webhook": "{{webhook}}",
+          "all": "{{all}}",
+          "autoConfirm": "{{autoConfirm}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Remove subscriber",
+      "description": "Remove a subscriber from an Instatus status page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "subscriberId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId",
+          "subscriberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/{{pageId}}/subscribers/{{subscriberId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "metrics.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List metrics",
+      "description": "List metrics on an Instatus status page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/{{pageId}}/metrics",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teammates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List teammates",
+      "description": "List teammates on an Instatus status page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/{{pageId}}/team",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List templates",
+      "description": "List incident and maintenance templates on an Instatus status page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Items per page.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/{{pageId}}/templates",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.incident_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Incident updated",
+      "description": "Instatus webhook when an incident is added or updated on a status page."
+    },
+    "webhook.maintenance_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Maintenance updated",
+      "description": "Instatus webhook when a maintenance is added or updated on a status page."
+    },
+    "webhook.component_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Component updated",
+      "description": "Instatus webhook when a component status changes on a status page."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

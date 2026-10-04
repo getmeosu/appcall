@@ -1,1 +1,1121 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Avoma API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["scheduling"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://api.avoma.com","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["detail","message","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"avoma","models":["user","meeting"],"name":"Avoma","network":{"allowedHosts":["api.avoma.com"]},"operations":{"healthcheck":{"description":"Validate the Avoma API key by listing users.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/users/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"meetings.get":{"description":"Retrieve one Avoma meeting by UUID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"includeCrmAssociations":{"type":"boolean"},"meetingUuid":{"minLength":1,"type":"string"}},"required":["meetingUuid"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/meetings/{{meetingUuid}}/","query":{"include_crm_associations":"{{includeCrmAssociations}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get meeting","validationMode":"strict-generated"},"meetings.list":{"description":"List Avoma meetings in a UTC date range with optional pagination and order.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"fromDate":{"minLength":1,"type":"string"},"order":{"enum":["start_at","-start_at"],"type":"string"},"page":{"minimum":1,"type":"integer"},"pageSize":{"maximum":100,"minimum":1,"type":"integer"},"toDate":{"minLength":1,"type":"string"}},"required":["fromDate","toDate"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/meetings/","query":{"from_date":"{{fromDate}}","o":"{{order}}","page":"{{page}}","page_size":"{{pageSize}}","to_date":"{{toDate}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List meetings","validationMode":"strict-generated"},"users.get":{"description":"Retrieve one Avoma user by UUID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"userUuid":{"minLength":1,"type":"string"}},"required":["userUuid"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/users/{{userUuid}}/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get user","validationMode":"strict-generated"},"users.list":{"description":"List Avoma users visible to the API key.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/users/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List users","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "avoma",
+  "name": "Avoma",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "scheduling"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Avoma API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.avoma.com"
+    ]
+  },
+  "models": [
+    "user",
+    "meeting",
+    "recording",
+    "transcription",
+    "note",
+    "scorecard",
+    "snippet",
+    "meetingType"
+  ],
+  "http": {
+    "baseUrl": "https://api.avoma.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Avoma API key by listing users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/users/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List users",
+      "description": "List Avoma users visible to the API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/users/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get user",
+      "description": "Retrieve one Avoma user by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userUuid": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "userUuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/users/{{userUuid}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetings.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List meetings",
+      "description": "List Avoma meetings in a UTC date range with optional pagination and order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "toDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "start_at",
+              "-start_at"
+            ]
+          }
+        },
+        "required": [
+          "fromDate",
+          "toDate"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/meetings/",
+        "query": {
+          "from_date": "{{fromDate}}",
+          "to_date": "{{toDate}}",
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}",
+          "o": "{{order}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetings.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get meeting",
+      "description": "Retrieve one Avoma meeting by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingUuid": {
+            "type": "string",
+            "minLength": 1
+          },
+          "includeCrmAssociations": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "meetingUuid"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/meetings/{{meetingUuid}}/",
+        "query": {
+          "include_crm_associations": "{{includeCrmAssociations}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetingSegments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List meeting segments",
+      "description": "List Avoma meeting segments for a meeting UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meeting UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "meetingUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/meeting_segments/",
+        "success": [
+          200
+        ],
+        "query": {
+          "uuid": "{{meetingUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get recording by meeting",
+      "description": "Get Avoma audio and video recording URLs for a meeting UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meeting UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "meetingUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/recordings/",
+        "success": [
+          200
+        ],
+        "query": {
+          "meeting_uuid": "{{meetingUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recordings.getById": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get recording by ID",
+      "description": "Get one Avoma recording by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "recordingUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "recordingUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/recordings/{{recordingUuid}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcriptions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List transcriptions",
+      "description": "List Avoma transcriptions in a UTC date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start of the UTC date range."
+          },
+          "toDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End of the UTC date range."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "fromDate",
+          "toDate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/transcriptions/",
+        "success": [
+          200
+        ],
+        "query": {
+          "from_date": "{{fromDate}}",
+          "to_date": "{{toDate}}",
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcriptions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get transcription",
+      "description": "Get the Avoma transcription for one meeting UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meeting UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "meetingUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/transcriptions/",
+        "success": [
+          200
+        ],
+        "query": {
+          "meeting_uuid": "{{meetingUuid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List notes",
+      "description": "List Avoma AI notes in a UTC date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start of the UTC date range."
+          },
+          "toDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End of the UTC date range."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          },
+          "outputFormat": {
+            "type": "string",
+            "description": "Notes output format.",
+            "enum": [
+              "json",
+              "html",
+              "markdown"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "fromDate",
+          "toDate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/notes/",
+        "success": [
+          200
+        ],
+        "query": {
+          "from_date": "{{fromDate}}",
+          "to_date": "{{toDate}}",
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}",
+          "output_format": "{{outputFormat}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notes.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get notes",
+      "description": "Get Avoma AI notes for one meeting.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meeting UUID."
+          },
+          "outputFormat": {
+            "type": "string",
+            "description": "Notes output format.",
+            "enum": [
+              "json",
+              "html",
+              "markdown"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "meetingUuid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/notes/",
+        "success": [
+          200
+        ],
+        "query": {
+          "meeting": "{{meetingUuid}}",
+          "output_format": "{{outputFormat}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scorecards.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List scorecard templates",
+      "description": "List Avoma scorecard templates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/scorecards/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scorecardEvaluations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List scorecard evaluations",
+      "description": "List Avoma scorecard evaluations, optionally for one meeting.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start of the UTC date range."
+          },
+          "toDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End of the UTC date range."
+          },
+          "meetingUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meeting UUID."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/scorecard_evaluations/",
+        "success": [
+          200
+        ],
+        "query": {
+          "from_date": "{{fromDate}}",
+          "to_date": "{{toDate}}",
+          "meeting_uuid": "{{meetingUuid}}",
+          "page_size": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetingTypes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List meeting types",
+      "description": "List Avoma meeting types for the organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/meeting_type/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "snippets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List meeting snippets",
+      "description": "List Avoma meeting snippets for one meeting or a UTC date range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meeting UUID."
+          },
+          "fromDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Start of the UTC date range."
+          },
+          "toDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "End of the UTC date range."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/snippets/",
+        "success": [
+          200
+        ],
+        "query": {
+          "meeting_uuid": "{{meetingUuid}}",
+          "from_date": "{{fromDate}}",
+          "to_date": "{{toDate}}",
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "revenueIntel.timeline": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get revenue intelligence timeline",
+      "description": "Get Avoma revenue-intelligence timeline aggregates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "objectType": {
+            "type": "string",
+            "description": "CRM entity type.",
+            "enum": [
+              "opportunity",
+              "account",
+              "contact",
+              "lead"
+            ]
+          },
+          "crmEntityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External CRM entity ID."
+          },
+          "startAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Timeline start (ISO-8601)."
+          },
+          "endAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Timeline end (ISO-8601)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "objectType",
+          "startAt"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/revenue_intel/timeline/",
+        "success": [
+          200
+        ],
+        "query": {
+          "object_type": "{{objectType}}",
+          "crm_entity_id": "{{crmEntityId}}",
+          "start_at": "{{startAt}}",
+          "end_at": "{{endAt}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "revenueIntel.timelineDetails": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get revenue intelligence timeline details",
+      "description": "Get paginated Avoma revenue-intelligence engagement records.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "objectType": {
+            "type": "string",
+            "description": "CRM entity type.",
+            "enum": [
+              "opportunity",
+              "account",
+              "contact",
+              "lead"
+            ]
+          },
+          "crmEntityId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External CRM entity ID."
+          },
+          "startAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Timeline start (ISO-8601)."
+          },
+          "endAt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Timeline end (ISO-8601)."
+          },
+          "type": {
+            "type": "string",
+            "description": "Engagement type.",
+            "enum": [
+              "meeting",
+              "call",
+              "email"
+            ]
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "objectType",
+          "startAt",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/revenue_intel/timeline_details/",
+        "success": [
+          200
+        ],
+        "query": {
+          "object_type": "{{objectType}}",
+          "crm_entity_id": "{{crmEntityId}}",
+          "start_at": "{{startAt}}",
+          "end_at": "{{endAt}}",
+          "type": "{{type}}",
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.ainote": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "AI notes ready",
+      "description": "Avoma webhook when AI notes are generated for a meeting or call (AINOTE)."
+    },
+    "webhook.meeting_booked_via_scheduler": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Meeting booked via scheduler",
+      "description": "Avoma webhook when a meeting is booked through an Avoma scheduling page (MEETING_BOOKED_VIA_SCHEDULER)."
+    },
+    "webhook.meeting_canceled_via_scheduler": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Meeting canceled via scheduler",
+      "description": "Avoma webhook when a scheduled meeting is canceled (MEETING_CANCELED_VIA_SCHEDULER)."
+    },
+    "webhook.meeting_rescheduled_via_scheduler": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Meeting rescheduled via scheduler",
+      "description": "Avoma webhook when a scheduled meeting is rescheduled (MEETING_RESCHEDULED_VIA_SCHEDULER)."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

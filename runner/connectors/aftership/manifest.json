@@ -1,1 +1,1149 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"AfterShip API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["ecommerce"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"as-api-key","value":"{{apiKey}}"},"baseUrl":"https://api.aftership.com/tracking/2026-01","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["meta.message","errors.0.info","errors.0.message","meta.type","message","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"aftership","models":["courier","tracking"],"name":"AfterShip","network":{"allowedHosts":["api.aftership.com"]},"operations":{"couriers.list":{"description":"List AfterShip couriers, optionally limited to activated couriers or slugs.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"active":{"type":"boolean"},"slug":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/couriers","query":{"active":"{{active}}","slug":"{{slug}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List couriers","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the AfterShip API key by listing activated couriers.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/couriers","query":{"active":"true"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"trackings.get":{"description":"Retrieve one AfterShip tracking by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"fields":{"minLength":1,"type":"string"},"id":{"minLength":1,"type":"string"},"lang":{"minLength":1,"type":"string"}},"required":["id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/trackings/{{id}}","query":{"fields":"{{fields}}","lang":"{{lang}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get tracking","validationMode":"strict-generated"},"trackings.list":{"description":"List AfterShip trackings with cursor pagination and scalar filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"cursor":{"minLength":1,"type":"string"},"fields":{"minLength":1,"type":"string"},"keyword":{"minLength":1,"type":"string"},"limit":{"maximum":200,"minimum":1,"type":"integer"},"order_id":{"minLength":1,"type":"string"},"tag":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/trackings","query":{"cursor":"{{cursor}}","fields":"{{fields}}","keyword":"{{keyword}}","limit":"{{limit}}","order_id":"{{order_id}}","tag":"{{tag}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List trackings","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "aftership",
+  "name": "AfterShip",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "ecommerce"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "AfterShip API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.aftership.com"
+    ]
+  },
+  "models": [
+    "courier",
+    "tracking",
+    "courierConnection",
+    "estimatedDeliveryDate"
+  ],
+  "http": {
+    "baseUrl": "https://api.aftership.com/tracking/2026-01",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "as-api-key",
+      "value": "{{apiKey}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "meta.message",
+        "errors.0.info",
+        "errors.0.message",
+        "meta.type",
+        "message",
+        "error"
+      ]
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the AfterShip API key by listing activated couriers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/couriers",
+        "query": {
+          "active": "true"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "couriers.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List couriers",
+      "description": "List AfterShip couriers, optionally limited to activated couriers or slugs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/couriers",
+        "query": {
+          "active": "{{active}}",
+          "slug": "{{slug}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trackings.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List trackings",
+      "description": "List AfterShip trackings with cursor pagination and scalar filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "keyword": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tag": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/trackings",
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}",
+          "keyword": "{{keyword}}",
+          "tag": "{{tag}}",
+          "fields": "{{fields}}",
+          "order_id": "{{order_id}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trackings.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get tracking",
+      "description": "Retrieve one AfterShip tracking by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/trackings/{{id}}",
+        "query": {
+          "fields": "{{fields}}",
+          "lang": "{{lang}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trackings.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create tracking",
+      "description": "Create an AfterShip tracking.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tracking_number": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Shipment tracking number."
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Courier slug."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display title."
+          },
+          "order_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order ID."
+          },
+          "order_number": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable order number."
+          },
+          "origin_country_region": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO Alpha-3 origin country."
+          },
+          "destination_country_region": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO Alpha-3 destination country."
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Internal note."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tracking_number"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/trackings",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "tracking_number": "{{tracking_number}}",
+          "slug": "{{slug}}",
+          "title": "{{title}}",
+          "order_id": "{{order_id}}",
+          "order_number": "{{order_number}}",
+          "origin_country_region": "{{origin_country_region}}",
+          "destination_country_region": "{{destination_country_region}}",
+          "note": "{{note}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trackings.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update tracking",
+      "description": "Update an AfterShip tracking by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tracking ID."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display title."
+          },
+          "order_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order ID."
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Internal note."
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Courier slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/trackings/{{id}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "order_id": "{{order_id}}",
+          "note": "{{note}}",
+          "slug": "{{slug}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trackings.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete tracking",
+      "description": "Delete an AfterShip tracking by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tracking ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/trackings/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trackings.retrack": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Retrack tracking",
+      "description": "Retrack an expired AfterShip tracking by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tracking ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/trackings/{{id}}/retrack",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trackings.markCompleted": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Mark tracking completed",
+      "description": "Mark an AfterShip tracking as completed by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tracking ID."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Completion reason.",
+            "enum": [
+              "DELIVERED",
+              "LOST",
+              "RETURNED_TO_SENDER"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "reason"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/trackings/{{id}}/mark-as-completed",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "reason": "{{reason}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "couriers.detect": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Detect courier",
+      "description": "Detect the courier for a tracking number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tracking_number": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Shipment tracking number."
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional courier slug hint."
+          },
+          "origin_country_region": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO Alpha-3 origin country."
+          },
+          "destination_country_region": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO Alpha-3 destination country."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "tracking_number"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/couriers/detect",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "tracking_number": "{{tracking_number}}",
+          "slug": "{{slug}}",
+          "origin_country_region": "{{origin_country_region}}",
+          "destination_country_region": "{{destination_country_region}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "courierConnections.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List courier connections",
+      "description": "List AfterShip courier connections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size.",
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/courier-connections",
+        "success": [
+          200
+        ],
+        "query": {
+          "cursor": "{{cursor}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "courierConnections.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get courier connection",
+      "description": "Get one AfterShip courier connection by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Courier connection ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/courier-connections/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "courierConnections.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create courier connection",
+      "description": "Create an AfterShip courier connection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "courier_slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Courier slug for the connection."
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Connection note."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "courier_slug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/courier-connections",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "courier_slug": "{{courier_slug}}",
+          "note": "{{note}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "courierConnections.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update courier connection",
+      "description": "Update an AfterShip courier connection by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Courier connection ID."
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Connection note."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/courier-connections/{{id}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "note": "{{note}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "courierConnections.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete courier connection",
+      "description": "Delete an AfterShip courier connection by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Courier connection ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/courier-connections/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimatedDeliveryDate.predict": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Predict estimated delivery date",
+      "description": "Predict an AfterShip estimated delivery date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Courier slug."
+          },
+          "origin_country_region": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO Alpha-3 origin country."
+          },
+          "destination_country_region": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO Alpha-3 destination country."
+          },
+          "origin_state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Origin state."
+          },
+          "destination_state": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination state."
+          },
+          "origin_postal_code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Origin postal code."
+          },
+          "destination_postal_code": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination postal code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "slug",
+          "origin_country_region",
+          "destination_country_region"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/estimated-delivery-date/predict",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "slug": "{{slug}}",
+          "origin_address": {
+            "country_region": "{{origin_country_region}}",
+            "state": "{{origin_state}}",
+            "postal_code": "{{origin_postal_code}}"
+          },
+          "destination_address": {
+            "country_region": "{{destination_country_region}}",
+            "state": "{{destination_state}}",
+            "postal_code": "{{destination_postal_code}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "estimatedDeliveryDate.predictBatch": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Batch predict estimated delivery date",
+      "description": "Batch-predict AfterShip estimated delivery dates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Courier slug."
+          },
+          "origin_country_region": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO Alpha-3 origin country."
+          },
+          "destination_country_region": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO Alpha-3 destination country."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "slug",
+          "origin_country_region",
+          "destination_country_region"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/estimated-delivery-date/predict-batch",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "estimated_delivery_dates": [
+            {
+              "slug": "{{slug}}",
+              "origin_address": {
+                "country_region": "{{origin_country_region}}"
+              },
+              "destination_address": {
+                "country_region": "{{destination_country_region}}"
+              }
+            }
+          ]
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.tracking_update": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Tracking update",
+      "description": "AfterShip webhook when a shipment delivery status changes (tracking_update)."
+    },
+    "webhook.edd_revise": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Estimated delivery date revised",
+      "description": "AfterShip webhook when the estimated delivery date is revised (edd_revise)."
+    },
+    "webhook.tracking_pending_time": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Tracking pending time",
+      "description": "AfterShip webhook when a shipment stays pending beyond the configured threshold (tracking_pending_time)."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
