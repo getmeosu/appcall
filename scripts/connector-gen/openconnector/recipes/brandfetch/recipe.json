@@ -65,8 +65,17 @@
     "edition": "international Brandfetch Brand API v2",
     "operations": [
       "healthcheck",
+      "viewer.get",
       "brands.get",
-      "transactions.resolve"
+      "brands.getByDomain",
+      "brands.getByTicker",
+      "brands.getByIsin",
+      "brands.getByCrypto",
+      "brands.context",
+      "transactions.resolve",
+      "brands.search",
+      "agents.accessOffer",
+      "graphql.query"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -135,14 +144,26 @@
       ],
       "documentationUrls": [
         "https://docs.brandfetch.com/reference/brand-api",
-        "https://docs.brandfetch.com/changelog/overview"
+        "https://docs.brandfetch.com/reference/viewer-api"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Credential-only healthcheck maps to GET /v2/brands/brandfetch.com matching the pinned credential validator. Official docs state requests for brandfetch.com are free and do not count toward quota.",
-        "Official GET /v2/viewer is a never-billed credential probe but is not a pinned upstream action, so it is not fabricated.",
-        "Native category is utility (source Design & Media / Marketing are not in Rust CATEGORIES).",
-        "The upstream user-agent is not sent."
+        "Credential-only healthcheck maps to GET /v2/brands/brandfetch.com. Official docs state requests for brandfetch.com are free."
+      ]
+    },
+    "viewer.get": {
+      "upstreamActionId": "get_brand",
+      "sourceRefs": [
+        "credential-validate",
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.brandfetch.com/reference/viewer-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official Viewer API GET /v2/viewer is free and is now exposed as a native operation."
       ]
     },
     "brands.get": {
@@ -157,9 +178,82 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Lookups other than brandfetch.com consume Brand API credits and are not used as healthcheck.",
-        "Optional allowNsfw query parameter is omitted.",
-        "Returns raw Brandfetch JSON under data rather than the pinned normalized wrapper."
+        "Optional allowNsfw and cachedOnly query flags are forwarded. Lookups other than brandfetch.com consume credits."
+      ]
+    },
+    "brands.getByDomain": {
+      "upstreamActionId": "get_brand",
+      "sourceRefs": [
+        "action-get-brand",
+        "handler-get-brand",
+        "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.brandfetch.com/reference/brand-api-domain"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Explicit domain route GET /v2/brands/domain/{domain} from official Brand API docs."
+      ]
+    },
+    "brands.getByTicker": {
+      "upstreamActionId": "get_brand",
+      "sourceRefs": [
+        "action-get-brand",
+        "handler-get-brand",
+        "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.brandfetch.com/reference/brand-api-ticker"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Explicit ticker route GET /v2/brands/ticker/{ticker} from official Brand API docs."
+      ]
+    },
+    "brands.getByIsin": {
+      "upstreamActionId": "get_brand",
+      "sourceRefs": [
+        "action-get-brand",
+        "handler-get-brand",
+        "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.brandfetch.com/reference/brand-api-isin"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Explicit ISIN route GET /v2/brands/isin/{isin} from official Brand API docs."
+      ]
+    },
+    "brands.getByCrypto": {
+      "upstreamActionId": "get_brand",
+      "sourceRefs": [
+        "action-get-brand",
+        "handler-get-brand",
+        "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.brandfetch.com/reference/brand-api-crypto"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Explicit crypto route GET /v2/brands/crypto/{symbol} from official Brand API docs."
+      ]
+    },
+    "brands.context": {
+      "upstreamActionId": "get_brand",
+      "sourceRefs": [
+        "handler-get-brand",
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.brandfetch.com/reference/brand-context-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Brand Context API GET /v2/context/{domain} from official docs. Optional cachedOnly is forwarded."
       ]
     },
     "transactions.resolve": {
@@ -174,18 +268,56 @@
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Official docs use POST /v2/brands/transaction; pinned source calls POST /v2/transactions. Native follows current official docs.",
-        "Pinned source uppercases countryCode; native sends the caller value. Callers should supply ISO 3166-1 alpha-2 uppercase.",
-        "Native omits maxLength on countryCode because strict-generated schemas reject maxLength.",
-        "Transaction lookups consume Brand API credits and are not used as healthcheck.",
-        "Returns raw Brandfetch JSON under data."
+        "Official docs use POST /v2/brands/transaction. Native sends countryCode as provided."
+      ]
+    },
+    "brands.search": {
+      "upstreamActionId": "get_brand",
+      "sourceRefs": [
+        "request-headers",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.brandfetch.com/reference/brand-search-api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Brand Search API GET /v2/search/{name}?c={clientId}. Bearer auth is still sent from the shared connector credential."
+      ]
+    },
+    "agents.accessOffer": {
+      "upstreamActionId": "get_brand",
+      "sourceRefs": [
+        "api-base",
+        "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.brandfetch.com/reference/agents-access-offer"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v2/agents/access describes standing access. No extra input is required."
+      ]
+    },
+    "graphql.query": {
+      "upstreamActionId": "get_brand",
+      "sourceRefs": [
+        "request-json",
+        "request-headers"
+      ],
+      "documentationUrls": [
+        "https://docs.brandfetch.com/delivery-methods/graphql"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GraphQL endpoint at graphql.brandfetch.io. Operation overrides baseUrl and posts a JSON query document."
       ]
     }
   },
   "manifest": {
     "key": "brandfetch",
     "name": "Brandfetch",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -208,11 +340,17 @@
     },
     "network": {
       "allowedHosts": [
-        "api.brandfetch.io"
+        "api.brandfetch.io",
+        "graphql.brandfetch.io"
       ]
     },
     "models": [
-      "brand"
+      "brand",
+      "viewer",
+      "transaction",
+      "context",
+      "search",
+      "agent"
     ],
     "http": {
       "baseUrl": "https://api.brandfetch.io",
@@ -235,16 +373,19 @@
           "message",
           "error",
           "details"
+        ],
+        "bodyErrorPaths": [
+          "errors"
         ]
       }
     },
     "operations": {
       "healthcheck": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
         "title": "Healthcheck",
         "description": "Validate the Brandfetch API key by reading the free brandfetch.com sandbox brand.",
         "inputSchema": {
@@ -275,20 +416,62 @@
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "brands.get": {
+      "viewer.get": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
+        "title": "Get viewer",
+        "description": "Return the authenticated Brandfetch API key identity. This request is free and does not consume credits.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/viewer",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "brands.get": {
         "kind": "action",
         "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
         "title": "Get brand",
-        "description": "Fetch a Brandfetch brand profile from a domain, Brand ID, ISIN, or stock ticker identifier.",
+        "description": "Fetch a Brandfetch brand profile from a domain, Brand ID, ISIN, ticker, crypto symbol, email, or website URL.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "identifier": {
               "type": "string",
               "minLength": 1
+            },
+            "allowNsfw": {
+              "type": "boolean"
+            },
+            "cachedOnly": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -313,18 +496,288 @@
           "path": "/v2/brands/{{identifier}}",
           "success": [
             200
-          ]
+          ],
+          "query": {
+            "allowNsfw": "{{allowNsfw}}",
+            "cachedOnly": "{{cachedOnly}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "brands.getByDomain": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get brand by domain",
+        "description": "Fetch a Brandfetch brand profile using the explicit domain route.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "minLength": 1
+            },
+            "allowNsfw": {
+              "type": "boolean"
+            },
+            "cachedOnly": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "domain"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/brands/domain/{{domain}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "allowNsfw": "{{allowNsfw}}",
+            "cachedOnly": "{{cachedOnly}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "brands.getByTicker": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get brand by ticker",
+        "description": "Fetch a Brandfetch brand profile using a stock or ETF ticker.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ticker": {
+              "type": "string",
+              "minLength": 1
+            },
+            "allowNsfw": {
+              "type": "boolean"
+            },
+            "cachedOnly": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "ticker"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/brands/ticker/{{ticker}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "allowNsfw": "{{allowNsfw}}",
+            "cachedOnly": "{{cachedOnly}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "brands.getByIsin": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get brand by ISIN",
+        "description": "Fetch a Brandfetch brand profile using an ISIN code.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "isin": {
+              "type": "string",
+              "minLength": 1
+            },
+            "allowNsfw": {
+              "type": "boolean"
+            },
+            "cachedOnly": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "isin"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/brands/isin/{{isin}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "allowNsfw": "{{allowNsfw}}",
+            "cachedOnly": "{{cachedOnly}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "brands.getByCrypto": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get brand by crypto symbol",
+        "description": "Fetch a Brandfetch brand profile using a crypto symbol.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "symbol": {
+              "type": "string",
+              "minLength": 1
+            },
+            "allowNsfw": {
+              "type": "boolean"
+            },
+            "cachedOnly": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "symbol"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/brands/crypto/{{symbol}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "allowNsfw": "{{allowNsfw}}",
+            "cachedOnly": "{{cachedOnly}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "brands.context": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get brand context",
+        "description": "Fetch narrative brand context for a domain, website URL, or email address.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cachedOnly": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "domain"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/context/{{domain}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "cachedOnly": "{{cachedOnly}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
       "transactions.resolve": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
         "title": "Resolve transaction",
         "description": "Resolve a raw transaction label into a Brandfetch merchant brand profile. This operation consumes credits.",
         "inputSchema": {
@@ -360,16 +813,158 @@
         "request": {
           "method": "POST",
           "path": "/v2/brands/transaction",
-          "headers": {
-            "Content-Type": "application/json"
-          },
+          "success": [
+            200
+          ],
           "body": {
             "countryCode": "{{countryCode}}",
             "transactionLabel": "{{transactionLabel}}"
           },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "brands.search": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Search brands",
+        "description": "Search Brandfetch brands by name using the Brand Search API client ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "clientId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "name",
+            "clientId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/search/{{name}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "c": "{{clientId}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "agents.accessOffer": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get agent access offer",
+        "description": "Describe the Brandfetch standing-access offer for agents, including price and payment protocols.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v2/agents/access",
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "graphql.query": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "GraphQL query",
+        "description": "Run a GraphQL query against graphql.brandfetch.io using the same Bearer API key as the REST APIs.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/",
+          "success": [
+            200
+          ],
+          "body": {
+            "query": "{{query}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "baseUrl": "https://graphql.brandfetch.io"
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
