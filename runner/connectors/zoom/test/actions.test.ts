@@ -9,6 +9,10 @@ import meetingAddRegistrantFixture from "../fixtures/meeting_add_registrant.json
 import pastMeetingParticipantsFixture from "../fixtures/past_meeting_participants.json";
 import webinarCreateFixture from "../fixtures/webinar_create.json";
 import webinarsListFixture from "../fixtures/webinars_list.json";
+import webinarGetFixture from "../fixtures/webinar_get.json";
+import usersGetFixture from "../fixtures/users_get.json";
+import recordingsListFixture from "../fixtures/recordings_list.json";
+import recordingsGetFixture from "../fixtures/recordings_get.json";
 import zoomManifest from "../manifest.json";
 
 import {
@@ -24,6 +28,11 @@ import {
   listPastMeetingParticipants,
   createWebinar,
   listWebinars,
+  getUser,
+  listRecordings,
+  getRecording,
+  deleteRecording,
+  getWebinar,
   validateUsersMeInput,
   validateUsersListInput,
   validateMeetingsCreateInput,
@@ -36,6 +45,11 @@ import {
   validatePastMeetingParticipantsInput,
   validateWebinarsCreateInput,
   validateWebinarsListInput,
+  validateUsersGetInput,
+  validateRecordingsListInput,
+  validateRecordingsGetInput,
+  validateRecordingsDeleteInput,
+  validateWebinarsGetInput,
 } from "../src/actions";
 
 // ─── users.me ─────────────────────────────────────────────────────────────────
@@ -739,5 +753,248 @@ describe("listWebinars", () => {
       accessToken: "tok_test",
       fetch: async () => new Response("{}", { status: 429, headers: { "retry-after": "40" } }),
     })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 40 });
+  });
+});
+
+// ─── users.get ────────────────────────────────────────────────────────────────
+
+describe("getUser", () => {
+  test("validates input and returns connector-owned output", () => {
+    const result = getUser({ userId: "user_002" });
+    expect(result.source).toBe("connector");
+    expect(result.action).toBe("users.get");
+    expect((result.validated as { userId: string }).userId).toBe("user_002");
+  });
+
+  test("throws when userId is missing", () => {
+    expect(() => validateUsersGetInput({})).toThrow("userId is required");
+  });
+
+  test("calls GET /v2/users/{userId} with Bearer token", async () => {
+    const requests: Request[] = [];
+    const result = await getUser({
+      accessToken: "tok_test",
+      userId: "user_002",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(usersGetFixture), { status: 200 });
+      },
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://api.zoom.us/v2/users/user_002");
+    expect(requests[0].method).toBe("GET");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer tok_test");
+    expect(result.action).toBe("users.get");
+    expect((result.user as Record<string, unknown>).email).toBe("alex.rivera@example.com");
+  });
+
+  test("maps 404 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    await expect(getUser({
+      accessToken: "tok_test",
+      userId: "missing",
+      fetch: async () => new Response("{}", { status: 404 }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    await expect(getUser({
+      accessToken: "tok_test",
+      userId: "user_002",
+      fetch: async () => new Response("{}", { status: 429, headers: { "retry-after": "12" } }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 12 });
+  });
+});
+
+// ─── recordings.list ──────────────────────────────────────────────────────────
+
+describe("listRecordings", () => {
+  test("validates input and returns connector-owned output", () => {
+    const result = listRecordings({ from: "2025-07-01" });
+    expect(result.source).toBe("connector");
+    expect(result.action).toBe("recordings.list");
+    expect((result.validated as { from: string }).from).toBe("2025-07-01");
+  });
+
+  test("throws when from is missing", () => {
+    expect(() => validateRecordingsListInput({})).toThrow("from is required");
+  });
+
+  test("calls GET /v2/users/me/recordings with query params", async () => {
+    const requests: Request[] = [];
+    const result = await listRecordings({
+      accessToken: "tok_test",
+      from: "2025-07-01",
+      to: "2025-07-31",
+      page_size: 30,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(recordingsListFixture), { status: 200 });
+      },
+    });
+    expect(requests).toHaveLength(1);
+    const url = new URL(requests[0].url);
+    expect(url.pathname).toBe("/v2/users/me/recordings");
+    expect(url.searchParams.get("from")).toBe("2025-07-01");
+    expect(url.searchParams.get("to")).toBe("2025-07-31");
+    expect(url.searchParams.get("page_size")).toBe("30");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer tok_test");
+    expect(result.action).toBe("recordings.list");
+    expect(Array.isArray(result.meetings)).toBe(true);
+    expect((result.meetings as unknown[]).length).toBe(1);
+  });
+
+  test("uses custom userId when provided", async () => {
+    const requests: Request[] = [];
+    await listRecordings({
+      accessToken: "tok_test",
+      userId: "user_001",
+      from: "2025-07-01",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(recordingsListFixture), { status: 200 });
+      },
+    });
+    expect(new URL(requests[0].url).pathname).toBe("/v2/users/user_001/recordings");
+  });
+
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    await expect(listRecordings({
+      accessToken: "tok_test",
+      from: "2025-07-01",
+      fetch: async () => new Response("{}", { status: 429, headers: { "retry-after": "18" } }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 18 });
+  });
+});
+
+// ─── recordings.get ───────────────────────────────────────────────────────────
+
+describe("getRecording", () => {
+  test("validates input and returns connector-owned output", () => {
+    const result = getRecording({ meetingId: "123456789" });
+    expect(result.source).toBe("connector");
+    expect(result.action).toBe("recordings.get");
+    expect((result.validated as { meetingId: string }).meetingId).toBe("123456789");
+  });
+
+  test("throws when meetingId is missing", () => {
+    expect(() => validateRecordingsGetInput({})).toThrow("meetingId is required");
+  });
+
+  test("calls GET /v2/meetings/{meetingId}/recordings", async () => {
+    const requests: Request[] = [];
+    const result = await getRecording({
+      accessToken: "tok_test",
+      meetingId: "123456789",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(recordingsGetFixture), { status: 200 });
+      },
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://api.zoom.us/v2/meetings/123456789/recordings");
+    expect(requests[0].method).toBe("GET");
+    expect(result.action).toBe("recordings.get");
+    expect(Array.isArray((result.recording as Record<string, unknown>).recording_files)).toBe(true);
+  });
+
+  test("maps 404 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    await expect(getRecording({
+      accessToken: "tok_test",
+      meetingId: "missing",
+      fetch: async () => new Response("{}", { status: 404 }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+// ─── recordings.delete ────────────────────────────────────────────────────────
+
+describe("deleteRecording", () => {
+  test("validates input and returns connector-owned output", () => {
+    const result = deleteRecording({ meetingId: "123456789" });
+    expect(result.source).toBe("connector");
+    expect(result.action).toBe("recordings.delete");
+    expect((result.validated as { meetingId: string }).meetingId).toBe("123456789");
+  });
+
+  test("throws when meetingId is missing", () => {
+    expect(() => validateRecordingsDeleteInput({})).toThrow("meetingId is required");
+  });
+
+  test("deletes all recordings for a meeting", async () => {
+    const requests: Request[] = [];
+    const result = await deleteRecording({
+      accessToken: "tok_test",
+      meetingId: "123456789",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(null, { status: 204 });
+      },
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://api.zoom.us/v2/meetings/123456789/recordings");
+    expect(requests[0].method).toBe("DELETE");
+    expect(result.deleted).toBe(true);
+  });
+
+  test("deletes a single recording file when recordingId is provided", async () => {
+    const requests: Request[] = [];
+    await deleteRecording({
+      accessToken: "tok_test",
+      meetingId: "123456789",
+      recordingId: "file_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(null, { status: 204 });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.zoom.us/v2/meetings/123456789/recordings/file_001");
+  });
+
+  test("maps 404 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    await expect(deleteRecording({
+      accessToken: "tok_test",
+      meetingId: "missing",
+      fetch: async () => new Response("{}", { status: 404 }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+// ─── webinars.get ─────────────────────────────────────────────────────────────
+
+describe("getWebinar", () => {
+  test("validates input and returns connector-owned output", () => {
+    const result = getWebinar({ webinarId: "555666777" });
+    expect(result.source).toBe("connector");
+    expect(result.action).toBe("webinars.get");
+    expect((result.validated as { webinarId: string }).webinarId).toBe("555666777");
+  });
+
+  test("throws when webinarId is missing", () => {
+    expect(() => validateWebinarsGetInput({})).toThrow("webinarId is required");
+  });
+
+  test("calls GET /v2/webinars/{webinarId}", async () => {
+    const requests: Request[] = [];
+    const result = await getWebinar({
+      accessToken: "tok_test",
+      webinarId: "555666777",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(webinarGetFixture), { status: 200 });
+      },
+    });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://api.zoom.us/v2/webinars/555666777");
+    expect(requests[0].method).toBe("GET");
+    expect(result.action).toBe("webinars.get");
+    expect((result.webinar as Record<string, unknown>).topic).toBe("Product Launch Webinar");
+  });
+
+  test("maps 404 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    await expect(getWebinar({
+      accessToken: "tok_test",
+      webinarId: "missing",
+      fetch: async () => new Response("{}", { status: 404 }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
   });
 });

@@ -5,7 +5,7 @@ describe("zoom connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("zoom");
     expect(manifest.name).toBe("Zoom");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -14,6 +14,9 @@ describe("zoom connector manifest", () => {
     expect(manifest.auth.scopes).toContain("meeting:read");
     expect(manifest.auth.scopes).toContain("meeting:write");
     expect(manifest.auth.scopes).toContain("user:read");
+    expect(manifest.auth.scopes).toContain("recording:read");
+    expect(manifest.auth.scopes).toContain("recording:write");
+    expect(manifest.auth.scopes).toContain("webinar:read");
     expect(manifest.auth.setup.mode).toBe("oauth2");
     expect(manifest.auth.setup.fields).toEqual([]);
   });
@@ -30,6 +33,7 @@ describe("zoom connector manifest", () => {
     expect(manifest.models).toContain("meeting");
     expect(manifest.models).toContain("user");
     expect(manifest.models).toContain("webinar");
+    expect(manifest.models).toContain("recording");
   });
 
   const ACTION_KEYS = [
@@ -46,6 +50,11 @@ describe("zoom connector manifest", () => {
     "past_meetings.participants",
     "webinars.create",
     "webinars.list",
+    "webinars.get",
+    "users.get",
+    "recordings.list",
+    "recordings.get",
+    "recordings.delete",
   ];
 
   test("includes all action operations", () => {
