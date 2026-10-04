@@ -1,12 +1,1189 @@
 {
-  "key":"better-stack","name":"Better Stack","version":"0.1.0","runtime":"bun","visibility":"public","categories":["dev-tools"],
-  "auth":{"type":"api_key","scopes":[],"setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"Better Stack API token","required":true,"secret":true}]}},
-  "provenance":{"source":{"url":"https://github.com/oomol-lab/open-connector","revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"},"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}}},
-  "network":{"allowedHosts":["uptime.betterstack.com"]},"models":["incident","comment"],
-  "http":{"baseUrl":"https://uptime.betterstack.com","auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"headers":{"Accept":"application/json"},"errors":{"rateLimitStatuses":[429],"retryAfterHeader":"retry-after","defaultRetryAfterSeconds":30,"messagePaths":["errors.0.detail","message"]}},
-  "operations":{
-    "healthcheck":{"kind":"action","sideEffect":"read","timeoutMs":5000,"maxInputBytes":4096,"maxResponseBytes":65536,"title":"Healthcheck","description":"Verify the Better Stack API token by listing one incident.","inputSchema":{"type":"object","additionalProperties":false},"outputSchema":{"type":"object","required":["status","incidents"],"properties":{"status":{"type":"string"},"incidents":{"type":"array"}}},"request":{"method":"GET","path":"/api/v2/incidents","query":{"per_page":"1"},"success":[200],"result":{"status":"ok","incidents":"{{response.data}}"}},"enforceOutputSchema":true},
-    "incidents.list":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":65536,"maxResponseBytes":5242880,"title":"List Incidents","description":"List Better Stack incidents with optional team and status filters.","inputSchema":{"type":"object","additionalProperties":false,"properties":{"teamName":{"type":"string","minLength":1},"page":{"type":"integer","minimum":1},"perPage":{"type":"integer","minimum":1,"maximum":50},"resolved":{"type":"boolean"},"acknowledged":{"type":"boolean"}}},"outputSchema":{"type":"object","required":["incidents"],"properties":{"incidents":{"type":"array"},"pagination":{"type":["object","null"]}}},"request":{"method":"GET","path":"/api/v2/incidents","query":{"team_name":"{{teamName}}","page":"{{page}}","per_page":"{{perPage}}","resolved":"{{resolved}}","acknowledged":"{{acknowledged}}"},"success":[200],"result":{"incidents":"{{response.data}}","pagination":"{{response.pagination}}"}},"enforceOutputSchema":true},
-    "incidents.get":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":4096,"maxResponseBytes":1048576,"title":"Get Incident","description":"Get a Better Stack incident by ID.","inputSchema":{"type":"object","required":["incidentId"],"additionalProperties":false,"properties":{"incidentId":{"type":"string","minLength":1}}},"outputSchema":{"type":"object","required":["incident"],"properties":{"incident":{"type":"object"},"included":{"type":["object","null"]}}},"request":{"method":"GET","path":"/api/v2/incidents/{{incidentId}}","success":[200],"result":{"incident":"{{response.data}}","included":"{{response.included}}"}},"enforceOutputSchema":true}
+  "key": "better-stack",
+  "name": "Better Stack",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Better Stack API token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    },
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
+      }
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "uptime.betterstack.com"
+    ]
+  },
+  "models": [
+    "incident",
+    "comment",
+    "monitor",
+    "heartbeat",
+    "status-page",
+    "webhook"
+  ],
+  "http": {
+    "baseUrl": "https://uptime.betterstack.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors.0.detail",
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Verify the Better Stack API token by listing one incident.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "incidents"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "incidents": {
+            "type": "array"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/incidents",
+        "query": {
+          "per_page": "1"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "ok",
+          "incidents": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "incidents.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Incidents",
+      "description": "List Better Stack incidents with optional team and status filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "resolved": {
+            "type": "boolean"
+          },
+          "acknowledged": {
+            "type": "boolean"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "incidents"
+        ],
+        "properties": {
+          "incidents": {
+            "type": "array"
+          },
+          "pagination": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/incidents",
+        "query": {
+          "team_name": "{{teamName}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "resolved": "{{resolved}}",
+          "acknowledged": "{{acknowledged}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "incidents": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "incidents.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Incident",
+      "description": "Get a Better Stack incident by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "incidentId"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "incidentId": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "incident"
+        ],
+        "properties": {
+          "incident": {
+            "type": "object"
+          },
+          "included": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/incidents/{{incidentId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "incident": "{{response.data}}",
+          "included": "{{response.included}}"
+        }
+      },
+      "enforceOutputSchema": true
+    },
+    "monitors.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List Monitors",
+      "description": "List Better Stack uptime monitors with optional team, URL, and name filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team name for a global token."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by monitor URL."
+          },
+          "pronounceableName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by pronounceable name."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 50
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array"
+          },
+          "pagination": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/monitors",
+        "success": [
+          200
+        ],
+        "query": {
+          "team_name": "{{teamName}}",
+          "url": "{{url}}",
+          "pronounceable_name": "{{pronounceableName}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "result": {
+          "items": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        }
+      }
+    },
+    "monitors.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get Monitor",
+      "description": "Get a Better Stack monitor by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "monitorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor ID."
+          }
+        },
+        "required": [
+          "monitorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource": {
+            "type": "object"
+          },
+          "included": {
+            "type": [
+              "array",
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "resource"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/monitors/{{monitorId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "resource": "{{response.data}}",
+          "included": "{{response.included}}"
+        }
+      }
+    },
+    "monitors.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create Monitor",
+      "description": "Create a Better Stack uptime monitor.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL or host to monitor."
+          },
+          "monitor_type": {
+            "type": "string",
+            "enum": [
+              "status",
+              "expected_status_code",
+              "keyword",
+              "keyword_absence",
+              "ping",
+              "tcp",
+              "udp",
+              "smtp",
+              "pop",
+              "imap",
+              "dns"
+            ],
+            "description": "Better Stack monitor type."
+          },
+          "pronounceable_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable monitor name."
+          },
+          "team_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team name for a global token."
+          }
+        },
+        "required": [
+          "url",
+          "monitor_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource": {
+            "type": "object"
+          },
+          "included": {
+            "type": [
+              "array",
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "resource"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/monitors",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "url": "{{url}}",
+          "monitor_type": "{{monitor_type}}",
+          "pronounceable_name": "{{pronounceable_name}}",
+          "team_name": "{{team_name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "resource": "{{response.data}}",
+          "included": "{{response.included}}"
+        }
+      }
+    },
+    "monitors.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Delete Monitor",
+      "description": "Delete a Better Stack monitor by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "monitorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Monitor ID."
+          }
+        },
+        "required": [
+          "monitorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v2/monitors/{{monitorId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.monitorId}}"
+        }
+      }
+    },
+    "heartbeats.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List Heartbeats",
+      "description": "List Better Stack heartbeats.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "teamName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team name for a global token."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array"
+          },
+          "pagination": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/heartbeats",
+        "success": [
+          200
+        ],
+        "query": {
+          "team_name": "{{teamName}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "result": {
+          "items": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        }
+      }
+    },
+    "heartbeats.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get Heartbeat",
+      "description": "Get a Better Stack heartbeat by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "heartbeatId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Heartbeat ID."
+          }
+        },
+        "required": [
+          "heartbeatId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource": {
+            "type": "object"
+          },
+          "included": {
+            "type": [
+              "array",
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "resource"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/heartbeats/{{heartbeatId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "resource": "{{response.data}}",
+          "included": "{{response.included}}"
+        }
+      }
+    },
+    "incidents.acknowledge": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Acknowledge Incident",
+      "description": "Acknowledge a Better Stack incident and stop further escalations.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "incidentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident ID."
+          },
+          "acknowledged_by": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Who acknowledged the incident."
+          }
+        },
+        "required": [
+          "incidentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource": {
+            "type": "object"
+          },
+          "included": {
+            "type": [
+              "array",
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "resource"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/incidents/{{incidentId}}/acknowledge",
+        "success": [
+          200
+        ],
+        "body": {
+          "acknowledged_by": "{{acknowledged_by}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "resource": "{{response.data}}",
+          "included": "{{response.included}}"
+        }
+      }
+    },
+    "incidents.resolve": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Resolve Incident",
+      "description": "Resolve a Better Stack incident.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "incidentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident ID."
+          },
+          "resolved_by": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Who resolved the incident."
+          }
+        },
+        "required": [
+          "incidentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource": {
+            "type": "object"
+          },
+          "included": {
+            "type": [
+              "array",
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "resource"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/incidents/{{incidentId}}/resolve",
+        "success": [
+          200
+        ],
+        "body": {
+          "resolved_by": "{{resolved_by}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "resource": "{{response.data}}",
+          "included": "{{response.included}}"
+        }
+      }
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List Comments",
+      "description": "List comments on a Better Stack incident.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "incidentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident ID."
+          }
+        },
+        "required": [
+          "incidentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "comments": {
+            "type": "array"
+          }
+        },
+        "required": [
+          "comments"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/incidents/{{incidentId}}/comments",
+        "success": [
+          200
+        ],
+        "result": {
+          "comments": "{{response.data}}"
+        }
+      }
+    },
+    "comments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Create Comment",
+      "description": "Post a comment on a Better Stack incident.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "incidentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Incident ID."
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment body."
+          }
+        },
+        "required": [
+          "incidentId",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource": {
+            "type": "object"
+          },
+          "included": {
+            "type": [
+              "array",
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "resource"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/incidents/{{incidentId}}/comments",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "content": "{{content}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "resource": "{{response.data}}",
+          "included": "{{response.included}}"
+        }
+      }
+    },
+    "status-pages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List Status Pages",
+      "description": "List Better Stack status pages.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "teamName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team name for a global token."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array"
+          },
+          "pagination": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/status-pages",
+        "success": [
+          200
+        ],
+        "query": {
+          "team_name": "{{teamName}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "result": {
+          "items": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        }
+      }
+    },
+    "status-pages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "Get Status Page",
+      "description": "Get a Better Stack status page by ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "statusPageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          }
+        },
+        "required": [
+          "statusPageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resource": {
+            "type": "object"
+          },
+          "included": {
+            "type": [
+              "array",
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "resource"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/status-pages/{{statusPageId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "resource": "{{response.data}}",
+          "included": "{{response.included}}"
+        }
+      }
+    },
+    "status-pages.resources.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List Status Page Resources",
+      "description": "List resources on a Better Stack status page.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "statusPageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Status page ID."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "statusPageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array"
+          },
+          "pagination": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/status-pages/{{statusPageId}}/resources",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        },
+        "result": {
+          "items": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        }
+      }
+    },
+    "outgoing-webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "title": "List Outgoing Webhooks",
+      "description": "List Better Stack outgoing webhook integrations used for incident and on-call events.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "teamName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team name for a global token."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array"
+          },
+          "pagination": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/outgoing-webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "team_name": "{{teamName}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        },
+        "result": {
+          "items": "{{response.data}}",
+          "pagination": "{{response.pagination}}"
+        }
+      }
+    },
+    "webhook.incident_started": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Incident Started",
+      "description": "Better Stack outgoing webhook when an incident starts. EventOnly; maps trigger_type incident_change / on_incident_started.",
+      "sideEffect": "read"
+    },
+    "webhook.incident_acknowledged": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Incident Acknowledged",
+      "description": "Better Stack outgoing webhook when an incident is acknowledged. EventOnly; maps on_incident_acknowledged.",
+      "sideEffect": "read"
+    },
+    "webhook.incident_resolved": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Incident Resolved",
+      "description": "Better Stack outgoing webhook when an incident is resolved. EventOnly; maps on_incident_resolved.",
+      "sideEffect": "read"
+    },
+    "webhook.on_call_change": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "On-call Change",
+      "description": "Better Stack outgoing webhook when on-call rotation changes. EventOnly; maps trigger_type on_call_change.",
+      "sideEffect": "read"
+    }
   }
 }
