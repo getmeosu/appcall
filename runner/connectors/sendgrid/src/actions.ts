@@ -9,6 +9,11 @@ import {
   validateListCreateInput,
   validateListGetInput,
   validateListDeleteInput,
+  validateContactGetInput,
+  validateListsListInput,
+  validateListContactsListInput,
+  validateListContactsAddInput,
+  validateListContactsRemoveInput,
 } from "./contacts_ext";
 import {
   createTemplatesClient,
@@ -16,7 +21,17 @@ import {
   validateTemplateCreateInput,
   validateTemplateGetInput,
   validateBouncesListInput,
+  validateTemplateListInput,
+  validateTemplateUpdateInput,
+  validateTemplateDeleteInput,
+  validateSuppressionListInput,
 } from "./templates";
+import {
+  createAdminClient,
+  validateGlobalStatsInput,
+  validateApiKeysListInput,
+  validateAlertsListInput,
+} from "./admin";
 
 // ─── Existing: contacts.create ───────────────────────────────────────────────
 
@@ -209,7 +224,176 @@ export function listBounces(input: unknown): Record<string, unknown> | Promise<R
   return { connector: "sendgrid", action: "suppression.bounces.list", source: "connector", validated: validateBouncesListInput(input) };
 }
 
+// ─── contacts.get ─────────────────────────────────────────────────────────────
+
+export function getContact(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "contacts.get", validateContactGetInput, (apiKey, fetchFn) =>
+    createContactsExtClient({ apiKey, fetch: fetchFn }).get(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "contacts.get", source: "connector", contact: result.contact };
+    }));
+}
+
+// ─── lists.list.action ────────────────────────────────────────────────────────
+
+export function listLists(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "lists.list.action", validateListsListInput, (apiKey, fetchFn) =>
+    createListsClient({ apiKey, fetch: fetchFn }).list(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "lists.list.action", source: "connector", lists: result.lists };
+    }));
+}
+
+// ─── lists.contacts.list ──────────────────────────────────────────────────────
+
+export function listListContacts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "lists.contacts.list", validateListContactsListInput, (apiKey, fetchFn) =>
+    createListsClient({ apiKey, fetch: fetchFn }).listContacts(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "lists.contacts.list", source: "connector", contacts: result.contacts };
+    }));
+}
+
+// ─── lists.contacts.add ───────────────────────────────────────────────────────
+
+export function addListContacts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "lists.contacts.add", validateListContactsAddInput, (apiKey, fetchFn) =>
+    createListsClient({ apiKey, fetch: fetchFn }).addContacts(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "lists.contacts.add", source: "connector", jobId: result.jobId };
+    }));
+}
+
+// ─── lists.contacts.remove ────────────────────────────────────────────────────
+
+export function removeListContacts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "lists.contacts.remove", validateListContactsRemoveInput, (apiKey, fetchFn) =>
+    createListsClient({ apiKey, fetch: fetchFn }).removeContacts(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "lists.contacts.remove", source: "connector", jobId: result.jobId };
+    }));
+}
+
+// ─── templates.list ───────────────────────────────────────────────────────────
+
+export function listTemplates(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "templates.list", validateTemplateListInput, (apiKey, fetchFn) =>
+    createTemplatesClient({ apiKey, fetch: fetchFn }).list(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "templates.list", source: "connector", templates: result.templates };
+    }));
+}
+
+// ─── templates.update ─────────────────────────────────────────────────────────
+
+export function updateTemplate(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "templates.update", validateTemplateUpdateInput, (apiKey, fetchFn) =>
+    createTemplatesClient({ apiKey, fetch: fetchFn }).update(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "templates.update", source: "connector", template: result.template };
+    }));
+}
+
+// ─── templates.delete ─────────────────────────────────────────────────────────
+
+export function deleteTemplate(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "templates.delete", validateTemplateDeleteInput, (apiKey, fetchFn) =>
+    createTemplatesClient({ apiKey, fetch: fetchFn }).delete(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "templates.delete", source: "connector", deleted: result.deleted };
+    }));
+}
+
+// ─── stats.global.get ─────────────────────────────────────────────────────────
+
+export function getGlobalStats(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "stats.global.get", validateGlobalStatsInput, (apiKey, fetchFn) =>
+    createAdminClient({ apiKey, fetch: fetchFn }).getGlobalStats(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "stats.global.get", source: "connector", stats: result.stats };
+    }));
+}
+
+// ─── suppression.blocks.list ──────────────────────────────────────────────────
+
+export function listBlocks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "suppression.blocks.list", validateSuppressionListInput, (apiKey, fetchFn) =>
+    createSuppressionClient({ apiKey, fetch: fetchFn }).listBlocks(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "suppression.blocks.list", source: "connector", blocks: result.blocks };
+    }));
+}
+
+// ─── suppression.spam_reports.list ────────────────────────────────────────────
+
+export function listSpamReports(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "suppression.spam_reports.list", validateSuppressionListInput, (apiKey, fetchFn) =>
+    createSuppressionClient({ apiKey, fetch: fetchFn }).listSpamReports(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "suppression.spam_reports.list", source: "connector", spamReports: result.spamReports };
+    }));
+}
+
+// ─── suppression.unsubscribes.list ────────────────────────────────────────────
+
+export function listUnsubscribes(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "suppression.unsubscribes.list", validateSuppressionListInput, (apiKey, fetchFn) =>
+    createSuppressionClient({ apiKey, fetch: fetchFn }).listUnsubscribes(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "suppression.unsubscribes.list", source: "connector", unsubscribes: result.unsubscribes };
+    }));
+}
+
+// ─── suppression.invalid_emails.list ──────────────────────────────────────────
+
+export function listInvalidEmails(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "suppression.invalid_emails.list", validateSuppressionListInput, (apiKey, fetchFn) =>
+    createSuppressionClient({ apiKey, fetch: fetchFn }).listInvalidEmails(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "suppression.invalid_emails.list", source: "connector", invalidEmails: result.invalidEmails };
+    }));
+}
+
+// ─── api_keys.list ────────────────────────────────────────────────────────────
+
+export function listApiKeys(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "api_keys.list", validateApiKeysListInput, (apiKey, fetchFn) =>
+    createAdminClient({ apiKey, fetch: fetchFn }).listApiKeys(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "api_keys.list", source: "connector", apiKeys: result.apiKeys };
+    }));
+}
+
+// ─── alerts.list ──────────────────────────────────────────────────────────────
+
+export function listAlerts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  return liveAction(input, "alerts.list", validateAlertsListInput, (apiKey, fetchFn) =>
+    createAdminClient({ apiKey, fetch: fetchFn }).listAlerts(input).then((result) => {
+      throwFailed(result);
+      return { connector: "sendgrid", action: "alerts.list", source: "connector", alerts: result.alerts };
+    }));
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function requireString(v: unknown, f: string): string { if (typeof v !== "string" || !v.length) throw new Error(`${f} is required`); return v; }
 function isRecord(v: unknown): v is Record<string, unknown> { return typeof v === "object" && v !== null && !Array.isArray(v); }
+
+function liveAction(
+  input: unknown,
+  action: string,
+  validate: (input: unknown) => unknown,
+  execute: (apiKey: string, fetchFn: typeof fetch | undefined) => Promise<Record<string, unknown>>,
+): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+    return execute(input.apiKey, fetchFn);
+  }
+  return { connector: "sendgrid", action, source: "connector", validated: validate(input) };
+}
+
+function throwFailed(result: { ok: boolean; error?: { code: string; message: string; retryAfterSeconds?: number } }): asserts result is { ok: true } & typeof result {
+  if (!result.ok) {
+    throw { ok: false, code: result.error?.code, message: result.error?.message, retryAfterSeconds: result.error?.retryAfterSeconds };
+  }
+}
