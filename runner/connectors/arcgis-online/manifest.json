@@ -1,7 +1,17 @@
 {
+  "key": "arcgis-online",
+  "name": "ArcGIS Online",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,14 +19,1294 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
+      ]
+    }
   },
-  "categories": [
-    "utility"
+  "network": {
+    "allowedHosts": [
+      "geocode-api.arcgis.com",
+      "www.arcgis.com"
+    ]
+  },
+  "models": [
+    "suggestion",
+    "address-candidate",
+    "reverse-geocode",
+    "portal",
+    "item",
+    "group",
+    "user"
   ],
+  "http": {
+    "baseUrl": "https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "token",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "query": {
+      "f": "json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error.message",
+        "message",
+        "error"
+      ],
+      "bodyErrorPaths": [
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the ArcGIS API key with a zero-credit suggest request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/suggest",
+        "query": {
+          "text": "Berlin",
+          "maxSuggestions": "1"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "geocode.suggest": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Suggest addresses",
+      "description": "Return ArcGIS address and place autocomplete suggestions.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "searchExtent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceCountry": {
+            "type": "string",
+            "minLength": 1
+          },
+          "preferredLabelValues": {
+            "type": "string",
+            "minLength": 1
+          },
+          "countryCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxSuggestions": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 15
+          },
+          "returnCollections": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/suggest",
+        "query": {
+          "text": "{{text}}",
+          "searchExtent": "{{searchExtent}}",
+          "category": "{{category}}",
+          "sourceCountry": "{{sourceCountry}}",
+          "preferredLabelValues": "{{preferredLabelValues}}",
+          "countryCode": "{{countryCode}}",
+          "maxSuggestions": "{{maxSuggestions}}",
+          "returnCollections": "{{returnCollections}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "geocode.find-address-candidates": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Find address candidates",
+      "description": "Convert an address or place query into ArcGIS geocoding candidates.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "singleLine"
+        ],
+        "properties": {
+          "singleLine": {
+            "type": "string",
+            "minLength": 1
+          },
+          "searchExtent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceCountry": {
+            "type": "string",
+            "minLength": 1
+          },
+          "preferredLabelValues": {
+            "type": "string",
+            "minLength": 1
+          },
+          "magicKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "outFields": {
+            "type": "string",
+            "minLength": 1
+          },
+          "outSr": {
+            "type": "integer"
+          },
+          "maxLocations": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "forStorage": {
+            "type": "boolean"
+          },
+          "locationType": {
+            "type": "string",
+            "enum": [
+              "rooftop",
+              "street"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/findAddressCandidates",
+        "query": {
+          "SingleLine": "{{singleLine}}",
+          "searchExtent": "{{searchExtent}}",
+          "category": "{{category}}",
+          "sourceCountry": "{{sourceCountry}}",
+          "preferredLabelValues": "{{preferredLabelValues}}",
+          "magicKey": "{{magicKey}}",
+          "outFields": "{{outFields}}",
+          "outSR": "{{outSr}}",
+          "maxLocations": "{{maxLocations}}",
+          "forStorage": "{{forStorage}}",
+          "locationType": "{{locationType}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "geocode.reverse": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Reverse geocode",
+      "description": "Convert longitude and latitude into an ArcGIS address result.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "longitude",
+          "latitude"
+        ],
+        "properties": {
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "outSr": {
+            "type": "integer"
+          },
+          "langCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "forStorage": {
+            "type": "boolean"
+          },
+          "featureTypes": {
+            "type": "string",
+            "minLength": 1
+          },
+          "locationType": {
+            "type": "string",
+            "enum": [
+              "rooftop",
+              "street"
+            ]
+          },
+          "preferredLabelValues": {
+            "type": "string",
+            "minLength": 1
+          },
+          "outFields": {
+            "type": "string",
+            "minLength": 1
+          },
+          "returnInputLocation": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/reverseGeocode",
+        "query": {
+          "location": "{{longitude}},{{latitude}}",
+          "outSR": "{{outSr}}",
+          "langCode": "{{langCode}}",
+          "forStorage": "{{forStorage}}",
+          "featureTypes": "{{featureTypes}}",
+          "locationType": "{{locationType}}",
+          "preferredLabelValues": "{{preferredLabelValues}}",
+          "outFields": "{{outFields}}",
+          "returnInputLocation": "{{returnInputLocation}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "geocode.geocode-addresses": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Geocode addresses",
+      "description": "Batch-geocode a JSON addresses payload against the ArcGIS World GeocodeServer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "addresses": {
+            "type": "string",
+            "description": "JSON string of the addresses records payload.",
+            "minLength": 1
+          },
+          "sourceCountry": {
+            "type": "string",
+            "description": "ISO country code to limit results.",
+            "minLength": 1
+          },
+          "forStorage": {
+            "type": "boolean",
+            "description": "Whether results may be stored."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "addresses"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/geocodeAddresses",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "addresses": "{{addresses}}",
+          "sourceCountry": "{{sourceCountry}}",
+          "forStorage": "{{forStorage}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "portal.self": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get portal self",
+      "description": "Read the authenticated ArcGIS Online organization portal.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/portals/self",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.self": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get current user",
+      "description": "Read the authenticated ArcGIS Online community user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/community/self",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Retrieve an ArcGIS Online user by username.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "ArcGIS Online username.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/community/users/{{username}}",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search items",
+      "description": "Search ArcGIS Online items with a portal query string.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Portal item query, for example title:water.",
+            "minLength": 1
+          },
+          "num": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "start": {
+            "type": "integer",
+            "description": "1-based start index.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "q"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/search",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "query": {
+          "q": "{{q}}",
+          "num": "{{num}}",
+          "start": "{{start}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get item",
+      "description": "Retrieve an ArcGIS Online item by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Item ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/content/items/{{id}}",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create item",
+      "description": "Add an item to an ArcGIS Online user's content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Item owner username.",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Item title.",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "description": "Item type, for example Web Map.",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags.",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Item description.",
+            "minLength": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "title",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/content/users/{{username}}/addItem",
+        "success": [
+          200,
+          201
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "body": {
+          "title": "{{title}}",
+          "type": "{{type}}",
+          "tags": "{{tags}}",
+          "description": "{{description}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update item",
+      "description": "Update an ArcGIS Online item owned by a user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Item owner username.",
+            "minLength": 1
+          },
+          "id": {
+            "type": "string",
+            "description": "Item ID.",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Updated title.",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags.",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Updated description.",
+            "minLength": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/content/users/{{username}}/items/{{id}}/update",
+        "success": [
+          200,
+          201
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "body": {
+          "title": "{{title}}",
+          "tags": "{{tags}}",
+          "description": "{{description}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete item",
+      "description": "Delete an ArcGIS Online item owned by a user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Item owner username.",
+            "minLength": 1
+          },
+          "id": {
+            "type": "string",
+            "description": "Item ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/content/users/{{username}}/items/{{id}}/delete",
+        "success": [
+          200,
+          201
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "body": {},
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search groups",
+      "description": "Search ArcGIS Online groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Group query.",
+            "minLength": 1
+          },
+          "num": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "start": {
+            "type": "integer",
+            "description": "1-based start index.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "q"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/community/groups",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "query": {
+          "q": "{{q}}",
+          "num": "{{num}}",
+          "start": "{{start}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 5242880,
+      "title": "Get group",
+      "description": "Retrieve an ArcGIS Online group by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Group ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/community/groups/{{id}}",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create group",
+      "description": "Create an ArcGIS Online group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Group title.",
+            "minLength": 1
+          },
+          "access": {
+            "type": "string",
+            "description": "Access level: private, org, or public.",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags.",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Group description.",
+            "minLength": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/community/createGroup",
+        "success": [
+          200,
+          201
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "body": {
+          "title": "{{title}}",
+          "access": "{{access}}",
+          "tags": "{{tags}}",
+          "description": "{{description}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update group",
+      "description": "Update an ArcGIS Online group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Group ID.",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Updated title.",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags.",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Updated description.",
+            "minLength": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/community/groups/{{id}}/update",
+        "success": [
+          200,
+          201
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "body": {
+          "title": "{{title}}",
+          "tags": "{{tags}}",
+          "description": "{{description}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete group",
+      "description": "Delete an ArcGIS Online group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Group ID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/community/groups/{{id}}/delete",
+        "success": [
+          200,
+          201
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "body": {},
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "content.user": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List user content",
+      "description": "List folders and items in an ArcGIS Online user's content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Owner username.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/content/users/{{username}}",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "items.share": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Share item",
+      "description": "Share an ArcGIS Online item with everyone, the organization, or groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Item owner username.",
+            "minLength": 1
+          },
+          "id": {
+            "type": "string",
+            "description": "Item ID.",
+            "minLength": 1
+          },
+          "everyone": {
+            "type": "boolean",
+            "description": "Share with everyone."
+          },
+          "org": {
+            "type": "boolean",
+            "description": "Share with the organization."
+          },
+          "groups": {
+            "type": "string",
+            "description": "Comma-separated group IDs.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {}
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/content/users/{{username}}/items/{{id}}/share",
+        "success": [
+          200,
+          201
+        ],
+        "baseUrl": "https://www.arcgis.com/sharing/rest",
+        "body": {
+          "everyone": "{{everyone}}",
+          "org": "{{org}}",
+          "groups": "{{groups}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.features_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Features created",
+      "description": "ArcGIS Online hosted feature layer webhook when FeaturesCreated is raised."
+    },
+    "webhook.features_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Features updated",
+      "description": "ArcGIS Online hosted feature layer webhook when FeaturesUpdated is raised."
+    },
+    "webhook.features_deleted": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Features deleted",
+      "description": "ArcGIS Online hosted feature layer webhook when FeaturesDeleted is raised."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
   "evidence": {
     "fixture": {
       "status": "supplied"
@@ -24,365 +1314,5 @@
     "live": {
       "status": "unverified"
     }
-  },
-  "http": {
-    "auth": {
-      "field": "apiKey",
-      "in": "query",
-      "name": "token",
-      "value": "{{apiKey}}"
-    },
-    "baseUrl": "https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer",
-    "errors": {
-      "bodyErrorPaths": [
-        "error"
-      ],
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "error.message",
-        "message",
-        "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    },
-    "query": {
-      "f": "json"
-    }
-  },
-  "key": "arcgis-online",
-  "models": [
-    "suggestion",
-    "address-candidate",
-    "reverse-geocode"
-  ],
-  "name": "ArcGIS Online",
-  "network": {
-    "allowedHosts": [
-      "geocode-api.arcgis.com"
-    ]
-  },
-  "operations": {
-    "geocode.find-address-candidates": {
-      "description": "Convert an address or place query into ArcGIS geocoding candidates.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "category": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "forStorage": {
-            "type": "boolean"
-          },
-          "locationType": {
-            "enum": [
-              "rooftop",
-              "street"
-            ],
-            "type": "string"
-          },
-          "magicKey": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "maxLocations": {
-            "maximum": 50,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "outFields": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "outSr": {
-            "type": "integer"
-          },
-          "preferredLabelValues": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "searchExtent": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "singleLine": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "sourceCountry": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "singleLine"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/findAddressCandidates",
-        "query": {
-          "SingleLine": "{{singleLine}}",
-          "category": "{{category}}",
-          "forStorage": "{{forStorage}}",
-          "locationType": "{{locationType}}",
-          "magicKey": "{{magicKey}}",
-          "maxLocations": "{{maxLocations}}",
-          "outFields": "{{outFields}}",
-          "outSR": "{{outSr}}",
-          "preferredLabelValues": "{{preferredLabelValues}}",
-          "searchExtent": "{{searchExtent}}",
-          "sourceCountry": "{{sourceCountry}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Find address candidates",
-      "validationMode": "strict-generated"
-    },
-    "geocode.reverse": {
-      "description": "Convert longitude and latitude into an ArcGIS address result.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "featureTypes": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "forStorage": {
-            "type": "boolean"
-          },
-          "langCode": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "latitude": {
-            "maximum": 90,
-            "minimum": -90,
-            "type": "number"
-          },
-          "locationType": {
-            "enum": [
-              "rooftop",
-              "street"
-            ],
-            "type": "string"
-          },
-          "longitude": {
-            "maximum": 180,
-            "minimum": -180,
-            "type": "number"
-          },
-          "outFields": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "outSr": {
-            "type": "integer"
-          },
-          "preferredLabelValues": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "returnInputLocation": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "longitude",
-          "latitude"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/reverseGeocode",
-        "query": {
-          "featureTypes": "{{featureTypes}}",
-          "forStorage": "{{forStorage}}",
-          "langCode": "{{langCode}}",
-          "location": "{{longitude}},{{latitude}}",
-          "locationType": "{{locationType}}",
-          "outFields": "{{outFields}}",
-          "outSR": "{{outSr}}",
-          "preferredLabelValues": "{{preferredLabelValues}}",
-          "returnInputLocation": "{{returnInputLocation}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Reverse geocode",
-      "validationMode": "strict-generated"
-    },
-    "geocode.suggest": {
-      "description": "Return ArcGIS address and place autocomplete suggestions.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "category": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "countryCode": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "maxSuggestions": {
-            "maximum": 15,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "preferredLabelValues": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "returnCollections": {
-            "type": "boolean"
-          },
-          "searchExtent": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "sourceCountry": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "text": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "text"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/suggest",
-        "query": {
-          "category": "{{category}}",
-          "countryCode": "{{countryCode}}",
-          "maxSuggestions": "{{maxSuggestions}}",
-          "preferredLabelValues": "{{preferredLabelValues}}",
-          "returnCollections": "{{returnCollections}}",
-          "searchExtent": "{{searchExtent}}",
-          "sourceCountry": "{{sourceCountry}}",
-          "text": "{{text}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Suggest addresses",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the ArcGIS API key with a zero-credit suggest request.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {}
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/suggest",
-        "query": {
-          "maxSuggestions": "1",
-          "text": "Berlin"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    }
-  },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
-    }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
