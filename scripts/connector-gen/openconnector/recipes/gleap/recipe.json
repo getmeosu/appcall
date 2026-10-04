@@ -95,11 +95,27 @@
     "disposition": "APPROVED",
     "edition": "international Gleap admin REST API v3",
     "operations": [
-      "healthcheck",
-      "contacts.list",
       "contacts.getByUserId",
+      "contacts.list",
+      "healthcheck",
+      "tickets.get",
       "tickets.list",
-      "tickets.get"
+      "contacts.get",
+      "contacts.create",
+      "contacts.update",
+      "contacts.search",
+      "tickets.create",
+      "tickets.update",
+      "tickets.archive",
+      "tickets.search",
+      "tickets.counts",
+      "tickets.history",
+      "messages.list",
+      "messages.create",
+      "teams.list",
+      "collections.list",
+      "articles.list",
+      "articles.get"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -239,12 +255,236 @@
       "adaptations": [
         "ticketId is interpolated as a path segment. Returns raw Gleap JSON under data."
       ]
+    },
+    "contacts.get": {
+      "upstreamActionId": "get_session",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/session/get-a-session"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "sessionId is the Mongo session id, not Session.userId. Returns raw Gleap JSON under data."
+      ]
+    },
+    "contacts.create": {
+      "upstreamActionId": "create_session",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/session/create-a-new-session"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /sessions upserts on userId. Optional email, name, phone, and companyName are omitted when unset."
+      ]
+    },
+    "contacts.update": {
+      "upstreamActionId": "update_session",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/session/update-a-session"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PUT /sessions/{sessionId} with optional email, name, and phone. userId is not writable."
+      ]
+    },
+    "contacts.search": {
+      "upstreamActionId": "search_sessions",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/session/search-for-sessions"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /sessions/search with required searchTerm and optional type. Returns the raw Gleap array under data."
+      ]
+    },
+    "tickets.create": {
+      "upstreamActionId": "create_ticket",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/ticket/create-a-new-ticket"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /tickets with title plus optional description, type, priority, status, and session."
+      ]
+    },
+    "tickets.update": {
+      "upstreamActionId": "update_ticket",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/ticket/update-a-ticket"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PUT /tickets/{ticketId} with optional title, status, priority, and type."
+      ]
+    },
+    "tickets.archive": {
+      "upstreamActionId": "archive_ticket",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/ticket/archive-a-ticket"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "PUT /tickets/{ticketId}/archive with no body."
+      ]
+    },
+    "tickets.search": {
+      "upstreamActionId": "search_tickets",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/ticket/search-for-tickets"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /tickets/search with required searchTerm and optional type/status."
+      ]
+    },
+    "tickets.counts": {
+      "upstreamActionId": "ticket_counts",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/ticket/get-ticket-counts-per-status"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /tickets/ticketscount with optional type. Returns the raw status-count array under data."
+      ]
+    },
+    "tickets.history": {
+      "upstreamActionId": "ticket_history",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/ticket/get-the-internal-history-of-a-ticket"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /tickets/{ticketId}/history. Returns the raw history array under data."
+      ]
+    },
+    "messages.list": {
+      "upstreamActionId": "list_messages",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/messages/find-messages-by-query"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /messages with required ticket and optional limit/type. Returns the raw message array under data."
+      ]
+    },
+    "messages.create": {
+      "upstreamActionId": "create_message",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/messages/create-a-new-message"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /messages with ticket and comment. Optional isNote creates an internal note."
+      ]
+    },
+    "teams.list": {
+      "upstreamActionId": "list_teams",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/team/get-all-teams"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /teams. Returns the raw team array under data."
+      ]
+    },
+    "collections.list": {
+      "upstreamActionId": "list_collections",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/help-center-collections/get-all-collections"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /helpcenter/collections with optional parentId. Returns the raw collection array under data."
+      ]
+    },
+    "articles.list": {
+      "upstreamActionId": "list_articles",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/help-center-articles/get-all-articles"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /helpcenter/collections/{collectionId}/articles. Returns the raw article array under data."
+      ]
+    },
+    "articles.get": {
+      "upstreamActionId": "get_article",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.gleap.io/api-reference/help-center-articles/get-an-article"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /helpcenter/articles/{articleId}. Returns raw Gleap JSON under data."
+      ]
     }
   },
   "manifest": {
     "key": "gleap",
     "name": "Gleap",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -279,7 +519,11 @@
     "models": [
       "user",
       "contact",
-      "ticket"
+      "ticket",
+      "message",
+      "team",
+      "article",
+      "collection"
     ],
     "http": {
       "baseUrl": "https://api.gleap.io/v3",
@@ -307,17 +551,246 @@
       }
     },
     "operations": {
+      "contacts.getByUserId": {
+        "description": "Get a Gleap contact session by external user ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "userId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "userId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sessions/by-user-id/{{userId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get contact by user ID",
+        "validationMode": "strict-generated"
+      },
+      "contacts.list": {
+        "description": "List Gleap contact sessions for the connected project.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/sessions",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List contacts",
+        "validationMode": "strict-generated"
+      },
       "healthcheck": {
-        "timeoutMs": 10000,
+        "description": "Validate the Gleap API key and project by retrieving the current user.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/users/me",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
+      },
+      "tickets.get": {
+        "description": "Get a Gleap ticket by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "ticketId": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "ticketId"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/tickets/{{ticketId}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get ticket",
+        "validationMode": "strict-generated"
+      },
+      "tickets.list": {
+        "description": "List Gleap tickets with optional type, status, priority, and limit filters.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "priority": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "status": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/tickets",
+          "query": {
+            "limit": "{{limit}}",
+            "priority": "{{priority}}",
+            "status": "{{status}}",
+            "type": "{{type}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List tickets",
+        "validationMode": "strict-generated"
+      },
+      "contacts.get": {
         "kind": "action",
         "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the Gleap API key and project by retrieving the current user.",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get contact",
+        "description": "Get a Gleap contact session by session ID.",
         "inputSchema": {
           "type": "object",
-          "properties": {},
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Gleap session ID."
+            }
+          },
+          "required": [
+            "sessionId"
+          ],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -334,26 +807,183 @@
         },
         "request": {
           "method": "GET",
-          "path": "/users/me",
+          "path": "/sessions/{{sessionId}}",
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "enforceOutputSchema": true
       },
-      "contacts.list": {
+      "contacts.create": {
+        "kind": "action",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List contacts",
-        "description": "List Gleap contact sessions for the connected project.",
+        "title": "Create contact",
+        "description": "Create or upsert a Gleap contact session. A supplied userId updates the existing contact.",
         "inputSchema": {
           "type": "object",
-          "properties": {},
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "External user ID used as the upsert key."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact email."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact name."
+            },
+            "phone": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact phone."
+            },
+            "companyName": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Company name."
+            }
+          },
+          "required": [
+            "userId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/sessions",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "userId": "{{userId}}",
+            "email": "{{email}}",
+            "name": "{{name}}",
+            "phone": "{{phone}}",
+            "companyName": "{{companyName}}"
+          }
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "contacts.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update contact",
+        "description": "Update a Gleap contact session by session ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Gleap session ID."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact email."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact name."
+            },
+            "phone": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Contact phone."
+            }
+          },
+          "required": [
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/sessions/{{sessionId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "email": "{{email}}",
+            "name": "{{name}}",
+            "phone": "{{phone}}"
+          }
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "contacts.search": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Search contacts",
+        "description": "Autocomplete search over Gleap contact sessions. searchTerm is required.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "searchTerm": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search term; terms shorter than 3 characters return an empty array."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional session type filter such as users or guests."
+            }
+          },
+          "required": [
+            "searchTerm"
+          ],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -370,34 +1000,249 @@
         },
         "request": {
           "method": "GET",
-          "path": "/sessions",
+          "path": "/sessions/search",
+          "success": [
+            200
+          ],
+          "query": {
+            "searchTerm": "{{searchTerm}}",
+            "type": "{{type}}"
+          }
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "tickets.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create ticket",
+        "description": "Create a Gleap ticket in the connected project.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket title."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket description."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket type such as BUG or FEATURE_REQUEST."
+            },
+            "priority": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket priority: LOW, MEDIUM, or HIGH."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket status such as OPEN."
+            },
+            "session": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional contact session ID."
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/tickets",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "title": "{{title}}",
+            "description": "{{description}}",
+            "type": "{{type}}",
+            "priority": "{{priority}}",
+            "status": "{{status}}",
+            "session": "{{session}}"
+          }
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "tickets.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Update ticket",
+        "description": "Update a Gleap ticket's title, status, priority, or type.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ticketId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket ID."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket title."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket status."
+            },
+            "priority": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket priority: LOW, MEDIUM, or HIGH."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket type."
+            }
+          },
+          "required": [
+            "ticketId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/tickets/{{ticketId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "title": "{{title}}",
+            "status": "{{status}}",
+            "priority": "{{priority}}",
+            "type": "{{type}}"
+          }
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "tickets.archive": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Archive ticket",
+        "description": "Archive a Gleap ticket by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ticketId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Ticket ID."
+            }
+          },
+          "required": [
+            "ticketId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PUT",
+          "path": "/tickets/{{ticketId}}/archive",
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "enforceOutputSchema": true
       },
-      "contacts.getByUserId": {
+      "tickets.search": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get contact by user ID",
-        "description": "Get a Gleap contact session by external user ID.",
+        "title": "Search tickets",
+        "description": "Full-text search over Gleap tickets and comments. Returns at most 30 hits.",
         "inputSchema": {
           "type": "object",
-          "required": [
-            "userId"
-          ],
           "properties": {
-            "userId": {
+            "searchTerm": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Search term, max 100 characters."
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional ticket type filter such as BUG."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional status filter such as OPEN."
             }
           },
+          "required": [
+            "searchTerm"
+          ],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -414,44 +1259,141 @@
         },
         "request": {
           "method": "GET",
-          "path": "/sessions/by-user-id/{{userId}}",
+          "path": "/tickets/search",
           "success": [
             200
-          ]
+          ],
+          "query": {
+            "searchTerm": "{{searchTerm}}",
+            "type": "{{type}}",
+            "status": "{{status}}"
+          }
         },
-        "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "enforceOutputSchema": true
       },
-      "tickets.list": {
+      "tickets.counts": {
+        "kind": "action",
+        "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List tickets",
-        "description": "List Gleap tickets with optional type, status, priority, and limit filters.",
+        "title": "Count tickets by status",
+        "description": "Get Gleap ticket counts grouped by status, excluding archived, hidden, and spam tickets.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "type": {
               "type": "string",
-              "minLength": 1
-            },
-            "status": {
+              "minLength": 1,
+              "description": "Optional ticket type filter."
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/tickets/ticketscount",
+          "success": [
+            200
+          ],
+          "query": {
+            "type": "{{type}}"
+          }
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "tickets.history": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get ticket history",
+        "description": "Get the internal history of a Gleap ticket (status, assignee, tag, and workflow changes).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ticketId": {
               "type": "string",
-              "minLength": 1
-            },
-            "priority": {
+              "minLength": 1,
+              "description": "Ticket ID."
+            }
+          },
+          "required": [
+            "ticketId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/tickets/{{ticketId}}/history",
+          "success": [
+            200
+          ]
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "messages.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List ticket messages",
+        "description": "List Gleap conversation messages for a ticket, oldest first.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ticket": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Ticket ID, number, or share token."
             },
             "limit": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 1000
+              "maximum": 100
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional message type filter such as TEXT or NOTE."
             }
           },
+          "required": [
+            "ticket"
+          ],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -461,47 +1403,237 @@
           ],
           "properties": {
             "data": {
-              "type": "object"
+              "type": "array"
             }
           },
           "additionalProperties": false
         },
         "request": {
           "method": "GET",
-          "path": "/tickets",
-          "query": {
-            "type": "{{type}}",
-            "status": "{{status}}",
-            "priority": "{{priority}}",
-            "limit": "{{limit}}"
-          },
+          "path": "/messages",
           "success": [
             200
-          ]
+          ],
+          "query": {
+            "ticket": "{{ticket}}",
+            "limit": "{{limit}}",
+            "type": "{{type}}"
+          }
         },
-        "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "enforceOutputSchema": true
       },
-      "tickets.get": {
+      "messages.create": {
+        "kind": "action",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get ticket",
-        "description": "Get a Gleap ticket by ID.",
+        "title": "Create ticket message",
+        "description": "Post a teammate reply or internal note on a Gleap ticket.",
         "inputSchema": {
           "type": "object",
-          "required": [
-            "ticketId"
-          ],
           "properties": {
-            "ticketId": {
+            "ticket": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Ticket ID."
+            },
+            "comment": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Message body as plain text or markdown."
+            },
+            "isNote": {
+              "type": "boolean"
             }
           },
+          "required": [
+            "ticket",
+            "comment"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/messages",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "ticket": "{{ticket}}",
+            "comment": "{{comment}}",
+            "isNote": "{{isNote}}"
+          }
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "teams.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 5242880,
+        "title": "List teams",
+        "description": "List Gleap teams associated with the connected project.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/teams",
+          "success": [
+            200
+          ]
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "collections.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List help center collections",
+        "description": "List Gleap help center collections. Pass parentId to list children, or parentId=all for every collection.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "parentId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Parent collection ID, or all."
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/helpcenter/collections",
+          "success": [
+            200
+          ],
+          "query": {
+            "parentId": "{{parentId}}"
+          }
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "articles.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List help center articles",
+        "description": "List every article in a Gleap help center collection, published and unpublished.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "collectionId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Help center collection ID."
+            }
+          },
+          "required": [
+            "collectionId"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/helpcenter/collections/{{collectionId}}/articles",
+          "success": [
+            200
+          ]
+        },
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "enforceOutputSchema": true
+      },
+      "articles.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get help center article",
+        "description": "Get a Gleap help center article by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "articleId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Help center article ID."
+            }
+          },
+          "required": [
+            "articleId"
+          ],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -518,14 +1650,14 @@
         },
         "request": {
           "method": "GET",
-          "path": "/tickets/{{ticketId}}",
+          "path": "/helpcenter/articles/{{articleId}}",
           "success": [
             200
           ]
         },
-        "enforceOutputSchema": true,
         "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "enforceOutputSchema": true
       }
     },
     "provenance": {

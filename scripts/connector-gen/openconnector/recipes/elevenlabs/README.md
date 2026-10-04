@@ -1,7 +1,7 @@
 # ElevenLabs
 
-Read-only international ElevenLabs API recipe. Configure an `xi-api-key` from Developers > API Keys. Healthcheck is documented GET `/v1/user`; text-to-speech, sound generation, and history audio download are omitted because they are billable or binary.
+International ElevenLabs API recipe. Configure an `xi-api-key` from Developers > API Keys. Healthcheck is documented GET `/v1/user`. Binary text-to-speech audio download is omitted; `speech.convertWithTimestamps` returns JSON (`audio_base64` plus alignment).
 
-Operations: `healthcheck`, `subscription.get`, `models.list`, `voices.list`, and `voices.get`. `voices.list` uses current GET `/v2/voices` rather than deprecated GET `/v1/voices`. `page_size` and `next_page_token` are caller controlled; provider next tokens are metadata and are never followed. Voice IDs are URI-encoded.
+Operations cover user/subscription/models/voices, voice settings, generated history, shared voices, JSON speech-with-timestamps, conversational agents/conversations/knowledge-base/phone numbers, pronunciation dictionaries, dubbing, and workspace groups. `voices.list` uses current GET `/v2/voices`.
 
 Source attribution: oomol-lab/open-connector at `33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a`. Live authentication is unverified.
