@@ -1,20 +1,23 @@
 # Alpaca
 
-Read-only international Alpaca Trading API v2 recipe. Copy the API key ID and secret from the Alpaca dashboard. Set `tradingHost` to `paper-api` (paper trading, `paper-api.alpaca.markets`) or `api` (live, `api.alpaca.markets`). The runner sends `APCA-API-KEY-ID`, `APCA-API-SECRET-KEY`, and `Accept: application/json`.
+International Alpaca Trading API v2 recipe. Copy the API key ID and secret from the Alpaca dashboard. Set `tradingHost` to `paper-api` (paper trading, `paper-api.alpaca.markets`) or `api` (live, `api.alpaca.markets`). The runner sends `APCA-API-KEY-ID`, `APCA-API-SECRET-KEY`, and `Accept: application/json`.
 
 ## Operations
 
 - `healthcheck`: `GET /v2/account` with empty input (pinned credential validator).
-- `assets.list`: `GET /v2/assets` with optional `status` and `assetClass` (`asset_class`).
-- `positions.list`: `GET /v2/positions`.
-- `clock.get`: `GET /v2/clock`.
-- `watchlists.list`: `GET /v2/watchlists`.
+- `assets.list` / `assets.get`: asset catalog reads.
+- `positions.list` / `positions.get` / `positions.close`: open position reads and close.
+- `orders.list` / `orders.get` / `orders.create` / `orders.cancel`: order lifecycle on the trading host.
+- `watchlists.list` / `watchlists.get` / `watchlists.create`: watchlist reads and create.
+- `clock.get` / `calendar.list`: US market clock and calendar.
+- `account.activities.list` / `account.config.get` / `account.portfolio.history`: account activity, configuration, and equity history.
+- `option_contracts.list` / `option_contracts.get`: option contract catalog on the trading host.
 
-Orders, watchlist-by-name path switching, market-data (`data.alpaca.markets`), OAuth, and writes are omitted. Native returns raw JSON under `data`. Native category is `banking-data` (source Finance / Data).
+Market-data host `data.alpaca.markets` and OAuth remain omitted. Native returns raw JSON under `data`. Native category is `banking-data`.
 
 ## Adaptations
 
-Pinned source and official docs agree on the two trading hosts and the APCA key-id/secret headers. Required stored `tradingHost` interpolates `https://{{tradingHost}}.alpaca.markets` because source `environment` `paper`/`live` cannot form those hostnames. `attributes` comma-join is omitted. The upstream user-agent is not sent.
+Required stored `tradingHost` interpolates `https://{{tradingHost}}.alpaca.markets`. `attributes` comma-join is omitted. Order create leaves qty/notional exclusivity to the provider. Cancel order maps 204 to `data: null`.
 
 ## License and evidence
 
