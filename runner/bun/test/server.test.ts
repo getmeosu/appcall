@@ -1183,7 +1183,7 @@ describe("connector webhook RPC", () => {
         method: "POST",
         body: JSON.stringify({
           method: "connector.webhook.parse",
-          params: { connectorKey: "calendly", payload: {} },
+          params: { connectorKey: "csv", payload: {} },
         }),
       }),
     );
