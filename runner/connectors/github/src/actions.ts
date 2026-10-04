@@ -393,6 +393,21 @@ import {
   validateGetLicenseInput,
   validateGetZenInput,
 } from "./card14_reads";
+import {
+  createCardProjectsV2Client,
+  validateAddOrgProjectItemInput,
+  validateCreateOrgProjectDraftInput,
+  validateCreateOrgProjectFieldInput,
+  validateCreateOrgProjectViewInput,
+  validateDeleteOrgProjectItemInput,
+  validateGetOrgProjectFieldInput,
+  validateGetOrgProjectItemInput,
+  validateGetOrgProjectV2Input,
+  validateListOrgProjectFieldsInput,
+  validateListOrgProjectItemsInput,
+  validateListOrgProjectsV2Input,
+  validateUpdateOrgProjectItemInput,
+} from "./card_projects_v2";
 
 
 
@@ -6097,6 +6112,138 @@ export function getGitignoreTemplate(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
+}
+
+
+// ─── projects v2 org reads and item writes ───────────────────────────────────
+
+function liveProjectsV2Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCardProjectsV2Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listOrgProjectsV2(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.list").listProjects(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.list", source: "connector", projects: result.projects };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.list", source: "connector", validated: validateListOrgProjectsV2Input(input) };
+}
+
+export function getOrgProjectV2(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.get").getProject(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.get", source: "connector", project: result.project };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.get", source: "connector", validated: validateGetOrgProjectV2Input(input) };
+}
+
+export function listOrgProjectFields(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.fields.list").listFields(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.fields.list", source: "connector", fields: result.fields };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.fields.list", source: "connector", validated: validateListOrgProjectFieldsInput(input) };
+}
+
+export function getOrgProjectField(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.fields.get").getField(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.fields.get", source: "connector", field: result.field };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.fields.get", source: "connector", validated: validateGetOrgProjectFieldInput(input) };
+}
+
+export function listOrgProjectItems(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.items.list").listItems(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.items.list", source: "connector", items: result.items };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.items.list", source: "connector", validated: validateListOrgProjectItemsInput(input) };
+}
+
+export function getOrgProjectItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.items.get").getItem(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.items.get", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.items.get", source: "connector", validated: validateGetOrgProjectItemInput(input) };
+}
+
+export function createOrgProjectDraft(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.drafts.create").createDraft(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.drafts.create", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.drafts.create", source: "connector", validated: validateCreateOrgProjectDraftInput(input) };
+}
+
+export function createOrgProjectField(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.fields.create").createField(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.fields.create", source: "connector", field: result.field };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.fields.create", source: "connector", validated: validateCreateOrgProjectFieldInput(input) };
+}
+
+export function addOrgProjectItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.items.add").addItem(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.items.add", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.items.add", source: "connector", validated: validateAddOrgProjectItemInput(input) };
+}
+
+export function updateOrgProjectItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.items.update").updateItem(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.items.update", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.items.update", source: "connector", validated: validateUpdateOrgProjectItemInput(input) };
+}
+
+export function deleteOrgProjectItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.items.delete").deleteItem(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.items.delete", source: "connector", deleted: result.deleted, itemId: result.itemId };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.items.delete", source: "connector", validated: validateDeleteOrgProjectItemInput(input) };
+}
+
+export function createOrgProjectView(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveProjectsV2Client(input, "orgs.projects_v2.views.create").createView(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "orgs.projects_v2.views.create", source: "connector", view: result.view };
+    });
+  }
+  return { connector: "github", action: "orgs.projects_v2.views.create", source: "connector", validated: validateCreateOrgProjectViewInput(input) };
 }
 
 
