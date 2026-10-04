@@ -1,7 +1,7 @@
 {
   "key": "bugsnag",
   "name": "Bugsnag",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -31,7 +31,11 @@
     "user",
     "organization",
     "project",
-    "error"
+    "error",
+    "event",
+    "comment",
+    "release",
+    "collaborator"
   ],
   "http": {
     "baseUrl": "https://api.bugsnag.com",
@@ -316,6 +320,885 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "organizations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get organization",
+      "description": "Get a Bugsnag organization by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag organization id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "organization_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organization_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project",
+      "description": "Get a Bugsnag project by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create project",
+      "description": "Create a Bugsnag project in an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag organization id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project display name."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Notifier type such as rails, node, or python."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "organization_id",
+          "name",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/organizations/{{organization_id}}/projects",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update project",
+      "description": "Update a Bugsnag project name or ignore-old-browsers setting.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project display name."
+          },
+          "ignore_old_browsers": {
+            "type": "boolean",
+            "description": "Ignore errors from outdated browsers."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/projects/{{project_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "ignore_old_browsers": "{{ignore_old_browsers}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete project",
+      "description": "Delete a Bugsnag project by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/projects/{{project_id}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.project_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "errors.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update error",
+      "description": "Update a Bugsnag error group (operation, severity, or assignee).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "error_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag error group id."
+          },
+          "operation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Error operation such as open, fix, or ignore."
+          },
+          "severity": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Error severity such as error, warning, or info."
+          },
+          "assigned_collaborator_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collaborator id to assign."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "error_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/projects/{{project_id}}/errors/{{error_id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "operation": "{{operation}}",
+          "severity": "{{severity}}",
+          "assigned_collaborator_id": "{{assigned_collaborator_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List events",
+      "description": "List events for a Bugsnag project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "link": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/events",
+        "success": [
+          200
+        ],
+        "query": {
+          "per_page": "{{per_page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get event",
+      "description": "Get a Bugsnag event by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "event_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag event id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "event_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/events/{{event_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "error-events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List error events",
+      "description": "List events that belong to a Bugsnag error group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "error_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag error group id."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "error_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "link": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/errors/{{error_id}}/events",
+        "success": [
+          200
+        ],
+        "query": {
+          "per_page": "{{per_page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List comments",
+      "description": "List comments on a Bugsnag error group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "error_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag error group id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "error_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "link": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/errors/{{error_id}}/comments",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create comment",
+      "description": "Add a comment to a Bugsnag error group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "error_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag error group id."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment body."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "error_id",
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/projects/{{project_id}}/errors/{{error_id}}/comments",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "message": "{{message}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "releases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List releases",
+      "description": "List releases for a Bugsnag project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Results per page."
+          },
+          "release_stage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Release stage filter such as production."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "link": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/releases",
+        "success": [
+          200
+        ],
+        "query": {
+          "per_page": "{{per_page}}",
+          "release_stage": "{{release_stage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "releases.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get release",
+      "description": "Get a Bugsnag release by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          },
+          "release_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag release id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id",
+          "release_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/releases/{{release_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collaborators.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List collaborators",
+      "description": "List collaborators with access to a Bugsnag project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "link": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/collaborators",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "event-fields.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List event fields",
+      "description": "List filterable event fields for a Bugsnag project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bugsnag project id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "project_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "link": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{project_id}}/event_fields",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.error": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Error",
+      "description": "Bugsnag error webhook. Fires for error created, updated, commented, assigned, or deleted project error events."
+    },
+    "webhook.project": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Project",
+      "description": "Bugsnag project webhook. Fires when a project is created, updated, or deleted."
     }
   },
   "evidence": {

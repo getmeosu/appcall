@@ -1,7 +1,17 @@
 {
+  "key": "polygon-io",
+  "name": "Massive (Polygon.io)",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "banking-data"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,93 +19,159 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "banking-data"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.massive.com"
+    ]
+  },
+  "models": [
+    "ticker-type",
+    "market-status",
+    "exchange",
+    "ticker",
+    "aggregate",
+    "snapshot",
+    "trade",
+    "quote",
+    "news",
+    "dividend",
+    "split"
+  ],
   "http": {
+    "baseUrl": "https://api.massive.com",
     "auth": {
       "field": "apiKey",
       "in": "query",
       "name": "apiKey",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.massive.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
-      "bodyErrorPaths": [
-        "error"
+      "rateLimitStatuses": [
+        429
       ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error",
         "message"
       ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      "bodyErrorPaths": [
+        "error"
+      ]
     }
   },
-  "key": "polygon-io",
-  "models": [
-    "ticker-type",
-    "market-status",
-    "exchange",
-    "ticker"
-  ],
-  "name": "Massive (Polygon.io)",
-  "network": {
-    "allowedHosts": [
-      "api.massive.com"
-    ]
-  },
   "operations": {
-    "exchanges.list": {
-      "description": "List known exchanges available through Massive.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "assetClass": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "locale": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Massive API key with GET /v3/reference/tickers/types.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/reference/tickers/types",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "market-status.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get market status",
+      "description": "Get the current Massive market status for stocks, currencies, and indices.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/marketstatus/now",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exchanges.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List exchanges",
+      "description": "List known exchanges available through Massive.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assetClass": {
+            "type": "string",
+            "minLength": 1
+          },
+          "locale": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -108,118 +184,46 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List exchanges",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Massive API key with GET /v3/reference/tickers/types.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v3/reference/tickers/types",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "market-status.get": {
-      "description": "Get the current Massive market status for stocks, currencies, and indices.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/marketstatus/now",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get market status",
-      "validationMode": "strict-generated"
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "ticker.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get ticker details",
       "description": "Get comprehensive details for a single Massive ticker.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
-          "date": {
-            "minLength": 1,
-            "type": "string"
-          },
           "ticker": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
           "ticker"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -231,107 +235,968 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get ticker details",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "tickers.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List tickers",
       "description": "List ticker symbols supported by Massive with optional filters.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "market": {
+            "type": "string",
+            "minLength": 1
+          },
+          "exchange": {
+            "type": "string",
+            "minLength": 1
+          },
           "active": {
             "type": "boolean"
           },
-          "cursor": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "exchange": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "market": {
-            "minLength": 1,
-            "type": "string"
-          },
           "order": {
+            "type": "string",
             "enum": [
               "asc",
               "desc"
-            ],
-            "type": "string"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
           },
           "sort": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
-          "ticker": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "type": {
-            "minLength": 1,
-            "type": "string"
+          "cursor": {
+            "type": "string",
+            "minLength": 1
           }
         },
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/v3/reference/tickers",
         "query": {
-          "active": "{{active}}",
-          "cursor": "{{cursor}}",
-          "exchange": "{{exchange}}",
-          "limit": "{{limit}}",
-          "market": "{{market}}",
-          "order": "{{order}}",
-          "sort": "{{sort}}",
           "ticker": "{{ticker}}",
-          "type": "{{type}}"
+          "type": "{{type}}",
+          "market": "{{market}}",
+          "exchange": "{{exchange}}",
+          "active": "{{active}}",
+          "order": "{{order}}",
+          "limit": "{{limit}}",
+          "sort": "{{sort}}",
+          "cursor": "{{cursor}}"
         },
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "market-status.upcoming": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List tickers",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Upcoming market status",
+      "description": "List upcoming Massive market holidays and early closes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/marketstatus/upcoming",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ticker-types.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List ticker types",
+      "description": "List Massive ticker types, optionally filtered by asset class.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "asset_class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Asset class such as stocks, options, crypto, or fx."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/reference/tickers/types",
+        "success": [
+          200
+        ],
+        "query": {
+          "asset_class": "{{asset_class}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "aggs.prev": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Previous close",
+      "description": "Get the previous day's aggregate OHLC for a ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stocksTicker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          },
+          "adjusted": {
+            "type": "boolean",
+            "description": "Whether results are split-adjusted."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stocksTicker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/aggs/ticker/{{stocksTicker}}/prev",
+        "success": [
+          200
+        ],
+        "query": {
+          "adjusted": "{{adjusted}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "aggs.range": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Aggregate bars",
+      "description": "Get aggregate OHLC bars for a ticker over a custom range.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stocksTicker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          },
+          "multiplier": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Size of the timespan multiplier."
+          },
+          "timespan": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Timespan unit.",
+            "enum": [
+              "minute",
+              "hour",
+              "day",
+              "week",
+              "month",
+              "quarter",
+              "year"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive from date (YYYY-MM-DD) or millisecond timestamp."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive to date (YYYY-MM-DD) or millisecond timestamp."
+          },
+          "adjusted": {
+            "type": "boolean",
+            "description": "Whether results are split-adjusted."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort order.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000,
+            "description": "Max results."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stocksTicker",
+          "multiplier",
+          "timespan",
+          "from",
+          "to"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/aggs/ticker/{{stocksTicker}}/range/{{multiplier}}/{{timespan}}/{{from}}/{{to}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "adjusted": "{{adjusted}}",
+          "sort": "{{sort}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "aggs.grouped": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Daily market summary",
+      "description": "Get grouped daily OHLC for all US stocks on a trading date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Trading date (YYYY-MM-DD)."
+          },
+          "adjusted": {
+            "type": "boolean",
+            "description": "Whether results are split-adjusted."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/aggs/grouped/locale/us/market/stocks/{{date}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "adjusted": "{{adjusted}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "open-close.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Daily open close",
+      "description": "Get official open and close for a ticker on a trading date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stocksTicker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Trading date (YYYY-MM-DD)."
+          },
+          "adjusted": {
+            "type": "boolean",
+            "description": "Whether results are split-adjusted."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stocksTicker",
+          "date"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/open-close/{{stocksTicker}}/{{date}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "adjusted": "{{adjusted}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "snapshot.ticker": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Ticker snapshot",
+      "description": "Get a current snapshot for a US stock ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ticker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/snapshot/locale/us/markets/stocks/tickers/{{ticker}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "last-trade.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Last trade",
+      "description": "Get the most recent trade for a ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stocksTicker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stocksTicker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/last/trade/{{stocksTicker}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "last-quote.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Last quote",
+      "description": "Get the most recent NBBO quote for a ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stocksTicker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stocksTicker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/last/nbbo/{{stocksTicker}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "trades.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List trades",
+      "description": "List historical trades for a ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stockTicker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          },
+          "timestamp": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive nanosecond timestamp or YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000,
+            "description": "Max results."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort order.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stockTicker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/trades/{{stockTicker}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "timestamp": "{{timestamp}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "quotes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List quotes",
+      "description": "List historical NBBO quotes for a ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "stockTicker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          },
+          "timestamp": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive nanosecond timestamp or YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50000,
+            "description": "Max results."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort order.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "stockTicker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/quotes/{{stockTicker}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "timestamp": "{{timestamp}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "news.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List ticker news",
+      "description": "List news articles, optionally filtered by ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol to filter news."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Max results."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort order.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field such as published_utc."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/reference/news",
+        "success": [
+          200
+        ],
+        "query": {
+          "ticker": "{{ticker}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}",
+          "sort": "{{sort}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dividends.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List dividends",
+      "description": "List historical cash dividends, optionally filtered by ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Max results."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort order.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/reference/dividends",
+        "success": [
+          200
+        ],
+        "query": {
+          "ticker": "{{ticker}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "splits.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List splits",
+      "description": "List historical stock splits, optionally filtered by ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Max results."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort order.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/reference/splits",
+        "success": [
+          200
+        ],
+        "query": {
+          "ticker": "{{ticker}}",
+          "limit": "{{limit}}",
+          "order": "{{order}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ticker-events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List ticker events",
+      "description": "List ticker change events such as ticker symbol changes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol such as AAPL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ticker"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/vX/reference/tickers/{{ticker}}/events",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
