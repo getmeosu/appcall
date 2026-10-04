@@ -5,7 +5,7 @@ describe("calendly connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("calendly");
     expect(manifest.name).toBe("Calendly");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -20,9 +20,14 @@ describe("calendly connector manifest", () => {
     expect(manifest.network.allowedHosts).toEqual(["api.calendly.com"]);
   });
 
-  test("all operations are actions (no background syncs under external_bearer)", () => {
-    for (const op of Object.values(manifest.operations as Record<string, { kind: string }>)) {
-      expect(op.kind).toBe("action");
+  test("actions stay actions and EventOnly webhooks stay webhooks", () => {
+    const ops = manifest.operations as Record<string, { kind: string }>;
+    for (const [key, op] of Object.entries(ops)) {
+      if (key.startsWith("webhook.") && !key.startsWith("webhook_subscriptions.")) {
+        expect(op.kind).toBe("webhook");
+      } else {
+        expect(op.kind).toBe("action");
+      }
     }
   });
 
@@ -33,10 +38,11 @@ describe("calendly connector manifest", () => {
     expect(healthcheck.maxResponseBytes).toBe(65536);
   });
 
-  test("models include event and user", () => {
+  test("models include event, user, invitee, and organization", () => {
     expect(manifest.models).toContain("event");
     expect(manifest.models).toContain("user");
-    expect(manifest.models).toHaveLength(2);
+    expect(manifest.models).toContain("invitee");
+    expect(manifest.models).toContain("organization");
   });
 
   test("includes all action operations", () => {
@@ -44,14 +50,24 @@ describe("calendly connector manifest", () => {
     const newActionKeys = [
       "users.me.action",
       "event_types.list",
+      "event_types.get",
       "scheduled_events.list",
       "scheduled_events.get",
       "scheduled_events.invitees.list",
       "scheduled_events.cancel",
+      "invitees.get",
       "invitee_no_shows.create",
       "scheduling_links.create",
       "slots.available",
       "bookings.create",
+      "organization.memberships.list",
+      "webhook_subscriptions.create",
+      "webhook_subscriptions.list",
+      "webhook_subscriptions.delete",
+      "users.get",
+      "organizations.get",
+      "routing_forms.list",
+      "routing_forms.get",
     ];
     for (const key of newActionKeys) {
       expect(ops[key]).toBeDefined();
@@ -63,19 +79,38 @@ describe("calendly connector manifest", () => {
     }
   });
 
+  test("declares EventOnly webhooks without a tool schema", () => {
+    const ops = manifest.operations as Record<string, { kind: string; inputSchema?: unknown }>;
+    for (const key of ["webhook.invitee_created", "webhook.invitee_canceled", "webhook.routing_form_submission"]) {
+      expect(ops[key]).toBeDefined();
+      expect(ops[key].kind).toBe("webhook");
+      expect(ops[key].inputSchema).toBeUndefined();
+    }
+  });
+
   test("all new action operations have timeoutMs, maxInputBytes, maxResponseBytes > 0", () => {
     const ops = manifest.operations as Record<string, { kind: string; timeoutMs: number; maxInputBytes: number; maxResponseBytes: number }>;
     const newActionKeys = [
       "users.me.action",
       "event_types.list",
+      "event_types.get",
       "scheduled_events.list",
       "scheduled_events.get",
       "scheduled_events.invitees.list",
       "scheduled_events.cancel",
+      "invitees.get",
       "invitee_no_shows.create",
       "scheduling_links.create",
       "slots.available",
       "bookings.create",
+      "organization.memberships.list",
+      "webhook_subscriptions.create",
+      "webhook_subscriptions.list",
+      "webhook_subscriptions.delete",
+      "users.get",
+      "organizations.get",
+      "routing_forms.list",
+      "routing_forms.get",
     ];
     for (const key of newActionKeys) {
       expect(ops[key].timeoutMs).toBeGreaterThan(0);
@@ -89,14 +124,24 @@ describe("calendly connector manifest", () => {
     const newActionKeys = [
       "users.me.action",
       "event_types.list",
+      "event_types.get",
       "scheduled_events.list",
       "scheduled_events.get",
       "scheduled_events.invitees.list",
       "scheduled_events.cancel",
+      "invitees.get",
       "invitee_no_shows.create",
       "scheduling_links.create",
       "slots.available",
       "bookings.create",
+      "organization.memberships.list",
+      "webhook_subscriptions.create",
+      "webhook_subscriptions.list",
+      "webhook_subscriptions.delete",
+      "users.get",
+      "organizations.get",
+      "routing_forms.list",
+      "routing_forms.get",
     ];
     for (const key of newActionKeys) {
       expect(ops[key].inputSchema).toBeDefined();

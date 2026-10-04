@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test";
 import manifest from "../manifest.json";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
+const actionOps = Object.fromEntries(Object.entries(operations).filter(([, op]) => op.kind === "action"));
+const webhookOps = Object.fromEntries(Object.entries(operations).filter(([, op]) => op.kind === "webhook"));
 
 describe("confluence manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
@@ -12,7 +14,7 @@ describe("confluence manifest", () => {
   });
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOps)) {
       expect(operation.kind, key).toBe("action");
       expect(operation.timeoutMs as number, key).toBeGreaterThan(0);
       expect(operation.maxInputBytes as number, key).toBeGreaterThan(0);
@@ -27,7 +29,7 @@ describe("confluence manifest", () => {
   });
 
   it("classifies every mutating operation as a write — a safety control, not metadata", () => {
-    const writes = Object.entries(operations)
+    const writes = Object.entries(actionOps)
       .filter(([, operation]) => ["POST", "PUT", "PATCH", "DELETE"].includes(String((operation.request as Record<string, unknown>).method)))
       .map(([key]) => key);
     expect(writes.length).toBeGreaterThan(0);
@@ -37,7 +39,7 @@ describe("confluence manifest", () => {
   });
 
   it("only interpolates path placeholders the operation's schema requires", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOps)) {
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { required?: string[] };
       const placeholders = [...String(request.path ?? "").matchAll(/\{\{\s*([A-Za-z0-9_.$-]+)\s*\}\}/g)].map((match) => match[1]);
@@ -48,7 +50,7 @@ describe("confluence manifest", () => {
   });
 
   it("templates every query and body value from a declared input", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOps)) {
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { properties?: Record<string, unknown> };
       const declared = Object.keys(schema.properties ?? {});
@@ -77,7 +79,7 @@ describe("confluence manifest", () => {
     expect((manifest.http.errors as Record<string, unknown>).bodyErrorPaths).toBeUndefined();
   });
 
-  it("declares exactly the 11 operations the brief lists", () => {
+  it("declares the existing surface plus the first depth slice", () => {
     expect(Object.keys(operations).sort()).toEqual(
       [
         "healthcheck",
@@ -86,13 +88,41 @@ describe("confluence manifest", () => {
         "page.update",
         "page.list",
         "page.delete",
+        "page.children.list",
         "space.list",
         "space.get",
+        "space.create",
         "search.cql",
         "attachment.listForPage",
         "comment.create",
+        "comment.list",
+        "comment.get",
+        "labels.add",
+        "labels.list",
+        "labels.remove",
+        "blogpost.list",
+        "blogpost.get",
+        "blogpost.create",
+        "webhook.page_created",
+        "webhook.page_updated",
+        "webhook.comment_created",
+        "webhook.space_created",
       ].sort(),
     );
+  });
+
+  it("declares EventOnly webhooks without a request or tool schema", () => {
+    expect(Object.keys(webhookOps).sort()).toEqual([
+      "webhook.comment_created",
+      "webhook.page_created",
+      "webhook.page_updated",
+      "webhook.space_created",
+    ]);
+    for (const [key, operation] of Object.entries(webhookOps)) {
+      expect(operation.kind, key).toBe("webhook");
+      expect(operation.request, key).toBeUndefined();
+      expect(operation.inputSchema, key).toBeUndefined();
+    }
   });
 
   it("never declares attachment.upload — multipart bodies are Tier H, not declarative", () => {
@@ -129,7 +159,7 @@ describe("confluence manifest", () => {
   });
 
   it("uses v2 for content and v1 only where v2 has no endpoint", () => {
-    const v1 = Object.entries(operations)
+    const v1 = Object.entries(actionOps)
       .filter(([, op]) => String((op.request as Record<string, unknown>).path).startsWith("/rest/api"))
       .map(([key]) => key);
     expect(v1.sort()).toEqual(["healthcheck", "search.cql"]);
@@ -149,7 +179,7 @@ describe("confluence manifest", () => {
   });
 
   it("maps _links.next through as an opaque nextLink, never inventing a bare nextCursor", () => {
-    for (const key of ["page.list", "space.list", "attachment.listForPage"]) {
+    for (const key of ["page.list", "space.list", "attachment.listForPage", "page.children.list", "labels.list", "comment.list", "blogpost.list"]) {
       const result = JSON.stringify((operations[key]!.request as Record<string, unknown>).result ?? {});
       expect(result, key).toContain("{{response._links.next}}");
       expect(result, key).not.toContain("nextCursor");

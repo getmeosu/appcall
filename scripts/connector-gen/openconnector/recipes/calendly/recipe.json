@@ -81,10 +81,29 @@
     "edition": "international Calendly API v2",
     "operations": [
       "healthcheck",
-      "users.me",
-      "eventTypes.list",
-      "eventTypes.get",
-      "scheduledEvents.list"
+      "users.me.action",
+      "event_types.list",
+      "scheduled_events.list",
+      "scheduled_events.get",
+      "scheduled_events.invitees.list",
+      "scheduled_events.cancel",
+      "invitee_no_shows.create",
+      "scheduling_links.create",
+      "slots.available",
+      "bookings.create",
+      "event_types.get",
+      "invitees.get",
+      "organization.memberships.list",
+      "webhook_subscriptions.create",
+      "webhook_subscriptions.list",
+      "webhook_subscriptions.delete",
+      "users.get",
+      "organizations.get",
+      "routing_forms.list",
+      "routing_forms.get",
+      "webhook.invitee_created",
+      "webhook.invitee_canceled",
+      "webhook.routing_form_submission"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -243,7 +262,7 @@
   "manifest": {
     "key": "calendly",
     "name": "Calendly",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -300,13 +319,12 @@
     },
     "operations": {
       "healthcheck": {
+        "kind": "action",
         "timeoutMs": 5000,
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
         "title": "Healthcheck",
-        "description": "Validate the Calendly personal access token with GET /users/me.",
+        "description": "Verify connectivity and credentials for the Calendly connector. Takes no input and returns the connector health status.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -314,234 +332,1063 @@
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
+            "status": {
+              "type": "string",
+              "description": "Connector health status, e.g. \"ok\" or \"error\"."
             }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/users/me",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+          }
+        }
       },
-      "users.me": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+      "users.me.action": {
         "sideEffect": "read",
-        "title": "Get current user",
-        "description": "Retrieve the authenticated Calendly user.",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Get Current User",
+        "description": "Retrieve the profile information for the authenticated Calendly user, including name, email, timezone, and scheduling URL.",
         "inputSchema": {
           "type": "object",
           "properties": {},
-          "additionalProperties": false
+          "additionalProperties": false,
+          "required": []
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "user": {
+              "type": "object",
+              "description": "The authenticated user's profile resource from Calendly."
             }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/users/me",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+          }
+        }
       },
-      "eventTypes.list": {
-        "timeoutMs": 15000,
+      "event_types.list": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 30000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List event types",
-        "description": "List Calendly event types for one user URI.",
+        "title": "List Event Types",
+        "description": "Retrieve all active event types belonging to a specific Calendly user or organization.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "userUri": {
+            "user": {
               "type": "string",
-              "minLength": 1
+              "description": "The URI of the user whose event types to list (e.g. https://api.calendly.com/users/AAAA)."
             },
-            "count": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "pageToken": {
+            "organization": {
               "type": "string",
-              "minLength": 1
+              "description": "Optional. The URI of the organization to filter event types."
             },
             "active": {
-              "type": "boolean"
-            }
-          },
-          "required": [
-            "userUri"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/event_types",
-          "query": {
-            "user": "{{userUri}}",
-            "count": "{{count}}",
-            "page_token": "{{pageToken}}",
-            "active": "{{active}}"
-          },
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "eventTypes.get": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get event type",
-        "description": "Retrieve one Calendly event type by UUID.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "eventTypeUuid": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "eventTypeUuid"
-          ],
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
-          "properties": {
-            "data": {
-              "type": "object"
-            }
-          },
-          "additionalProperties": false
-        },
-        "request": {
-          "method": "GET",
-          "path": "/event_types/{{eventTypeUuid}}",
-          "success": [
-            200
-          ]
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "scheduledEvents.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "List scheduled events",
-        "description": "List Calendly scheduled events for one user URI.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "userUri": {
-              "type": "string",
-              "minLength": 1
+              "type": "boolean",
+              "description": "Optional. Filter by active status."
             },
             "count": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
+              "type": "number",
+              "description": "Optional. Number of results to return (max 100)."
             },
             "pageToken": {
               "type": "string",
-              "minLength": 1
+              "description": "Optional. Token for paginating to the next result set."
+            }
+          },
+          "required": [
+            "user"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "eventTypes": {
+              "type": "array",
+              "description": "List of event type resources."
+            },
+            "pagination": {
+              "type": "object",
+              "description": "Pagination metadata."
+            }
+          }
+        }
+      },
+      "scheduled_events.list": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List Scheduled Events",
+        "description": "Retrieve a list of scheduled events for a Calendly user or organization, with optional filters for status, date range, and pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "user": {
+              "type": "string",
+              "description": "Optional. The URI of the user whose scheduled events to list."
+            },
+            "organization": {
+              "type": "string",
+              "description": "Optional. The URI of the organization to filter events."
             },
             "status": {
               "type": "string",
+              "description": "Optional. Filter by event status: active or canceled.",
               "enum": [
                 "active",
                 "canceled"
               ]
+            },
+            "count": {
+              "type": "number",
+              "description": "Optional. Number of results to return (max 100)."
+            },
+            "pageToken": {
+              "type": "string",
+              "description": "Optional. Token for paginating to the next result set."
+            },
+            "minStartTime": {
+              "type": "string",
+              "description": "Optional. ISO 8601 minimum start time filter."
+            },
+            "maxStartTime": {
+              "type": "string",
+              "description": "Optional. ISO 8601 maximum start time filter."
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "events": {
+              "type": "array",
+              "description": "List of scheduled event resources."
+            },
+            "pagination": {
+              "type": "object",
+              "description": "Pagination metadata."
+            }
+          }
+        }
+      },
+      "scheduled_events.get": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Get Scheduled Event",
+        "description": "Retrieve the details of a single Calendly scheduled event by its UUID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "The UUID of the scheduled event to retrieve."
             }
           },
           "required": [
-            "userUri"
+            "uuid"
           ],
           "additionalProperties": false
         },
         "outputSchema": {
           "type": "object",
-          "required": [
-            "data"
-          ],
           "properties": {
-            "data": {
-              "type": "object"
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "event": {
+              "type": "object",
+              "description": "The scheduled event resource."
+            }
+          }
+        }
+      },
+      "scheduled_events.invitees.list": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List Event Invitees",
+        "description": "Retrieve all invitees for a specific Calendly scheduled event, with optional filters for status and email.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "The UUID of the scheduled event whose invitees to list."
+            },
+            "status": {
+              "type": "string",
+              "description": "Optional. Filter by invitee status: active or canceled.",
+              "enum": [
+                "active",
+                "canceled"
+              ]
+            },
+            "count": {
+              "type": "number",
+              "description": "Optional. Number of results to return (max 100)."
+            },
+            "pageToken": {
+              "type": "string",
+              "description": "Optional. Token for paginating to the next result set."
+            },
+            "email": {
+              "type": "string",
+              "description": "Optional. Filter invitees by email address."
             }
           },
+          "required": [
+            "uuid"
+          ],
           "additionalProperties": false
         },
-        "request": {
-          "method": "GET",
-          "path": "/scheduled_events",
-          "query": {
-            "user": "{{userUri}}",
-            "count": "{{count}}",
-            "page_token": "{{pageToken}}",
-            "status": "{{status}}"
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "invitees": {
+              "type": "array",
+              "description": "List of invitee resources."
+            },
+            "pagination": {
+              "type": "object",
+              "description": "Pagination metadata."
+            }
+          }
+        }
+      },
+      "scheduled_events.cancel": {
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Cancel Scheduled Event",
+        "description": "Cancel a Calendly scheduled event by its UUID, optionally providing a cancellation reason.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "The UUID of the scheduled event to cancel."
+            },
+            "reason": {
+              "type": "string",
+              "description": "Optional. The reason for canceling the event."
+            }
           },
-          "success": [
-            200
-          ]
+          "required": [
+            "uuid"
+          ],
+          "additionalProperties": false
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "cancellation": {
+              "type": "object",
+              "description": "The cancellation resource returned by Calendly."
+            }
+          }
+        }
+      },
+      "invitee_no_shows.create": {
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Mark Invitee as No-Show",
+        "description": "Mark a Calendly event invitee as a no-show by creating an invitee_no_show record for their invitee URI.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "invitee": {
+              "type": "string",
+              "description": "The full URI of the invitee to mark as a no-show (e.g. https://api.calendly.com/scheduled_events/{uuid}/invitees/{uuid})."
+            }
+          },
+          "required": [
+            "invitee"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "noShow": {
+              "type": "object",
+              "description": "The created invitee no-show resource."
+            }
+          }
+        }
+      },
+      "scheduling_links.create": {
+        "sideEffect": "write",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Create Scheduling Link",
+        "description": "Create a single-use or multi-use Calendly scheduling link for a specific event type, enabling one-time or limited booking URLs.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "owner": {
+              "type": "string",
+              "description": "The URI of the event type that owns this scheduling link (e.g. https://api.calendly.com/event_types/AAAA)."
+            },
+            "ownerType": {
+              "type": "string",
+              "description": "The type of the owner resource. Must be EventType.",
+              "enum": [
+                "EventType"
+              ]
+            },
+            "maxEventCount": {
+              "type": "number",
+              "description": "Optional. Maximum number of events that can be booked with this link."
+            }
+          },
+          "required": [
+            "owner",
+            "ownerType"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "link": {
+              "type": "object",
+              "description": "The created scheduling link resource, including the booking_url."
+            }
+          }
+        }
+      },
+      "slots.available": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 30000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "title": "Get Available Times",
+        "description": "Retrieve available booking times for a Calendly event type within a date range (max 7 days, must be in the future).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "type": "string",
+              "description": "The Calendly event type URI to check availability for."
+            },
+            "start": {
+              "type": "string",
+              "description": "ISO 8601 start of the availability window (future, within 7 days of end)."
+            },
+            "end": {
+              "type": "string",
+              "description": "ISO 8601 end of the availability window."
+            }
+          },
+          "required": [
+            "eventType",
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "slots": {
+              "type": "array",
+              "description": "Available time slots."
+            }
+          }
+        }
+      },
+      "bookings.create": {
+        "kind": "action",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 65536,
+        "title": "Create Booking",
+        "description": "Book a Calendly event for an invitee directly, without the Calendly UI. Requires a paid Calendly plan.",
+        "sideEffect": "write",
+        "sample": {
+          "eventType": "https://api.calendly.com/event_types/AAAA",
+          "startTime": "2026-06-10T15:00:00Z",
+          "invitee": {
+            "name": "Carol White",
+            "email": "carol@example.com",
+            "timeZone": "America/New_York"
+          }
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "eventType": {
+              "type": "string",
+              "description": "The Calendly event type URI to book."
+            },
+            "startTime": {
+              "type": "string",
+              "description": "ISO 8601 start time (UTC) of the booking."
+            },
+            "invitee": {
+              "type": "object",
+              "description": "Invitee details.",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Full name of the invitee."
+                },
+                "email": {
+                  "type": "string",
+                  "description": "Email address of the invitee."
+                },
+                "timeZone": {
+                  "type": "string",
+                  "description": "IANA timezone of the invitee (e.g. America/New_York)."
+                }
+              },
+              "required": [
+                "name",
+                "email",
+                "timeZone"
+              ]
+            },
+            "location": {
+              "type": "object",
+              "description": "Optional. Meeting location object (e.g. { kind, details })."
+            },
+            "guests": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Optional. Up to 10 additional guest emails."
+            }
+          },
+          "required": [
+            "eventType",
+            "startTime",
+            "invitee"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "booking": {
+              "type": "object",
+              "description": "The created scheduled event resource."
+            }
+          }
+        }
+      },
+      "event_types.get": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Get Event Type",
+        "description": "Retrieve a single Calendly event type by UUID. Accepts a bare UUID or a full event type URI.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "Event type UUID, or a full Calendly event type URI."
+            }
+          },
+          "required": [
+            "uuid"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "eventType": {
+              "type": "object",
+              "description": "The event type resource."
+            }
+          }
+        }
+      },
+      "invitees.get": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Get Event Invitee",
+        "description": "Retrieve a single invitee for a Calendly scheduled event by event UUID and invitee UUID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "eventUuid": {
+              "type": "string",
+              "description": "Scheduled event UUID, or a full scheduled event URI."
+            },
+            "uuid": {
+              "type": "string",
+              "description": "Invitee UUID, or a full invitee URI."
+            }
+          },
+          "required": [
+            "eventUuid",
+            "uuid"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "invitee": {
+              "type": "object",
+              "description": "The invitee resource."
+            }
+          }
+        }
+      },
+      "organization.memberships.list": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List Organization Memberships",
+        "description": "List memberships for a Calendly organization, including each member's role, user profile, and organization URI.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organization": {
+              "type": "string",
+              "description": "The URI of the organization whose memberships to list."
+            },
+            "user": {
+              "type": "string",
+              "description": "Optional. Filter to a single user URI."
+            },
+            "email": {
+              "type": "string",
+              "description": "Optional. Filter memberships by member email."
+            },
+            "count": {
+              "type": "number",
+              "description": "Optional. Number of results to return (max 100)."
+            },
+            "pageToken": {
+              "type": "string",
+              "description": "Optional. Token for paginating to the next result set."
+            }
+          },
+          "required": [
+            "organization"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "memberships": {
+              "type": "array",
+              "description": "List of organization membership resources."
+            },
+            "pagination": {
+              "type": "object",
+              "description": "Pagination metadata."
+            }
+          }
+        }
+      },
+      "webhook_subscriptions.create": {
+        "sideEffect": "write",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 65536,
+        "title": "Create Webhook Subscription",
+        "description": "Create a Calendly webhook subscription that POSTs invitee or routing-form events to a callback URL. scope is organization or user.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "HTTPS callback URL Calendly will POST events to."
+            },
+            "events": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Event names to subscribe to, e.g. [\"invitee.created\", \"invitee.canceled\", \"routing_form_submission.created\"]."
+            },
+            "organization": {
+              "type": "string",
+              "description": "The URI of the organization that owns the subscription."
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "organization",
+                "user"
+              ],
+              "description": "Subscription scope. organization or user."
+            },
+            "user": {
+              "type": "string",
+              "description": "Optional. User URI required when scope is user."
+            }
+          },
+          "required": [
+            "url",
+            "events",
+            "organization",
+            "scope"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "subscription": {
+              "type": "object",
+              "description": "The created webhook subscription resource."
+            }
+          }
+        }
+      },
+      "webhook_subscriptions.list": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List Webhook Subscriptions",
+        "description": "List Calendly webhook subscriptions for an organization, optionally filtered by scope and user.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organization": {
+              "type": "string",
+              "description": "The URI of the organization whose webhook subscriptions to list."
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "organization",
+                "user"
+              ],
+              "description": "Optional. Filter by subscription scope."
+            },
+            "user": {
+              "type": "string",
+              "description": "Optional. Filter to subscriptions owned by this user URI."
+            },
+            "count": {
+              "type": "number",
+              "description": "Optional. Number of results to return (max 100)."
+            },
+            "pageToken": {
+              "type": "string",
+              "description": "Optional. Token for paginating to the next result set."
+            }
+          },
+          "required": [
+            "organization"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "subscriptions": {
+              "type": "array",
+              "description": "List of webhook subscription resources."
+            },
+            "pagination": {
+              "type": "object",
+              "description": "Pagination metadata."
+            }
+          }
+        }
+      },
+      "webhook_subscriptions.delete": {
+        "sideEffect": "write",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Delete Webhook Subscription",
+        "description": "Delete a Calendly webhook subscription by UUID. Accepts a bare UUID or a full webhook subscription URI.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "Webhook subscription UUID, or a full Calendly webhook subscription URI."
+            }
+          },
+          "required": [
+            "uuid"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "deleted": {
+              "type": "boolean"
+            },
+            "uuid": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "users.get": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Get User",
+        "description": "Retrieve a Calendly user by UUID. Accepts a bare UUID or a full user URI.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "User UUID, or a full Calendly user URI."
+            }
+          },
+          "required": [
+            "uuid"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "user": {
+              "type": "object",
+              "description": "The user resource."
+            }
+          }
+        }
+      },
+      "organizations.get": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Get Organization",
+        "description": "Retrieve a Calendly organization by UUID. Accepts a bare UUID or a full organization URI.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "Organization UUID, or a full Calendly organization URI."
+            }
+          },
+          "required": [
+            "uuid"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "organization": {
+              "type": "object",
+              "description": "The organization resource."
+            }
+          }
+        }
+      },
+      "routing_forms.list": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List Routing Forms",
+        "description": "List Calendly routing forms for an organization.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "organization": {
+              "type": "string",
+              "description": "The URI of the organization whose routing forms to list."
+            },
+            "count": {
+              "type": "number",
+              "description": "Optional. Number of results to return (max 100)."
+            },
+            "pageToken": {
+              "type": "string",
+              "description": "Optional. Token for paginating to the next result set."
+            }
+          },
+          "required": [
+            "organization"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "routingForms": {
+              "type": "array",
+              "description": "List of routing form resources."
+            },
+            "pagination": {
+              "type": "object",
+              "description": "Pagination metadata."
+            }
+          }
+        }
+      },
+      "routing_forms.get": {
+        "sideEffect": "read",
+        "kind": "action",
+        "timeoutMs": 15000,
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 65536,
+        "title": "Get Routing Form",
+        "description": "Retrieve a Calendly routing form by UUID. Accepts a bare UUID or a full routing form URI.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "Routing form UUID, or a full Calendly routing form URI."
+            }
+          },
+          "required": [
+            "uuid"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "connector": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "routingForm": {
+              "type": "object",
+              "description": "The routing form resource."
+            }
+          }
+        }
+      },
+      "webhook.invitee_created": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read"
+      },
+      "webhook.invitee_canceled": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read"
+      },
+      "webhook.routing_form_submission": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read"
       }
     },
     "provenance": {

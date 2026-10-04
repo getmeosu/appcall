@@ -765,7 +765,12 @@ import {
   getUsersMe as calGetUsersMe, listEventTypes as calListEventTypes, listScheduledEvents as calListScheduledEvents, getScheduledEvent as calGetScheduledEvent,
   listInvitees as calListInvitees, cancelScheduledEvent as calCancelEvent, createInviteeNoShow as calCreateNoShow, createSchedulingLink as calCreateLink,
   getAvailableSlots as calGetSlots, createBooking as calCreateBooking,
+  getEventType as calGetEventType, getInvitee as calGetInvitee, listOrganizationMemberships as calListOrganizationMemberships,
+  createWebhookSubscription as calCreateWebhookSubscription, listWebhookSubscriptions as calListWebhookSubscriptions,
+  deleteWebhookSubscription as calDeleteWebhookSubscription, getUser as calGetUser, getOrganization as calGetOrganization,
+  listRoutingForms as calListRoutingForms, getRoutingForm as calGetRoutingForm,
 } from "../../connectors/calendly/src/actions";
+import { parseWebhook as calendlyParseWebhook } from "../../connectors/calendly/src/webhook";
 import googleAdsManifest from "../../connectors/google-ads/manifest.json";
 import { healthcheck as googleAdsHealthcheck } from "../../connectors/google-ads/src/healthcheck";
 import {
@@ -1943,14 +1948,24 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     calendly: {
       "users.me.action": calGetUsersMe,
       "event_types.list": calListEventTypes,
+      "event_types.get": calGetEventType,
       "scheduled_events.list": calListScheduledEvents,
       "scheduled_events.get": calGetScheduledEvent,
       "scheduled_events.invitees.list": calListInvitees,
       "scheduled_events.cancel": calCancelEvent,
+      "invitees.get": calGetInvitee,
       "invitee_no_shows.create": calCreateNoShow,
       "scheduling_links.create": calCreateLink,
       "slots.available": calGetSlots,
       "bookings.create": calCreateBooking,
+      "organization.memberships.list": calListOrganizationMemberships,
+      "webhook_subscriptions.create": calCreateWebhookSubscription,
+      "webhook_subscriptions.list": calListWebhookSubscriptions,
+      "webhook_subscriptions.delete": calDeleteWebhookSubscription,
+      "users.get": calGetUser,
+      "organizations.get": calGetOrganization,
+      "routing_forms.list": calListRoutingForms,
+      "routing_forms.get": calGetRoutingForm,
     },
     "google-ads": {
       "customers.listAccessible": gadsListAccessibleCustomers,
@@ -2491,6 +2506,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     // updated, interview scheduled, offer created). Ashby HMAC verification is
     // not required for EventOnly ingest; the parser classifies the action.
     ashby: { parse: ashbyParseWebhook },
+    calendly: { parse: calendlyParseWebhook },
   },
 }));
 

@@ -14,6 +14,13 @@ import projectFixture from "../fixtures/project.json";
 import projectsFixture from "../fixtures/projects.json";
 import errorUnauthorizedFixture from "../fixtures/error_unauthorized.json";
 import errorRateLimitedFixture from "../fixtures/error_rate_limited.json";
+import jobFixture from "../fixtures/job.json";
+import jobsFixture from "../fixtures/jobs.json";
+import repositoryFileFixture from "../fixtures/repository_file.json";
+import groupFixture from "../fixtures/group.json";
+import groupsFixture from "../fixtures/groups.json";
+import branchesFixture from "../fixtures/branches.json";
+import commitsFixture from "../fixtures/commits.json";
 
 const { actions } = compileDeclarativeConnector(manifest as never);
 
@@ -34,8 +41,12 @@ function mockJson(body: unknown, status = 200, headers: Record<string, string> =
 const creds = { host: "gitlab.com", apiToken: "glpat-example-token" };
 
 describe("gitlab connector surface", () => {
-  it("compiles one handler per declared operation", () => {
-    expect(Object.keys(actions).sort()).toEqual(Object.keys(manifest.operations).sort());
+  it("compiles one handler per declared action", () => {
+    const actionKeys = Object.entries(manifest.operations as Record<string, { kind: string }>)
+      .filter(([, op]) => op.kind === "action")
+      .map(([key]) => key)
+      .sort();
+    expect(Object.keys(actions).sort()).toEqual(actionKeys);
   });
 });
 
@@ -371,6 +382,163 @@ describe("projects.get", () => {
     const { calls, fetchFn } = mockJson(projectFixture);
     await actions["projects.get"]!({ ...creds, projectId: "4", fetch: fetchFn });
     expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/projects/4");
+  });
+});
+
+describe("projects.create", () => {
+  it("requires name", () => {
+    expect(() => actions["projects.create"]!({ ...creds })).toThrow("name is required");
+  });
+
+  it("POSTs name and optional visibility to /projects", async () => {
+    const { calls, fetchFn } = mockJson(projectFixture, 201);
+    const result = await actions["projects.create"]!({
+      ...creds, name: "Diaspora", path: "diaspora", visibility: "private", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/projects");
+    expect(JSON.parse(String(calls[0]!.init?.body))).toMatchObject({
+      name: "Diaspora", path: "diaspora", visibility: "private",
+    });
+    expect((result.project as Record<string, unknown>).path_with_namespace).toBe("diaspora/diaspora");
+  });
+});
+
+describe("projects.update", () => {
+  it("requires projectId", () => {
+    expect(() => actions["projects.update"]!({ ...creds, name: "New" })).toThrow("projectId is required");
+  });
+
+  it("PUTs to the project path", async () => {
+    const { calls, fetchFn } = mockJson(projectFixture);
+    await actions["projects.update"]!({ ...creds, projectId: "4", description: "Updated", fetch: fetchFn });
+    expect(calls[0]!.init?.method).toBe("PUT");
+    expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/projects/4");
+    expect(JSON.parse(String(calls[0]!.init?.body))).toEqual({ description: "Updated" });
+  });
+});
+
+describe("issues.close", () => {
+  it("requires projectId and issueIid", () => {
+    expect(() => actions["issues.close"]!({ ...creds, projectId: "4" })).toThrow("issueIid is required");
+  });
+
+  it("PUTs state_event close to the iid-scoped path", async () => {
+    const closed = { ...issueFixture, state: "closed" };
+    const { calls, fetchFn } = mockJson(closed);
+    const result = await actions["issues.close"]!({ ...creds, projectId: "4", issueIid: 14, fetch: fetchFn }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("PUT");
+    expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/projects/4/issues/14");
+    expect(JSON.parse(String(calls[0]!.init?.body))).toEqual({ state_event: "close" });
+    expect((result.issue as Record<string, unknown>).state).toBe("closed");
+  });
+});
+
+describe("mergeRequests.notes.create", () => {
+  it("requires body", () => {
+    expect(() => actions["mergeRequests.notes.create"]!({ ...creds, projectId: "4", mergeRequestIid: 1 })).toThrow("body is required");
+  });
+
+  it("posts a note on the merge request iid path", async () => {
+    const { calls, fetchFn } = mockJson(noteFixture, 201);
+    const result = await actions["mergeRequests.notes.create"]!({
+      ...creds, projectId: "4", mergeRequestIid: 1, body: "Text of the comment", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/projects/4/merge_requests/1/notes");
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect((result.note as Record<string, unknown>).id).toBe(302);
+  });
+});
+
+describe("jobs.list", () => {
+  it("requires projectId and pipelineId", () => {
+    expect(() => actions["jobs.list"]!({ ...creds, projectId: "4" })).toThrow("pipelineId is required");
+  });
+
+  it("lists jobs for a pipeline and maps x-next-page", async () => {
+    const { calls, fetchFn } = mockJson(jobsFixture, 200, { "x-next-page": "2" });
+    const result = await actions["jobs.list"]!({
+      ...creds, projectId: "4", pipelineId: 287, fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/projects/4/pipelines/287/jobs");
+    expect(result.jobs).toEqual(jobsFixture);
+    expect(result.nextPage).toBe("2");
+  });
+});
+
+describe("jobs.get", () => {
+  it("requires jobId", () => {
+    expect(() => actions["jobs.get"]!({ ...creds, projectId: "4" })).toThrow("jobId is required");
+  });
+
+  it("GETs a single job by id", async () => {
+    const { calls, fetchFn } = mockJson(jobFixture);
+    const result = await actions["jobs.get"]!({ ...creds, projectId: "4", jobId: 7, fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/projects/4/jobs/7");
+    expect((result.job as Record<string, unknown>).id).toBe(7);
+  });
+});
+
+describe("repository.files.get", () => {
+  it("requires filePath and ref", () => {
+    expect(() => actions["repository.files.get"]!({ ...creds, projectId: "4", filePath: "README.md" })).toThrow("ref is required");
+  });
+
+  it("percent-encodes slashes in filePath, which GitLab requires", async () => {
+    const { calls, fetchFn } = mockJson(repositoryFileFixture);
+    const result = await actions["repository.files.get"]!({
+      ...creds, projectId: "diaspora/diaspora", filePath: "docs/README.md", ref: "main", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.url).toContain("/projects/diaspora%2Fdiaspora/repository/files/docs%2FREADME.md");
+    expect(new URL(calls[0]!.url).searchParams.get("ref")).toBe("main");
+    expect((result.file as Record<string, unknown>).file_path).toBe("docs/README.md");
+  });
+});
+
+describe("groups.list", () => {
+  it("maps x-next-page on GET /groups", async () => {
+    const { calls, fetchFn } = mockJson(groupsFixture, 200, { "x-next-page": "2" });
+    const result = await actions["groups.list"]!({ ...creds, search: "foo", fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/groups");
+    expect(new URL(calls[0]!.url).searchParams.get("search")).toBe("foo");
+    expect(result.groups).toEqual(groupsFixture);
+    expect(result.nextPage).toBe("2");
+  });
+});
+
+describe("groups.get", () => {
+  it("requires groupId", () => {
+    expect(() => actions["groups.get"]!({ ...creds })).toThrow("groupId is required");
+  });
+
+  it("percent-encodes a nested group path", async () => {
+    const { calls, fetchFn } = mockJson(groupFixture);
+    await actions["groups.get"]!({ ...creds, groupId: "foo-bar/nested", fetch: fetchFn });
+    expect(calls[0]!.url).toContain("/groups/foo-bar%2Fnested");
+  });
+});
+
+describe("branches.list", () => {
+  it("lists branches for a project", async () => {
+    const { calls, fetchFn } = mockJson(branchesFixture, 200, { "x-next-page": "" });
+    const result = await actions["branches.list"]!({ ...creds, projectId: "4", search: "main", fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/projects/4/repository/branches");
+    expect(new URL(calls[0]!.url).searchParams.get("search")).toBe("main");
+    expect(result.branches).toEqual(branchesFixture);
+    expect(result.nextPage).toBe("");
+  });
+});
+
+describe("repository.commits.list", () => {
+  it("lists commits for a ref", async () => {
+    const { calls, fetchFn } = mockJson(commitsFixture, 200, { "x-next-page": "2" });
+    const result = await actions["repository.commits.list"]!({
+      ...creds, projectId: "4", refName: "main", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/api/v4/projects/4/repository/commits");
+    expect(new URL(calls[0]!.url).searchParams.get("ref_name")).toBe("main");
+    expect(result.commits).toEqual(commitsFixture);
+    expect(result.nextPage).toBe("2");
   });
 });
 
