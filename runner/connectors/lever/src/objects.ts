@@ -493,3 +493,324 @@ export function parseArchiveReasonsResponse(raw: unknown): {
     hasNext: data.hasNext === true,
   };
 }
+
+export function parseInterviewGetResponse(
+  raw: unknown,
+  opportunityId?: string | null,
+): { interview: NormalizedInterview | null } {
+  const envelope = raw as { data?: LeverInterview } | null;
+  const interview = envelope && typeof envelope === "object" ? envelope.data : undefined;
+  if (interview == null || typeof interview !== "object" || Array.isArray(interview)) {
+    return { interview: null };
+  }
+  if (asStringId(interview.id) == null) {
+    return { interview: null };
+  }
+  return { interview: normalizeInterview(interview, opportunityId) };
+}
+
+export function parseFeedbackGetResponse(raw: unknown): { feedback: NormalizedFeedback | null } {
+  const envelope = raw as { data?: LeverFeedback } | null;
+  const feedback = envelope && typeof envelope === "object" ? envelope.data : undefined;
+  if (feedback == null || typeof feedback !== "object" || Array.isArray(feedback)) {
+    return { feedback: null };
+  }
+  if (asStringId(feedback.id) == null) {
+    return { feedback: null };
+  }
+  return { feedback: normalizeFeedback(feedback) };
+}
+
+export function parseUserGetResponse(raw: unknown): { user: NormalizedUser | null } {
+  const envelope = raw as { data?: LeverUser } | null;
+  const user = envelope && typeof envelope === "object" ? envelope.data : undefined;
+  if (user == null || typeof user !== "object" || Array.isArray(user)) {
+    return { user: null };
+  }
+  if (asStringId(user.id) == null) {
+    return { user: null };
+  }
+  return { user: normalizeUser(user) };
+}
+
+export interface NormalizedCandidate {
+  id: string;
+  provider: string;
+  name: string;
+  headline: string | null;
+  location: string | null;
+  emails: string[];
+  tags: string[];
+  sources: string[];
+  origin: string | null;
+  opportunityId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export function normalizeCandidateFromOpportunity(opp: LeverOpportunity): NormalizedCandidate {
+  const id = asStringId(opp.id) ?? "";
+  return {
+    id: `lev-candidate:${id}`,
+    provider: "lever",
+    name: opp.name ?? "",
+    headline: opp.headline ?? null,
+    location: opp.location ?? null,
+    emails: asStringArray(opp.emails),
+    tags: asStringArray(opp.tags),
+    sources: asStringArray(opp.sources),
+    origin: opp.origin ?? null,
+    opportunityId: id || null,
+    createdAt: msToIso(opp.createdAt),
+    updatedAt: msToIso(opp.updatedAt),
+  };
+}
+
+export function parseCandidateGetResponse(raw: unknown): { candidate: NormalizedCandidate | null } {
+  const envelope = raw as { data?: LeverOpportunity } | null;
+  const opp = envelope && typeof envelope === "object" ? envelope.data : undefined;
+  if (opp == null || typeof opp !== "object" || Array.isArray(opp)) {
+    return { candidate: null };
+  }
+  if (asStringId(opp.id) == null) {
+    return { candidate: null };
+  }
+  return { candidate: normalizeCandidateFromOpportunity(opp) };
+}
+
+export interface NormalizedOffer {
+  id: string;
+  provider: string;
+  status: string | null;
+  creatorId: string | null;
+  createdAt: string | null;
+  fields: Array<{ text: string | null; identifier: string | null; value: unknown }>;
+}
+
+interface LeverOfferField {
+  text?: string | null;
+  identifier?: string | null;
+  value?: unknown;
+}
+
+interface LeverOffer {
+  id: string;
+  status?: string | null;
+  creator?: string | null;
+  createdAt?: number | null;
+  fields?: LeverOfferField[] | null;
+}
+
+export function normalizeOffer(offer: LeverOffer): NormalizedOffer {
+  const fields = Array.isArray(offer.fields) ? offer.fields : [];
+  return {
+    id: `lev-offer:${asStringId(offer.id) ?? ""}`,
+    provider: "lever",
+    status: offer.status ?? null,
+    creatorId: offer.creator ?? null,
+    createdAt: msToIso(offer.createdAt),
+    fields: fields.map((f) => ({
+      text: f?.text ?? null,
+      identifier: f?.identifier ?? null,
+      value: f?.value ?? null,
+    })),
+  };
+}
+
+export function parseOffersResponse(raw: unknown): {
+  offers: NormalizedOffer[];
+  next: string | null;
+  hasNext: boolean;
+} {
+  const data = raw as { data?: LeverOffer[]; next?: string | null; hasNext?: boolean };
+  const items = Array.isArray(data.data) ? data.data : [];
+  return {
+    offers: items.map(normalizeOffer),
+    next: typeof data.next === "string" ? data.next : null,
+    hasNext: data.hasNext === true,
+  };
+}
+
+export function parseOfferGetResponse(raw: unknown): { offer: NormalizedOffer | null } {
+  const envelope = raw as { data?: LeverOffer } | null;
+  const offer = envelope && typeof envelope === "object" ? envelope.data : undefined;
+  if (offer == null || typeof offer !== "object" || Array.isArray(offer)) {
+    return { offer: null };
+  }
+  if (asStringId(offer.id) == null) {
+    return { offer: null };
+  }
+  return { offer: normalizeOffer(offer) };
+}
+
+export interface NormalizedPosting {
+  id: string;
+  provider: string;
+  title: string;
+  state: string | null;
+  location: string | null;
+  team: string | null;
+  department: string | null;
+  commitment: string | null;
+  description: string | null;
+  url: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface LeverAuthenticatedPosting {
+  id: string;
+  text?: string | null;
+  state?: string | null;
+  categories?: {
+    location?: string | null;
+    team?: string | null;
+    department?: string | null;
+    commitment?: string | null;
+  } | null;
+  content?: { description?: string | null } | null;
+  hostedUrl?: string | null;
+  createdAt?: number | null;
+  updatedAt?: number | null;
+}
+
+export function normalizePosting(posting: LeverAuthenticatedPosting): NormalizedPosting {
+  const categories = posting.categories ?? {};
+  return {
+    id: `lev-posting:${asStringId(posting.id) ?? ""}`,
+    provider: "lever",
+    title: posting.text ?? "",
+    state: posting.state ?? null,
+    location: categories.location ?? null,
+    team: categories.team ?? null,
+    department: categories.department ?? null,
+    commitment: categories.commitment ?? null,
+    description: posting.content?.description ?? null,
+    url: posting.hostedUrl ?? null,
+    createdAt: msToIso(posting.createdAt),
+    updatedAt: msToIso(posting.updatedAt),
+  };
+}
+
+export function parsePostingsResponse(raw: unknown): {
+  postings: NormalizedPosting[];
+  next: string | null;
+  hasNext: boolean;
+} {
+  const data = raw as {
+    data?: LeverAuthenticatedPosting[];
+    next?: string | null;
+    hasNext?: boolean;
+  };
+  const items = Array.isArray(data.data) ? data.data : [];
+  return {
+    postings: items.map(normalizePosting),
+    next: typeof data.next === "string" ? data.next : null,
+    hasNext: data.hasNext === true,
+  };
+}
+
+export function parsePostingGetResponse(raw: unknown): { posting: NormalizedPosting | null } {
+  const envelope = raw as { data?: LeverAuthenticatedPosting } | null;
+  const posting = envelope && typeof envelope === "object" ? envelope.data : undefined;
+  if (posting == null || typeof posting !== "object" || Array.isArray(posting)) {
+    return { posting: null };
+  }
+  if (asStringId(posting.id) == null) {
+    return { posting: null };
+  }
+  return { posting: normalizePosting(posting) };
+}
+
+export interface NormalizedNote {
+  id: string;
+  provider: string;
+  text: string;
+  userId: string | null;
+  createdAt: string | null;
+  completedAt: string | null;
+}
+
+interface LeverNote {
+  id: string;
+  text?: string | null;
+  user?: string | null;
+  createdAt?: number | null;
+  completedAt?: number | null;
+}
+
+export function normalizeNote(note: LeverNote): NormalizedNote {
+  return {
+    id: `lev-note:${asStringId(note.id) ?? ""}`,
+    provider: "lever",
+    text: note.text ?? "",
+    userId: note.user ?? null,
+    createdAt: msToIso(note.createdAt),
+    completedAt: msToIso(note.completedAt),
+  };
+}
+
+export function parseNotesResponse(raw: unknown): {
+  notes: NormalizedNote[];
+  next: string | null;
+  hasNext: boolean;
+} {
+  const data = raw as { data?: LeverNote[]; next?: string | null; hasNext?: boolean };
+  const items = Array.isArray(data.data) ? data.data : [];
+  return {
+    notes: items.map(normalizeNote),
+    next: typeof data.next === "string" ? data.next : null,
+    hasNext: data.hasNext === true,
+  };
+}
+
+export interface NormalizedRequisition {
+  id: string;
+  provider: string;
+  requisitionCode: string | null;
+  name: string;
+  headcountTotal: number | null;
+  status: string | null;
+  hiringManagerId: string | null;
+  createdAt: string | null;
+}
+
+interface LeverRequisition {
+  id: string;
+  requisitionCode?: string | null;
+  name?: string | null;
+  headcountTotal?: number | null;
+  status?: string | null;
+  hiringManager?: string | null;
+  createdAt?: number | null;
+}
+
+export function normalizeRequisition(requisition: LeverRequisition): NormalizedRequisition {
+  return {
+    id: `lev-requisition:${asStringId(requisition.id) ?? ""}`,
+    provider: "lever",
+    requisitionCode: requisition.requisitionCode ?? null,
+    name: requisition.name ?? "",
+    headcountTotal:
+      typeof requisition.headcountTotal === "number" && Number.isFinite(requisition.headcountTotal)
+        ? requisition.headcountTotal
+        : null,
+    status: requisition.status ?? null,
+    hiringManagerId: requisition.hiringManager ?? null,
+    createdAt: msToIso(requisition.createdAt),
+  };
+}
+
+export function parseRequisitionsResponse(raw: unknown): {
+  requisitions: NormalizedRequisition[];
+  next: string | null;
+  hasNext: boolean;
+} {
+  const data = raw as { data?: LeverRequisition[]; next?: string | null; hasNext?: boolean };
+  const items = Array.isArray(data.data) ? data.data : [];
+  return {
+    requisitions: items.map(normalizeRequisition),
+    next: typeof data.next === "string" ? data.next : null,
+    hasNext: data.hasNext === true,
+  };
+}

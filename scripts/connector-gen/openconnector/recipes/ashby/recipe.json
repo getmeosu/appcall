@@ -74,9 +74,37 @@
     "disposition": "APPROVED",
     "edition": "international Ashby ATS API at api.ashbyhq.com",
     "operations": [
-      "healthcheck",
       "jobs.list",
-      "candidates.list"
+      "candidates.list",
+      "applications.list",
+      "candidates.get",
+      "applications.get",
+      "applications.create",
+      "candidates.search",
+      "candidates.create",
+      "interviews.list",
+      "healthcheck",
+      "applications.move",
+      "applications.reject",
+      "applications.hire",
+      "interviews.schedule",
+      "interviews.cancel",
+      "jobs.get",
+      "candidates.update",
+      "offers.list",
+      "offers.get",
+      "departments.list",
+      "users.list",
+      "sources.list",
+      "archive_reasons.list",
+      "interview_schedules.list",
+      "interview_schedules.get",
+      "interview_stages.list",
+      "openings.list",
+      "webhook.application_submitted",
+      "webhook.candidate_updated",
+      "webhook.interview_scheduled",
+      "webhook.offer_created"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -206,7 +234,7 @@
   "manifest": {
     "key": "ashby",
     "name": "Ashby",
-    "version": "0.1.0",
+    "version": "0.6.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -276,6 +304,187 @@
       }
     },
     "operations": {
+      "jobs.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List jobs",
+        "description": "List public job postings via GET /posting-api/job-board/{boardName}/jobs."
+      },
+      "candidates.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List candidates",
+        "description": "List candidates via authenticated POST /candidate.list. Optional limit, cursor, syncToken, and createdAfter filters."
+      },
+      "applications.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List applications",
+        "description": "List applications via authenticated POST /application.list. Optional limit, cursor, syncToken, createdAfter, status, and jobId filters."
+      },
+      "candidates.get": {
+        "kind": "sync",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Get candidate",
+        "description": "Fetch a single candidate via authenticated POST /candidate.info. Requires id or externalMappingId."
+      },
+      "applications.get": {
+        "kind": "sync",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Get application",
+        "description": "Fetch a single application via authenticated POST /application.info. Requires applicationId or submittedFormInstanceId."
+      },
+      "applications.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "effectPolicy": "Idempotent",
+        "reconcile": "applications.get",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Create application",
+        "description": "Consider a candidate for a job via authenticated POST /application.create. Requires candidateId and jobId. EffectPolicy Idempotent observes the created application via applications.get.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "candidateId",
+            "jobId"
+          ],
+          "properties": {
+            "candidateId": {
+              "type": "string",
+              "description": "Ashby candidate UUID to consider for a job."
+            },
+            "jobId": {
+              "type": "string",
+              "description": "Ashby job UUID."
+            },
+            "sourceId": {
+              "type": "string",
+              "description": "Optional source UUID."
+            },
+            "creditedToUserId": {
+              "type": "string",
+              "description": "Optional user UUID credited for the application."
+            },
+            "interviewStageId": {
+              "type": "string",
+              "description": "Optional interview stage UUID, or Ashby special string FirstPreInterviewScreen."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "application"
+          ],
+          "properties": {
+            "application": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Normalized application after reconcile via applications.get."
+            }
+          }
+        }
+      },
+      "candidates.search": {
+        "kind": "sync",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Search candidates",
+        "description": "Search candidates by email and/or name via authenticated POST /candidate.search. Requires email or name (AND-combined when both set). Not paginated; responses capped by Ashby (~100)."
+      },
+      "candidates.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "effectPolicy": "Idempotent",
+        "reconcile": "candidates.get",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Create candidate",
+        "description": "Create a candidate via authenticated POST /candidate.create. Requires name. AppCall websiteUrl maps to Ashby native body field website. EffectPolicy Idempotent observes the created candidate via candidates.get.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Candidate full name (Ashby-required)."
+            },
+            "email": {
+              "type": "string",
+              "description": "Primary personal email."
+            },
+            "phoneNumber": {
+              "type": "string",
+              "description": "Primary personal phone number."
+            },
+            "linkedInUrl": {
+              "type": "string",
+              "description": "LinkedIn profile URL."
+            },
+            "githubUrl": {
+              "type": "string",
+              "description": "GitHub profile URL."
+            },
+            "websiteUrl": {
+              "type": "string",
+              "description": "Website URL. Mapped to Ashby native body field website."
+            },
+            "sourceId": {
+              "type": "string",
+              "description": "Source UUID credited on the candidate."
+            },
+            "creditedToUserId": {
+              "type": "string",
+              "description": "User UUID the candidate is credited to."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "candidate"
+          ],
+          "properties": {
+            "candidate": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Normalized candidate after reconcile via candidates.get."
+            }
+          }
+        }
+      },
+      "interviews.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List interviews",
+        "description": "List interview definitions via authenticated POST /interview.list. Optional limit, cursor, and syncToken filters."
+      },
       "healthcheck": {
         "kind": "action",
         "sideEffect": "read",
@@ -283,7 +492,7 @@
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
         "title": "Healthcheck",
-        "description": "Validate the Ashby API key with POST /apiKey.info.",
+        "description": "Validate Ashby credentials with POST /apiKey.info.",
         "inputSchema": {
           "type": "object",
           "properties": {},
@@ -291,6 +500,7 @@
         },
         "outputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "required": [
             "data"
           ],
@@ -298,120 +508,545 @@
             "data": {
               "type": "object"
             }
-          },
-          "additionalProperties": false
+          }
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
           "method": "POST",
           "path": "/apiKey.info",
+          "body": {},
           "success": [
             200
-          ],
-          "body": {}
-        }
+          ]
+        },
+        "responseFormat": "json",
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated"
       },
-      "jobs.list": {
+      "applications.move": {
         "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
+        "sideEffect": "write",
+        "effectPolicy": "Reconcile",
+        "reconcile": "applications.get",
+        "timeoutMs": 20000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List jobs",
-        "description": "List Ashby jobs with optional cursor pagination.",
+        "maxResponseBytes": 1048576,
+        "title": "Move application",
+        "description": "Move an application to another interview stage via authenticated POST /application.changeStage. EffectPolicy Reconcile observes the post-move application via applications.get.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "applicationId",
+            "interviewStageId"
+          ],
           "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
+            "applicationId": {
               "type": "string",
-              "minLength": 1
+              "description": "Ashby application UUID."
+            },
+            "interviewStageId": {
+              "type": "string",
+              "description": "Destination interview stage UUID."
+            },
+            "archiveReasonId": {
+              "type": "string",
+              "description": "Archive reason UUID; required when moving to an Archived stage."
+            },
+            "archiveEmail": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "communicationTemplateId"
+              ],
+              "properties": {
+                "communicationTemplateId": {
+                  "type": "string"
+                },
+                "sendAt": {
+                  "type": "string",
+                  "description": "Optional ISO-8601 send time for the archive email."
+                }
+              }
             }
-          },
-          "additionalProperties": false
+          }
         },
         "outputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "required": [
-            "data"
+            "application"
           ],
           "properties": {
-            "data": {
-              "type": "object"
+            "application": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Normalized application after EffectPolicy Reconcile via applications.get."
             }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "POST",
-          "path": "/job.list",
-          "success": [
-            200
-          ],
-          "body": {
-            "cursor": "{{cursor}}",
-            "limit": "{{limit}}"
           }
         }
       },
-      "candidates.list": {
+      "applications.reject": {
         "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
+        "sideEffect": "write",
+        "effectPolicy": "Reconcile",
+        "reconcile": "applications.get",
+        "timeoutMs": 20000,
         "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "List candidates",
-        "description": "List Ashby candidates with optional cursor pagination.",
+        "maxResponseBytes": 1048576,
+        "title": "Reject application",
+        "description": "Reject (archive) an application via authenticated POST /application.changeStage to an Archived stage with archiveReasonId. EffectPolicy Reconcile observes the post-reject application via applications.get.",
         "inputSchema": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "applicationId",
+            "interviewStageId",
+            "archiveReasonId"
+          ],
           "properties": {
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "cursor": {
+            "applicationId": {
               "type": "string",
-              "minLength": 1
+              "description": "Ashby application UUID."
+            },
+            "interviewStageId": {
+              "type": "string",
+              "description": "Destination interview stage UUID."
+            },
+            "archiveReasonId": {
+              "type": "string",
+              "description": "Archive reason UUID; required when moving to an Archived stage."
+            },
+            "archiveEmail": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "communicationTemplateId"
+              ],
+              "properties": {
+                "communicationTemplateId": {
+                  "type": "string"
+                },
+                "sendAt": {
+                  "type": "string",
+                  "description": "Optional ISO-8601 send time for the archive email."
+                }
+              }
             }
-          },
-          "additionalProperties": false
+          }
         },
         "outputSchema": {
           "type": "object",
+          "additionalProperties": false,
           "required": [
-            "data"
+            "application"
           ],
           "properties": {
-            "data": {
-              "type": "object"
+            "application": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Normalized application after EffectPolicy Reconcile via applications.get."
             }
-          },
-          "additionalProperties": false
-        },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
-        "request": {
-          "method": "POST",
-          "path": "/candidate.list",
-          "success": [
-            200
-          ],
-          "body": {
-            "cursor": "{{cursor}}",
-            "limit": "{{limit}}"
           }
         }
+      },
+      "applications.hire": {
+        "kind": "action",
+        "sideEffect": "write",
+        "effectPolicy": "Reconcile",
+        "reconcile": "applications.get",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Hire application",
+        "description": "Hire a candidate by moving the application to a Hired interview stage via authenticated POST /application.changeStage. EffectPolicy Reconcile observes the post-hire application via applications.get.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "applicationId",
+            "interviewStageId"
+          ],
+          "properties": {
+            "applicationId": {
+              "type": "string",
+              "description": "Ashby application UUID."
+            },
+            "interviewStageId": {
+              "type": "string",
+              "description": "Destination interview stage UUID."
+            },
+            "archiveReasonId": {
+              "type": "string",
+              "description": "Archive reason UUID; required when moving to an Archived stage."
+            },
+            "archiveEmail": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "communicationTemplateId"
+              ],
+              "properties": {
+                "communicationTemplateId": {
+                  "type": "string"
+                },
+                "sendAt": {
+                  "type": "string",
+                  "description": "Optional ISO-8601 send time for the archive email."
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "application"
+          ],
+          "properties": {
+            "application": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Normalized application after EffectPolicy Reconcile via applications.get."
+            }
+          }
+        }
+      },
+      "interviews.schedule": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Schedule interview",
+        "description": "Create an interview schedule via authenticated POST /interviewSchedule.create. Requires applicationId and interviewEvents (startTime, endTime, interviewers).",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "applicationId",
+            "interviewEvents"
+          ],
+          "properties": {
+            "applicationId": {
+              "type": "string",
+              "description": "Ashby application UUID."
+            },
+            "interviewEvents": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "startTime",
+                  "endTime",
+                  "interviewers"
+                ],
+                "properties": {
+                  "startTime": {
+                    "type": "string",
+                    "description": "Event start time (ISO-8601)."
+                  },
+                  "endTime": {
+                    "type": "string",
+                    "description": "Event end time (ISO-8601)."
+                  },
+                  "interviewers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "email"
+                      ],
+                      "properties": {
+                        "email": {
+                          "type": "string"
+                        },
+                        "feedbackRequired": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "interviewId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Optional interview definition UUID."
+                  },
+                  "extraData": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "interviewSchedule"
+          ],
+          "properties": {
+            "interviewSchedule": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Normalized interview schedule returned by Ashby."
+            }
+          }
+        }
+      },
+      "interviews.cancel": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Cancel interview schedule",
+        "description": "Cancel an interview schedule via authenticated POST /interviewSchedule.cancel. Maps interviewScheduleId to Ashby request body id.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "interviewScheduleId"
+          ],
+          "properties": {
+            "interviewScheduleId": {
+              "type": "string",
+              "description": "Interview schedule UUID (sent to Ashby as body.id)."
+            },
+            "allowReschedule": {
+              "type": "boolean",
+              "description": "Whether the cancelled schedule may be rescheduled (default false)."
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "interviewSchedule"
+          ],
+          "properties": {
+            "interviewSchedule": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Normalized interview schedule returned by Ashby."
+            }
+          }
+        }
+      },
+      "jobs.get": {
+        "kind": "sync",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Get job",
+        "description": "Fetch a single job via authenticated POST /job.info. Requires id."
+      },
+      "candidates.update": {
+        "kind": "action",
+        "sideEffect": "write",
+        "effectPolicy": "Reconcile",
+        "reconcile": "candidates.get",
+        "timeoutMs": 20000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Update candidate",
+        "description": "Update a candidate via authenticated POST /candidate.update. AppCall websiteUrl maps to Ashby native body field website. EffectPolicy Reconcile observes via candidates.get.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Ashby candidate UUID."
+            },
+            "name": {
+              "type": "string",
+              "description": "Candidate full name."
+            },
+            "email": {
+              "type": "string",
+              "description": "Primary personal email."
+            },
+            "phoneNumber": {
+              "type": "string",
+              "description": "Primary personal phone number."
+            },
+            "linkedInUrl": {
+              "type": "string",
+              "description": "LinkedIn profile URL."
+            },
+            "githubUrl": {
+              "type": "string",
+              "description": "GitHub profile URL."
+            },
+            "websiteUrl": {
+              "type": "string",
+              "description": "Website URL. Mapped to Ashby native body field website."
+            },
+            "sourceId": {
+              "type": "string",
+              "description": "Source UUID credited on the candidate."
+            },
+            "creditedToUserId": {
+              "type": "string",
+              "description": "User UUID the candidate is credited to."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "candidate"
+          ],
+          "properties": {
+            "candidate": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Normalized candidate after EffectPolicy Reconcile via candidates.get."
+            }
+          }
+        }
+      },
+      "offers.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List offers",
+        "description": "List offers via authenticated POST /offer.list. Optional limit, cursor, syncToken, and applicationId filters."
+      },
+      "offers.get": {
+        "kind": "sync",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Get offer",
+        "description": "Fetch a single offer via authenticated POST /offer.info. Requires offerId."
+      },
+      "departments.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List departments",
+        "description": "List departments via authenticated POST /department.list. Optional limit, cursor, and syncToken filters."
+      },
+      "users.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List users",
+        "description": "List users via authenticated POST /user.list. Optional limit, cursor, and syncToken filters."
+      },
+      "sources.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List sources",
+        "description": "List candidate sources via authenticated POST /source.list. Optional limit, cursor, and syncToken filters."
+      },
+      "archive_reasons.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List archive reasons",
+        "description": "List archive reasons via authenticated POST /archiveReason.list. Optional limit, cursor, and syncToken filters."
+      },
+      "interview_schedules.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List interview schedules",
+        "description": "List interview schedules via authenticated POST /interviewSchedule.list. Optional limit, cursor, and syncToken filters."
+      },
+      "interview_schedules.get": {
+        "kind": "sync",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "title": "Get interview schedule",
+        "description": "Fetch a single interview schedule via authenticated POST /interviewSchedule.info. Maps interviewScheduleId to Ashby body field id."
+      },
+      "interview_stages.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List interview stages",
+        "description": "List interview stages via authenticated POST /interviewStage.list. Optional limit, cursor, and syncToken filters."
+      },
+      "openings.list": {
+        "kind": "sync",
+        "timeoutMs": 30000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List openings",
+        "description": "List job openings via authenticated POST /opening.list. Optional limit, cursor, and syncToken filters."
+      },
+      "webhook.application_submitted": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read"
+      },
+      "webhook.candidate_updated": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read"
+      },
+      "webhook.interview_scheduled": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read"
+      },
+      "webhook.offer_created": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read"
       }
     },
     "evidence": {

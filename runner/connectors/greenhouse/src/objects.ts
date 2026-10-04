@@ -486,3 +486,256 @@ export function parseApplicationGetResponse(raw: unknown): {
   }
   return { application: normalizeApplication(application) };
 }
+
+export function parseUserGetResponse(raw: unknown): { user: NormalizedUser | null } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { user: null };
+  }
+  const user = raw as GreenhouseUser;
+  if (user.id == null || asStringId(user.id) == null) {
+    return { user: null };
+  }
+  return { user: normalizeUser(user) };
+}
+
+export interface NormalizedOffer {
+  id: string;
+  provider: string;
+  applicationId: string | null;
+  jobId: string | null;
+  candidateId: string | null;
+  status: string | null;
+  version: number | null;
+  startsAt: string | null;
+  sentAt: string | null;
+  resolvedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface GreenhouseOffer {
+  id: number | string;
+  version?: number | null;
+  application_id?: number | string | null;
+  job_id?: number | string | null;
+  candidate_id?: number | string | null;
+  status?: string | null;
+  starts_at?: string | null;
+  sent_at?: string | null;
+  resolved_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export function normalizeOffer(offer: GreenhouseOffer): NormalizedOffer {
+  return {
+    id: `gh-offer:${asStringId(offer.id) ?? ""}`,
+    provider: "greenhouse",
+    applicationId: asStringId(offer.application_id ?? null),
+    jobId: asStringId(offer.job_id ?? null),
+    candidateId: asStringId(offer.candidate_id ?? null),
+    status: offer.status ?? null,
+    version: typeof offer.version === "number" && Number.isFinite(offer.version) ? offer.version : null,
+    startsAt: asIso(offer.starts_at),
+    sentAt: asIso(offer.sent_at),
+    resolvedAt: asIso(offer.resolved_at),
+    createdAt: asIso(offer.created_at),
+    updatedAt: asIso(offer.updated_at),
+  };
+}
+
+export function parseOffersResponse(raw: unknown): { offers: NormalizedOffer[] } {
+  const items = Array.isArray(raw) ? (raw as GreenhouseOffer[]) : [];
+  return { offers: items.map(normalizeOffer) };
+}
+
+export function parseOfferGetResponse(raw: unknown): { offer: NormalizedOffer | null } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { offer: null };
+  }
+  const offer = raw as GreenhouseOffer;
+  if (offer.id == null || asStringId(offer.id) == null) {
+    return { offer: null };
+  }
+  return { offer: normalizeOffer(offer) };
+}
+
+export interface NormalizedScorecard {
+  id: string;
+  provider: string;
+  applicationId: string | null;
+  candidateId: string | null;
+  interviewName: string | null;
+  interviewStepId: string | null;
+  interviewerId: string | null;
+  overallRecommendation: string | null;
+  status: string | null;
+  interviewedAt: string | null;
+  submittedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface GreenhouseScorecard {
+  id: number | string;
+  interview?: string | null;
+  interview_step?: { id?: number | string | null; name?: string | null } | null;
+  candidate_id?: number | string | null;
+  application_id?: number | string | null;
+  interviewed_at?: string | null;
+  submitted_at?: string | null;
+  interviewer?: { id?: number | string | null } | null;
+  overall_recommendation?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export function normalizeScorecard(scorecard: GreenhouseScorecard): NormalizedScorecard {
+  return {
+    id: `gh-scorecard:${asStringId(scorecard.id) ?? ""}`,
+    provider: "greenhouse",
+    applicationId: asStringId(scorecard.application_id ?? null),
+    candidateId: asStringId(scorecard.candidate_id ?? null),
+    interviewName: scorecard.interview ?? scorecard.interview_step?.name ?? null,
+    interviewStepId: asStringId(scorecard.interview_step?.id ?? null),
+    interviewerId: asStringId(scorecard.interviewer?.id ?? null),
+    overallRecommendation: scorecard.overall_recommendation ?? null,
+    status: scorecard.status ?? null,
+    interviewedAt: asIso(scorecard.interviewed_at),
+    submittedAt: asIso(scorecard.submitted_at),
+    createdAt: asIso(scorecard.created_at),
+    updatedAt: asIso(scorecard.updated_at),
+  };
+}
+
+export function parseScorecardsResponse(raw: unknown): { scorecards: NormalizedScorecard[] } {
+  const items = Array.isArray(raw) ? (raw as GreenhouseScorecard[]) : [];
+  return { scorecards: items.map(normalizeScorecard) };
+}
+
+export function parseScorecardGetResponse(raw: unknown): { scorecard: NormalizedScorecard | null } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { scorecard: null };
+  }
+  const scorecard = raw as GreenhouseScorecard;
+  if (scorecard.id == null || asStringId(scorecard.id) == null) {
+    return { scorecard: null };
+  }
+  return { scorecard: normalizeScorecard(scorecard) };
+}
+
+export interface NormalizedDepartment {
+  id: string;
+  provider: string;
+  name: string;
+  parentId: string | null;
+  externalId: string | null;
+}
+
+interface GreenhouseDepartment {
+  id: number | string;
+  name?: string | null;
+  parent_id?: number | string | null;
+  external_id?: string | null;
+}
+
+export function normalizeDepartment(department: GreenhouseDepartment): NormalizedDepartment {
+  return {
+    id: `gh-department:${asStringId(department.id) ?? ""}`,
+    provider: "greenhouse",
+    name: department.name ?? "",
+    parentId: asStringId(department.parent_id ?? null),
+    externalId: department.external_id ?? null,
+  };
+}
+
+export function parseDepartmentsResponse(raw: unknown): { departments: NormalizedDepartment[] } {
+  const items = Array.isArray(raw) ? (raw as GreenhouseDepartment[]) : [];
+  return { departments: items.map(normalizeDepartment) };
+}
+
+export interface NormalizedOffice {
+  id: string;
+  provider: string;
+  name: string;
+  location: string | null;
+  parentId: string | null;
+  externalId: string | null;
+}
+
+interface GreenhouseOffice {
+  id: number | string;
+  name?: string | null;
+  location?: { name?: string | null } | null;
+  parent_id?: number | string | null;
+  external_id?: string | null;
+}
+
+export function normalizeOffice(office: GreenhouseOffice): NormalizedOffice {
+  return {
+    id: `gh-office:${asStringId(office.id) ?? ""}`,
+    provider: "greenhouse",
+    name: office.name ?? "",
+    location: office.location?.name ?? null,
+    parentId: asStringId(office.parent_id ?? null),
+    externalId: office.external_id ?? null,
+  };
+}
+
+export function parseOfficesResponse(raw: unknown): { offices: NormalizedOffice[] } {
+  const items = Array.isArray(raw) ? (raw as GreenhouseOffice[]) : [];
+  return { offices: items.map(normalizeOffice) };
+}
+
+export interface NormalizedSource {
+  id: string;
+  provider: string;
+  name: string;
+  type: string | null;
+}
+
+interface GreenhouseSource {
+  id: number | string;
+  name?: string | null;
+  public_name?: string | null;
+  type?: { id?: number | string | null; name?: string | null } | null;
+}
+
+export function normalizeSource(source: GreenhouseSource): NormalizedSource {
+  return {
+    id: `gh-source:${asStringId(source.id) ?? ""}`,
+    provider: "greenhouse",
+    name: source.public_name ?? source.name ?? "",
+    type: source.type?.name ?? null,
+  };
+}
+
+export function parseSourcesResponse(raw: unknown): { sources: NormalizedSource[] } {
+  const items = Array.isArray(raw) ? (raw as GreenhouseSource[]) : [];
+  return { sources: items.map(normalizeSource) };
+}
+
+export interface NormalizedCloseReason {
+  id: string;
+  provider: string;
+  name: string;
+}
+
+interface GreenhouseCloseReason {
+  id: number | string;
+  name?: string | null;
+}
+
+export function normalizeCloseReason(reason: GreenhouseCloseReason): NormalizedCloseReason {
+  return {
+    id: `gh-close-reason:${asStringId(reason.id) ?? ""}`,
+    provider: "greenhouse",
+    name: reason.name ?? "",
+  };
+}
+
+export function parseCloseReasonsResponse(raw: unknown): { closeReasons: NormalizedCloseReason[] } {
+  const items = Array.isArray(raw) ? (raw as GreenhouseCloseReason[]) : [];
+  return { closeReasons: items.map(normalizeCloseReason) };
+}

@@ -1,7 +1,7 @@
 {
   "key": "greenhouse",
   "name": "Greenhouse",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "runtime": "bun",
   "categories": [
     "ats-recruitment"
@@ -322,6 +322,253 @@
       "responseFormat": "json",
       "enforceOutputSchema": true,
       "validationMode": "strict-generated"
+    },
+    "candidates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "reconcile": "candidates.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create candidate",
+      "description": "Create a candidate via authenticated Harvest POST /v3/candidates. Requires firstName and lastName. Optional email maps to email_addresses; optional jobId attaches an application. EffectPolicy Idempotent observes via candidates.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "Candidate first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Candidate last name."
+          },
+          "company": {
+            "type": "string",
+            "description": "Current or most recent company."
+          },
+          "title": {
+            "type": "string",
+            "description": "Current or most recent title."
+          },
+          "email": {
+            "type": "string",
+            "description": "Primary personal email; sent as Harvest email_addresses[0]."
+          },
+          "phone": {
+            "type": "string",
+            "description": "Primary mobile phone; sent as Harvest phone_numbers[0]."
+          },
+          "jobId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Optional Harvest job id; sent as applications[0].job_id."
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate"
+        ],
+        "properties": {
+          "candidate": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized candidate after EffectPolicy Idempotent via candidates.get."
+          }
+        }
+      }
+    },
+    "candidates.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "candidates.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update candidate",
+      "description": "Update a candidate via authenticated Harvest PATCH /v3/candidates/{id}. EffectPolicy Reconcile observes via candidates.get.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest candidate id."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Candidate first name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Candidate last name."
+          },
+          "company": {
+            "type": "string",
+            "description": "Current or most recent company."
+          },
+          "title": {
+            "type": "string",
+            "description": "Current or most recent title."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate"
+        ],
+        "properties": {
+          "candidate": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized candidate after EffectPolicy Reconcile via candidates.get."
+          }
+        }
+      }
+    },
+    "offers.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List offers",
+      "description": "List offers via authenticated Harvest GET /v3/offers. Optional perPage, page, jobId, applicationId, and status filters."
+    },
+    "offers.get": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get offer",
+      "description": "Fetch a single offer via authenticated Harvest GET /v3/offers/{id}."
+    },
+    "scorecards.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List scorecards",
+      "description": "List interview scorecards via authenticated Harvest GET /v3/scorecards. Optional perPage, page, applicationId, and jobId filters."
+    },
+    "scorecards.get": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get scorecard",
+      "description": "Fetch a single scorecard via authenticated Harvest GET /v3/scorecards/{id}."
+    },
+    "departments.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List departments",
+      "description": "List departments via authenticated Harvest GET /v3/departments."
+    },
+    "offices.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List offices",
+      "description": "List offices via authenticated Harvest GET /v3/offices."
+    },
+    "sources.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List sources",
+      "description": "List candidate sources via authenticated Harvest GET /v3/sources."
+    },
+    "close_reasons.list": {
+      "kind": "sync",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List close reasons",
+      "description": "List application close reasons via authenticated Harvest GET /v3/close_reasons."
+    },
+    "users.get": {
+      "kind": "sync",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get user",
+      "description": "Fetch a single user via authenticated Harvest GET /v3/users/{id}."
+    },
+    "applications.reject": {
+      "kind": "action",
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "applications.get",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Reject application",
+      "description": "Reject an application via authenticated Harvest POST /v3/applications/{id}/reject. EffectPolicy Reconcile observes via applications.get (reject itself may return 204).",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Harvest application id."
+          },
+          "rejectionReasonId": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "Harvest rejection reason id."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional private rejection notes."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "application"
+        ],
+        "properties": {
+          "application": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Normalized application after EffectPolicy Reconcile via applications.get."
+          }
+        }
+      }
     }
   },
   "models": [
@@ -330,6 +577,12 @@
     "application",
     "user",
     "interview",
-    "job_interview_stage"
+    "job_interview_stage",
+    "offer",
+    "scorecard",
+    "department",
+    "office",
+    "source",
+    "close_reason"
   ]
 }

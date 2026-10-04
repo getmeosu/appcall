@@ -627,6 +627,18 @@ import {
   executeUsersListSync as listGreenhouseUsers,
   executeInterviewsListSync as listGreenhouseInterviews,
   executeJobInterviewStagesListSync as listGreenhouseJobInterviewStages,
+  executeCandidatesCreateSync as createGreenhouseCandidate,
+  executeCandidatesUpdateSync as updateGreenhouseCandidate,
+  executeOffersListSync as listGreenhouseOffers,
+  executeOffersGetSync as getGreenhouseOffer,
+  executeScorecardsListSync as listGreenhouseScorecards,
+  executeScorecardsGetSync as getGreenhouseScorecard,
+  executeDepartmentsListSync as listGreenhouseDepartments,
+  executeOfficesListSync as listGreenhouseOffices,
+  executeSourcesListSync as listGreenhouseSources,
+  executeCloseReasonsListSync as listGreenhouseCloseReasons,
+  executeUsersGetSync as getGreenhouseUser,
+  executeApplicationsRejectSync as rejectGreenhouseApplication,
 } from "../../connectors/greenhouse/src/sync";
 import leverManifest from "../../connectors/lever/manifest.json";
 import {
@@ -640,6 +652,18 @@ import {
   executeArchiveReasonsListSync as listLeverArchiveReasons,
   executeStagesListSync as listLeverStages,
   executeUsersListSync as listLeverUsers,
+  executeOpportunitiesUpdateSync as updateLeverOpportunity,
+  executeCandidatesGetSync as getLeverCandidate,
+  executeInterviewsListSync as listLeverInterviews,
+  executeInterviewsGetSync as getLeverInterview,
+  executeOffersListSync as listLeverOffers,
+  executeOffersGetSync as getLeverOffer,
+  executePostingsListSync as listLeverPostings,
+  executePostingsGetSync as getLeverPosting,
+  executeNotesListSync as listLeverNotes,
+  executeUsersGetSync as getLeverUser,
+  executeRequisitionsListSync as listLeverRequisitions,
+  executeFeedbackGetSync as getLeverFeedback,
 } from "../../connectors/lever/src/sync";
 import ashbyManifest from "../../connectors/ashby/manifest.json";
 import {
@@ -657,7 +681,20 @@ import {
   executeApplicationsHireSync as hireAshbyApplication,
   executeInterviewsScheduleSync as scheduleAshbyInterview,
   executeInterviewsCancelSync as cancelAshbyInterview,
+  executeJobsGetSync as getAshbyJob,
+  executeCandidatesUpdateSync as updateAshbyCandidate,
+  executeOffersListSync as listAshbyOffers,
+  executeOffersGetSync as getAshbyOffer,
+  executeDepartmentsListSync as listAshbyDepartments,
+  executeUsersListSync as listAshbyUsers,
+  executeSourcesListSync as listAshbySources,
+  executeArchiveReasonsListSync as listAshbyArchiveReasons,
+  executeInterviewSchedulesListSync as listAshbyInterviewSchedules,
+  executeInterviewSchedulesGetSync as getAshbyInterviewSchedule,
+  executeInterviewStagesListSync as listAshbyInterviewStages,
+  executeOpeningsListSync as listAshbyOpenings,
 } from "../../connectors/ashby/src/sync";
+import { parseWebhook as ashbyParseWebhook } from "../../connectors/ashby/src/webhook";
 import intercomManifest from "../../connectors/intercom/manifest.json";
 import {
   executeAdminsListSync as listIntercomAdmins,
@@ -2021,13 +2058,18 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     greenhouse: {
       "applications.move": moveGreenhouseApplication,
       "applications.create": createGreenhouseApplication,
+      "applications.reject": rejectGreenhouseApplication,
+      "candidates.create": createGreenhouseCandidate,
+      "candidates.update": updateGreenhouseCandidate,
     },
     lever: {
       "opportunities.update_stage": updateLeverOpportunityStage,
       "opportunities.archive": archiveLeverOpportunity,
+      "opportunities.update": updateLeverOpportunity,
     },
     ashby: {
       "candidates.create": createAshbyCandidate,
+      "candidates.update": updateAshbyCandidate,
       "applications.create": createAshbyApplication,
       "applications.move": moveAshbyApplication,
       "applications.reject": rejectAshbyApplication,
@@ -2301,8 +2343,17 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "applications.list": listGreenhouseApplications,
       "applications.get": getGreenhouseApplication,
       "users.list": listGreenhouseUsers,
+      "users.get": getGreenhouseUser,
       "interviews.list": listGreenhouseInterviews,
       "job_interview_stages.list": listGreenhouseJobInterviewStages,
+      "offers.list": listGreenhouseOffers,
+      "offers.get": getGreenhouseOffer,
+      "scorecards.list": listGreenhouseScorecards,
+      "scorecards.get": getGreenhouseScorecard,
+      "departments.list": listGreenhouseDepartments,
+      "offices.list": listGreenhouseOffices,
+      "sources.list": listGreenhouseSources,
+      "close_reasons.list": listGreenhouseCloseReasons,
     },
     lever: {
       "jobs.list": listLeverJobs,
@@ -2313,15 +2364,37 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "archive_reasons.list": listLeverArchiveReasons,
       "stages.list": listLeverStages,
       "users.list": listLeverUsers,
+      "users.get": getLeverUser,
+      "candidates.get": getLeverCandidate,
+      "interviews.list": listLeverInterviews,
+      "interviews.get": getLeverInterview,
+      "offers.list": listLeverOffers,
+      "offers.get": getLeverOffer,
+      "postings.list": listLeverPostings,
+      "postings.get": getLeverPosting,
+      "notes.list": listLeverNotes,
+      "requisitions.list": listLeverRequisitions,
+      "feedback.get": getLeverFeedback,
     },
     ashby: {
       "jobs.list": listAshbyJobs,
+      "jobs.get": getAshbyJob,
       "candidates.list": listAshbyCandidates,
       "applications.list": listAshbyApplications,
       "candidates.get": getAshbyCandidate,
       "applications.get": getAshbyApplication,
       "candidates.search": searchAshbyCandidates,
       "interviews.list": listAshbyInterviews,
+      "offers.list": listAshbyOffers,
+      "offers.get": getAshbyOffer,
+      "departments.list": listAshbyDepartments,
+      "users.list": listAshbyUsers,
+      "sources.list": listAshbySources,
+      "archive_reasons.list": listAshbyArchiveReasons,
+      "interview_schedules.list": listAshbyInterviewSchedules,
+      "interview_schedules.get": getAshbyInterviewSchedule,
+      "interview_stages.list": listAshbyInterviewStages,
+      "openings.list": listAshbyOpenings,
     },
     intercom: {
       "admins.list": listIntercomAdmins,
@@ -2414,6 +2487,10 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     // parser. The registry treats a connector with no verifier as verified.
     apollo: { parse: apolloParseWebhook },
     whatsapp: { parse: whatsappParseWebhook },
+    // Ashby webhook deliveries are EventOnly (application submitted, candidate
+    // updated, interview scheduled, offer created). Ashby HMAC verification is
+    // not required for EventOnly ingest; the parser classifies the action.
+    ashby: { parse: ashbyParseWebhook },
   },
 }));
 
