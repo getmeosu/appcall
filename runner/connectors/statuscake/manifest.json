@@ -1,7 +1,7 @@
 {
   "key": "statuscake",
   "name": "statuscake",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -30,6 +30,11 @@
     "account",
     "monitor",
     "uptimeTest",
+    "heartbeatTest",
+    "pagespeedTest",
+    "sslTest",
+    "contactGroup",
+    "maintenanceWindow",
     "location"
   ],
   "http": {
@@ -225,6 +230,867 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "uptimeTests.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create uptime test",
+      "description": "Create a StatusCake uptime check via POST /uptime.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the check."
+          },
+          "testType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Uptime check type such as HTTP or TCP."
+          },
+          "websiteUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL or IP address under test."
+          },
+          "checkRate": {
+            "type": "integer",
+            "description": "Seconds between checks.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "testType",
+          "websiteUrl",
+          "checkRate"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/uptime",
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "test_type": "{{testType}}",
+          "website_url": "{{websiteUrl}}",
+          "check_rate": "{{checkRate}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "uptimeTests.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update uptime test",
+      "description": "Update a StatusCake uptime check via PUT /uptime/{test_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "test_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Uptime check ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated check name."
+          },
+          "paused": {
+            "type": "boolean",
+            "description": "Whether the check should be paused."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "test_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/uptime/{{test_id}}",
+        "success": [
+          204
+        ],
+        "body": {
+          "name": "{{name}}",
+          "paused": "{{paused}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "result": {
+          "data": {
+            "updated": true,
+            "test_id": "{{input.test_id}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "uptimeTests.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete uptime test",
+      "description": "Delete a StatusCake uptime check via DELETE /uptime/{test_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "test_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Uptime check ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "test_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/uptime/{{test_id}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "data": {
+            "deleted": true,
+            "test_id": "{{input.test_id}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "uptimeTests.history.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List uptime history",
+      "description": "List history results for a StatusCake uptime check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "test_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Uptime check ID."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of history results.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "test_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/uptime/{{test_id}}/history",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "uptimeTests.alerts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List uptime alerts",
+      "description": "List alerts fired for a StatusCake uptime check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "test_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Uptime check ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "test_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/uptime/{{test_id}}/alerts",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "heartbeatTests.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List heartbeat tests",
+      "description": "List StatusCake heartbeat checks with explicit page and limit pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Results page.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/heartbeat",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "heartbeatTests.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get heartbeat test",
+      "description": "Fetch a StatusCake heartbeat check by test id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "test_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Heartbeat check ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "test_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/heartbeat/{{test_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "heartbeatTests.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create heartbeat test",
+      "description": "Create a StatusCake heartbeat check via POST /heartbeat.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the heartbeat check."
+          },
+          "period": {
+            "type": "integer",
+            "description": "Seconds since the last ping before the check is down.",
+            "minimum": 30,
+            "maximum": 172800
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "period"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/heartbeat",
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "period": "{{period}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pagespeedTests.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List pagespeed tests",
+      "description": "List StatusCake pagespeed checks with explicit page and limit pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Results page.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/pagespeed",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pagespeedTests.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get pagespeed test",
+      "description": "Fetch a StatusCake pagespeed check by test id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "test_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagespeed check ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "test_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/pagespeed/{{test_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sslTests.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List SSL tests",
+      "description": "List StatusCake SSL checks with explicit page and limit pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Results page.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ssl",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sslTests.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get SSL test",
+      "description": "Fetch a StatusCake SSL check by test id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "test_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "SSL check ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "test_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/ssl/{{test_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contactGroups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contact groups",
+      "description": "List StatusCake contact groups used for alerting.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Results page.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contact-groups",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contactGroups.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get contact group",
+      "description": "Fetch a StatusCake contact group by group id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact group ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "group_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contact-groups/{{group_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contactGroups.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create contact group",
+      "description": "Create a StatusCake contact group via POST /contact-groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact group name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contact-groups",
+        "success": [
+          201
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "bodyEncoding": "form",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "maintenanceWindows.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List maintenance windows",
+      "description": "List StatusCake maintenance windows with explicit page and limit pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Results page.",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/maintenance-windows",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.uptime_down": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Uptime down",
+      "description": "StatusCake contact-group webhook when an uptime check reports Down. Maps payload Status/Name/URL from the ping URL POST."
+    },
+    "webhook.uptime_up": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Uptime up",
+      "description": "StatusCake contact-group webhook when an uptime check recovers to Up. Maps payload Status/Name/URL from the ping URL POST."
     }
   },
   "provenance": {
