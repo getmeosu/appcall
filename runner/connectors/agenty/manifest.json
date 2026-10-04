@@ -1,1 +1,1365 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Agenty API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["dev-tools"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"X-Agenty-ApiKey","value":"{{apiKey}}"},"baseUrl":"https://api.agenty.com/v2","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["error","message","error_message"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"agenty","models":["agent","job"],"name":"Agenty","network":{"allowedHosts":["api.agenty.com"]},"operations":{"agents.get":{"description":"Get one Agenty agent by identifier.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"agent_id":{"minLength":1,"type":"string"}},"required":["agent_id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/agents/{{agent_id}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get agent","validationMode":"strict-generated"},"agents.list":{"description":"List Agenty agents with optional pagination and sorting.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"limit":{"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"},"order":{"enum":["asc","desc"],"type":"string"},"sort":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/agents","query":{"limit":"{{limit}}","offset":"{{offset}}","order":"{{order}}","sort":"{{sort}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List agents","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Agenty API key by listing agents.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/agents","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"jobs.get":{"description":"Get one Agenty job by identifier.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"job_id":{"minimum":1,"type":"integer"}},"required":["job_id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/jobs/{{job_id}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get job","validationMode":"strict-generated"},"jobs.list":{"description":"List Agenty jobs with optional pagination and agent filter.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"agent_id":{"minLength":1,"type":"string"},"limit":{"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"},"order":{"enum":["asc","desc"],"type":"string"},"sort":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/jobs","query":{"agent_id":"{{agent_id}}","limit":"{{limit}}","offset":"{{offset}}","order":"{{order}}","sort":"{{sort}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List jobs","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "auth": {
+    "scopes": [],
+    "setup": {
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Agenty API key",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "mode": "api_key"
+    },
+    "type": "api_key"
+  },
+  "categories": [
+    "dev-tools"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  },
+  "http": {
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Agenty-ApiKey",
+      "value": "{{apiKey}}"
+    },
+    "baseUrl": "https://api.agenty.com/v2",
+    "errors": {
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message",
+        "error_message"
+      ],
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after"
+    },
+    "headers": {
+      "Accept": "application/json"
+    }
+  },
+  "key": "agenty",
+  "models": [
+    "agent",
+    "job",
+    "list",
+    "scheduler",
+    "input"
+  ],
+  "name": "Agenty",
+  "network": {
+    "allowedHosts": [
+      "api.agenty.com"
+    ]
+  },
+  "operations": {
+    "agents.get": {
+      "description": "Get one Agenty agent by identifier.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/agents/{{agent_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get agent",
+      "validationMode": "strict-generated"
+    },
+    "agents.list": {
+      "description": "List Agenty agents with optional pagination and sorting.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "order": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          },
+          "sort": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/agents",
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List agents",
+      "validationMode": "strict-generated"
+    },
+    "healthcheck": {
+      "description": "Validate the Agenty API key by listing agents.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/agents",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "title": "Healthcheck",
+      "validationMode": "strict-generated"
+    },
+    "jobs.get": {
+      "description": "Get one Agenty job by identifier.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs/{{job_id}}",
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "Get job",
+      "validationMode": "strict-generated"
+    },
+    "jobs.list": {
+      "description": "List Agenty jobs with optional pagination and agent filter.",
+      "enforceOutputSchema": true,
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "limit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "order": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
+          },
+          "sort": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "kind": "action",
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "outputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs",
+        "query": {
+          "agent_id": "{{agent_id}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "sort": "{{sort}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "responseFormat": "json",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "title": "List jobs",
+      "validationMode": "strict-generated"
+    },
+    "agents.clone": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Clone agent",
+      "description": "Clone one Agenty agent by identifier via GET /agents/{agent_id}/clone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agenty agent identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "agent_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/agents/{{agent_id}}/clone",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "agents.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete agent",
+      "description": "Permanently delete one Agenty agent via DELETE /agents/{agent_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agenty agent identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "agent_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/agents/{{agent_id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.start": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Start job",
+      "description": "Start an asynchronous Agenty job via POST /jobs/start.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agenty agent identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "agent_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/jobs/start",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "agent_id": "{{agent_id}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.stop": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Stop job",
+      "description": "Request stop of a running Agenty job via GET /jobs/{job_id}/stop.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agenty job identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs/{{job_id}}/stop",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.result": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get job result",
+      "description": "Fetch paginated Agenty job result rows via GET /jobs/{job_id}/result.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agenty job identifier."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Rows to skip."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2500,
+            "description": "Rows per page, 1-2500."
+          },
+          "collection": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result collection number."
+          },
+          "modified": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "1 for post-processed rows, 0 for default."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs/{{job_id}}/result",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}",
+          "collection": "{{collection}}",
+          "modified": "{{modified}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "jobs.export": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Export job result",
+      "description": "Create an Agenty CSV download link via GET /jobs/{job_id}/export.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agenty job identifier."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Export result rows or logs.",
+            "enum": [
+              "result",
+              "logs"
+            ]
+          },
+          "collection": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Collection number."
+          },
+          "modified": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "1 for post-processed rows."
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Download file name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "job_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/jobs/{{job_id}}/export",
+        "success": [
+          200
+        ],
+        "query": {
+          "type": "{{type}}",
+          "collection": "{{collection}}",
+          "modified": "{{modified}}",
+          "filename": "{{filename}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lists.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List lists",
+      "description": "List Agenty URL lists via GET /lists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lists.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get list",
+      "description": "Get one Agenty list and its rows via GET /lists/{list_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agenty list identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists/{{list_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lists.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create list",
+      "description": "Create an Agenty list via POST /lists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "List name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "List description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lists",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lists.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update list",
+      "description": "Update an Agenty list name or description via PUT /lists/{list_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agenty list identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated list name."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated list description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/lists/{{list_id}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lists.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete list",
+      "description": "Permanently delete an Agenty list via DELETE /lists/{list_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agenty list identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/lists/{{list_id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lists.rows.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List list rows",
+      "description": "List rows in an Agenty list via GET /lists/{list_id}/rows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agenty list identifier."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Rows to skip."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort direction.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/lists/{{list_id}}/rows",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sort": "{{sort}}",
+          "order": "{{order}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "lists.rows.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Insert list rows",
+      "description": "Bulk-insert rows into an Agenty list via POST /lists/{list_id}/rows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "list_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agenty list identifier."
+          },
+          "rows": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Rows to insert. Column names must match the list.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "list_id",
+          "rows"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/lists/{{list_id}}/rows",
+        "success": [
+          200,
+          201
+        ],
+        "body": "{{rows}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scheduler.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Schedule agent",
+      "description": "Schedule an Agenty agent with a unix cron expression via POST /scheduler/{agent_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agenty agent identifier."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Schedule type.",
+            "enum": [
+              "cron"
+            ]
+          },
+          "expression": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unix cron expression in UTC."
+          },
+          "is_enabled": {
+            "type": "boolean",
+            "description": "Whether the schedule is enabled."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "agent_id",
+          "expression"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/scheduler/{{agent_id}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "type": "{{type}}",
+          "expression": "{{expression}}",
+          "is_enabled": "{{is_enabled}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "scheduler.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete schedule",
+      "description": "Remove an Agenty agent schedule via DELETE /scheduler/{agent_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agenty agent identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "agent_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/scheduler/{{agent_id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "inputs.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get agent input",
+      "description": "Get the input configuration for one Agenty agent via GET /inputs/{agent_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agenty agent identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "agent_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/inputs/{{agent_id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "inputs.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update agent input",
+      "description": "Overwrite Agenty agent input via PUT /inputs/{agent_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agenty agent identifier."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Input type.",
+            "enum": [
+              "url",
+              "list",
+              "source"
+            ]
+          },
+          "list_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Agenty list identifier."
+          },
+          "field": {
+            "type": "string",
+            "minLength": 1,
+            "description": "List column that holds URLs."
+          },
+          "collection": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Collection number."
+          },
+          "data": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Manual input URLs.",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Input URL."
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "agent_id",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/inputs/{{agent_id}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "type": "{{type}}",
+          "list_id": "{{list_id}}",
+          "field": "{{field}}",
+          "collection": "{{collection}}",
+          "data": "{{data}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "agents.results": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get agent results",
+      "description": "Get the latest Agenty agent result rows via GET /agents/{agent_id}/results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agenty agent identifier."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Rows to skip."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Rows per page, max 1000."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "agent_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/agents/{{agent_id}}/results",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    }
+  },
+  "provenance": {
+    "source": {
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+      "url": "https://github.com/oomol-lab/open-connector"
+    }
+  },
+  "runtime": "bun",
+  "version": "0.2.0",
+  "visibility": "public"
+}
