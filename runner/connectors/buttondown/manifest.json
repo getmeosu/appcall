@@ -1,13 +1,1215 @@
 {
-  "key":"buttondown","name":"Buttondown","version":"0.1.0","runtime":"bun","visibility":"public","categories":["email-marketing"],
-  "auth":{"type":"api_key","scopes":[],"setup":{"mode":"api_key","fields":[{"key":"apiKey","label":"Buttondown API key","required":true,"secret":true}],"docsUrl":"https://buttondown.com/requests"}},
-  "network":{"allowedHosts":["api.buttondown.com"]},"models":["account","newsletter","subscriber"],
-  "http":{"baseUrl":"https://api.buttondown.com/v1","auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Token {{apiKey}}"},"errors":{"rateLimitStatuses":[429],"retryAfterHeader":"retry-after","retryAfterKind":"seconds","defaultRetryAfterSeconds":30,"messagePaths":["detail","message","error"]}},
-  "operations":{
-    "healthcheck":{"kind":"action","sideEffect":"read","timeoutMs":5000,"maxInputBytes":4096,"maxResponseBytes":65536,"title":"Healthcheck","description":"Validate the Buttondown API key with GET /accounts/me.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"outputSchema":{"type":"object","required":["account"],"properties":{"account":{"type":"object"}}},"request":{"method":"GET","path":"/accounts/me","success":[200],"result":{"account":"{{response}}"}},"enforceOutputSchema":true},
-    "account.get":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":4096,"maxResponseBytes":1048576,"title":"Get Account","description":"Get the account associated with the Buttondown API key.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"outputSchema":{"type":"object","required":["account"],"properties":{"account":{"type":"object"}}},"request":{"method":"GET","path":"/accounts/me","success":[200],"result":{"account":"{{response}}"}},"enforceOutputSchema":true},
-    "newsletters.list":{"kind":"action","sideEffect":"read","timeoutMs":15000,"maxInputBytes":65536,"maxResponseBytes":5242880,"title":"List Newsletters","description":"List Buttondown newsletters with explicit page and page_size pagination.","inputSchema":{"type":"object","properties":{"page":{"type":"integer","minimum":1,"maximum":100000},"page_size":{"type":"integer","minimum":1,"maximum":100}},"additionalProperties":false},"outputSchema":{"type":"object","required":["newsletters","page"],"properties":{"newsletters":{"type":"array","items":{"type":"object"}},"page":{"type":"object"}}},"request":{"method":"GET","path":"/newsletters","query":{"page":"{{page}}","page_size":"{{page_size}}"},"success":[200],"result":{"newsletters":"{{response.results}}","page":{"count":"{{response.count}}","next":"{{response.next}}","previous":"{{response.previous}}"}}},"enforceOutputSchema":true},
-    "subscribers.list":{"kind":"action","sideEffect":"read","timeoutMs":15000,"maxInputBytes":65536,"maxResponseBytes":5242880,"title":"List Subscribers","description":"List Buttondown subscribers with bounded filters and explicit page pagination.","inputSchema":{"type":"object","properties":{"page":{"type":"integer","minimum":1,"maximum":100000},"email_address":{"type":"string","minLength":1},"type":{"type":"string","minLength":1},"tag":{"type":"string","minLength":1},"date__start":{"type":"string","minLength":1},"date__end":{"type":"string","minLength":1}},"additionalProperties":false},"outputSchema":{"type":"object","required":["subscribers","page"],"properties":{"subscribers":{"type":"array","items":{"type":"object"}},"page":{"type":"object"}}},"request":{"method":"GET","path":"/subscribers","query":{"page":"{{page}}","email_address":"{{email_address}}","type":"{{type}}","tag":"{{tag}}","date__start":"{{date__start}}","date__end":"{{date__end}}"},"success":[200],"result":{"subscribers":"{{response.results}}","page":{"count":"{{response.count}}","next":"{{response.next}}","previous":"{{response.previous}}"}}},"enforceOutputSchema":true},
-    "subscribers.get":{"kind":"action","sideEffect":"read","timeoutMs":10000,"maxInputBytes":4096,"maxResponseBytes":1048576,"title":"Get Subscriber","description":"Retrieve one Buttondown subscriber by ID or email address.","inputSchema":{"type":"object","properties":{"id_or_email":{"type":"string","minLength":1}},"required":["id_or_email"],"additionalProperties":false},"outputSchema":{"type":"object","required":["subscriber"],"properties":{"subscriber":{"type":"object"}}},"request":{"method":"GET","path":"/subscribers/{{id_or_email}}","success":[200],"result":{"subscriber":"{{response}}"}},"enforceOutputSchema":true}
-  },"provenance":{"source":{"url":"https://github.com/oomol-lab/open-connector","revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"}},"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}}
+  "key": "buttondown",
+  "name": "Buttondown",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "email-marketing"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Buttondown API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.buttondown.com"
+    ]
+  },
+  "models": [
+    "account",
+    "newsletter",
+    "subscriber",
+    "tag",
+    "email",
+    "comment",
+    "webhook"
+  ],
+  "http": {
+    "baseUrl": "https://api.buttondown.com/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Token {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "error",
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Buttondown API key by retrieving the current account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/accounts/me",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "newsletters.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List newsletters",
+      "description": "List newsletters available to the Buttondown API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/newsletters",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "newsletters.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get newsletter",
+      "description": "Retrieve one Buttondown newsletter by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Newsletter ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/newsletters/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List subscribers",
+      "description": "List Buttondown subscribers with common filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "email_address": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "regular",
+              "premium",
+              "unactivated",
+              "unsubscribed",
+              "removed"
+            ]
+          },
+          "date__start": {
+            "type": "string",
+            "minLength": 1
+          },
+          "date__end": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscribers",
+        "query": {
+          "page": "{{page}}",
+          "email_address": "{{email_address}}",
+          "type": "{{type}}",
+          "date__start": "{{date__start}}",
+          "date__end": "{{date__end}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get subscriber",
+      "description": "Retrieve one Buttondown subscriber by ID or email address.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id_or_email"
+        ],
+        "properties": {
+          "id_or_email": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscribers/{{id_or_email}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create subscriber",
+      "description": "Create a Buttondown subscriber.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email_address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber email address."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Private notes."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "regular",
+              "premium",
+              "unactivated",
+              "unsubscribed",
+              "removed"
+            ],
+            "description": "Subscriber type."
+          }
+        },
+        "required": [
+          "email_address"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/subscribers",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email_address": "{{email_address}}",
+          "notes": "{{notes}}",
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update subscriber",
+      "description": "Update a Buttondown subscriber by ID or email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id_or_email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber ID or email."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Updated private notes."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "regular",
+              "premium",
+              "unactivated",
+              "unsubscribed",
+              "removed"
+            ],
+            "description": "Updated subscriber type."
+          }
+        },
+        "required": [
+          "id_or_email"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/subscribers/{{id_or_email}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "notes": "{{notes}}",
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete subscriber",
+      "description": "Delete a Buttondown subscriber by ID or email address.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id_or_email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber ID or email."
+          }
+        },
+        "required": [
+          "id_or_email"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/subscribers/{{id_or_email}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List tags",
+      "description": "List Buttondown tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get tag",
+      "description": "Retrieve one Buttondown tag by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create tag",
+      "description": "Create a Buttondown tag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag name."
+          },
+          "color": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Hex color."
+          },
+          "description": {
+            "type": "string",
+            "description": "Internal description."
+          }
+        },
+        "required": [
+          "name",
+          "color"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tags",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "color": "{{color}}",
+          "description": "{{description}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update tag",
+      "description": "Update a Buttondown tag by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated tag name."
+          },
+          "color": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated hex color."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/tags/{{id}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "color": "{{color}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete tag",
+      "description": "Delete a Buttondown tag by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/tags/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List emails",
+      "description": "List Buttondown emails including drafts, scheduled, and sent issues.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Results per page."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "about_to_send",
+              "sent",
+              "scheduled"
+            ],
+            "description": "Email status."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/emails",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get email",
+      "description": "Retrieve one Buttondown email by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/emails/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create email",
+      "description": "Create a Buttondown email or draft.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email subject."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email body."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "about_to_send",
+              "sent",
+              "scheduled"
+            ],
+            "description": "Email status."
+          }
+        },
+        "required": [
+          "subject",
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/emails",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "subject": "{{subject}}",
+          "body": "{{body}}",
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update email",
+      "description": "Update a Buttondown email or draft by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email ID."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated subject."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated body."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "about_to_send",
+              "sent",
+              "scheduled"
+            ],
+            "description": "Updated status."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/emails/{{id}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "subject": "{{subject}}",
+          "body": "{{body}}",
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "emails.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete email",
+      "description": "Delete a Buttondown email or draft by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email ID."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/emails/{{id}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List comments",
+      "description": "List comments on Buttondown emails.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Results per page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/comments",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List webhooks",
+      "description": "List configured Buttondown webhooks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ],
+            "description": "Webhook status."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.subscriber_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Subscriber created",
+      "description": "Buttondown webhook when a subscriber is created. Maps type=subscriber.created."
+    },
+    "webhook.subscriber_unsubscribed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Subscriber unsubscribed",
+      "description": "Buttondown webhook when a subscriber unsubscribes. Maps type=subscriber.unsubscribed."
+    },
+    "webhook.email_sent": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Email sent",
+      "description": "Buttondown webhook when an email is sent. Maps type=email.sent."
+    },
+    "webhook.comment_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Comment created",
+      "description": "Buttondown webhook when a comment is created. Maps type=comment.created."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
