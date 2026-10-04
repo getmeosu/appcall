@@ -1,4 +1,1077 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Stannp API key","required":true,"secret":true},{"key":"region","label":"Stannp API region (eu or us)","required":true,"secret":false}],"mode":"api_key"},"type":"api_key"},"categories":["ads"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"basic":{"password":"","username":"{{apiKey}}"},"field":"apiKey","in":"header","name":"Authorization"},"baseUrl":"https://api-{{region}}1.stannp.com","errors":{"bodyErrorPaths":["error"],"defaultRetryAfterSeconds":30,"messagePaths":["error","message","data.error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"stannp","models":["account","recipient","group"],"name":"Stannp","network":{"allowedHosts":[
-        "api-eu1.stannp.com",
-        "api-us1.stannp.com"
-      ]},"operations":{"groups.list":{"description":"List Stannp recipient groups with optional offset and limit pagination.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"limit":{"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/groups/list","query":{"limit":"{{limit}}","offset":"{{offset}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List groups","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Stannp API key with GET /v1/accounts/balance.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/accounts/balance","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"recipients.get":{"description":"Retrieve one Stannp recipient by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"recipientId":{"minimum":1,"type":"integer"}},"required":["recipientId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/recipients/get/{{recipientId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get recipient","validationMode":"strict-generated"},"recipients.list":{"description":"List Stannp recipients, optionally filtered by group and paginated.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"groupId":{"minimum":1,"type":"integer"},"limit":{"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/v1/recipients/list","query":{"group_id":"{{groupId}}","limit":"{{limit}}","offset":"{{offset}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List recipients","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "stannp",
+  "name": "Stannp",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "ads"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Stannp API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "key": "region",
+          "label": "Stannp API region (eu or us)",
+          "required": true,
+          "secret": false
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api-eu1.stannp.com",
+      "api-us1.stannp.com"
+    ]
+  },
+  "models": [
+    "account",
+    "recipient",
+    "group",
+    "template",
+    "letter",
+    "postcard",
+    "campaign"
+  ],
+  "http": {
+    "baseUrl": "https://api-{{region}}1.stannp.com",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{apiKey}}",
+        "password": ""
+      }
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message",
+        "data.error"
+      ],
+      "bodyErrorPaths": [
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Stannp API key with GET /v1/accounts/balance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/accounts/balance",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recipients.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List recipients",
+      "description": "List Stannp recipients, optionally filtered by group and paginated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/recipients/list",
+        "success": [
+          200
+        ],
+        "query": {
+          "group_id": "{{groupId}}",
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recipients.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get recipient",
+      "description": "Retrieve one Stannp recipient by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "recipientId"
+        ],
+        "properties": {
+          "recipientId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/recipients/get/{{recipientId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List groups",
+      "description": "List Stannp recipient groups with optional offset and limit pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/groups/list",
+        "success": [
+          200
+        ],
+        "query": {
+          "offset": "{{offset}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recipients.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create recipient",
+      "description": "Create a Stannp recipient, optionally adding them to a group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "firstname": {
+            "type": "string",
+            "description": "First name."
+          },
+          "lastname": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "address1": {
+            "type": "string",
+            "description": "Address line 1."
+          },
+          "city": {
+            "type": "string",
+            "description": "City."
+          },
+          "zipcode": {
+            "type": "string",
+            "description": "Postal or ZIP code."
+          },
+          "country": {
+            "type": "string",
+            "minLength": 2,
+            "description": "ISO 3166-1 alpha-2 country code."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address."
+          },
+          "groupId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Group to add the recipient to."
+          },
+          "onDuplicate": {
+            "type": "string",
+            "enum": [
+              "update",
+              "ignore",
+              "duplicate"
+            ],
+            "description": "Duplicate handling."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "firstname",
+          "address1",
+          "country"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/recipients/new",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "firstname": "{{firstname}}",
+          "lastname": "{{lastname}}",
+          "address1": "{{address1}}",
+          "city": "{{city}}",
+          "zipcode": "{{zipcode}}",
+          "country": "{{country}}",
+          "email": "{{email}}",
+          "group_id": "{{groupId}}",
+          "on_duplicate": "{{onDuplicate}}"
+        },
+        "bodyEncoding": "form"
+      }
+    },
+    "recipients.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete recipient",
+      "description": "Permanently delete a Stannp recipient.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Stannp resource id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/recipients/delete",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "id": "{{id}}"
+        },
+        "bodyEncoding": "form"
+      }
+    },
+    "groups.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create group",
+      "description": "Create an empty Stannp recipient group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Group name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/groups/new",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "name": "{{name}}"
+        },
+        "bodyEncoding": "form"
+      }
+    },
+    "groups.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete group",
+      "description": "Delete a Stannp recipient group. Recipients remain unless deleteRecipients is true.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Stannp resource id."
+          },
+          "deleteRecipients": {
+            "type": "boolean",
+            "description": "Also delete recipients in the group."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/groups/delete",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "id": "{{id}}",
+          "delete_recipients": "{{deleteRecipients}}"
+        },
+        "bodyEncoding": "form"
+      }
+    },
+    "groups.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add recipients to group",
+      "description": "Add existing recipients to a Stannp group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Group id."
+          },
+          "recipients": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated recipient ids."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "groupId",
+          "recipients"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/groups/add/{{groupId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "recipients": "{{recipients}}"
+        },
+        "bodyEncoding": "form"
+      }
+    },
+    "templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List templates",
+      "description": "List design templates on the Stannp account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/templates/list",
+        "success": [
+          200
+        ]
+      }
+    },
+    "letters.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create letter",
+      "description": "Create a Stannp letter. Set test true to produce a sample PDF without dispatch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "test": {
+            "type": "boolean",
+            "description": "When true, produce a sample without dispatch or charge."
+          },
+          "template": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Existing template id."
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags."
+          },
+          "recipient": {
+            "type": "object",
+            "description": "Inline recipient address object or existing recipient id wrapper."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "template",
+          "recipient"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/letters/create",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "test": "{{test}}",
+          "template": "{{template}}",
+          "tags": "{{tags}}",
+          "recipient": "{{recipient}}"
+        }
+      }
+    },
+    "letters.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get letter",
+      "description": "Get one Stannp letter by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "letterId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Stannp resource id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "letterId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/letters/get/{{letterId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "postcards.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create postcard",
+      "description": "Create a Stannp postcard. Set test true to produce a sample without dispatch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "test": {
+            "type": "boolean",
+            "description": "When true, produce a sample without dispatch or charge."
+          },
+          "template": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Existing template id."
+          },
+          "size": {
+            "type": "string",
+            "description": "Postcard size such as A6 or A5."
+          },
+          "recipient": {
+            "type": "object",
+            "description": "Inline recipient address object."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "template",
+          "recipient"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/postcards/create",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "test": "{{test}}",
+          "template": "{{template}}",
+          "size": "{{size}}",
+          "recipient": "{{recipient}}"
+        }
+      }
+    },
+    "campaigns.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List campaigns",
+      "description": "List Stannp direct-mail campaigns.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/campaigns/list",
+        "success": [
+          200
+        ]
+      }
+    },
+    "campaigns.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get campaign",
+      "description": "Get one Stannp campaign by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Stannp resource id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaignId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/campaigns/get/{{campaignId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "campaigns.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create campaign",
+      "description": "Create a Stannp campaign for a recipient group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign name."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign type such as a6-postcard, a5-postcard, or letter."
+          },
+          "groupId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Recipient group id."
+          },
+          "templateId": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Template id to copy, or 0 for a blank template."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type",
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/campaigns/create",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "name": "{{name}}",
+          "type": "{{type}}",
+          "group_id": "{{groupId}}",
+          "template_id": "{{templateId}}"
+        },
+        "bodyEncoding": "form"
+      }
+    },
+    "campaigns.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete campaign",
+      "description": "Delete an unbooked Stannp campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Stannp resource id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/v1/campaigns/delete",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "body": {
+          "id": "{{id}}"
+        },
+        "bodyEncoding": "form"
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get current user",
+      "description": "Get the authenticated Stannp user profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v1/users/me",
+        "success": [
+          200
+        ]
+      }
+    },
+    "webhook.mailpiece_status": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Mailpiece status",
+      "description": "Stannp webhook for mailpiece_status. Fires when a mailpiece changes status such as printing, dispatched, delivered, or returned."
+    },
+    "webhook.campaign_status": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Campaign status",
+      "description": "Stannp webhook for campaign_status. Fires when a campaign changes status such as printing, dispatched, or cancelled."
+    },
+    "webhook.recipient_events": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Recipient events",
+      "description": "Stannp webhook for recipient_events. Fires when a new recipient event is recorded."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
