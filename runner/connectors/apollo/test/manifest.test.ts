@@ -70,6 +70,18 @@ describe("apollo connector manifest", () => {
     }
   });
 
+  test("describes people.search as sparse candidates and exposes its top-level total", () => {
+    const ops = manifest.operations as Record<string, {
+      description?: string;
+      outputSchema?: { properties?: Record<string, unknown> };
+    }>;
+    const peopleSearch = ops["people.search"];
+    expect(peopleSearch.description).toContain("availability indicators");
+    expect(peopleSearch.description).toContain("do not include email addresses or phone numbers");
+    expect(peopleSearch.description).toContain("people.match");
+    expect(peopleSearch.outputSchema?.properties).toHaveProperty("total_entries");
+  });
+
   test("all action operations have title and description", () => {
     const ops = manifest.operations as Record<string, { kind: string; title?: string; description?: string }>;
     for (const key of actionKeys) {

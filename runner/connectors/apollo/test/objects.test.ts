@@ -17,11 +17,26 @@ import {
 // ---------------------------------------------------------------------------
 
 describe("normalizePerson", () => {
-  test("normalizes a full person from fixture", () => {
-    const raw = peopleSearchFixture.people[0];
+  test("normalizes a full enriched person", () => {
+    const raw = {
+      id: "prs_enriched_001",
+      first_name: "Jane",
+      last_name: "Smith",
+      name: "Jane Smith",
+      email: "jane.smith@acme.com",
+      title: "VP of Sales",
+      seniority: "vp",
+      organization_name: "Acme Corp",
+      organization_id: "org_001",
+      linkedin_url: "https://www.linkedin.com/in/janesmith",
+      city: "San Francisco",
+      state: "California",
+      country: "United States",
+      photo_url: "https://example.com/photos/jane.jpg",
+    };
     const result = normalizePerson(raw);
 
-    expect(result.id).toBe("apl-person:prs_001");
+    expect(result.id).toBe("apl-person:prs_enriched_001");
     expect(result.provider).toBe("apollo");
     expect(result.firstName).toBe("Jane");
     expect(result.lastName).toBe("Smith");
@@ -75,6 +90,59 @@ describe("parsePeopleSearchResponse", () => {
     expect(result.pagination.perPage).toBe(25);
     expect(result.pagination.totalEntries).toBe(142);
     expect(result.pagination.totalPages).toBe(6);
+  });
+
+  test("normalizes sparse search candidates without deriving contact details", () => {
+    const result = parsePeopleSearchResponse(peopleSearchFixture);
+
+    expect(result.people[0].lastName).toBe("");
+    expect(result.people[0].email).toBe("");
+    expect(result.people[0].raw.has_email).toBe(true);
+    expect(result.people[0].raw).not.toHaveProperty("email");
+    expect(result.people[0].raw).not.toHaveProperty("phone_number");
+  });
+
+  test("uses nested page values and top-level total_entries before legacy nested totals", () => {
+    const result = parsePeopleSearchResponse({
+      people: [],
+      total_entries: 0,
+      pagination: { page: 2, per_page: 20, total_entries: 99, total_pages: 5 },
+    }, { page: 3, perPage: 25 });
+
+    expect(result.pagination).toEqual({ page: 2, perPage: 20, totalEntries: 0, totalPages: 0 });
+  });
+
+  test("uses request pagination context and omits unknown totals", () => {
+    const result = parsePeopleSearchResponse({ people: [] }, { page: 3, perPage: 10 });
+
+    expect(result.pagination).toEqual({ page: 3, perPage: 10 });
+  });
+
+  test("uses request context when response pagination is fractional and accepts legacy integer strings", () => {
+    const fractional = parsePeopleSearchResponse({
+      people: [],
+      pagination: { page: 1.5, per_page: "2.5" },
+    }, { page: 3, perPage: 10 });
+    expect(fractional.pagination).toEqual({ page: 3, perPage: 10 });
+
+    const legacyStrings = parsePeopleSearchResponse({
+      people: [],
+      pagination: { page: "2", per_page: "20" },
+    }, { page: 3, perPage: 10 });
+    expect(legacyStrings.pagination).toEqual({ page: 2, perPage: 20 });
+
+    const fractionalContext = parsePeopleSearchResponse({ people: [] }, { page: 1.5, perPage: 20.5 });
+    expect(fractionalContext.pagination).toEqual({ page: 1, perPage: 25 });
+  });
+
+  test("ignores non-finite or negative total entries", () => {
+    const result = parsePeopleSearchResponse({
+      people: [],
+      total_entries: Number.POSITIVE_INFINITY,
+      pagination: { total_entries: -1 },
+    });
+
+    expect(result.pagination).toEqual({ page: 1, perPage: 25 });
   });
 
   test("parses empty collection", () => {

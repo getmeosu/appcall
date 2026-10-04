@@ -17,6 +17,7 @@ import emailAccountsListFixture from "../fixtures/email_accounts_list.json";
 import usersSearchFixture from "../fixtures/users_search.json";
 
 import {
+  createPeopleClient,
   searchPeople,
   matchPerson,
   bulkMatchPeople,
@@ -62,6 +63,55 @@ describe("searchPeople", () => {
     expect((result.validated as { q_keywords?: string }).q_keywords).toBe("VP Sales");
   });
 
+  test("rejects invalid numeric pagination before making a request and ignores non-number values", async () => {
+    const invalidValues: unknown[] = [
+      1.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      0,
+      -1,
+      Number.MAX_SAFE_INTEGER + 1,
+    ];
+    let fetchCalls = 0;
+
+    for (const field of ["page", "per_page"] as const) {
+      for (const value of invalidValues) {
+        await expect(searchPeople({
+          apiKey: "test_key",
+          [field]: value,
+          fetch: async () => {
+            fetchCalls += 1;
+            return new Response(JSON.stringify({ people: [] }), { status: 200 });
+          },
+        })).rejects.toMatchObject({ message: `${field} must be a positive integer` });
+        expect(fetchCalls).toBe(0);
+      }
+    }
+
+    const ignored = validatePeopleSearchInput({ page: "2", per_page: null });
+    expect(ignored.page).toBeUndefined();
+    expect(ignored.per_page).toBeUndefined();
+  });
+
+  test("forwards valid safe integer pagination unchanged", async () => {
+    const requests: Request[] = [];
+    const page = Number.MAX_SAFE_INTEGER;
+    const perPage = Number.MAX_SAFE_INTEGER;
+    await searchPeople({
+      apiKey: "test_key",
+      page,
+      per_page: perPage,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify({ people: [], total_entries: 0 }), { status: 200 });
+      },
+    });
+
+    const body = await requests[0].json() as Record<string, unknown>;
+    expect(body.page).toBe(page);
+    expect(body.per_page).toBe(perPage);
+  });
+
   test("calls POST /api/v1/mixed_people/api_search with X-Api-Key header", async () => {
     const requests: Request[] = [];
     const result = await searchPeople({
@@ -87,6 +137,117 @@ describe("searchPeople", () => {
     expect(result.action).toBe("people.search");
     expect(Array.isArray(result.people)).toBe(true);
     expect((result.people as unknown[]).length).toBe(2);
+  });
+
+  test("maps organization_domains to Apollo's documented filter and forwards supported criteria", async () => {
+    const requests: Request[] = [];
+    const result = await searchPeople({
+      apiKey: "test_key",
+      q_keywords: "VP Sales",
+      person_titles: ["VP of Sales"],
+      person_seniorities: ["vp"],
+      person_locations: ["San Francisco"],
+      organization_domains: ["acme.com"],
+      organization_num_employees_ranges: ["11,50"],
+      page: 2,
+      per_page: 10,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify({ people: [], total_entries: 0 }), { status: 200 });
+      },
+    });
+
+    const body = await requests[0].json() as Record<string, unknown>;
+    expect(body).toEqual({
+      q_keywords: "VP Sales",
+      person_titles: ["VP of Sales"],
+      person_seniorities: ["vp"],
+      person_locations: ["San Francisco"],
+      q_organization_domains_list: ["acme.com"],
+      organization_num_employees_ranges: ["11,50"],
+      page: 2,
+      per_page: 10,
+    });
+    expect(body.organization_domains).toBeUndefined();
+    expect(result.total_entries).toBe(0);
+    expect(result.pagination).toEqual({ page: 2, per_page: 10, total_entries: 0, total_pages: 0 });
+  });
+
+  test("rejects malformed HTTP 200 people.search responses with a stable safe error", async () => {
+    const invalidBodies: unknown[] = [
+      null,
+      {},
+      { people: "not an array", message: "private upstream detail" },
+      { people: [{ id: "valid" }, null, "private upstream detail", 42] },
+    ];
+    const outcomes = await Promise.allSettled(invalidBodies.map((body) => createPeopleClient({
+      apiKey: "test_key",
+      fetch: async () => new Response(JSON.stringify(body), { status: 200 }),
+    }).search({})));
+
+    expect(outcomes).toHaveLength(invalidBodies.length);
+    for (const outcome of outcomes) {
+      expect(outcome.status).toBe("fulfilled");
+      if (outcome.status === "fulfilled") {
+        expect(outcome.value).toEqual({
+          ok: false,
+          error: {
+            code: "CONNECTOR_UPSTREAM_ERROR",
+            message: "Apollo returned an invalid people.search response.",
+          },
+        });
+      }
+    }
+  });
+
+  test("preserves a valid empty people list and does not invent unavailable totals", async () => {
+    const empty = await searchPeople({
+      apiKey: "test_key",
+      page: 3,
+      per_page: 10,
+      fetch: async () => new Response(JSON.stringify({ people: [], total_entries: 0 }), { status: 200 }),
+    });
+    expect(empty.people).toEqual([]);
+    expect(empty.total_entries).toBe(0);
+    expect(empty.pagination).toEqual({ page: 3, per_page: 10, total_entries: 0, total_pages: 0 });
+
+    const unavailable = await searchPeople({
+      apiKey: "test_key",
+      page: 3,
+      per_page: 10,
+      fetch: async () => new Response(JSON.stringify({ people: [] }), { status: 200 }),
+    });
+    expect(unavailable.pagination).toEqual({ page: 3, per_page: 10 });
+    expect(unavailable).not.toHaveProperty("total_entries");
+  });
+
+  test("preserves legacy nested pagination values when top-level totals are absent", async () => {
+    const result = await searchPeople({
+      apiKey: "test_key",
+      page: 4,
+      per_page: 50,
+      fetch: async () => new Response(JSON.stringify({
+        people: [],
+        pagination: { page: "2", per_page: "20", total_entries: "99", total_pages: 99 },
+      }), { status: 200 }),
+    });
+
+    expect(result.pagination).toEqual({ page: 2, per_page: 20, total_entries: 99, total_pages: 5 });
+    expect(result).not.toHaveProperty("total_entries");
+  });
+
+  test("surfaces malformed response errors through the normal action error path", async () => {
+    await expect(searchPeople({
+      apiKey: "test_key",
+      fetch: async () => new Response(JSON.stringify({
+        people: "private upstream payload",
+        message: "private upstream detail",
+      }), { status: 200 }),
+    })).rejects.toMatchObject({
+      ok: false,
+      code: "CONNECTOR_UPSTREAM_ERROR",
+      message: "Apollo returned an invalid people.search response.",
+    });
   });
 
   test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
