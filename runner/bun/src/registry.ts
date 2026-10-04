@@ -809,10 +809,16 @@ import calComManifest from "../../connectors/cal-com/manifest.json";
 import { healthcheck as calComHealthcheck } from "../../connectors/cal-com/src/healthcheck";
 import {
   getMe as calComGetMe, listEventTypes as calComListEventTypes, getEventType as calComGetEventType,
+  createEventType as calComCreateEventType, updateEventType as calComUpdateEventType, deleteEventType as calComDeleteEventType,
   listBookings as calComListBookings, getBooking as calComGetBooking, createBooking as calComCreateBooking,
   cancelBooking as calComCancelBooking, rescheduleBooking as calComRescheduleBooking,
   confirmBooking as calComConfirmBooking, declineBooking as calComDeclineBooking,
   getAvailableSlots as calComGetAvailableSlots, listSchedules as calComListSchedules,
+  getSchedule as calComGetSchedule, createSchedule as calComCreateSchedule,
+  updateSchedule as calComUpdateSchedule, deleteSchedule as calComDeleteSchedule,
+  getAvailability as calComGetAvailability,
+  listWebhooks as calComListWebhooks, createWebhook as calComCreateWebhook,
+  getWebhook as calComGetWebhook, deleteWebhook as calComDeleteWebhook,
 } from "../../connectors/cal-com/src/actions";
 
 import lushaManifest from "../../connectors/lusha/manifest.json";
@@ -844,6 +850,13 @@ import {
   abortRun as apifyAbortRun, getDataset as apifyGetDataset, getDatasetItems as apifyGetDatasetItems,
   listTasks as apifyListTasks, runTask as apifyRunTask, runTaskSyncGetDatasetItems as apifyRunTaskSync,
   getKeyValueStoreRecord as apifyGetKVRecord,
+  listDatasets as apifyListDatasets, createDataset as apifyCreateDataset, deleteDataset as apifyDeleteDataset,
+  pushDatasetItems as apifyPushDatasetItems,
+  listKeyValueStores as apifyListKVStores, getKeyValueStore as apifyGetKVStore,
+  putKeyValueStoreRecord as apifyPutKVRecord, listKeyValueStoreKeys as apifyListKVKeys,
+  deleteKeyValueStoreRecord as apifyDeleteKVRecord,
+  getTask as apifyGetTask, getUserMe as apifyGetUserMe, listWebhooks as apifyListWebhooks,
+  getRunLog as apifyGetRunLog, listRequestQueues as apifyListRequestQueues,
 } from "../../connectors/apify/src/actions";
 import { actorsOptions as apifyActorsOptions, actorInputSchema as apifyActorInputSchema } from "../../connectors/apify/src/options";
 
@@ -1964,6 +1977,9 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "me.get": calComGetMe,
       "event_types.list": calComListEventTypes,
       "event_types.get": calComGetEventType,
+      "event_types.create": calComCreateEventType,
+      "event_types.update": calComUpdateEventType,
+      "event_types.delete": calComDeleteEventType,
       "bookings.list": calComListBookings,
       "bookings.get": calComGetBooking,
       "bookings.create": calComCreateBooking,
@@ -1973,6 +1989,15 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "bookings.decline": calComDeclineBooking,
       "slots.available": calComGetAvailableSlots,
       "schedules.list": calComListSchedules,
+      "schedules.get": calComGetSchedule,
+      "schedules.create": calComCreateSchedule,
+      "schedules.update": calComUpdateSchedule,
+      "schedules.delete": calComDeleteSchedule,
+      "availability.get": calComGetAvailability,
+      "webhooks.list": calComListWebhooks,
+      "webhooks.create": calComCreateWebhook,
+      "webhooks.get": calComGetWebhook,
+      "webhooks.delete": calComDeleteWebhook,
     },
     lusha: {
       "person.enrich": lushaEnrichPerson,
@@ -2018,6 +2043,20 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "key_value_store.get_record": apifyGetKVRecord,
       "actors.options": apifyActorsOptions,
       "actors.input_schema": apifyActorInputSchema,
+      "datasets.list": apifyListDatasets,
+      "datasets.create": apifyCreateDataset,
+      "datasets.delete": apifyDeleteDataset,
+      "datasets.push_items": apifyPushDatasetItems,
+      "key_value_stores.list": apifyListKVStores,
+      "key_value_stores.get": apifyGetKVStore,
+      "key_value_store.put_record": apifyPutKVRecord,
+      "key_value_store.list_keys": apifyListKVKeys,
+      "key_value_store.delete_record": apifyDeleteKVRecord,
+      "tasks.get": apifyGetTask,
+      "users.me": apifyGetUserMe,
+      "webhooks.list": apifyListWebhooks,
+      "runs.log": apifyGetRunLog,
+      "request_queues.list": apifyListRequestQueues,
     },
     zoom: {
       "users.me": zoomGetUsersMe,

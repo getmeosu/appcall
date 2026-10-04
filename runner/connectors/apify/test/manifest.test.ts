@@ -5,7 +5,7 @@ describe("apify connector manifest", () => {
   test("declares key, name, runtime, version", () => {
     expect(manifest.key).toBe("apify");
     expect(manifest.name).toBe("Apify");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -30,6 +30,9 @@ describe("apify connector manifest", () => {
     expect(manifest.models).toContain("actor");
     expect(manifest.models).toContain("run");
     expect(manifest.models).toContain("dataset");
+    expect(manifest.models).toContain("task");
+    expect(manifest.models).toContain("key-value-store");
+    expect(manifest.models).toContain("webhook");
   });
 
   test("healthcheck is an action op", () => {
@@ -103,6 +106,20 @@ describe("apify connector manifest", () => {
       "task.run",
       "task.run_sync_get_dataset_items",
       "key_value_store.get_record",
+      "datasets.list",
+      "datasets.create",
+      "datasets.delete",
+      "datasets.push_items",
+      "key_value_stores.list",
+      "key_value_stores.get",
+      "key_value_store.put_record",
+      "key_value_store.list_keys",
+      "key_value_store.delete_record",
+      "tasks.get",
+      "users.me",
+      "webhooks.list",
+      "runs.log",
+      "request_queues.list",
     ];
     for (const key of expectedOps) {
       expect(ops[key]).toBeDefined();
