@@ -1,7 +1,17 @@
 {
+  "key": "bugbug",
+  "name": "BugBug",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,242 +19,189 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "dev-tools"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "app.bugbug.io"
+    ]
+  },
+  "models": [
+    "test",
+    "suite",
+    "profile",
+    "testrun",
+    "suiterun",
+    "component"
+  ],
   "http": {
+    "baseUrl": "https://app.bugbug.io",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Token {{apiKey}}"
     },
-    "baseUrl": "https://app.bugbug.io",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "detail",
         "message",
         "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
-  },
-  "key": "bugbug",
-  "models": [
-    "test",
-    "suite",
-    "profile"
-  ],
-  "name": "BugBug",
-  "network": {
-    "allowedHosts": [
-      "app.bugbug.io"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate the BugBug API token with GET /api/v2/tests/?page=1&page_size=1.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the BugBug API token with GET /api/v2/tests/?page=1&page_size=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/api/v2/tests/",
+        "success": [
+          200
+        ],
         "query": {
           "page": "1",
           "page_size": "1"
-        },
-        "success": [
-          200
-        ]
+        }
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "profiles.list": {
-      "description": "List BugBug run profiles with optional page and page_size filters.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page_size": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tests.list": {
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v2/profiles/",
-        "query": {
-          "page": "{{page}}",
-          "page_size": "{{page_size}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List profiles",
-      "validationMode": "strict-generated"
-    },
-    "suites.list": {
-      "description": "List BugBug suites with optional page, page_size, query, and ordering filters.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tests",
+      "description": "List BugBug tests with optional page, page_size, query, and ordering filters.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
           "ordering": {
+            "type": "string",
             "enum": [
               "-created",
               "-name",
               "created",
               "name"
-            ],
-            "type": "string"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page_size": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "query": {
-            "minLength": 1,
-            "type": "string"
+            ]
           }
         },
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/api/v2/suites/",
-        "query": {
-          "ordering": "{{ordering}}",
-          "page": "{{page}}",
-          "page_size": "{{page_size}}",
-          "query": "{{query}}"
-        },
+        "path": "/api/v2/tests/",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "query": "{{query}}",
+          "ordering": "{{ordering}}"
+        }
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List suites",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "tests.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get test",
       "description": "Retrieve one BugBug test by UUID.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "id": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
           "id"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -253,84 +210,1119 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suites.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get test",
-      "validationMode": "strict-generated"
-    },
-    "tests.list": {
-      "description": "List BugBug tests with optional page, page_size, query, and ordering filters.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List suites",
+      "description": "List BugBug suites with optional page, page_size, query, and ordering filters.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
           "ordering": {
+            "type": "string",
             "enum": [
               "-created",
               "-name",
               "created",
               "name"
-            ],
-            "type": "string"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page_size": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "query": {
-            "minLength": 1,
-            "type": "string"
+            ]
           }
         },
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/api/v2/tests/",
-        "query": {
-          "ordering": "{{ordering}}",
-          "page": "{{page}}",
-          "page_size": "{{page_size}}",
-          "query": "{{query}}"
-        },
+        "path": "/api/v2/suites/",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "query": "{{query}}",
+          "ordering": "{{ordering}}"
+        }
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List tests",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List profiles",
+      "description": "List BugBug run profiles with optional page and page_size filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/profiles/",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tests.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create test",
+      "description": "Create a BugBug test.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Test name."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Test notes."
+          },
+          "folderId": {
+            "type": "string",
+            "description": "Folder UUID.",
+            "minLength": 1
+          },
+          "screenSizeType": {
+            "type": "string",
+            "description": "Screen size type.",
+            "enum": [
+              "desktop",
+              "mobile",
+              "custom"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/tests/",
+        "success": [
+          201,
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "notes": "{{notes}}",
+          "folderId": "{{folderId}}",
+          "screenSizeType": "{{screenSizeType}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tests.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update test",
+      "description": "Update a BugBug test by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Test UUID.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Test name."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Test notes."
+          },
+          "folderId": {
+            "type": "string",
+            "description": "Folder UUID.",
+            "minLength": 1
+          },
+          "screenSizeType": {
+            "type": "string",
+            "description": "Screen size type.",
+            "enum": [
+              "desktop",
+              "mobile",
+              "custom"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v2/tests/{{id}}/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "notes": "{{notes}}",
+          "folderId": "{{folderId}}",
+          "screenSizeType": "{{screenSizeType}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tests.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete test",
+      "description": "Delete a BugBug test by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Test UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v2/tests/{{id}}/",
+        "success": [
+          204,
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suites.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get suite",
+      "description": "Retrieve one BugBug suite by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Suite UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/suites/{{id}}/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suites.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create suite",
+      "description": "Create a BugBug suite.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Suite name."
+          },
+          "runProfileId": {
+            "type": "string",
+            "description": "Run profile UUID.",
+            "minLength": 1
+          },
+          "notes": {
+            "type": "string",
+            "description": "Suite notes."
+          },
+          "autoAddNewTests": {
+            "type": "boolean",
+            "description": "Automatically add new tests."
+          },
+          "runInParallel": {
+            "type": "boolean",
+            "description": "Run tests in parallel."
+          },
+          "autoRetry": {
+            "type": "integer",
+            "description": "Automatic retry count.",
+            "minimum": 0,
+            "maximum": 5
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "runProfileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/suites/",
+        "success": [
+          201,
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "runProfileId": "{{runProfileId}}",
+          "notes": "{{notes}}",
+          "autoAddNewTests": "{{autoAddNewTests}}",
+          "runInParallel": "{{runInParallel}}",
+          "autoRetry": "{{autoRetry}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suites.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update suite",
+      "description": "Update a BugBug suite by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Suite UUID.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Suite name."
+          },
+          "runProfileId": {
+            "type": "string",
+            "description": "Run profile UUID.",
+            "minLength": 1
+          },
+          "notes": {
+            "type": "string",
+            "description": "Suite notes."
+          },
+          "autoAddNewTests": {
+            "type": "boolean",
+            "description": "Automatically add new tests."
+          },
+          "runInParallel": {
+            "type": "boolean",
+            "description": "Run tests in parallel."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v2/suites/{{id}}/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "runProfileId": "{{runProfileId}}",
+          "notes": "{{notes}}",
+          "autoAddNewTests": "{{autoAddNewTests}}",
+          "runInParallel": "{{runInParallel}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suites.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete suite",
+      "description": "Delete a BugBug suite by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Suite UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v2/suites/{{id}}/",
+        "success": [
+          204,
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "testruns.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List test runs",
+      "description": "List historical BugBug test runs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1
+          },
+          "ordering": {
+            "type": "string",
+            "description": "Sort order.",
+            "enum": [
+              "-created",
+              "-started",
+              "created",
+              "started"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Run status filter."
+          },
+          "testId": {
+            "type": "string",
+            "description": "Filter by test UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/testruns/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "ordering": "{{ordering}}",
+          "status": "{{status}}",
+          "testId": "{{testId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "testruns.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Run test",
+      "description": "Execute a BugBug test in the cloud.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "testId": {
+            "type": "string",
+            "description": "Test UUID to execute.",
+            "minLength": 1
+          },
+          "runProfileId": {
+            "type": "string",
+            "description": "Optional run profile UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "testId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/testruns/",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "testId": "{{testId}}",
+          "runProfileId": "{{runProfileId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "testruns.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get test run",
+      "description": "Retrieve one BugBug test run by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Test run UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/testruns/{{id}}/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "testruns.status": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get test run status",
+      "description": "Retrieve the current status of a BugBug test run.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Test run UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/testruns/{{id}}/status/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "testruns.stop": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Stop test run",
+      "description": "Stop a running BugBug test run.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Test run UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/testruns/{{id}}/stop/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suiteruns.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List suite runs",
+      "description": "List historical BugBug suite runs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1
+          },
+          "ordering": {
+            "type": "string",
+            "description": "Sort order.",
+            "enum": [
+              "-created",
+              "-started",
+              "created",
+              "started"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/suiteruns/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}",
+          "ordering": "{{ordering}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suiteruns.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Run suite",
+      "description": "Execute a BugBug suite in the cloud.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "suiteId": {
+            "type": "string",
+            "description": "Suite UUID to execute.",
+            "minLength": 1
+          },
+          "runProfileId": {
+            "type": "string",
+            "description": "Optional run profile UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "suiteId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v2/suiteruns/",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "suiteId": "{{suiteId}}",
+          "runProfileId": "{{runProfileId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "suiteruns.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get suite run",
+      "description": "Retrieve one BugBug suite run by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Suite run UUID.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/suiteruns/{{id}}/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "components.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List components",
+      "description": "List reusable BugBug components.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/components/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Accept": "application/json"
+        },
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{page_size}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.test_finished": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Test finished",
+      "description": "BugBug outbound alert when a test run finishes (eventName=testFinished). Maps passed, failed, and error statuses.",
+      "sideEffect": "read"
+    },
+    "webhook.suite_finished": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Suite finished",
+      "description": "BugBug outbound alert when a suite run finishes (eventName=suiteFinished).",
+      "sideEffect": "read"
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
