@@ -4,6 +4,10 @@ import manifest from "../manifest.json";
 import docs from "../fixtures/docs_list.json";
 import whoami from "../fixtures/whoami.json";
 import empty from "../fixtures/empty_page.json";
+import doc from "../fixtures/doc.json";
+import page from "../fixtures/page.json";
+import mutation from "../fixtures/mutation.json";
+import formulas from "../fixtures/formulas.json";
 
 const { actions } = compileDeclarativeConnector(manifest);
 const response = (body: unknown, status = 200, headers?: HeadersInit) => new Response(JSON.stringify(body), { status, headers });
@@ -46,5 +50,27 @@ describe("coda HTTP contract", () => {
 
   test("rejects malformed provider responses", async () => {
     await expect(actions["rows.list"]!({ apiKey: "tok", docId: "d", tableIdOrName: "t", fetch: async () => response({ items: {} }) })).rejects.toMatchObject({ code: "CONNECTOR_RESPONSE_INVALID" });
+  });
+
+  test("creates docs and pages and writes rows as 202 mutations", async () => {
+    const seen: Request[] = [];
+    const created = await actions["docs.create"]!({ apiKey: "tok", title: "Pilot", fetch: async (input, init) => { seen.push(new Request(input, init)); return response(doc, 201); } });
+    expect(seen[0].method).toBe("POST");
+    expect(new URL(seen[0].url).pathname).toBe("/apis/v1/docs");
+    expect(created).toMatchObject({ doc, source: "provider" });
+    const inserted = await actions["rows.insert"]!({ apiKey: "tok", docId: "doc-1", tableIdOrName: "grid-1", rows: [{ cells: [{ column: "c-1", value: "Ship" }] }], fetch: async (input, init) => { seen.push(new Request(input, init)); return response(mutation, 202); } });
+    expect(seen[1].method).toBe("POST");
+    expect(new URL(seen[1].url).pathname).toBe("/apis/v1/docs/doc-1/tables/grid-1/rows");
+    expect(inserted).toMatchObject({ mutation, source: "provider" });
+    const triggered = await actions["automations.trigger"]!({ apiKey: "tok", docId: "doc-1", ruleId: "rule-1", payload: { hello: true }, fetch: async (input, init) => { seen.push(new Request(input, init)); return response(mutation, 202); } });
+    expect(new URL(seen[2].url).pathname).toBe("/apis/v1/docs/doc-1/hooks/automation/rule-1");
+    expect(await seen[2].clone().json()).toEqual({ hello: true });
+    expect(triggered).toMatchObject({ mutation });
+  });
+
+  test("reads pages, formulas, and mutation status", async () => {
+    await expect(actions["pages.get"]!({ apiKey: "tok", docId: "doc-1", pageIdOrName: "Home", fetch: async () => response(page) })).resolves.toMatchObject({ page, source: "provider" });
+    await expect(actions["formulas.list"]!({ apiKey: "tok", docId: "doc-1", fetch: async () => response(formulas) })).resolves.toMatchObject({ items: formulas.items, source: "provider" });
+    await expect(actions["mutations.get"]!({ apiKey: "tok", requestId: "req-1", fetch: async () => response(mutation) })).resolves.toMatchObject({ mutation, source: "provider" });
   });
 });

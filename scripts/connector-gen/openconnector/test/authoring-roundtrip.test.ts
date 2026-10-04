@@ -41,5 +41,5 @@ test.skipIf(!process.env.APPCALL_OPENCONNECTOR_SOURCE)("reviewed Coda and Buildk
     const emittedHash = createHash("sha256").update(emittedManifest).digest("hex"); expect(emittedRuns.every(r=>r.candidateSHA===emittedHash)).toBe(true);
     total += fixtures.length;
   }
-  expect(total).toBe(14);
+  expect(total).toBe(27);
 });

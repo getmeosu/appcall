@@ -17,7 +17,7 @@ describe("pinned recipe roundtrip", () => {
       const cases = new Map(recipes.map((recipe) => [recipe.providerId, loadFixtureCases(join(root, recipe.providerId, "fixtures", "cases"))]));
       const build = await buildRecipeCatalog({ recipes, asOf: "2026-09-13", snapshot: { root: source! }, recipeDirs: Object.fromEntries(recipes.map((r) => [r.providerId, join(root, r.providerId)])), fixtureCases: (r) => cases.get(r.providerId)! });
       expect(build.records.filter((r) => r.status === "ACCEPTED").map((r) => r.appcallId)).toEqual(["buildkite", "coda"]);
-      expect(build.records.flatMap((r) => r.fixture ?? [])).toHaveLength(14);
+      expect(build.records.flatMap((r) => r.fixture ?? [])).toHaveLength(27);
       const report = await emitVerifiedCatalog(build, out);
       expect(report.accepted).toEqual(["buildkite", "coda"]);
       expect((report as any).asOf).toBe("2026-09-13");
