@@ -1,7 +1,17 @@
 {
+  "key": "airfocus",
+  "name": "airfocus",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,14 +19,1114 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
+      ]
+    }
   },
-  "categories": [
-    "productivity"
+  "network": {
+    "allowedHosts": [
+      "app.airfocus.com"
+    ]
+  },
+  "models": [
+    "profile",
+    "workspace",
+    "item",
+    "comment",
+    "field",
+    "team",
+    "attachment"
   ],
+  "http": {
+    "baseUrl": "https://app.airfocus.com/api",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "error.message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the airfocus personal access token with GET /profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/profile",
+        "success": [
+          200
+        ]
+      }
+    },
+    "workspaces.search": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Search workspaces",
+      "description": "Search airfocus workspaces with optional archived flag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/search",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "archived": "{{archived}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "workspaces.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get workspace",
+      "description": "Get one airfocus workspace by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "items.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get item",
+      "description": "Get one item from an airfocus workspace by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "workspaceId",
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/items/{{itemId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "workspaces.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create workspace",
+      "description": "Create an airfocus workspace. Description is sent as empty rich-text blocks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/workspaces",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": {
+            "blocks": [],
+            "richText": true
+          },
+          "lastActivity": "2026-01-01T00:00:00Z",
+          "order": "{{order}}"
+        }
+      }
+    },
+    "workspaces.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update workspace",
+      "description": "Replace an airfocus workspace name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/workspaces/{{workspaceId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": {
+            "blocks": [],
+            "richText": true
+          },
+          "lastActivity": "2026-01-01T00:00:00Z",
+          "order": 0
+        }
+      }
+    },
+    "workspaces.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete workspace",
+      "description": "Delete an airfocus workspace by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "workspaceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "workspaceId"
+        ],
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/workspaces/{{workspaceId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "workspaceId": "{{input.workspaceId}}"
+        }
+      }
+    },
+    "workspaces.count": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Count workspaces",
+      "description": "Count airfocus workspaces in the current team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/count",
+        "success": [
+          200
+        ]
+      }
+    },
+    "items.search": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Search items",
+      "description": "Search items in an airfocus workspace. Filter and sort objects are omitted.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/items/search",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "archived": "{{archived}}"
+        }
+      }
+    },
+    "items.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create item",
+      "description": "Create an item in an airfocus workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/items",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "archived": "{{archived}}"
+        }
+      }
+    },
+    "items.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update item",
+      "description": "Replace an airfocus item name or archived flag.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "itemId",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/workspaces/{{workspaceId}}/items/{{itemId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "archived": "{{archived}}"
+        }
+      }
+    },
+    "items.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete item",
+      "description": "Delete an item from an airfocus workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "itemId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "workspaceId",
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/workspaces/{{workspaceId}}/items/{{itemId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "workspaceId": "{{input.workspaceId}}",
+          "itemId": "{{input.itemId}}"
+        }
+      }
+    },
+    "comments.search": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Search comments",
+      "description": "Search comments in an airfocus workspace, optionally filtered by item ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/comments/search",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "itemId": "{{itemId}}"
+        }
+      }
+    },
+    "comments.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create comment",
+      "description": "Create a comment on an airfocus item. Content is sent as a single rich-text paragraph.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "itemId",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/comments",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "itemId": "{{itemId}}",
+          "content": {
+            "richText": true,
+            "blocks": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "content": "{{text}}"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    "comments.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get comment",
+      "description": "Retrieve one airfocus comment by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "commentId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/comments/{{commentId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "comments.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete comment",
+      "description": "Delete an airfocus comment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "commentId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "workspaceId": {
+            "type": "string"
+          },
+          "commentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "workspaceId",
+          "commentId"
+        ],
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/workspaces/{{workspaceId}}/comments/{{commentId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "workspaceId": "{{input.workspaceId}}",
+          "commentId": "{{input.commentId}}"
+        }
+      }
+    },
+    "fields.search": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Search fields",
+      "description": "Search airfocus fields, optionally limited to team fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "isTeamField": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/fields/search",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "isTeamField": "{{isTeamField}}"
+        }
+      }
+    },
+    "fields.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get field",
+      "description": "Retrieve one airfocus field by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fieldId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "fieldId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/fields/{{fieldId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "team.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get team",
+      "description": "Retrieve the airfocus team for the authenticated token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/team",
+        "success": [
+          200
+        ]
+      }
+    },
+    "team.users.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List team users",
+      "description": "List users in the airfocus team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/team/users",
+        "success": [
+          200
+        ]
+      }
+    },
+    "webhook.item_created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Item created",
+      "description": "airfocus createdItem webhook when an item is created in a workspace.",
+      "sideEffect": "read"
+    },
+    "webhook.item_updated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Item updated",
+      "description": "airfocus updatedItem webhook when an item name, status, or field changes.",
+      "sideEffect": "read"
+    },
+    "webhook.status_updated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Status updated",
+      "description": "airfocus status-updated webhook when an item status changes.",
+      "sideEffect": "read"
+    },
+    "webhook.item_archived": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Item archived",
+      "description": "airfocus archived-item webhook when an item archived flag changes.",
+      "sideEffect": "read"
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
   "evidence": {
     "fixture": {
       "status": "supplied"
@@ -24,227 +1134,5 @@
     "live": {
       "status": "unverified"
     }
-  },
-  "http": {
-    "auth": {
-      "field": "apiKey",
-      "in": "header",
-      "name": "Authorization",
-      "value": "Bearer {{apiKey}}"
-    },
-    "baseUrl": "https://app.airfocus.com/api",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "message",
-        "error",
-        "error.message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    }
-  },
-  "key": "airfocus",
-  "models": [
-    "profile",
-    "workspace",
-    "item"
-  ],
-  "name": "airfocus",
-  "network": {
-    "allowedHosts": [
-      "app.airfocus.com"
-    ]
-  },
-  "operations": {
-    "healthcheck": {
-      "description": "Validate the airfocus personal access token with GET /profile.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/profile",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "items.get": {
-      "description": "Get one item from an airfocus workspace by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "itemId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "workspaceId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "workspaceId",
-          "itemId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/workspaces/{{workspaceId}}/items/{{itemId}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get item",
-      "validationMode": "strict-generated"
-    },
-    "workspaces.get": {
-      "description": "Get one airfocus workspace by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "workspaceId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "workspaceId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/workspaces/{{workspaceId}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get workspace",
-      "validationMode": "strict-generated"
-    },
-    "workspaces.search": {
-      "description": "Search airfocus workspaces with optional archived flag.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "archived": {
-            "type": "boolean"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "body": {
-          "archived": "{{archived}}"
-        },
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "method": "POST",
-        "path": "/workspaces/search",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Search workspaces",
-      "validationMode": "strict-generated"
-    }
-  },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
-    }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
