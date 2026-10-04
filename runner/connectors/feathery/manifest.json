@@ -1,1 +1,1115 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Feathery API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["forms"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Token {{apiKey}}"},"baseUrl":"https://api.feathery.io","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["detail","error","message","errors"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"feathery","models":["account","form","hiddenField","user"],"name":"Feathery","network":{"allowedHosts":["api.feathery.io"]},"operations":{"forms.get":{"description":"Retrieve the complete schema for one Feathery form.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"form_id":{"minLength":1,"type":"string"}},"required":["form_id"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/form/{{form_id}}/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get form schema","validationMode":"strict-generated"},"forms.list":{"description":"List Feathery forms for the authenticated account.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/form/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List forms","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Feathery API key by retrieving account information.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/account/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Healthcheck","validationMode":"strict-generated"},"hidden-fields.list":{"description":"List hidden fields configured in the Feathery account.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/field/hidden/","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List hidden fields","validationMode":"strict-generated"},"users.list":{"description":"List Feathery users with optional creation-time filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"created_after":{"minLength":1,"type":"string"},"created_before":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/user/","query":{"created_after":"{{created_after}}","created_before":"{{created_before}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List users","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "feathery",
+  "name": "Feathery",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "forms"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Feathery API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.feathery.io"
+    ]
+  },
+  "models": [
+    "account",
+    "form",
+    "hiddenField",
+    "user",
+    "submission",
+    "workspace",
+    "extraction",
+    "documentTemplate"
+  ],
+  "http": {
+    "baseUrl": "https://api.feathery.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Token {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "error",
+        "message",
+        "errors"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Feathery API key by retrieving account information.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/account/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List forms",
+      "description": "List Feathery forms for the authenticated account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/form/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get form schema",
+      "description": "Retrieve the complete schema for one Feathery form.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "form_id"
+        ],
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/form/{{form_id}}/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "hidden-fields.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List hidden fields",
+      "description": "List hidden fields configured in the Feathery account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/field/hidden/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List users",
+      "description": "List Feathery users with optional creation-time filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "created_after": {
+            "type": "string",
+            "minLength": 1
+          },
+          "created_before": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/user/",
+        "query": {
+          "created_after": "{{created_after}}",
+          "created_before": "{{created_before}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create form",
+      "description": "Create a Feathery form from a template.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "form_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the new form."
+          },
+          "template_form_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ID of the template form to copy."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "form_name",
+          "template_form_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/form/",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "form_name": "{{form_name}}",
+          "template_form_id": "{{template_form_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update form",
+      "description": "Update a Feathery form name or enabled status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form ID."
+          },
+          "form_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New form name."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the form is enabled."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "form_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/form/{{form_id}}/",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "form_name": "{{form_name}}",
+          "enabled": "{{enabled}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete form",
+      "description": "Delete a Feathery form after confirmation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form ID."
+          },
+          "confirm_delete": {
+            "type": "boolean",
+            "description": "Must be true to delete the form."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "form_id",
+          "confirm_delete"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "form_id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "form_id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/form/{{form_id}}/",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "confirm_delete": "{{confirm_delete}}"
+        },
+        "result": {
+          "deleted": true,
+          "form_id": "{{input.form_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "forms.copy": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Copy form",
+      "description": "Duplicate a Feathery form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "form_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the copied form."
+          },
+          "copy_form_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ID of the form to copy."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "form_name",
+          "copy_form_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/form/copy/",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "form_name": "{{form_name}}",
+          "copy_form_id": "{{copy_form_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "submissions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List form submissions",
+      "description": "List submissions for one Feathery form.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Form ID."
+          },
+          "created_after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit submissions created after this time."
+          },
+          "created_before": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit submissions created before this time."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "form_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/form/submission/",
+        "success": [
+          200
+        ],
+        "query": {
+          "form_id": "{{form_id}}",
+          "created_after": "{{created_after}}",
+          "created_before": "{{created_before}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "submissions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create or update form submission",
+      "description": "Set field values for a user and initialize Feathery form submissions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Existing or new Feathery user ID."
+          },
+          "forms": {
+            "type": "array",
+            "description": "Form IDs to initialize submissions for.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fields": {
+            "type": "object",
+            "description": "Mapping of field identifier to value."
+          },
+          "complete": {
+            "type": "boolean",
+            "description": "Whether the submission is complete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "fields"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/form/submission/",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_id": "{{user_id}}",
+          "forms": "{{forms}}",
+          "fields": "{{fields}}",
+          "complete": "{{complete}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create user",
+      "description": "Create or fetch a Feathery end user by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique user ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/user/",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete user",
+      "description": "Delete a Feathery user and their submission data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/user/{{id}}/",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.session": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user session",
+      "description": "Get form session progress for one Feathery user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/user/{{user_id}}/session/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.events": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user events",
+      "description": "Get form step events for one Feathery user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/user/{{user_id}}/event/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.data": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List user field data",
+      "description": "List submitted field values for one Feathery user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/field/",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "hidden-fields.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create hidden field",
+      "description": "Create a hidden field in the Feathery account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique hidden field ID."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Value type.",
+            "enum": [
+              "json_value",
+              "number_value",
+              "text_value"
+            ]
+          },
+          "server_side": {
+            "type": "boolean",
+            "description": "Whether the field is server-side only."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/field/hidden/",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{id}}",
+          "type": "{{type}}",
+          "server_side": "{{server_side}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workspaces.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List workspaces",
+      "description": "List Feathery workspaces for the authenticated account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/workspace/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "extractions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List extractions",
+      "description": "List Feathery document intelligence extractions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/ai/extraction/",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "document-templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List document templates",
+      "description": "List uploaded Feathery document templates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional name filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/document/template/",
+        "success": [
+          200
+        ],
+        "query": {
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.form_completion": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Form completion",
+      "description": "Feathery webhook when a form is completed. Maps trigger=form_completion."
+    },
+    "webhook.data_received": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Data received",
+      "description": "Feathery webhook when form step data is received. Maps trigger=data_received."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
