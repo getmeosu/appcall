@@ -88,21 +88,24 @@ export type Calendar = {
   [key: string]: unknown;
 };
 
+export function parseCalendar(value: unknown): Calendar {
+  if (!isRecord(value)) throw new Error("id is required");
+  return {
+    id: requireString(value.id, "id"),
+    name: requireString(value.name ?? value.displayName, "name"),
+    canEdit: typeof value.canEdit === "boolean" ? value.canEdit : false,
+    canShare: typeof value.canShare === "boolean" ? value.canShare : false,
+    isDefaultCalendar: typeof value.isDefaultCalendar === "boolean" ? value.isDefaultCalendar : false,
+    isRemovable: typeof value.isRemovable === "boolean" ? value.isRemovable : false,
+    owner: isRecord(value.owner) ? (isRecord(value.owner.emailAddress) ? { address: requireString(value.owner.emailAddress.address ?? "", "address"), name: requireString(value.owner.emailAddress.name ?? "", "name") } : { address: "", name: "" }) : undefined,
+  };
+}
+
 export function parseCalendarsResponse(response: unknown): { calendars: Calendar[] } {
   if (!isRecord(response)) return { calendars: [] };
   const value = response.value;
   if (!Array.isArray(value)) return { calendars: [] };
-  return {
-    calendars: value.filter(isRecord).map((c) => ({
-      id: requireString(c.id, "id"),
-      name: requireString(c.name ?? c.displayName, "name"),
-      canEdit: typeof c.canEdit === "boolean" ? c.canEdit : false,
-      canShare: typeof c.canShare === "boolean" ? c.canShare : false,
-      isDefaultCalendar: typeof c.isDefaultCalendar === "boolean" ? c.isDefaultCalendar : false,
-      isRemovable: typeof c.isRemovable === "boolean" ? c.isRemovable : false,
-      owner: isRecord(c.owner) ? (isRecord(c.owner.emailAddress) ? { address: requireString(c.owner.emailAddress.address ?? "", "address"), name: requireString(c.owner.emailAddress.name ?? "", "name") } : { address: "", name: "" }) : undefined,
-    })),
-  };
+  return { calendars: value.filter(isRecord).map(parseCalendar) };
 }
 
 function parseNextOdataLink(response: Record<string, unknown>): string | null {
@@ -269,6 +272,34 @@ export type GetEventInput = { eventId: string };
 export function validateGetEventInput(input: unknown): GetEventInput {
   if (!isRecord(input)) throw new Error("get event input must be an object");
   return { eventId: requireString(input.eventId, "eventId") };
+}
+
+// ─── Get Calendar ─────────────────────────────────────────────────────────────
+
+export type GetCalendarInput = { calendarId: string };
+
+export function validateGetCalendarInput(input: unknown): GetCalendarInput {
+  if (!isRecord(input)) throw new Error("get calendar input must be an object");
+  return { calendarId: requireString(input.calendarId, "calendarId") };
+}
+
+export function createCalendarsClient(options: { accessToken: string; fetch?: typeof fetch; graphClient?: GraphClient }) {
+  const client = options.graphClient ?? createGraphClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "calendars.get" });
+
+  return {
+    async get(input: unknown) {
+      const payload = validateGetCalendarInput(input);
+      const response = await client.fetchJSON(`/v1.0/me/calendars/${encodeURIComponent(payload.calendarId)}`);
+      if (response.status === 200) {
+        return { ok: true as const, calendar: parseCalendar(response.body) };
+      }
+      if (response.status === 429) {
+        const rateLimit = parseGraphRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Graph rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Graph rejected the get calendar request." } };
+    },
+  };
 }
 
 function requireRecord(value: unknown, field: string): Record<string, unknown> {

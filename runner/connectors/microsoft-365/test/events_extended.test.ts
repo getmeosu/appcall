@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import eventCreateFixture from "../fixtures/event_create.json";
+import calendarsListFixture from "../fixtures/calendars_list.json";
 import {
   validateCreateEventInput,
   validateUpdateEventInput,
   validateDeleteEventInput,
   validateGetEventInput,
+  validateGetCalendarInput,
   createEventsClient,
+  createCalendarsClient,
 } from "../src/events";
 
 describe("microsoft-365 events extended (create/update/delete/get)", () => {
@@ -212,6 +215,60 @@ describe("microsoft-365 events extended (create/update/delete/get)", () => {
     });
 
     const result = await client.get({ eventId: "missing" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
+  test("validateGetCalendarInput returns calendarId", () => {
+    const result = validateGetCalendarInput({ calendarId: "AAMkAGI2TG93AAA=" });
+    expect(result.calendarId).toBe("AAMkAGI2TG93AAA=");
+  });
+
+  test("validateGetCalendarInput throws on missing calendarId", () => {
+    expect(() => validateGetCalendarInput({})).toThrow("calendarId is required");
+  });
+
+  test("getCalendar GETs /v1.0/me/calendars/{id} with Bearer token", async () => {
+    const requests: Request[] = [];
+    const client = createCalendarsClient({
+      accessToken: "tok-cal-get",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(calendarsListFixture.value[0]), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    });
+
+    const result = await client.get({ calendarId: "AAMkAGI2TG93AAA=" });
+
+    expect(requests[0].url).toBe("https://graph.microsoft.com/v1.0/me/calendars/AAMkAGI2TG93AAA%3D");
+    expect(requests[0].method).toBe("GET");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer tok-cal-get");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.calendar.id).toBe("AAMkAGI2TG93AAA=");
+      expect(result.calendar.name).toBe("Calendar");
+      expect(result.calendar.isDefaultCalendar).toBe(true);
+    }
+  });
+
+  test("getCalendar maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    const client = createCalendarsClient({
+      accessToken: "tok-cal-get",
+      fetch: async () => new Response("{}", { status: 429, headers: { "Retry-After": "11" } }),
+    });
+
+    const result = await client.get({ calendarId: "cal1" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
+  });
+
+  test("getCalendar maps non-200/429 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createCalendarsClient({
+      accessToken: "tok-cal-get",
+      fetch: async () => new Response("{}", { status: 404 }),
+    });
+
+    const result = await client.get({ calendarId: "missing" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
   });

@@ -4,6 +4,7 @@ import {
   validateGetDriveItemInput,
   validateDeleteDriveItemInput,
   validateCopyDriveItemInput,
+  validateUpdateDriveItemInput,
   createDriveItemsClient,
 } from "../src/files";
 
@@ -160,6 +161,58 @@ describe("microsoft-365 drive items extended (get/delete/copy)", () => {
     });
 
     const result = await client.copy({ itemId: "src", destinationId: "dst" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
+  test("validateUpdateDriveItemInput returns itemId and optional fields", () => {
+    const result = validateUpdateDriveItemInput({ itemId: "01DRIVEITEMID", name: "renamed.docx" });
+    expect(result.itemId).toBe("01DRIVEITEMID");
+    expect(result.name).toBe("renamed.docx");
+  });
+
+  test("validateUpdateDriveItemInput throws on missing itemId", () => {
+    expect(() => validateUpdateDriveItemInput({ name: "renamed.docx" })).toThrow("itemId is required");
+  });
+
+  test("updateDriveItem PATCHes /v1.0/me/drive/items/{id}", async () => {
+    const requests: Request[] = [];
+    const updated = { ...driveItemFixture, name: "renamed.docx" };
+    const client = createDriveItemsClient({
+      accessToken: "tok-drive-update",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(updated), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    });
+
+    const result = await client.update({ itemId: "01DRIVEITEMID", name: "renamed.docx" });
+
+    expect(requests[0].url).toBe("https://graph.microsoft.com/v1.0/me/drive/items/01DRIVEITEMID");
+    expect(requests[0].method).toBe("PATCH");
+    expect(await requests[0].json()).toEqual({ name: "renamed.docx" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.item.name).toBe("renamed.docx");
+  });
+
+  test("updateDriveItem maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    const client = createDriveItemsClient({
+      accessToken: "tok-drive-update",
+      fetch: async () => new Response("{}", { status: 429, headers: { "Retry-After": "14" } }),
+    });
+
+    const result = await client.update({ itemId: "item1", name: "x" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
+  });
+
+  test("updateDriveItem maps non-200/429 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createDriveItemsClient({
+      accessToken: "tok-drive-update",
+      fetch: async () => new Response("{}", { status: 404 }),
+    });
+
+    const result = await client.update({ itemId: "missing", name: "x" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
   });

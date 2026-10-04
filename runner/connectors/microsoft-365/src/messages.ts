@@ -244,19 +244,29 @@ export type MailFolder = {
   [key: string]: unknown;
 };
 
+export function parseMailFolder(value: unknown): MailFolder {
+  if (!isRecord(value)) throw new Error("id is required");
+  return {
+    id: requireString(value.id, "id"),
+    displayName: typeof value.displayName === "string" ? value.displayName : "",
+    totalItemCount: typeof value.totalItemCount === "number" ? value.totalItemCount : 0,
+    unreadItemCount: typeof value.unreadItemCount === "number" ? value.unreadItemCount : 0,
+    isHidden: typeof value.isHidden === "boolean" ? value.isHidden : undefined,
+  };
+}
+
 export function parseMailFoldersResponse(response: unknown): { folders: MailFolder[] } {
   if (!isRecord(response)) return { folders: [] };
   const value = response.value;
   if (!Array.isArray(value)) return { folders: [] };
-  return {
-    folders: value.filter(isRecord).map((f) => ({
-      id: requireString(f.id, "id"),
-      displayName: typeof f.displayName === "string" ? f.displayName : "",
-      totalItemCount: typeof f.totalItemCount === "number" ? f.totalItemCount : 0,
-      unreadItemCount: typeof f.unreadItemCount === "number" ? f.unreadItemCount : 0,
-      isHidden: typeof f.isHidden === "boolean" ? f.isHidden : undefined,
-    })),
-  };
+  return { folders: value.filter(isRecord).map(parseMailFolder) };
+}
+
+export type GetMailFolderInput = { folderId: string };
+
+export function validateGetMailFolderInput(input: unknown): GetMailFolderInput {
+  if (!isRecord(input)) throw new Error("get mail folder input must be an object");
+  return { folderId: requireString(input.folderId, "folderId") };
 }
 
 export function createMailFoldersClient(options: { accessToken: string; fetch?: typeof fetch; graphClient?: GraphClient }) {
@@ -274,6 +284,66 @@ export function createMailFoldersClient(options: { accessToken: string; fetch?: 
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Graph rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Graph rejected the list mail folders request." } };
+    },
+
+    async get(input: unknown) {
+      const payload = validateGetMailFolderInput(input);
+      const response = await client.fetchJSON(`/v1.0/me/mailFolders/${encodeURIComponent(payload.folderId)}`);
+      if (response.status === 200) {
+        return { ok: true as const, folder: parseMailFolder(response.body) };
+      }
+      if (response.status === 429) {
+        const rateLimit = parseGraphRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Graph rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Graph rejected the get mail folder request." } };
+    },
+  };
+}
+
+// ─── Create Draft Message ─────────────────────────────────────────────────────
+
+export type CreateMessageInput = { to?: string[]; subject: string; body?: string; contentType?: string };
+
+export function validateCreateMessageInput(input: unknown): CreateMessageInput {
+  if (!isRecord(input)) throw new Error("create message input must be an object");
+  const to = input.to === undefined ? undefined : requireArray(input.to, "to").map((recipient) => {
+    if (typeof recipient === "string") return requireRecipientAddress(recipient);
+    const record = requireRecord(recipient, "to");
+    const address = isRecord(record.emailAddress) ? record.emailAddress.address : record.address;
+    return requireRecipientAddress(address);
+  });
+  return {
+    subject: requireString(input.subject, "subject"),
+    to,
+    body: typeof input.body === "string" ? input.body : undefined,
+    contentType: typeof input.contentType === "string" ? input.contentType : "text",
+  };
+}
+
+export function createCreateMessageClient(options: { accessToken: string; fetch?: typeof fetch; graphClient?: GraphClient }) {
+  const client = options.graphClient ?? createGraphClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "messages.create" });
+
+  return {
+    async create(input: unknown) {
+      const payload = validateCreateMessageInput(input);
+      const body: Record<string, unknown> = { subject: payload.subject };
+      if (payload.body !== undefined) body.body = { contentType: payload.contentType, content: payload.body };
+      if (payload.to && payload.to.length > 0) body.toRecipients = payload.to.map((addr) => ({ emailAddress: { address: addr } }));
+      const response = await client.fetchJSON("/v1.0/me/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 201) {
+        const msg = response.body as OutlookMessage;
+        return { ok: true as const, message: normalizeOutlookMessage({ id: requireString((msg as Record<string, unknown>).id, "id"), ...msg as Record<string, unknown> }) };
+      }
+      if (response.status === 429) {
+        const rateLimit = parseGraphRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Graph rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Graph rejected the create message request." } };
     },
   };
 }

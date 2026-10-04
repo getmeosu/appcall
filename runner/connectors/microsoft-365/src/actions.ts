@@ -1,7 +1,8 @@
-import { createOutlookClient, validateSendMessageInput, createGetMessageClient, validateGetMessageInput, createReplyMessageClient, validateReplyMessageInput, createMoveMessageClient, validateMoveMessageInput, createDeleteMessageClient, validateDeleteMessageInput, createMailFoldersClient } from "./messages";
-import { createEventsClient, validateCreateEventInput, validateUpdateEventInput, validateDeleteEventInput, validateGetEventInput } from "./events";
-import { createDriveItemsClient, validateGetDriveItemInput, validateDeleteDriveItemInput, validateCopyDriveItemInput } from "./files";
-import { createContactsClient, validateCreateContactInput, validateListContactsInput } from "./contacts";
+import { createOutlookClient, validateSendMessageInput, createGetMessageClient, validateGetMessageInput, createReplyMessageClient, validateReplyMessageInput, createMoveMessageClient, validateMoveMessageInput, createDeleteMessageClient, validateDeleteMessageInput, createCreateMessageClient, validateCreateMessageInput, createMailFoldersClient, validateGetMailFolderInput } from "./messages";
+import { createEventsClient, validateCreateEventInput, validateUpdateEventInput, validateDeleteEventInput, validateGetEventInput, createCalendarsClient, validateGetCalendarInput } from "./events";
+import { createDriveItemsClient, validateGetDriveItemInput, validateDeleteDriveItemInput, validateCopyDriveItemInput, validateUpdateDriveItemInput } from "./files";
+import { createContactsClient, validateCreateContactInput, validateListContactsInput, validateGetContactInput, validateUpdateContactInput } from "./contacts";
+import { createUsersClient, validateGetMeInput } from "./users";
 import { createTeamsMeetingsClient, validateCreateMeetingInput, validateGetMeetingInput, validateUpdateMeetingInput, validateDeleteMeetingInput, validateGetMeetingByJoinUrlInput, validateCreateCalendarTeamsEventInput } from "./teams";
 
 export function sendMessage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -84,6 +85,21 @@ export function deleteMessage(input: unknown): Record<string, unknown> | Promise
   return { connector: "microsoft-365", action: "messages.delete", source: "connector", validated: validateDeleteMessageInput(input) };
 }
 
+export function createMessage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createCreateMessageClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).create(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "microsoft-365", action: "messages.create", source: "connector", message: result.message };
+    });
+  }
+  return { connector: "microsoft-365", action: "messages.create", source: "connector", validated: validateCreateMessageInput(input) };
+}
+
 export function listMailFolders(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return createMailFoldersClient({
@@ -97,6 +113,21 @@ export function listMailFolders(input: unknown): Record<string, unknown> | Promi
     });
   }
   return { connector: "microsoft-365", action: "mailFolders.list", source: "connector", validated: {} };
+}
+
+export function getMailFolder(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createMailFoldersClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "microsoft-365", action: "mailFolders.get", source: "connector", folder: result.folder };
+    });
+  }
+  return { connector: "microsoft-365", action: "mailFolders.get", source: "connector", validated: validateGetMailFolderInput(input) };
 }
 
 export function createEvent(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
@@ -159,6 +190,21 @@ export function getEvent(input: unknown): Record<string, unknown> | Promise<Reco
   return { connector: "microsoft-365", action: "events.get", source: "connector", validated: validateGetEventInput(input) };
 }
 
+export function getCalendar(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createCalendarsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "microsoft-365", action: "calendars.get", source: "connector", calendar: result.calendar };
+    });
+  }
+  return { connector: "microsoft-365", action: "calendars.get", source: "connector", validated: validateGetCalendarInput(input) };
+}
+
 export function getDriveItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return createDriveItemsClient({
@@ -204,6 +250,21 @@ export function copyDriveItem(input: unknown): Record<string, unknown> | Promise
   return { connector: "microsoft-365", action: "drive.items.copy", source: "connector", validated: validateCopyDriveItemInput(input) };
 }
 
+export function updateDriveItem(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createDriveItemsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).update(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "microsoft-365", action: "drive.items.update", source: "connector", item: result.item };
+    });
+  }
+  return { connector: "microsoft-365", action: "drive.items.update", source: "connector", validated: validateUpdateDriveItemInput(input) };
+}
+
 export function createContact(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
   if (isRecord(input) && typeof input.accessToken === "string") {
     return createContactsClient({
@@ -232,6 +293,51 @@ export function listContacts(input: unknown): Record<string, unknown> | Promise<
     });
   }
   return { connector: "microsoft-365", action: "contacts.list", source: "connector", validated: validateListContactsInput(input) };
+}
+
+export function getContact(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createContactsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "microsoft-365", action: "contacts.get", source: "connector", contact: result.contact };
+    });
+  }
+  return { connector: "microsoft-365", action: "contacts.get", source: "connector", validated: validateGetContactInput(input) };
+}
+
+export function updateContact(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createContactsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).update(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "microsoft-365", action: "contacts.update", source: "connector", contact: result.contact };
+    });
+  }
+  return { connector: "microsoft-365", action: "contacts.update", source: "connector", validated: validateUpdateContactInput(input) };
+}
+
+export function getMe(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createUsersClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).me(input).then((result) => {
+      if (!result.ok) {
+        throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      }
+      return { connector: "microsoft-365", action: "users.me", source: "connector", user: result.user };
+    });
+  }
+  return { connector: "microsoft-365", action: "users.me", source: "connector", validated: validateGetMeInput(input) };
 }
 
 // ─── Teams Meetings Actions ───────────────────────────────────────────────────

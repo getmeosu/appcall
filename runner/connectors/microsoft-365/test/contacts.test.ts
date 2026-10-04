@@ -4,6 +4,8 @@ import contactsListFixture from "../fixtures/contacts_list.json";
 import {
   validateCreateContactInput,
   validateListContactsInput,
+  validateGetContactInput,
+  validateUpdateContactInput,
   normalizeContact,
   parseContactsResponse,
   createContactsClient,
@@ -186,6 +188,90 @@ describe("microsoft-365 contacts (create/list)", () => {
     });
 
     const result = await client.list({});
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
+  test("validateGetContactInput returns contactId", () => {
+    const result = validateGetContactInput({ contactId: "AAMkAGI2contactAAA=" });
+    expect(result.contactId).toBe("AAMkAGI2contactAAA=");
+  });
+
+  test("validateGetContactInput throws on missing contactId", () => {
+    expect(() => validateGetContactInput({})).toThrow("contactId is required");
+  });
+
+  test("validateUpdateContactInput returns contactId and optional fields", () => {
+    const result = validateUpdateContactInput({ contactId: "AAMkAGI2contactAAA=", jobTitle: "Staff Engineer" });
+    expect(result.contactId).toBe("AAMkAGI2contactAAA=");
+    expect(result.jobTitle).toBe("Staff Engineer");
+    expect(result.givenName).toBeUndefined();
+  });
+
+  test("validateUpdateContactInput throws on missing contactId", () => {
+    expect(() => validateUpdateContactInput({ givenName: "Ada" })).toThrow("contactId is required");
+  });
+
+  test("getContact GETs /v1.0/me/contacts/{id} with Bearer token", async () => {
+    const requests: Request[] = [];
+    const client = createContactsClient({
+      accessToken: "tok-contact-get",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(contactCreateFixture), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    });
+
+    const result = await client.get({ contactId: "AAMkAGI2contactAAA=" });
+
+    expect(requests[0].url).toBe("https://graph.microsoft.com/v1.0/me/contacts/AAMkAGI2contactAAA%3D");
+    expect(requests[0].method).toBe("GET");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer tok-contact-get");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.contact.providerContactId).toBe("AAMkAGI2contactAAA=");
+      expect(result.contact.givenName).toBe("John");
+    }
+  });
+
+  test("getContact maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    const client = createContactsClient({
+      accessToken: "tok-contact-get",
+      fetch: async () => new Response("{}", { status: 429, headers: { "Retry-After": "6" } }),
+    });
+
+    const result = await client.get({ contactId: "c1" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
+  });
+
+  test("updateContact PATCHes /v1.0/me/contacts/{id}", async () => {
+    const requests: Request[] = [];
+    const updated = { ...contactCreateFixture, jobTitle: "Staff Engineer" };
+    const client = createContactsClient({
+      accessToken: "tok-contact-update",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(updated), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    });
+
+    const result = await client.update({ contactId: "AAMkAGI2contactAAA=", jobTitle: "Staff Engineer" });
+
+    expect(requests[0].url).toBe("https://graph.microsoft.com/v1.0/me/contacts/AAMkAGI2contactAAA%3D");
+    expect(requests[0].method).toBe("PATCH");
+    expect(await requests[0].json()).toEqual({ jobTitle: "Staff Engineer" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.contact.jobTitle).toBe("Staff Engineer");
+  });
+
+  test("updateContact maps non-200/429 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createContactsClient({
+      accessToken: "tok-contact-update",
+      fetch: async () => new Response("{}", { status: 404 }),
+    });
+
+    const result = await client.update({ contactId: "missing", givenName: "Ada" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
   });

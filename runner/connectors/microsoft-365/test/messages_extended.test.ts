@@ -1,15 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import messageGetFixture from "../fixtures/message_get.json";
+import messageCreateFixture from "../fixtures/message_create.json";
 import mailFoldersFixture from "../fixtures/mail_folders_list.json";
 import {
   validateGetMessageInput,
   validateReplyMessageInput,
   validateMoveMessageInput,
   validateDeleteMessageInput,
+  validateCreateMessageInput,
+  validateGetMailFolderInput,
   createGetMessageClient,
   createReplyMessageClient,
   createMoveMessageClient,
   createDeleteMessageClient,
+  createCreateMessageClient,
   createMailFoldersClient,
   parseMailFoldersResponse,
 } from "../src/messages";
@@ -47,6 +51,32 @@ describe("microsoft-365 messages extended (get/reply/move/delete/mailFolders)", 
   test("validateDeleteMessageInput returns messageId", () => {
     const result = validateDeleteMessageInput({ messageId: "msg456" });
     expect(result.messageId).toBe("msg456");
+  });
+
+  test("validateCreateMessageInput requires subject and accepts optional recipients", () => {
+    const result = validateCreateMessageInput({
+      subject: "Draft: project update",
+      to: ["recipient@example.com"],
+      body: "Sharing the weekly status...",
+    });
+    expect(result.subject).toBe("Draft: project update");
+    expect(result.to).toEqual(["recipient@example.com"]);
+    expect(result.body).toBe("Sharing the weekly status...");
+    expect(result.contentType).toBe("text");
+  });
+
+  test("validateCreateMessageInput throws on missing subject", () => {
+    expect(() => validateCreateMessageInput({})).toThrow("subject is required");
+    expect(() => validateCreateMessageInput("not-an-object")).toThrow();
+  });
+
+  test("validateGetMailFolderInput returns folderId", () => {
+    const result = validateGetMailFolderInput({ folderId: "inbox-folder-id" });
+    expect(result.folderId).toBe("inbox-folder-id");
+  });
+
+  test("validateGetMailFolderInput throws on missing folderId", () => {
+    expect(() => validateGetMailFolderInput({})).toThrow("folderId is required");
   });
 
   test("parseMailFoldersResponse parses folders", () => {
@@ -248,5 +278,111 @@ describe("microsoft-365 messages extended (get/reply/move/delete/mailFolders)", 
     const result = await client.list({});
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
+  });
+
+  // ─── Mocked HTTP: messages.create ────────────────────────────────────────────
+
+  test("createMessage POSTs a draft to /v1.0/me/messages", async () => {
+    const requests: Request[] = [];
+    const client = createCreateMessageClient({
+      accessToken: "tok-draft",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(messageCreateFixture), { status: 201, headers: { "Content-Type": "application/json" } });
+      },
+    });
+
+    const result = await client.create({
+      subject: "Draft: project update",
+      to: ["recipient@example.com"],
+      body: "Sharing the weekly status...",
+    });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://graph.microsoft.com/v1.0/me/messages");
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer tok-draft");
+    expect(await requests[0].json()).toEqual({
+      subject: "Draft: project update",
+      body: { contentType: "text", content: "Sharing the weekly status..." },
+      toRecipients: [{ emailAddress: { address: "recipient@example.com" } }],
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.message.providerMessageId).toBe("AAMkAGI2DRAFT=");
+      expect(result.message.raw.isDraft).toBe(true);
+    }
+  });
+
+  test("createMessage maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    const client = createCreateMessageClient({
+      accessToken: "tok-draft",
+      fetch: async () => new Response("{}", { status: 429, headers: { "Retry-After": "9" } }),
+    });
+
+    const result = await client.create({ subject: "Draft" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
+      expect(result.error.retryAfterSeconds).toBe(9);
+    }
+  });
+
+  test("createMessage maps non-201/429 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createCreateMessageClient({
+      accessToken: "tok-draft",
+      fetch: async () => new Response("{}", { status: 400 }),
+    });
+
+    const result = await client.create({ subject: "Draft" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
+  // ─── Mocked HTTP: mailFolders.get ────────────────────────────────────────────
+
+  test("getMailFolder GETs /v1.0/me/mailFolders/{id} with Bearer token", async () => {
+    const requests: Request[] = [];
+    const client = createMailFoldersClient({
+      accessToken: "tok-folder-get",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(mailFoldersFixture.value[0]), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    });
+
+    const result = await client.get({ folderId: "inbox-folder-id" });
+
+    expect(requests[0].url).toBe("https://graph.microsoft.com/v1.0/me/mailFolders/inbox-folder-id");
+    expect(requests[0].method).toBe("GET");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer tok-folder-get");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.folder.id).toBe("inbox-folder-id");
+      expect(result.folder.displayName).toBe("Inbox");
+      expect(result.folder.totalItemCount).toBe(42);
+    }
+  });
+
+  test("getMailFolder maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    const client = createMailFoldersClient({
+      accessToken: "tok-folder-get",
+      fetch: async () => new Response("{}", { status: 429, headers: { "Retry-After": "7" } }),
+    });
+
+    const result = await client.get({ folderId: "inbox-folder-id" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
+  });
+
+  test("getMailFolder maps non-200/429 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createMailFoldersClient({
+      accessToken: "tok-folder-get",
+      fetch: async () => new Response("{}", { status: 404 }),
+    });
+
+    const result = await client.get({ folderId: "missing" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
   });
 });

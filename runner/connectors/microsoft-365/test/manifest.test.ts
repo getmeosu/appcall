@@ -2,9 +2,10 @@ import { describe, expect, test } from "bun:test";
 import manifest from "../manifest.json";
 
 describe("microsoft-365 connector manifest", () => {
-  test("manifest declares key, runtime, and auth", () => {
+  test("manifest declares key, runtime, version, and auth", () => {
     expect(manifest.key).toBe("microsoft-365");
     expect(manifest.runtime).toBe("bun");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.auth.type).toBe("oauth2");
     expect(manifest.auth.scopes).toContain("Mail.Read");
     expect(manifest.auth.scopes).toContain("Mail.ReadWrite");
@@ -44,14 +45,32 @@ describe("microsoft-365 connector manifest", () => {
     expect(manifest.operations["drive.items.copy"].kind).toBe("action");
     expect(manifest.operations["contacts.create"].kind).toBe("action");
     expect(manifest.operations["contacts.list"].kind).toBe("action");
+    expect(manifest.operations["messages.create"].kind).toBe("action");
+    expect(manifest.operations["mailFolders.get"].kind).toBe("action");
+    expect(manifest.operations["calendars.get"].kind).toBe("action");
+    expect(manifest.operations["contacts.get"].kind).toBe("action");
+    expect(manifest.operations["contacts.update"].kind).toBe("action");
+    expect(manifest.operations["drive.items.update"].kind).toBe("action");
+    expect(manifest.operations["users.me"].kind).toBe("action");
+  });
+
+  test("manifest declares inbound Graph webhooks without compiling them", () => {
+    for (const key of ["webhook.message.created", "webhook.event.created", "webhook.event.updated"] as const) {
+      const spec = manifest.operations[key] as Record<string, unknown>;
+      expect(spec.kind).toBe("webhook");
+      expect(spec.request).toBeUndefined();
+      expect(typeof spec.timeoutMs).toBe("number");
+    }
   });
 
   test("all new action ops have non-empty title and description", () => {
     const newActionOps = [
-      "messages.get", "messages.reply", "messages.move", "messages.delete",
-      "mailFolders.list", "events.create", "events.update", "events.delete", "events.get",
-      "drive.items.get", "drive.items.delete", "drive.items.copy",
-      "contacts.create", "contacts.list",
+      "messages.get", "messages.reply", "messages.move", "messages.delete", "messages.create",
+      "mailFolders.list", "mailFolders.get", "events.create", "events.update", "events.delete", "events.get",
+      "calendars.get",
+      "drive.items.get", "drive.items.delete", "drive.items.copy", "drive.items.update",
+      "contacts.create", "contacts.list", "contacts.get", "contacts.update",
+      "users.me",
     ];
     for (const op of newActionOps) {
       const spec = manifest.operations[op] as Record<string, unknown>;
@@ -78,6 +97,7 @@ describe("microsoft-365 connector manifest", () => {
     expect(manifest.models).toContain("calendar");
     expect(manifest.models).toContain("drive_file");
     expect(manifest.models).toContain("contact");
+    expect(manifest.models).toContain("user");
   });
 
   test("manifest has timeout and size limits on all operations", () => {

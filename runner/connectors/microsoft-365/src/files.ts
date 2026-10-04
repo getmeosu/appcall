@@ -109,6 +109,17 @@ export function validateCopyDriveItemInput(input: unknown): CopyDriveItemInput {
   };
 }
 
+export type UpdateDriveItemInput = { itemId: string; name?: string; description?: string };
+
+export function validateUpdateDriveItemInput(input: unknown): UpdateDriveItemInput {
+  if (!isRecord(input)) throw new Error("update drive item input must be an object");
+  return {
+    itemId: requireString(input.itemId, "itemId"),
+    name: typeof input.name === "string" ? input.name : undefined,
+    description: typeof input.description === "string" ? input.description : undefined,
+  };
+}
+
 export function createDriveItemsClient(options: { accessToken: string; fetch?: typeof fetch; graphClient?: GraphClient }) {
   const client = options.graphClient ?? createGraphClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "drive.items.get" });
 
@@ -159,6 +170,26 @@ export function createDriveItemsClient(options: { accessToken: string; fetch?: t
         return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Graph rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
       }
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Graph rejected the copy drive item request." } };
+    },
+
+    async update(input: unknown) {
+      const payload = validateUpdateDriveItemInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.name) body.name = payload.name;
+      if (payload.description) body.description = payload.description;
+      const response = await client.fetchJSON(`/v1.0/me/drive/items/${encodeURIComponent(payload.itemId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (response.status === 200) {
+        return { ok: true as const, item: normalizeDriveFile(response.body as DriveFile) };
+      }
+      if (response.status === 429) {
+        const rateLimit = parseGraphRateLimit(response.status, response.headers);
+        return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED", message: "Graph rate limit exceeded.", retryAfterSeconds: rateLimit.limited ? rateLimit.retryAfterSeconds : undefined } };
+      }
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Graph rejected the update drive item request." } };
     },
   };
 }

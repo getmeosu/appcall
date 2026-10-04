@@ -5,16 +5,23 @@ import {
   replyMessage,
   moveMessage,
   deleteMessage,
+  createMessage,
   listMailFolders,
+  getMailFolder,
   createEvent,
   updateEvent,
   deleteEvent,
   getEvent,
+  getCalendar,
   getDriveItem,
   deleteDriveItem,
   copyDriveItem,
+  updateDriveItem,
   createContact,
   listContacts,
+  getContact,
+  updateContact,
+  getMe,
 } from "../src/actions";
 
 describe("microsoft-365 connector actions", () => {
@@ -424,5 +431,72 @@ describe("microsoft-365 connector actions", () => {
     expect(requests[0].url).toContain("/me/contacts");
     expect(requests[0].headers.get("Authorization")).toBe("Bearer tok-contacts");
     expect(result.contacts).toHaveLength(1);
+  });
+
+  test("createMessage validates a draft without auth", () => {
+    const result = createMessage({ subject: "Draft: project update" });
+    expect(result.action).toBe("messages.create");
+    expect(result.validated.subject).toBe("Draft: project update");
+  });
+
+  test("createMessage POSTs a draft with Bearer token", async () => {
+    const requests: Request[] = [];
+    const result = await createMessage({
+      accessToken: "tok-draft",
+      subject: "Draft: project update",
+      to: ["recipient@example.com"],
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify({ id: "draft-1", subject: "Draft: project update", isDraft: true }), { status: 201, headers: { "Content-Type": "application/json" } });
+      },
+    });
+    expect(requests[0].url).toContain("/me/messages");
+    expect(requests[0].method).toBe("POST");
+    expect(result.message.providerMessageId).toBe("draft-1");
+  });
+
+  test("getMailFolder validates input without auth", () => {
+    const result = getMailFolder({ folderId: "inbox-folder-id" });
+    expect(result.validated.folderId).toBe("inbox-folder-id");
+  });
+
+  test("getCalendar validates input without auth", () => {
+    const result = getCalendar({ calendarId: "cal-1" });
+    expect(result.validated.calendarId).toBe("cal-1");
+  });
+
+  test("getContact validates input without auth", () => {
+    const result = getContact({ contactId: "c1" });
+    expect(result.validated.contactId).toBe("c1");
+  });
+
+  test("updateContact validates input without auth", () => {
+    const result = updateContact({ contactId: "c1", jobTitle: "Engineer" });
+    expect(result.validated.jobTitle).toBe("Engineer");
+  });
+
+  test("updateDriveItem validates input without auth", () => {
+    const result = updateDriveItem({ itemId: "item1", name: "renamed.docx" });
+    expect(result.validated.name).toBe("renamed.docx");
+  });
+
+  test("getMe returns a stub without auth", () => {
+    const result = getMe({});
+    expect(result.action).toBe("users.me");
+    expect(result.source).toBe("connector");
+  });
+
+  test("getMe GETs /me with Bearer token", async () => {
+    const requests: Request[] = [];
+    const result = await getMe({
+      accessToken: "tok-me",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify({ id: "u1", displayName: "Alice", mail: "alice@example.com", userPrincipalName: "alice@example.com" }), { status: 200, headers: { "Content-Type": "application/json" } });
+      },
+    });
+    expect(requests[0].url).toBe("https://graph.microsoft.com/v1.0/me");
+    expect(result.user.id).toBe("u1");
+    expect(result.user.displayName).toBe("Alice");
   });
 });
