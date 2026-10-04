@@ -9,6 +9,15 @@ import inviteeNoShowFixture from "../fixtures/invitee_no_show.json";
 import schedulingLinkFixture from "../fixtures/scheduling_link.json";
 import availableTimesFixture from "../fixtures/available_times.json";
 import scheduledEventCreateFixture from "../fixtures/scheduled_event_create.json";
+import eventTypeGetFixture from "../fixtures/event_type_get.json";
+import inviteeGetFixture from "../fixtures/invitee_get.json";
+import organizationMembershipsFixture from "../fixtures/organization_memberships.json";
+import webhookSubscriptionFixture from "../fixtures/webhook_subscription.json";
+import webhookSubscriptionsFixture from "../fixtures/webhook_subscriptions.json";
+import userGetFixture from "../fixtures/user_get.json";
+import organizationGetFixture from "../fixtures/organization_get.json";
+import routingFormsFixture from "../fixtures/routing_forms.json";
+import routingFormFixture from "../fixtures/routing_form.json";
 
 import {
   getUsersMe,
@@ -21,6 +30,16 @@ import {
   createSchedulingLink,
   getAvailableSlots,
   createBooking,
+  getEventType,
+  getInvitee,
+  listOrganizationMemberships,
+  createWebhookSubscription,
+  listWebhookSubscriptions,
+  deleteWebhookSubscription,
+  getUser,
+  getOrganization,
+  listRoutingForms,
+  getRoutingForm,
   validateUsersMeInput,
   validateEventTypesListInput,
   validateScheduledEventsListInput,
@@ -31,6 +50,16 @@ import {
   validateSchedulingLinkCreateInput,
   validateSlotsAvailableInput,
   validateBookingsCreateInput,
+  validateEventTypesGetInput,
+  validateInviteesGetInput,
+  validateOrganizationMembershipsListInput,
+  validateWebhookSubscriptionsCreateInput,
+  validateWebhookSubscriptionsListInput,
+  validateWebhookSubscriptionsDeleteInput,
+  validateUsersGetInput,
+  validateOrganizationsGetInput,
+  validateRoutingFormsListInput,
+  validateRoutingFormsGetInput,
 } from "../src/actions";
 
 // ─── users.me.action ──────────────────────────────────────────────────────────
@@ -571,3 +600,251 @@ describe("createBooking", () => {
     })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 5 });
   });
 });
+
+describe("getEventType", () => {
+  test("throws when uuid is missing", () => {
+    expect(() => validateEventTypesGetInput({})).toThrow("uuid is required");
+  });
+
+  test("calls GET /event_types/{uuid}", async () => {
+    const requests: Request[] = [];
+    const result = await getEventType({
+      accessToken: "tok_test",
+      uuid: "et_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(eventTypeGetFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.calendly.com/event_types/et_001");
+    expect(result.action).toBe("event_types.get");
+    expect((result.eventType as { name: string }).name).toBe("30 Minute Meeting");
+  });
+
+  test("extracts uuid from a full event type URI", async () => {
+    const requests: Request[] = [];
+    await getEventType({
+      accessToken: "tok_test",
+      uuid: "https://api.calendly.com/event_types/et_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(eventTypeGetFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.calendly.com/event_types/et_001");
+  });
+});
+
+describe("getInvitee", () => {
+  test("requires eventUuid and uuid", () => {
+    expect(() => validateInviteesGetInput({ uuid: "inv_001" })).toThrow("eventUuid is required");
+    expect(() => validateInviteesGetInput({ eventUuid: "evt_001" })).toThrow("uuid is required");
+  });
+
+  test("calls GET /scheduled_events/{eventUuid}/invitees/{uuid}", async () => {
+    const requests: Request[] = [];
+    const result = await getInvitee({
+      accessToken: "tok_test",
+      eventUuid: "evt_001",
+      uuid: "inv_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(inviteeGetFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.calendly.com/scheduled_events/evt_001/invitees/inv_001");
+    expect(result.action).toBe("invitees.get");
+    expect((result.invitee as { email: string }).email).toBe("bob@example.com");
+  });
+});
+
+describe("listOrganizationMemberships", () => {
+  test("requires organization", () => {
+    expect(() => validateOrganizationMembershipsListInput({})).toThrow("organization is required");
+  });
+
+  test("calls GET /organization_memberships", async () => {
+    const requests: Request[] = [];
+    const result = await listOrganizationMemberships({
+      accessToken: "tok_test",
+      organization: "https://api.calendly.com/organizations/org_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(organizationMembershipsFixture), { status: 200 });
+      },
+    });
+    const url = new URL(requests[0].url);
+    expect(url.pathname).toBe("/organization_memberships");
+    expect(url.searchParams.get("organization")).toBe("https://api.calendly.com/organizations/org_001");
+    expect(result.action).toBe("organization.memberships.list");
+    expect((result.memberships as unknown[]).length).toBe(1);
+  });
+});
+
+describe("createWebhookSubscription", () => {
+  test("requires url, events, organization, and scope", () => {
+    expect(() => validateWebhookSubscriptionsCreateInput({
+      events: ["invitee.created"],
+      organization: "https://api.calendly.com/organizations/org_001",
+      scope: "organization",
+    })).toThrow("url is required");
+  });
+
+  test("POSTs to /webhook_subscriptions", async () => {
+    const requests: Request[] = [];
+    const result = await createWebhookSubscription({
+      accessToken: "tok_test",
+      url: "https://example.com/hooks/calendly",
+      events: ["invitee.created", "invitee.canceled"],
+      organization: "https://api.calendly.com/organizations/org_001",
+      scope: "organization",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(webhookSubscriptionFixture), { status: 201 });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.calendly.com/webhook_subscriptions");
+    expect(requests[0].method).toBe("POST");
+    const body = await requests[0].json() as Record<string, unknown>;
+    expect(body).toMatchObject({
+      url: "https://example.com/hooks/calendly",
+      events: ["invitee.created", "invitee.canceled"],
+      organization: "https://api.calendly.com/organizations/org_001",
+      scope: "organization",
+    });
+    expect(result.action).toBe("webhook_subscriptions.create");
+    expect(result.subscription).toBeDefined();
+  });
+});
+
+describe("listWebhookSubscriptions", () => {
+  test("requires organization", () => {
+    expect(() => validateWebhookSubscriptionsListInput({})).toThrow("organization is required");
+  });
+
+  test("calls GET /webhook_subscriptions", async () => {
+    const requests: Request[] = [];
+    const result = await listWebhookSubscriptions({
+      accessToken: "tok_test",
+      organization: "https://api.calendly.com/organizations/org_001",
+      scope: "organization",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(webhookSubscriptionsFixture), { status: 200 });
+      },
+    });
+    const url = new URL(requests[0].url);
+    expect(url.pathname).toBe("/webhook_subscriptions");
+    expect(url.searchParams.get("organization")).toBe("https://api.calendly.com/organizations/org_001");
+    expect(result.action).toBe("webhook_subscriptions.list");
+    expect((result.subscriptions as unknown[]).length).toBe(1);
+  });
+});
+
+describe("deleteWebhookSubscription", () => {
+  test("requires uuid", () => {
+    expect(() => validateWebhookSubscriptionsDeleteInput({})).toThrow("uuid is required");
+  });
+
+  test("DELETEs /webhook_subscriptions/{uuid}", async () => {
+    const requests: Request[] = [];
+    const result = await deleteWebhookSubscription({
+      accessToken: "tok_test",
+      uuid: "wh_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(null, { status: 204 });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.calendly.com/webhook_subscriptions/wh_001");
+    expect(requests[0].method).toBe("DELETE");
+    expect(result.action).toBe("webhook_subscriptions.delete");
+    expect(result.deleted).toBe(true);
+  });
+});
+
+describe("getUser", () => {
+  test("requires uuid", () => {
+    expect(() => validateUsersGetInput({})).toThrow("uuid is required");
+  });
+
+  test("calls GET /users/{uuid}", async () => {
+    const requests: Request[] = [];
+    const result = await getUser({
+      accessToken: "tok_test",
+      uuid: "usr_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(userGetFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.calendly.com/users/usr_001");
+    expect(result.action).toBe("users.get");
+    expect((result.user as { email: string }).email).toBe("jane@example.com");
+  });
+});
+
+describe("getOrganization", () => {
+  test("requires uuid", () => {
+    expect(() => validateOrganizationsGetInput({})).toThrow("uuid is required");
+  });
+
+  test("calls GET /organizations/{uuid}", async () => {
+    const requests: Request[] = [];
+    const result = await getOrganization({
+      accessToken: "tok_test",
+      uuid: "org_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(organizationGetFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.calendly.com/organizations/org_001");
+    expect(result.action).toBe("organizations.get");
+    expect((result.organization as { name: string }).name).toBe("Acme");
+  });
+});
+
+describe("listRoutingForms", () => {
+  test("requires organization", () => {
+    expect(() => validateRoutingFormsListInput({})).toThrow("organization is required");
+  });
+
+  test("calls GET /routing_forms", async () => {
+    const requests: Request[] = [];
+    const result = await listRoutingForms({
+      accessToken: "tok_test",
+      organization: "https://api.calendly.com/organizations/org_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(routingFormsFixture), { status: 200 });
+      },
+    });
+    const url = new URL(requests[0].url);
+    expect(url.pathname).toBe("/routing_forms");
+    expect(result.action).toBe("routing_forms.list");
+    expect((result.routingForms as unknown[]).length).toBe(1);
+  });
+});
+
+describe("getRoutingForm", () => {
+  test("requires uuid", () => {
+    expect(() => validateRoutingFormsGetInput({})).toThrow("uuid is required");
+  });
+
+  test("calls GET /routing_forms/{uuid}", async () => {
+    const requests: Request[] = [];
+    const result = await getRoutingForm({
+      accessToken: "tok_test",
+      uuid: "rf_001",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(routingFormFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].url).toBe("https://api.calendly.com/routing_forms/rf_001");
+    expect(result.action).toBe("routing_forms.get");
+    expect((result.routingForm as { name: string }).name).toBe("Inbound demo");
+  });
+});
+

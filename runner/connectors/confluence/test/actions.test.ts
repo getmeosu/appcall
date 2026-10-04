@@ -12,6 +12,12 @@ import commentFixture from "../fixtures/comment.json";
 import errorV2NotFoundFixture from "../fixtures/error_v2_not_found.json";
 import errorV1ForbiddenFixture from "../fixtures/error_v1_forbidden.json";
 import errorRateLimitedFixture from "../fixtures/error_rate_limited.json";
+import childrenFixture from "../fixtures/children.json";
+import labelsFixture from "../fixtures/labels.json";
+import labelFixture from "../fixtures/label.json";
+import commentsFixture from "../fixtures/comments.json";
+import blogpostFixture from "../fixtures/blogpost.json";
+import blogpostsFixture from "../fixtures/blogposts.json";
 
 const { actions } = compileDeclarativeConnector(manifest as never);
 
@@ -32,8 +38,12 @@ function mockJson(body: unknown, status = 200, headers: Record<string, string> =
 const creds = { site: "acme.atlassian.net", email: "me@acme.com", apiToken: "tok123", basicAuth: "bWU6dG9rMTIz" };
 
 describe("confluence connector surface", () => {
-  it("compiles one handler per declared operation", () => {
-    expect(Object.keys(actions).sort()).toEqual(Object.keys(manifest.operations).sort());
+  it("compiles one handler per declared action", () => {
+    const actionKeys = Object.entries(manifest.operations as Record<string, { kind: string }>)
+      .filter(([, op]) => op.kind === "action")
+      .map(([key]) => key)
+      .sort();
+    expect(Object.keys(actions).sort()).toEqual(actionKeys);
   });
 });
 
@@ -288,6 +298,141 @@ describe("comment.create", () => {
     expect(calls[0]!.init?.method).toBe("POST");
     const comment = result.comment as Record<string, unknown>;
     expect(comment.id).toBe("c98765");
+  });
+});
+
+describe("page.children.list", () => {
+  it("requires id and lists child pages", async () => {
+    expect(() => actions["page.children.list"]!({ ...creds })).toThrow("id is required");
+    const { calls, fetchFn } = mockJson(childrenFixture);
+    const result = await actions["page.children.list"]!({ ...creds, id: "123456", fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/pages/123456/children");
+    expect((result.pages as unknown[]).length).toBe(1);
+    expect(result.nextLink).toBe("/wiki/api/v2/pages/123456/children?cursor=ch2&limit=25");
+  });
+});
+
+describe("space.create", () => {
+  it("requires name and key", () => {
+    expect(() => actions["space.create"]!({ ...creds, name: "Engineering" })).toThrow("key is required");
+  });
+
+  it("POSTs name and key to /api/v2/spaces", async () => {
+    const { calls, fetchFn } = mockJson(spaceFixture, 201);
+    const result = await actions["space.create"]!({
+      ...creds, name: "Engineering", key: "ENG", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/spaces");
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]!.init?.body))).toMatchObject({ name: "Engineering", key: "ENG" });
+    expect((result.space as Record<string, unknown>).id).toBe("98765");
+  });
+});
+
+describe("labels.list", () => {
+  it("requires id and lists labels for a page", async () => {
+    expect(() => actions["labels.list"]!({ ...creds })).toThrow("id is required");
+    const { calls, fetchFn } = mockJson(labelsFixture);
+    const result = await actions["labels.list"]!({ ...creds, id: "123456", fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/pages/123456/labels");
+    expect((result.labels as unknown[]).length).toBe(2);
+    expect(result.nextLink).toContain("cursor=lab2");
+  });
+});
+
+describe("labels.add", () => {
+  it("requires id and name", () => {
+    expect(() => actions["labels.add"]!({ ...creds, id: "123456" })).toThrow("name is required");
+  });
+
+  it("POSTs a label array to /api/v2/pages/{id}/labels", async () => {
+    const { calls, fetchFn } = mockJson(labelFixture, 200);
+    const result = await actions["labels.add"]!({
+      ...creds, id: "123456", name: "onboarding", prefix: "global", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/pages/123456/labels");
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]!.init?.body))).toEqual([{ prefix: "global", name: "onboarding" }]);
+    expect((result.labels as unknown[]).length).toBe(1);
+  });
+});
+
+describe("labels.remove", () => {
+  it("requires id and name", () => {
+    expect(() => actions["labels.remove"]!({ ...creds, id: "123456" })).toThrow("name is required");
+  });
+
+  it("DELETEs the named label from the page", async () => {
+    const { calls, fetchFn } = mockJson(null, 204);
+    const result = await actions["labels.remove"]!({
+      ...creds, id: "123456", name: "onboarding", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("DELETE");
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/pages/123456/labels");
+    expect(new URL(calls[0]!.url).searchParams.get("name")).toBe("onboarding");
+    expect(result).toMatchObject({ deleted: true, name: "onboarding" });
+  });
+});
+
+describe("comment.list", () => {
+  it("requires id and lists footer comments for a page", async () => {
+    expect(() => actions["comment.list"]!({ ...creds })).toThrow("id is required");
+    const { calls, fetchFn } = mockJson(commentsFixture);
+    const result = await actions["comment.list"]!({ ...creds, id: "123456", fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/pages/123456/footer-comments");
+    expect((result.comments as unknown[]).length).toBe(1);
+  });
+});
+
+describe("comment.get", () => {
+  it("requires id and fetches a footer comment", async () => {
+    expect(() => actions["comment.get"]!({ ...creds })).toThrow("id is required");
+    const { calls, fetchFn } = mockJson(commentFixture);
+    const result = await actions["comment.get"]!({ ...creds, id: "c98765", fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/footer-comments/c98765");
+    expect((result.comment as Record<string, unknown>).id).toBe("c98765");
+  });
+});
+
+describe("blogpost.list", () => {
+  it("lists blog posts and maps nextLink", async () => {
+    const { calls, fetchFn } = mockJson(blogpostsFixture);
+    const result = await actions["blogpost.list"]!({ ...creds, spaceId: "98765", fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/blogposts");
+    expect(new URL(calls[0]!.url).searchParams.get("space-id")).toBe("98765");
+    expect((result.blogposts as unknown[]).length).toBe(1);
+    expect(result.nextLink).toContain("cursor=bp2");
+  });
+});
+
+describe("blogpost.get", () => {
+  it("requires id", () => {
+    expect(() => actions["blogpost.get"]!({ ...creds })).toThrow("id is required");
+  });
+
+  it("fetches GET /api/v2/blogposts/{id}", async () => {
+    const { calls, fetchFn } = mockJson(blogpostFixture);
+    const result = await actions["blogpost.get"]!({ ...creds, id: "b1001", fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/blogposts/b1001");
+    expect((result.blogpost as Record<string, unknown>).title).toBe("Ship notes");
+  });
+});
+
+describe("blogpost.create", () => {
+  it("requires spaceId", () => {
+    expect(() => actions["blogpost.create"]!({ ...creds, title: "Ship notes" })).toThrow("spaceId is required");
+  });
+
+  it("POSTs to /api/v2/blogposts", async () => {
+    const { calls, fetchFn } = mockJson(blogpostFixture, 200);
+    const result = await actions["blogpost.create"]!({
+      ...creds, spaceId: "98765", title: "Ship notes",
+      body: { representation: "storage", value: "<p>We shipped.</p>" },
+      fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/wiki/api/v2/blogposts");
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect((result.blogpost as Record<string, unknown>).id).toBe("b1001");
   });
 });
 

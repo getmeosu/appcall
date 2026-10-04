@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test";
 import manifest from "../manifest.json";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
+const actionOps = Object.fromEntries(Object.entries(operations).filter(([, op]) => op.kind === "action"));
+const webhookOps = Object.fromEntries(Object.entries(operations).filter(([, op]) => op.kind === "webhook"));
 
 describe("gitlab manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
@@ -26,7 +28,7 @@ describe("gitlab manifest", () => {
     expect(manifest.http.auth.value).toBe("Bearer {{apiToken}}");
   });
 
-  it("declares exactly the 16 operations the brief lists", () => {
+  it("declares the existing surface plus the first depth slice", () => {
     expect(Object.keys(operations).sort()).toEqual(
       [
         "healthcheck",
@@ -35,22 +37,37 @@ describe("gitlab manifest", () => {
         "issues.get",
         "issues.list",
         "issues.comment",
+        "issues.close",
         "mergeRequests.create",
         "mergeRequests.update",
         "mergeRequests.get",
         "mergeRequests.list",
         "mergeRequests.merge",
+        "mergeRequests.notes.create",
         "pipelines.create",
         "pipelines.get",
         "pipelines.list",
         "projects.list",
         "projects.get",
+        "projects.create",
+        "projects.update",
+        "jobs.list",
+        "jobs.get",
+        "repository.files.get",
+        "groups.list",
+        "groups.get",
+        "branches.list",
+        "repository.commits.list",
+        "webhook.push",
+        "webhook.merge_request",
+        "webhook.issue",
+        "webhook.pipeline",
       ].sort(),
     );
   });
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOps)) {
       expect(operation.kind, key).toBe("action");
       expect(operation.timeoutMs as number, key).toBeGreaterThan(0);
       expect(operation.maxInputBytes as number, key).toBeGreaterThan(0);
@@ -64,8 +81,25 @@ describe("gitlab manifest", () => {
     }
   });
 
+  it("declares EventOnly webhooks without a request or tool schema", () => {
+    expect(Object.keys(webhookOps).sort()).toEqual([
+      "webhook.issue",
+      "webhook.merge_request",
+      "webhook.pipeline",
+      "webhook.push",
+    ]);
+    for (const [key, operation] of Object.entries(webhookOps)) {
+      expect(operation.kind, key).toBe("webhook");
+      expect(operation.timeoutMs as number, key).toBeGreaterThan(0);
+      expect(operation.maxInputBytes as number, key).toBeGreaterThan(0);
+      expect(operation.maxResponseBytes as number, key).toBeGreaterThan(0);
+      expect(operation.request, key).toBeUndefined();
+      expect(operation.inputSchema, key).toBeUndefined();
+    }
+  });
+
   it("classifies every mutating operation as a write — a safety control, not metadata", () => {
-    const writes = Object.entries(operations)
+    const writes = Object.entries(actionOps)
       .filter(([, operation]) => ["POST", "PUT", "PATCH", "DELETE"].includes(String((operation.request as Record<string, unknown>).method)))
       .map(([key]) => key);
     expect(writes.length).toBeGreaterThan(0);
@@ -75,7 +109,7 @@ describe("gitlab manifest", () => {
   });
 
   it("only interpolates path placeholders the operation's schema requires", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOps)) {
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { required?: string[] };
       const placeholders = [...String(request.path ?? "").matchAll(/\{\{\s*([A-Za-z0-9_.$-]+)\s*\}\}/g)].map((match) => match[1]);
@@ -86,7 +120,7 @@ describe("gitlab manifest", () => {
   });
 
   it("templates every query and body value from a declared input", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOps)) {
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { properties?: Record<string, unknown> };
       const declared = Object.keys(schema.properties ?? {});
@@ -143,7 +177,7 @@ describe("gitlab manifest", () => {
   });
 
   it("takes the project-scoped iid in every path that has one", () => {
-    for (const [key, op] of Object.entries(operations)) {
+    for (const [key, op] of Object.entries(actionOps)) {
       const path = String((op.request as Record<string, unknown>).path ?? "");
       if (path.includes("/issues/")) expect(path, key).toContain("{{issueIid}}");
       if (path.includes("/merge_requests/")) expect(path, key).toContain("{{mergeRequestIid}}");
@@ -151,13 +185,13 @@ describe("gitlab manifest", () => {
   });
 
   it("names the issue and merge request path inputs iid, not id, so an agent cannot pass the wrong one", () => {
-    for (const key of ["issues.update", "issues.get", "issues.comment"]) {
+    for (const key of ["issues.update", "issues.get", "issues.comment", "issues.close"]) {
       const schema = operations[key]!.inputSchema as { properties?: Record<string, unknown>; required?: string[] };
       expect(Object.keys(schema.properties ?? {}), key).toContain("issueIid");
       expect(Object.keys(schema.properties ?? {}), key).not.toContain("issueId");
       expect(schema.required ?? [], key).toContain("issueIid");
     }
-    for (const key of ["mergeRequests.update", "mergeRequests.get", "mergeRequests.merge"]) {
+    for (const key of ["mergeRequests.update", "mergeRequests.get", "mergeRequests.merge", "mergeRequests.notes.create"]) {
       const schema = operations[key]!.inputSchema as { properties?: Record<string, unknown>; required?: string[] };
       expect(Object.keys(schema.properties ?? {}), key).toContain("mergeRequestIid");
       expect(Object.keys(schema.properties ?? {}), key).not.toContain("mergeRequestId");
@@ -172,7 +206,7 @@ describe("gitlab manifest", () => {
   });
 
   it("maps the next offset page from the x-next-page response header on every list operation", () => {
-    for (const key of ["issues.list", "mergeRequests.list", "pipelines.list", "projects.list"]) {
+    for (const key of ["issues.list", "mergeRequests.list", "pipelines.list", "projects.list", "jobs.list", "groups.list", "branches.list", "repository.commits.list"]) {
       const result = JSON.stringify((operations[key]!.request as Record<string, unknown>).result ?? {});
       expect(result, key).toContain("{{headers.x-next-page}}");
     }
@@ -184,11 +218,28 @@ describe("gitlab manifest", () => {
   });
 
   it("requires projectId on every project-scoped operation", () => {
-    for (const [key, op] of Object.entries(operations)) {
+    for (const [key, op] of Object.entries(actionOps)) {
       const path = String((op.request as Record<string, unknown>).path ?? "");
       if (!path.startsWith("/projects/{{projectId}}")) continue;
       const schema = op.inputSchema as { required?: string[] };
       expect(schema.required ?? [], key).toContain("projectId");
     }
+  });
+
+  it("closes an issue with a dedicated PUT state_event=close, not a generic update", () => {
+    const request = operations["issues.close"]!.request as Record<string, unknown>;
+    expect(request.method).toBe("PUT");
+    expect(request.path).toBe("/projects/{{projectId}}/issues/{{issueIid}}");
+    expect(JSON.stringify(request.body)).toContain("state_event");
+    expect(JSON.stringify(request.body)).toContain("close");
+  });
+
+  it("reads a repository file through the encoded filePath segment and required ref", () => {
+    const op = operations["repository.files.get"]!;
+    const request = op.request as Record<string, unknown>;
+    const schema = op.inputSchema as { required?: string[]; properties?: Record<string, unknown> };
+    expect(request.path).toBe("/projects/{{projectId}}/repository/files/{{filePath}}");
+    expect(schema.required).toEqual(expect.arrayContaining(["projectId", "filePath", "ref"]));
+    expect(JSON.stringify(request.query)).toContain("{{ref}}");
   });
 });
