@@ -89,7 +89,14 @@
       "account.get",
       "images.list",
       "images.get",
-      "images.search"
+      "images.search",
+      "account.update",
+      "images.create",
+      "images.update",
+      "images.delete",
+      "images.scrape",
+      "webhook.uploaded",
+      "webhook.deleted"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -239,12 +246,110 @@
       "adaptations": [
         "Maps to official GET /images/search with query bound to q (pinned source maps input.query to q). Optional page and limit. Returns raw JSON body under data rather than header pagination."
       ]
+    },
+    "account.update": {
+      "upstreamActionId": "update_account",
+      "sourceRefs": [
+        "definition"
+      ],
+      "documentationUrls": [
+        "https://alttext.ai/apidocs",
+        "https://alttext.ai/openapi.yml"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Declarative PUT /account with account.name/webhook_url/notification_email."
+      ]
+    },
+    "images.create": {
+      "upstreamActionId": "create_image",
+      "sourceRefs": [
+        "definition"
+      ],
+      "documentationUrls": [
+        "https://alttext.ai/apidocs",
+        "https://alttext.ai/openapi.yml"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Declarative POST /images with image.url. Raw base64 uploads and multipart bulk_create are omitted."
+      ]
+    },
+    "images.update": {
+      "upstreamActionId": "update_image",
+      "sourceRefs": [
+        "definition"
+      ],
+      "documentationUrls": [
+        "https://alttext.ai/apidocs",
+        "https://alttext.ai/openapi.yml"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Declarative PUT /images/{asset_id} with image.alt_text and optional lang/overwrite query."
+      ]
+    },
+    "images.delete": {
+      "upstreamActionId": "delete_image",
+      "sourceRefs": [
+        "definition"
+      ],
+      "documentationUrls": [
+        "https://alttext.ai/apidocs",
+        "https://alttext.ai/openapi.yml"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Declarative DELETE /images/{asset_id}."
+      ]
+    },
+    "images.scrape": {
+      "upstreamActionId": "page_scrape",
+      "sourceRefs": [
+        "definition"
+      ],
+      "documentationUrls": [
+        "https://alttext.ai/apidocs",
+        "https://alttext.ai/openapi.yml"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Declarative POST /images/page_scrape with page_scrape.url."
+      ]
+    },
+    "webhook.uploaded": {
+      "upstreamActionId": "webhook_uploaded",
+      "sourceRefs": [
+        "definition"
+      ],
+      "documentationUrls": [
+        "https://alttext.ai/apidocs",
+        "https://alttext.ai/openapi.yml"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly ImageEvent webhook. No HTTP request; AltText.ai POSTs event=uploaded."
+      ]
+    },
+    "webhook.deleted": {
+      "upstreamActionId": "webhook_deleted",
+      "sourceRefs": [
+        "definition"
+      ],
+      "documentationUrls": [
+        "https://alttext.ai/apidocs",
+        "https://alttext.ai/openapi.yml"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly ImageEvent webhook. No HTTP request; AltText.ai POSTs event=deleted."
+      ]
     }
   },
   "manifest": {
     "key": "alt-text-ai",
     "name": "AltText.ai",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -527,6 +632,336 @@
             200
           ]
         }
+      },
+      "account.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update account",
+        "description": "Update AltText.ai account settings via PUT /account.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Account display name."
+            },
+            "webhook_url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "ImageEvent webhook URL."
+            },
+            "notification_email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Notification email."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "PUT",
+          "path": "/account",
+          "success": [
+            200
+          ],
+          "body": {
+            "account": {
+              "name": "{{name}}",
+              "webhook_url": "{{webhook_url}}",
+              "notification_email": "{{notification_email}}"
+            }
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "images.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create image",
+        "description": "Add an image URL and generate alt text via POST /images.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Public image URL."
+            },
+            "asset_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional client asset ID."
+            },
+            "lang": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code or comma-separated codes."
+            },
+            "overwrite": {
+              "type": "boolean",
+              "description": "Overwrite existing alt text."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "url"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/images",
+          "success": [
+            200
+          ],
+          "body": {
+            "image": {
+              "url": "{{url}}",
+              "asset_id": "{{asset_id}}"
+            },
+            "lang": "{{lang}}",
+            "overwrite": "{{overwrite}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "images.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update image",
+        "description": "Update an AltText.ai image via PUT /images/{asset_id}.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "asset_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Image asset ID."
+            },
+            "alt_text": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Replacement alt text."
+            },
+            "lang": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code for the update."
+            },
+            "overwrite": {
+              "type": "boolean",
+              "description": "Overwrite existing alt text in the requested language."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "asset_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "PUT",
+          "path": "/images/{{asset_id}}",
+          "success": [
+            200
+          ],
+          "query": {
+            "lang": "{{lang}}",
+            "overwrite": "{{overwrite}}"
+          },
+          "body": {
+            "image": {
+              "alt_text": "{{alt_text}}"
+            }
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "images.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete image",
+        "description": "Delete an AltText.ai image via DELETE /images/{asset_id}.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "asset_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Image asset ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "asset_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "DELETE",
+          "path": "/images/{{asset_id}}",
+          "success": [
+            200
+          ]
+        }
+      },
+      "images.scrape": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Scrape page images",
+        "description": "Scrape a page for images and queue alt text via POST /images/page_scrape.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Page URL to scrape."
+            },
+            "lang": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Language code or comma-separated codes."
+            },
+            "include_existing": {
+              "type": "boolean",
+              "description": "Also process images that already have alt text."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "url"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/images/page_scrape",
+          "success": [
+            200
+          ],
+          "body": {
+            "page_scrape": {
+              "url": "{{url}}"
+            },
+            "lang": "{{lang}}",
+            "include_existing": "{{include_existing}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "webhook.uploaded": {
+        "kind": "webhook",
+        "sideEffect": "read",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "title": "Image uploaded",
+        "description": "AltText.ai ImageEvent webhook when new images are added to the library. EventOnly; AltText.ai POSTs event=uploaded to the account webhook_url."
+      },
+      "webhook.deleted": {
+        "kind": "webhook",
+        "sideEffect": "read",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "title": "Image deleted",
+        "description": "AltText.ai ImageEvent webhook when images are deleted from the library. EventOnly; AltText.ai POSTs event=deleted to the account webhook_url."
       }
     },
     "provenance": {

@@ -1,7 +1,17 @@
 {
+  "key": "alt-text-ai",
+  "name": "AltText.ai",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,14 +19,609 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
+      ]
+    }
   },
-  "categories": [
-    "utility"
+  "network": {
+    "allowedHosts": [
+      "alttext.ai"
+    ]
+  },
+  "models": [
+    "account",
+    "image"
   ],
+  "http": {
+    "baseUrl": "https://alttext.ai/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "errors",
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the AltText.ai API key with GET /account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      }
+    },
+    "account.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get account",
+      "description": "Retrieve AltText.ai account settings and usage details for the API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/account",
+        "success": [
+          200
+        ]
+      }
+    },
+    "images.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List images",
+      "description": "List image records in the AltText.ai library with optional URL filtering.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/images",
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}",
+          "url": "{{url}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "images.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get image",
+      "description": "Retrieve a single AltText.ai image record by asset ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "asset_id"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/images/{{asset_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "images.search": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Search images",
+      "description": "Search the AltText.ai image library by URL, asset ID, or alt text content.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/images/search",
+        "query": {
+          "q": "{{query}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "account.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update account",
+      "description": "Update AltText.ai account settings via PUT /account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Account display name."
+          },
+          "webhook_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ImageEvent webhook URL."
+          },
+          "notification_email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Notification email."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/account",
+        "success": [
+          200
+        ],
+        "body": {
+          "account": {
+            "name": "{{name}}",
+            "webhook_url": "{{webhook_url}}",
+            "notification_email": "{{notification_email}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "images.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create image",
+      "description": "Add an image URL and generate alt text via POST /images.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public image URL."
+          },
+          "asset_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional client asset ID."
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Language code or comma-separated codes."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Overwrite existing alt text."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/images",
+        "success": [
+          200
+        ],
+        "body": {
+          "image": {
+            "url": "{{url}}",
+            "asset_id": "{{asset_id}}"
+          },
+          "lang": "{{lang}}",
+          "overwrite": "{{overwrite}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "images.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update image",
+      "description": "Update an AltText.ai image via PUT /images/{asset_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Image asset ID."
+          },
+          "alt_text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Replacement alt text."
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Language code for the update."
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Overwrite existing alt text in the requested language."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "asset_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/images/{{asset_id}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "lang": "{{lang}}",
+          "overwrite": "{{overwrite}}"
+        },
+        "body": {
+          "image": {
+            "alt_text": "{{alt_text}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "images.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete image",
+      "description": "Delete an AltText.ai image via DELETE /images/{asset_id}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Image asset ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "asset_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/images/{{asset_id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "images.scrape": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Scrape page images",
+      "description": "Scrape a page for images and queue alt text via POST /images/page_scrape.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page URL to scrape."
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Language code or comma-separated codes."
+          },
+          "include_existing": {
+            "type": "boolean",
+            "description": "Also process images that already have alt text."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/images/page_scrape",
+        "success": [
+          200
+        ],
+        "body": {
+          "page_scrape": {
+            "url": "{{url}}"
+          },
+          "lang": "{{lang}}",
+          "include_existing": "{{include_existing}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "webhook.uploaded": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Image uploaded",
+      "description": "AltText.ai ImageEvent webhook when new images are added to the library. EventOnly; AltText.ai POSTs event=uploaded to the account webhook_url."
+    },
+    "webhook.deleted": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Image deleted",
+      "description": "AltText.ai ImageEvent webhook when images are deleted from the library. EventOnly; AltText.ai POSTs event=deleted to the account webhook_url."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
   "evidence": {
     "fixture": {
       "status": "supplied"
@@ -24,280 +629,5 @@
     "live": {
       "status": "unverified"
     }
-  },
-  "http": {
-    "auth": {
-      "field": "apiKey",
-      "in": "header",
-      "name": "X-API-Key",
-      "value": "{{apiKey}}"
-    },
-    "baseUrl": "https://alttext.ai/api/v1",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "error",
-        "errors",
-        "message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    }
-  },
-  "key": "alt-text-ai",
-  "models": [
-    "account",
-    "image"
-  ],
-  "name": "AltText.ai",
-  "network": {
-    "allowedHosts": [
-      "alttext.ai"
-    ]
-  },
-  "operations": {
-    "account.get": {
-      "description": "Retrieve AltText.ai account settings and usage details for the API key.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/account",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get account",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the AltText.ai API key with GET /account.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/account",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "images.get": {
-      "description": "Retrieve a single AltText.ai image record by asset ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "asset_id": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "asset_id"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/images/{{asset_id}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get image",
-      "validationMode": "strict-generated"
-    },
-    "images.list": {
-      "description": "List image records in the AltText.ai library with optional URL filtering.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "url": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/images",
-        "query": {
-          "limit": "{{limit}}",
-          "page": "{{page}}",
-          "url": "{{url}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List images",
-      "validationMode": "strict-generated"
-    },
-    "images.search": {
-      "description": "Search the AltText.ai image library by URL, asset ID, or alt text content.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "query": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "query"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/images/search",
-        "query": {
-          "limit": "{{limit}}",
-          "page": "{{page}}",
-          "q": "{{query}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Search images",
-      "validationMode": "strict-generated"
-    }
-  },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
-    }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
