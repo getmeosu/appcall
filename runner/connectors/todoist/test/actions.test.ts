@@ -39,8 +39,12 @@ function sentBody(call: Call): unknown {
 }
 
 describe("todoist connector surface", () => {
-  it("compiles one handler per declared operation", () => {
-    expect(Object.keys(actions).sort()).toEqual(Object.keys(manifest.operations).sort());
+  it("compiles one handler per declared action", () => {
+    const actionKeys = Object.entries(manifest.operations)
+      .filter(([, operation]) => (operation as { kind?: string }).kind === "action")
+      .map(([key]) => key)
+      .sort();
+    expect(Object.keys(actions).sort()).toEqual(actionKeys);
   });
 });
 

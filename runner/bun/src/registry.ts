@@ -64,8 +64,12 @@ import {
   sendMessage as sendWhatsAppMessage, validateCredentials as validateWhatsAppCredentials,
   sendTemplate as waSendTemplate, sendImage as waSendImage, sendDocument as waSendDocument, sendLocation as waSendLocation,
   sendContacts as waSendContacts, sendReaction as waSendReaction, markRead as waMarkRead, sendInteractive as waSendInteractive,
+  getMessage as waGetMessage, listTemplates as waListTemplates, getMedia as waGetMedia, uploadMedia as waUploadMedia, deleteMedia as waDeleteMedia,
+  sendAudio as waSendAudio, sendVideo as waSendVideo, getBusinessProfile as waGetBusinessProfile, updateBusinessProfile as waUpdateBusinessProfile,
+  getPhoneNumber as waGetPhoneNumber,
 } from "../../connectors/whatsapp/src/actions";
 import { healthcheck as whatsappHealthcheck } from "../../connectors/whatsapp/src/healthcheck";
+import { parseWebhook as whatsappParseWebhook } from "../../connectors/whatsapp/src/webhook";
 import googleWorkspaceManifest from "../../connectors/google-workspace/manifest.json";
 import {
   sendMessage as sendGmailMessage, getSheetValues, appendSheetValues, getDocument as getGoogleDocument,
@@ -1147,6 +1151,16 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "messages.sendReaction": waSendReaction,
       "messages.markRead": waMarkRead,
       "messages.sendInteractive": waSendInteractive,
+      "messages.get": waGetMessage,
+      "templates.list": waListTemplates,
+      "media.get": waGetMedia,
+      "media.upload": waUploadMedia,
+      "media.delete": waDeleteMedia,
+      "messages.sendAudio": waSendAudio,
+      "messages.sendVideo": waSendVideo,
+      "businessProfile.get": waGetBusinessProfile,
+      "businessProfile.update": waUpdateBusinessProfile,
+      "phoneNumbers.get": waGetPhoneNumber,
     },
     "google-workspace": {
       "messages.send": sendGmailMessage,
@@ -2292,6 +2306,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     // Apollo does not sign its phone-reveal callbacks, so it registers only a
     // parser. The registry treats a connector with no verifier as verified.
     apollo: { parse: apolloParseWebhook },
+    whatsapp: { parse: whatsappParseWebhook },
   },
 }));
 
