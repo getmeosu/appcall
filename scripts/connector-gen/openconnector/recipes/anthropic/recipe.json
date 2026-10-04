@@ -76,7 +76,28 @@
     "operations": [
       "healthcheck",
       "models.list",
-      "models.get"
+      "models.get",
+      "messages.create",
+      "messages.count_tokens",
+      "batches.list",
+      "batches.get",
+      "batches.create",
+      "batches.cancel",
+      "batches.delete",
+      "files.list",
+      "files.get",
+      "files.delete",
+      "skills.list",
+      "skills.get",
+      "skills.delete",
+      "skills.versions.list",
+      "skills.versions.get",
+      "skills.versions.delete",
+      "webhook.session.status_run_started",
+      "webhook.session.status_idled",
+      "webhook.session.status_terminated",
+      "webhook.session.deleted",
+      "webhook.agent.created"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -109,7 +130,23 @@
       "operationIds": [
         "healthcheck",
         "models.list",
-        "models.get"
+        "models.get",
+        "messages.create",
+        "messages.count_tokens",
+        "batches.list",
+        "batches.get",
+        "batches.create",
+        "batches.cancel",
+        "batches.delete",
+        "files.list",
+        "files.get",
+        "files.delete",
+        "skills.list",
+        "skills.get",
+        "skills.delete",
+        "skills.versions.list",
+        "skills.versions.get",
+        "skills.versions.delete"
       ],
       "productIds": [
         "anthropic"
@@ -176,25 +213,21 @@
     "healthcheck": {
       "upstreamActionId": "list_models",
       "sourceRefs": [
-        "api-base",
-        "credential-validate",
-        "spec-list-models",
-        "request-auth"
+        "request-auth",
+        "request-json"
       ],
       "documentationUrls": [
-        "https://docs.claude.com/en/api/models-list",
-        "https://console.anthropic.com/settings/keys"
+        "https://docs.claude.com/en/api/models-list"
       ],
       "responseContract": "appcall-provider-json-v1",
       "adaptations": [
-        "Credential-only healthcheck maps to GET /v1/models, the cheap authenticated model-list used by the pinned validator. POST /v1/messages and POST /v1/messages/count_tokens are omitted as billed completions. Native omits the upstream user-agent. Content-Type application/json is sent on GET to match the pinned executor and official required-header table."
+        "Credential-only healthcheck maps to GET /v1/models, the cheap authenticated model-list used by the pinned validator."
       ]
     },
     "models.list": {
       "upstreamActionId": "list_models",
       "sourceRefs": [
-        "action-list-models",
-        "spec-list-models",
+        "request-auth",
         "request-json"
       ],
       "documentationUrls": [
@@ -208,8 +241,7 @@
     "models.get": {
       "upstreamActionId": "get_model",
       "sourceRefs": [
-        "action-get-model",
-        "spec-get-model",
+        "request-auth",
         "request-json"
       ],
       "documentationUrls": [
@@ -219,12 +251,306 @@
       "adaptations": [
         "model_id is URL-encoded as a path segment. Returns raw Anthropic JSON under data."
       ]
+    },
+    "messages.create": {
+      "upstreamActionId": "create_message",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/messages/create"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/messages. Optional system and temperature are omitted when unset. Streaming is omitted."
+      ]
+    },
+    "messages.count_tokens": {
+      "upstreamActionId": "count_tokens",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/messages/count_tokens"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/messages/count_tokens. Does not create a billed completion."
+      ]
+    },
+    "batches.list": {
+      "upstreamActionId": "list_batches",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/messages/batches/list"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/messages/batches with optional cursor pagination."
+      ]
+    },
+    "batches.get": {
+      "upstreamActionId": "get_batch",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/messages/batches/retrieve"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/messages/batches/{message_batch_id}."
+      ]
+    },
+    "batches.create": {
+      "upstreamActionId": "create_batch",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/messages/batches/create"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/messages/batches with a requests array of custom_id plus Messages params."
+      ]
+    },
+    "batches.cancel": {
+      "upstreamActionId": "cancel_batch",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/messages/batches/cancel"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to POST /v1/messages/batches/{message_batch_id}/cancel."
+      ]
+    },
+    "batches.delete": {
+      "upstreamActionId": "delete_batch",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/messages/batches/delete"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to DELETE /v1/messages/batches/{message_batch_id}."
+      ]
+    },
+    "files.list": {
+      "upstreamActionId": "list_files",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/files/list"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/files with optional limit and page cursor."
+      ]
+    },
+    "files.get": {
+      "upstreamActionId": "get_file",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/files/retrieve"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/files/{file_id} metadata. Binary content download is omitted."
+      ]
+    },
+    "files.delete": {
+      "upstreamActionId": "delete_file",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/files/delete"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to DELETE /v1/files/{file_id}."
+      ]
+    },
+    "skills.list": {
+      "upstreamActionId": "list_skills",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/skills/list"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/skills with optional limit, page, and source filter."
+      ]
+    },
+    "skills.get": {
+      "upstreamActionId": "get_skill",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/skills/retrieve"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/skills/{skill_id}."
+      ]
+    },
+    "skills.delete": {
+      "upstreamActionId": "delete_skill",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/skills/delete"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to DELETE /v1/skills/{skill_id}."
+      ]
+    },
+    "skills.versions.list": {
+      "upstreamActionId": "list_skill_versions",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/skills/list-versions"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/skills/{skill_id}/versions."
+      ]
+    },
+    "skills.versions.get": {
+      "upstreamActionId": "get_skill_version",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/skills/retrieve-version"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to GET /v1/skills/{skill_id}/versions/{version}."
+      ]
+    },
+    "skills.versions.delete": {
+      "upstreamActionId": "delete_skill_version",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/api/skills/delete-version"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to DELETE /v1/skills/{skill_id}/versions/{version}."
+      ]
+    },
+    "webhook.session.status_run_started": {
+      "upstreamActionId": "webhook_session_status_run_started",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/managed-agents/webhooks"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook for session.status_run_started. No HTTP request."
+      ]
+    },
+    "webhook.session.status_idled": {
+      "upstreamActionId": "webhook_session_status_idled",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/managed-agents/webhooks"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook for session.status_idled. No HTTP request."
+      ]
+    },
+    "webhook.session.status_terminated": {
+      "upstreamActionId": "webhook_session_status_terminated",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/managed-agents/webhooks"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook for session.status_terminated. No HTTP request."
+      ]
+    },
+    "webhook.session.deleted": {
+      "upstreamActionId": "webhook_session_deleted",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/managed-agents/webhooks"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook for session.deleted. No HTTP request."
+      ]
+    },
+    "webhook.agent.created": {
+      "upstreamActionId": "webhook_agent_created",
+      "sourceRefs": [
+        "request-auth",
+        "request-json"
+      ],
+      "documentationUrls": [
+        "https://platform.claude.com/docs/en/managed-agents/webhooks"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly webhook for agent.created. No HTTP request."
+      ]
     }
   },
   "manifest": {
     "key": "anthropic",
     "name": "Anthropic",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -251,7 +577,11 @@
       ]
     },
     "models": [
-      "model"
+      "model",
+      "message",
+      "message-batch",
+      "file",
+      "skill"
     ],
     "http": {
       "baseUrl": "https://api.anthropic.com",
@@ -327,11 +657,11 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "before_id": {
+            "after_id": {
               "type": "string",
               "minLength": 1
             },
-            "after_id": {
+            "before_id": {
               "type": "string",
               "minLength": 1
             },
@@ -414,6 +744,952 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
+      },
+      "messages.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create message",
+        "description": "Send a Messages API request and return Claude's next turn.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "max_tokens": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "messages": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "role",
+                  "content"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "assistant"
+                    ]
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "system": {
+              "type": "string",
+              "minLength": 1
+            },
+            "temperature": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "model",
+            "max_tokens",
+            "messages"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/messages",
+          "success": [
+            200
+          ],
+          "body": {
+            "model": "{{model}}",
+            "max_tokens": "{{max_tokens}}",
+            "messages": "{{messages}}",
+            "system": "{{system}}",
+            "temperature": "{{temperature}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "messages.count_tokens": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Count tokens",
+        "description": "Count tokens for a Messages API request without creating a completion.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "messages": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "role",
+                  "content"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "assistant"
+                    ]
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "system": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "model",
+            "messages"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/messages/count_tokens",
+          "success": [
+            200
+          ],
+          "body": {
+            "model": "{{model}}",
+            "messages": "{{messages}}",
+            "system": "{{system}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "batches.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List message batches",
+        "description": "List Message Batches for the current API key with cursor pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "after_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "before_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/messages/batches",
+          "success": [
+            200
+          ],
+          "query": {
+            "after_id": "{{after_id}}",
+            "before_id": "{{before_id}}",
+            "limit": "{{limit}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "batches.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get message batch",
+        "description": "Retrieve one Message Batch by ID, including processing status.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "message_batch_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "message_batch_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/messages/batches/{{message_batch_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "batches.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create message batch",
+        "description": "Create a Message Batch of Messages API requests for asynchronous processing.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "requests": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "custom_id",
+                  "params"
+                ],
+                "properties": {
+                  "custom_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "params": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "model",
+                      "max_tokens",
+                      "messages"
+                    ],
+                    "properties": {
+                      "model": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "max_tokens": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "messages": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "role",
+                            "content"
+                          ],
+                          "properties": {
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "assistant"
+                              ]
+                            },
+                            "content": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "requests"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/messages/batches",
+          "success": [
+            200
+          ],
+          "body": {
+            "requests": "{{requests}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "batches.cancel": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Cancel message batch",
+        "description": "Cancel an in-progress Message Batch.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "message_batch_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "message_batch_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/messages/batches/{{message_batch_id}}/cancel",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "batches.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete message batch",
+        "description": "Delete a Message Batch that has ended processing.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "message_batch_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "message_batch_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/messages/batches/{{message_batch_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "files.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List files",
+        "description": "List Files API uploads available to the current API key.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "page": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/files",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "page": "{{page}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "files.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get file",
+        "description": "Retrieve metadata for one uploaded file.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "file_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/files/{{file_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "files.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete file",
+        "description": "Delete an uploaded file from Anthropic storage.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "file_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/files/{{file_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "skills.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List skills",
+        "description": "List custom and Anthropic-published Skills available to the current API key.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "page": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "custom",
+                "anthropic"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/skills",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "page": "{{page}}",
+            "source": "{{source}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "skills.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get skill",
+        "description": "Retrieve one Skill by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skill_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "skill_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/skills/{{skill_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "skills.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete skill",
+        "description": "Delete a custom Skill.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skill_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "skill_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/skills/{{skill_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "skills.versions.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List skill versions",
+        "description": "List versions of one Skill.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skill_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "page": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "skill_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/skills/{{skill_id}}/versions",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "page": "{{page}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "skills.versions.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get skill version",
+        "description": "Retrieve one Skill Version by skill ID and version.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skill_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "skill_id",
+            "version"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/skills/{{skill_id}}/versions/{{version}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "skills.versions.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete skill version",
+        "description": "Delete one Skill Version.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "skill_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "skill_id",
+            "version"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/skills/{{skill_id}}/versions/{{version}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhook.session.status_run_started": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Session run started",
+        "description": "Anthropic Managed Agents webhook. Fires when a session status transitions to running (session.status_run_started)."
+      },
+      "webhook.session.status_idled": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Session idled",
+        "description": "Anthropic Managed Agents webhook. Fires when a session is awaiting input (session.status_idled)."
+      },
+      "webhook.session.status_terminated": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Session terminated",
+        "description": "Anthropic Managed Agents webhook. Fires when a session terminates from error or archival (session.status_terminated)."
+      },
+      "webhook.session.deleted": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Session deleted",
+        "description": "Anthropic Managed Agents webhook. Fires when a session is permanently deleted (session.deleted)."
+      },
+      "webhook.agent.created": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Agent created",
+        "description": "Anthropic Managed Agents webhook. Fires when an agent resource is created (agent.created)."
       }
     },
     "provenance": {
