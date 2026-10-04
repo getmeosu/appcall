@@ -1,1 +1,1281 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Raisely campaign secret key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["payments"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://api.raisely.com/v3","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["detail","message","error","errors.0.message"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"raisely","models":["campaign","profile"],"name":"Raisely","network":{"allowedHosts":["api.raisely.com"]},"operations":{"campaigns.get":{"description":"Get one Raisely campaign by UUID, path, or domain.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"campaign":{"minLength":1,"type":"string"}},"required":["campaign"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/campaigns/{{campaign}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get campaign","validationMode":"strict-generated"},"campaigns.list":{"description":"List Raisely campaigns with optional search, sort, and pagination.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"limit":{"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"},"order":{"enum":["asc","desc"],"type":"string"},"private":{"type":"boolean"},"query":{"minLength":1,"type":"string"},"sort":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/campaigns","query":{"limit":"{{limit}}","offset":"{{offset}}","order":"{{order}}","private":"{{private}}","q":"{{query}}","sort":"{{sort}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List campaigns","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Raisely API key with a one-campaign list probe.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/campaigns","query":{"limit":1},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"profiles.get":{"description":"Get one Raisely fundraising profile by UUID or path.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"campaign":{"minLength":1,"type":"string"},"private":{"type":"boolean"},"profilePath":{"minLength":1,"type":"string"}},"required":["profilePath"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/profiles/{{profilePath}}","query":{"campaign":"{{campaign}}","private":"{{private}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get profile","validationMode":"strict-generated"},"profiles.list":{"description":"List fundraising profiles in one Raisely campaign.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"campaign":{"minLength":1,"type":"string"},"limit":{"minimum":1,"type":"integer"},"offset":{"minimum":0,"type":"integer"},"private":{"type":"boolean"},"query":{"minLength":1,"type":"string"}},"required":["campaign"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/profiles","query":{"campaign":"{{campaign}}","limit":"{{limit}}","offset":"{{offset}}","private":"{{private}}","q":"{{query}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List profiles","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "raisely",
+  "name": "Raisely",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "payments"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Raisely campaign secret key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.raisely.com"
+    ]
+  },
+  "models": [
+    "campaign",
+    "profile",
+    "donation",
+    "user",
+    "subscription",
+    "post"
+  ],
+  "http": {
+    "baseUrl": "https://api.raisely.com/v3",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "error",
+        "errors.0.message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Raisely API key with a one-campaign list probe.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns",
+        "query": {
+          "limit": 1
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List campaigns",
+      "description": "List Raisely campaigns with optional search, sort, and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "private": {
+            "type": "boolean"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns",
+        "query": {
+          "private": "{{private}}",
+          "q": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "sort": "{{sort}}",
+          "order": "{{order}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get campaign",
+      "description": "Get one Raisely campaign by UUID, path, or domain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "campaign"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/campaigns/{{campaign}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "campaigns.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update campaign",
+      "description": "Update a Raisely campaign by UUID, path, or domain.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign name."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "3-letter currency code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/campaigns/{{campaign}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": {
+            "name": "{{name}}",
+            "currency": "{{currency}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List profiles",
+      "description": "List fundraising profiles in one Raisely campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "campaign"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles",
+        "query": {
+          "campaign": "{{campaign}}",
+          "private": "{{private}}",
+          "q": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get profile",
+      "description": "Get one Raisely fundraising profile by UUID or path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profilePath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "campaign": {
+            "type": "string",
+            "minLength": 1
+          },
+          "private": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profilePath"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/profiles/{{profilePath}}",
+        "query": {
+          "campaign": "{{campaign}}",
+          "private": "{{private}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create profile",
+      "description": "Create a fundraising profile in a Raisely campaign.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile name."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile path."
+          },
+          "goal": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Fundraising goal in cents."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "campaign",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/campaigns/{{campaign}}/profiles",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": {
+            "name": "{{name}}",
+            "path": "{{path}}",
+            "goal": "{{goal}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "profiles.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update profile",
+      "description": "Update a Raisely fundraising profile by UUID or path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "profilePath": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile UUID or path."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profile name."
+          },
+          "goal": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Fundraising goal in cents."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "profilePath"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/profiles/{{profilePath}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": {
+            "name": "{{name}}",
+            "goal": "{{goal}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "donations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List donations",
+      "description": "List Raisely donations with optional campaign, search, and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Pagination offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/donations",
+        "success": [
+          200
+        ],
+        "query": {
+          "campaign": "{{campaign}}",
+          "q": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "donations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get donation",
+      "description": "Get one Raisely donation by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "donation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Donation UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "donation"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/donations/{{donation}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "donations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create donation",
+      "description": "Record an offline Raisely donation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Donor email."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "description": "3-letter currency code."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Donation type.",
+            "enum": [
+              "ONLINE",
+              "OFFLINE"
+            ]
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Amount in cents."
+          },
+          "method": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payment method.",
+            "enum": [
+              "CREDIT_CARD",
+              "PAYPAL",
+              "APPLE_PAY",
+              "OFFLINE",
+              "CUSTOM",
+              "STRIPE_INTENT",
+              "FACEBOOK"
+            ]
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Donor first name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Donor last name."
+          },
+          "campaignUuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "currency",
+          "type",
+          "amount",
+          "method"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/donations",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": {
+            "email": "{{email}}",
+            "currency": "{{currency}}",
+            "type": "{{type}}",
+            "amount": "{{amount}}",
+            "method": "{{method}}",
+            "firstName": "{{firstName}}",
+            "lastName": "{{lastName}}",
+            "campaignUuid": "{{campaignUuid}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List Raisely users with optional search and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Pagination offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "q": "{{query}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Get one Raisely user by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "user"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{user}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create user",
+      "description": "Create a Raisely user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User email."
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Last name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": {
+            "email": "{{email}}",
+            "firstName": "{{firstName}}",
+            "lastName": "{{lastName}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscriptions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List subscriptions",
+      "description": "List Raisely recurring subscriptions with optional campaign and pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Campaign UUID, path, or domain."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Pagination offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscriptions",
+        "success": [
+          200
+        ],
+        "query": {
+          "campaign": "{{campaign}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscriptions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get subscription",
+      "description": "Get one Raisely subscription by UUID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subscription": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscription UUID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subscription"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscriptions/{{subscription}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "posts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List posts",
+      "description": "List Raisely profile posts with optional pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page size."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Pagination offset."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/posts",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "offset": "{{offset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "posts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get post",
+      "description": "Get one Raisely post by UUID or path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post UUID or path."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "post"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/posts/{{post}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "posts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create post",
+      "description": "Create a Raisely profile post.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post title."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post body."
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Post path."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/posts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": {
+            "title": "{{title}}",
+            "body": "{{body}}",
+            "path": "{{path}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "authenticate.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Authenticate",
+      "description": "Validate the Raisely API token with GET /authenticate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/authenticate",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.donation.created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Donation created",
+      "description": "Raisely webhook donation.created. Fires when a donation is created and ready to be charged, or when an offline donation is added."
+    },
+    "webhook.donation.succeeded": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Donation succeeded",
+      "description": "Raisely webhook donation.succeeded. Fires when an online donation is successfully charged."
+    },
+    "webhook.profile.created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Profile created",
+      "description": "Raisely webhook profile.created. Fires when a new fundraising profile is created."
+    },
+    "webhook.user.created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "User created",
+      "description": "Raisely webhook user.created. Fires when a user signs up or is created automatically from a donation."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

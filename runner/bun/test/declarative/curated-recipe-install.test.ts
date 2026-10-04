@@ -193,6 +193,7 @@ import quentn from "../../../../runner/connectors/quentn/manifest.json";
 import quipteams from "../../../../runner/connectors/quipteams/manifest.json";
 import raindrop from "../../../../runner/connectors/raindrop/manifest.json";
 import raisely from "../../../../runner/connectors/raisely/manifest.json";
+import salesflare from "../../../../runner/connectors/salesflare/manifest.json";
 import sling from "../../../../runner/connectors/sling/manifest.json";
 import stannp from "../../../../runner/connectors/stannp/manifest.json";
 import stormboard from "../../../../runner/connectors/stormboard/manifest.json";
@@ -546,6 +547,7 @@ const installed = [
   ["quipteams", quipteams],
   ["raindrop", raindrop],
   ["raisely", raisely],
+  ["salesflare", salesflare],
   ["sling", sling],
   ["stannp", stannp],
   ["stormboard", stormboard],
@@ -726,6 +728,7 @@ describe("curated recipe install", () => {
       expect(recipe.manifest.provenance).toEqual(manifest.provenance);
       if (key === "pagerduty") expect(manifest.auth.setup.fields[0].label).toContain("personal user token");
       for (const operation of Object.values(manifest.operations) as Array<Record<string, unknown>>) {
+        if (operation.kind === "webhook") continue;
         expect(operation.enforceOutputSchema).toBe(true);
         expect(operation.responseFormat).toBe("json");
         expect(operation.validationMode).toBe("strict-generated");
@@ -741,7 +744,10 @@ describe("curated recipe install", () => {
       const runs = await runCandidateFixtures(JSON.stringify(manifest), cases);
       expect(runs.length).toBeGreaterThan(0);
       expect(runs.every((run) => run.status === "passed")).toBe(true);
-      expect(new Set(cases.map((fixture) => fixture.operation))).toEqual(new Set(Object.keys(manifest.operations)));
+      const httpOps = Object.entries(manifest.operations as Record<string, { kind?: string }>)
+        .filter(([, operation]) => operation.kind !== "webhook")
+        .map(([operationKey]) => operationKey);
+      expect(new Set(cases.map((fixture) => fixture.operation))).toEqual(new Set(httpOps));
       expect(recipeKey).toBeTruthy();
     }
   });
