@@ -421,6 +421,11 @@ import {
   validateListRepoKeysInput,
 } from "./card17_reads";
 
+import {
+  createCard18ReadsClient,
+  validateListRepoPullCommentsInput,
+} from "./card18_reads";
+
 
 
 import {
@@ -6335,6 +6340,27 @@ export function listRepoKeys(input: unknown): Record<string, unknown> | Promise<
     });
   }
   return { connector: "github", action: "repos.keys.list", source: "connector", validated: validateListRepoKeysInput(input) };
+}
+
+// ─── card 18: repository pull review comments ────────────────────────────────
+
+function liveCard18Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard18ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listRepoPullComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard18Client(input, "repos.pulls.comments.list").listRepoPullComments(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pulls.comments.list", source: "connector", comments: result.comments };
+    });
+  }
+  return { connector: "github", action: "repos.pulls.comments.list", source: "connector", validated: validateListRepoPullCommentsInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
