@@ -14,11 +14,18 @@ import createBoardFixture from "../fixtures/create_board.json";
 import boardsFixture from "../fixtures/boards.json";
 import createGroupFixture from "../fixtures/create_group.json";
 import groupsFixture from "../fixtures/groups.json";
+import boardGetFixture from "../fixtures/board_get.json";
+import deleteItemFixture from "../fixtures/delete_item.json";
+import duplicateItemFixture from "../fixtures/duplicate_item.json";
+import changeColumnValueFixture from "../fixtures/change_column_value.json";
 import errorUnauthorizedFixture from "../fixtures/error_unauthorized.json";
 import errorComplexityFixture from "../fixtures/error_complexity.json";
 import errorMessageLegacyFixture from "../fixtures/error_message_legacy.json";
 
 const { actions } = compileDeclarativeConnector(manifest as never);
+const actionKeys = Object.entries(manifest.operations)
+  .filter(([, operation]) => operation.kind === "action")
+  .map(([key]) => key);
 
 type Call = { url: string; init?: RequestInit };
 
@@ -40,7 +47,8 @@ function bodyOf(call: Call): Record<string, unknown> {
 
 describe("monday connector surface", () => {
   it("compiles one handler per declared operation", () => {
-    expect(Object.keys(actions).sort()).toEqual(Object.keys(manifest.operations).sort());
+    expect(Object.keys(actions).sort()).toEqual(actionKeys.sort());
+    expect(actions["webhook.item_created"]).toBeUndefined();
   });
 });
 
@@ -439,6 +447,138 @@ describe("group.list", () => {
 });
 
 // --- The two mandatory GraphQL-specific error cases from the task brief ---
+
+describe("boards.get", () => {
+  it("requires ids", () => {
+    expect(() => actions["boards.get"]!({ apiToken: "k" })).toThrow("ids is required");
+  });
+
+  it("is classified as a GraphQL query", () => {
+    expect(manifest.operations["boards.get"]!.sideEffect).toBe("read");
+  });
+
+  it("fetches boards by id array", async () => {
+    const { calls, fetchFn } = mockJson(boardGetFixture);
+    const result = (await actions["boards.get"]!({ apiToken: "k", ids: ["1234567890"], fetch: fetchFn })) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect((sent.variables as Record<string, unknown>).ids).toEqual(["1234567890"]);
+    expect(result.boards).toEqual(boardGetFixture.data.boards);
+  });
+});
+
+describe("items.update", () => {
+  it("requires boardId, itemId and columnValues", () => {
+    expect(() => actions["items.update"]!({ apiToken: "k", itemId: "i1", columnValues: "{}" })).toThrow("boardId is required");
+    expect(() => actions["items.update"]!({ apiToken: "k", boardId: "b1", columnValues: "{}" })).toThrow("itemId is required");
+    expect(() => actions["items.update"]!({ apiToken: "k", boardId: "b1", itemId: "i1" })).toThrow("columnValues is required");
+  });
+
+  it("is classified as a GraphQL mutation", () => {
+    expect(manifest.operations["items.update"]!.sideEffect).toBe("write");
+  });
+
+  it("sends change_multiple_column_values with a required itemId", async () => {
+    const { calls, fetchFn } = mockJson(changeMultipleColumnValuesFixture);
+    const result = (await actions["items.update"]!({
+      apiToken: "k",
+      boardId: "1234567890",
+      itemId: "1234567890123",
+      columnValues: '{"name":"Updated Task Name"}',
+      fetch: fetchFn,
+    })) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("change_multiple_column_values");
+    const variables = sent.variables as Record<string, unknown>;
+    expect(variables.itemId).toBe("1234567890123");
+    expect(variables.columnValues).toBe('{"name":"Updated Task Name"}');
+    expect(result.id).toBe("1234567890123");
+  });
+});
+
+describe("items.delete", () => {
+  it("requires itemId", () => {
+    expect(() => actions["items.delete"]!({ apiToken: "k" })).toThrow("itemId is required");
+  });
+
+  it("is classified as a GraphQL mutation", () => {
+    expect(manifest.operations["items.delete"]!.sideEffect).toBe("write");
+  });
+
+  it("posts delete_item and returns the deleted id", async () => {
+    const { calls, fetchFn } = mockJson(deleteItemFixture);
+    const result = (await actions["items.delete"]!({
+      apiToken: "k",
+      itemId: "1234567890123",
+      fetch: fetchFn,
+    })) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("delete_item");
+    expect((sent.variables as Record<string, unknown>).itemId).toBe("1234567890123");
+    expect(result.id).toBe("1234567890123");
+  });
+});
+
+describe("items.duplicate", () => {
+  it("requires boardId and itemId", () => {
+    expect(() => actions["items.duplicate"]!({ apiToken: "k", itemId: "i1" })).toThrow("boardId is required");
+    expect(() => actions["items.duplicate"]!({ apiToken: "k", boardId: "b1" })).toThrow("itemId is required");
+  });
+
+  it("is classified as a GraphQL mutation", () => {
+    expect(manifest.operations["items.duplicate"]!.sideEffect).toBe("write");
+  });
+
+  it("posts duplicate_item and returns the copy", async () => {
+    const { calls, fetchFn } = mockJson(duplicateItemFixture);
+    const result = (await actions["items.duplicate"]!({
+      apiToken: "k",
+      boardId: "1234567890",
+      itemId: "1234567890123",
+      withUpdates: true,
+      fetch: fetchFn,
+    })) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("duplicate_item");
+    const variables = sent.variables as Record<string, unknown>;
+    expect(variables.boardId).toBe("1234567890");
+    expect(variables.itemId).toBe("1234567890123");
+    expect(variables.withUpdates).toBe(true);
+    expect(result.id).toBe("1234567890999");
+    expect(result.name).toBe("new item");
+  });
+});
+
+describe("columns.change_value", () => {
+  it("requires boardId, itemId, columnId and value", () => {
+    expect(() => actions["columns.change_value"]!({ apiToken: "k", itemId: "i1", columnId: "status", value: "{}" })).toThrow("boardId is required");
+    expect(() => actions["columns.change_value"]!({ apiToken: "k", boardId: "b1", columnId: "status", value: "{}" })).toThrow("itemId is required");
+    expect(() => actions["columns.change_value"]!({ apiToken: "k", boardId: "b1", itemId: "i1", value: "{}" })).toThrow("columnId is required");
+    expect(() => actions["columns.change_value"]!({ apiToken: "k", boardId: "b1", itemId: "i1", columnId: "status" })).toThrow("value is required");
+  });
+
+  it("is classified as a GraphQL mutation", () => {
+    expect(manifest.operations["columns.change_value"]!.sideEffect).toBe("write");
+  });
+
+  it("sends value as a JSON string through change_column_value", async () => {
+    const { calls, fetchFn } = mockJson(changeColumnValueFixture);
+    const result = (await actions["columns.change_value"]!({
+      apiToken: "k",
+      boardId: "1234567890",
+      itemId: "1234567890123",
+      columnId: "status",
+      value: '{"index":1}',
+      fetch: fetchFn,
+    })) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("change_column_value");
+    const variables = sent.variables as Record<string, unknown>;
+    expect(variables.columnId).toBe("status");
+    expect(variables.value).toBe('{"index":1}');
+    expect(typeof variables.value).toBe("string");
+    expect(result.id).toBe("1234567890123");
+  });
+});
 
 describe("error mapping", () => {
   it("rejects a 200 carrying a populated errors array as CONNECTOR_UPSTREAM_ERROR, carrying monday's own message", async () => {

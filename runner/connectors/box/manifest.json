@@ -1,7 +1,7 @@
 {
   "key": "box",
   "name": "Box",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "description": "Box JSON metadata operations using a manually supplied OAuth2 access token.",
   "categories": [
@@ -27,7 +27,8 @@
   },
   "network": {
     "allowedHosts": [
-      "api.box.com"
+      "api.box.com",
+      "upload.box.com"
     ]
   },
   "http": {
@@ -457,6 +458,378 @@
           "recursive": false
         }
       }
+    },
+    "files.download": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Download a Box file's contents",
+      "description": "Download a Box file's contents. Returns the provider body as text for files within the connector response budget.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "Box file ID as a string."
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "File contents returned by Box."
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/files/{{fileId}}/content",
+        "success": [
+          200
+        ],
+        "result": {
+          "content": "{{response}}"
+        }
+      }
+    },
+    "files.upload": {
+      "kind": "action",
+      "timeoutMs": 30000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 5242880,
+      "title": "Upload a file into a Box folder",
+      "description": "Upload a text file into an explicit Box parent folder via the upload host. Name conflicts fail.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "New file name, subject to Box naming restrictions."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Parent folder ID as a string; 0 is the root folder."
+          },
+          "content": {
+            "type": "string",
+            "description": "File contents to upload as UTF-8 text."
+          }
+        },
+        "required": [
+          "name",
+          "parentId",
+          "content"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "object",
+            "description": "Provider metadata for the created file."
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "baseUrl": "https://upload.box.com/api/2.0",
+        "path": "/files/content",
+        "success": [
+          201
+        ],
+        "result": {
+          "file": "{{response.entries.0}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "parent": {
+            "id": "{{parentId}}"
+          },
+          "content": "{{content}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.copy": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Copy a Box file into another folder",
+      "description": "Copy a Box file into another folder. Optionally rename the copy.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "Box file ID as a string."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Destination folder ID as a string; 0 is the root folder."
+          },
+          "name": {
+            "type": "string",
+            "description": "Optional name for the copy. Defaults to the source file name."
+          }
+        },
+        "required": [
+          "fileId",
+          "parentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "object",
+            "description": "Provider metadata for the copied file."
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/{{fileId}}/copy",
+        "success": [
+          201
+        ],
+        "result": {
+          "file": "{{response}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "parent": {
+            "id": "{{parentId}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update Box file metadata",
+      "description": "Update a Box file's name or description. Use files.move to change its parent folder.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "Box file ID as a string."
+          },
+          "name": {
+            "type": "string",
+            "description": "Updated file name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Updated file description."
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "object",
+            "description": "Provider metadata for the updated file."
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/files/{{fileId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "file": "{{response}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "folders.update": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update Box folder metadata",
+      "description": "Update a Box folder's name or description.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": "string",
+            "description": "Box folder ID as a string; 0 is the root folder."
+          },
+          "name": {
+            "type": "string",
+            "description": "Updated folder name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Updated folder description."
+          }
+        },
+        "required": [
+          "folderId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "object",
+            "description": "Provider metadata for the updated folder."
+          }
+        },
+        "required": [
+          "folder"
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/folders/{{folderId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "folder": "{{response}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "shared_links.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create a Box shared link for a file",
+      "description": "Create a shared link on a Box file. Access is one of open, company, or collaborators.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "Box file ID as a string."
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "open",
+              "company",
+              "collaborators"
+            ],
+            "description": "Shared link access level."
+          }
+        },
+        "required": [
+          "fileId",
+          "access"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "sharedLink": {
+            "type": "object",
+            "description": "The created shared link metadata, including url."
+          },
+          "file": {
+            "type": "object",
+            "description": "Provider file metadata including the new shared_link."
+          }
+        },
+        "required": [
+          "sharedLink",
+          "file"
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/files/{{fileId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "sharedLink": "{{response.shared_link}}",
+          "file": "{{response}}"
+        },
+        "body": {
+          "shared_link": {
+            "access": "{{access}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "webhook.file_uploaded": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read"
+    },
+    "webhook.file_downloaded": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read"
+    },
+    "webhook.folder_created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read"
     }
   },
   "models": [

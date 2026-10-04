@@ -630,3 +630,207 @@ export function listWebinars(input: unknown): Record<string, unknown> | Promise<
   }
   return { connector: "zoom", action: "webinars.list", source: "connector", validated: validateWebinarsListInput(input) };
 }
+
+// ─── users.get ────────────────────────────────────────────────────────────────
+
+export function validateUsersGetInput(input: unknown): { userId: string } {
+  if (!isRecord(input)) throw new Error("users.get input must be an object");
+  return { userId: requireString(input.userId, "userId") };
+}
+
+export function createUsersGetClient(options: { accessToken: string; fetch?: typeof fetch }) {
+  const client = createZoomClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "users.get" });
+  return {
+    async get(input: unknown) {
+      const payload = validateUsersGetInput(input);
+      const response = await client.fetchJSON(`/v2/users/${payload.userId}`);
+      if (response.status === 200) {
+        return { ok: true as const, user: response.body as Record<string, unknown> };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "User not found." } };
+      }
+      return handleError(response.status, response.headers, "Zoom rejected the users.get request.");
+    },
+  };
+}
+
+export function getUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createUsersGetClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "zoom", action: "users.get", source: "connector", user: result.user };
+    });
+  }
+  return { connector: "zoom", action: "users.get", source: "connector", validated: validateUsersGetInput(input) };
+}
+
+// ─── recordings.list ──────────────────────────────────────────────────────────
+
+export type RecordingsListInput = { userId?: string; from: string; to?: string; page_size?: number; next_page_token?: string };
+
+export function validateRecordingsListInput(input: unknown): RecordingsListInput {
+  if (!isRecord(input)) throw new Error("recordings.list input must be an object");
+  const payload: RecordingsListInput = { from: requireString(input.from, "from") };
+  if (typeof input.userId === "string") payload.userId = input.userId;
+  if (typeof input.to === "string") payload.to = input.to;
+  if (typeof input.page_size === "number") payload.page_size = input.page_size;
+  if (typeof input.next_page_token === "string") payload.next_page_token = input.next_page_token;
+  return payload;
+}
+
+export function createRecordingsListClient(options: { accessToken: string; fetch?: typeof fetch }) {
+  const client = createZoomClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "recordings.list" });
+  return {
+    async list(input: unknown) {
+      const payload = validateRecordingsListInput(input);
+      const userId = payload.userId ?? "me";
+      const params = new URLSearchParams();
+      params.set("from", payload.from);
+      if (payload.to) params.set("to", payload.to);
+      if (payload.page_size !== undefined) params.set("page_size", String(payload.page_size));
+      if (payload.next_page_token) params.set("next_page_token", payload.next_page_token);
+      const response = await client.fetchJSON(`/v2/users/${userId}/recordings?${params.toString()}`);
+      if (response.status === 200) {
+        const body = response.body as Record<string, unknown>;
+        const meetings = Array.isArray(body.meetings) ? body.meetings : [];
+        const nextPageToken = typeof body.next_page_token === "string" ? body.next_page_token : "";
+        const totalRecords = typeof body.total_records === "number" ? body.total_records : 0;
+        return { ok: true as const, meetings, nextPageToken, totalRecords };
+      }
+      return handleError(response.status, response.headers, "Zoom rejected the recordings.list request.");
+    },
+  };
+}
+
+export function listRecordings(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createRecordingsListClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).list(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "zoom", action: "recordings.list", source: "connector", meetings: result.meetings, nextPageToken: result.nextPageToken, totalRecords: result.totalRecords };
+    });
+  }
+  return { connector: "zoom", action: "recordings.list", source: "connector", validated: validateRecordingsListInput(input) };
+}
+
+// ─── recordings.get ───────────────────────────────────────────────────────────
+
+export function validateRecordingsGetInput(input: unknown): { meetingId: string } {
+  if (!isRecord(input)) throw new Error("recordings.get input must be an object");
+  return { meetingId: requireString(input.meetingId, "meetingId") };
+}
+
+export function createRecordingsGetClient(options: { accessToken: string; fetch?: typeof fetch }) {
+  const client = createZoomClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "recordings.get" });
+  return {
+    async get(input: unknown) {
+      const payload = validateRecordingsGetInput(input);
+      const response = await client.fetchJSON(`/v2/meetings/${payload.meetingId}/recordings`);
+      if (response.status === 200) {
+        return { ok: true as const, recording: response.body as Record<string, unknown> };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Recording not found." } };
+      }
+      return handleError(response.status, response.headers, "Zoom rejected the recordings.get request.");
+    },
+  };
+}
+
+export function getRecording(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createRecordingsGetClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "zoom", action: "recordings.get", source: "connector", recording: result.recording };
+    });
+  }
+  return { connector: "zoom", action: "recordings.get", source: "connector", validated: validateRecordingsGetInput(input) };
+}
+
+// ─── recordings.delete ────────────────────────────────────────────────────────
+
+export function validateRecordingsDeleteInput(input: unknown): { meetingId: string; recordingId?: string } {
+  if (!isRecord(input)) throw new Error("recordings.delete input must be an object");
+  const payload: { meetingId: string; recordingId?: string } = { meetingId: requireString(input.meetingId, "meetingId") };
+  if (typeof input.recordingId === "string") payload.recordingId = input.recordingId;
+  return payload;
+}
+
+export function createRecordingsDeleteClient(options: { accessToken: string; fetch?: typeof fetch }) {
+  const client = createZoomClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "recordings.delete" });
+  return {
+    async delete(input: unknown) {
+      const payload = validateRecordingsDeleteInput(input);
+      const path = payload.recordingId
+        ? `/v2/meetings/${payload.meetingId}/recordings/${payload.recordingId}`
+        : `/v2/meetings/${payload.meetingId}/recordings`;
+      const response = await client.fetchJSON(path, { method: "DELETE" });
+      if (response.status === 204 || response.status === 200) {
+        return { ok: true as const, deleted: true };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Recording not found." } };
+      }
+      return handleError(response.status, response.headers, "Zoom rejected the recordings.delete request.");
+    },
+  };
+}
+
+export function deleteRecording(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createRecordingsDeleteClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).delete(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "zoom", action: "recordings.delete", source: "connector", deleted: result.deleted };
+    });
+  }
+  return { connector: "zoom", action: "recordings.delete", source: "connector", validated: validateRecordingsDeleteInput(input) };
+}
+
+// ─── webinars.get ─────────────────────────────────────────────────────────────
+
+export function validateWebinarsGetInput(input: unknown): { webinarId: string } {
+  if (!isRecord(input)) throw new Error("webinars.get input must be an object");
+  return { webinarId: requireString(input.webinarId, "webinarId") };
+}
+
+export function createWebinarsGetClient(options: { accessToken: string; fetch?: typeof fetch }) {
+  const client = createZoomClient({ accessToken: options.accessToken, fetch: options.fetch, operation: "webinars.get" });
+  return {
+    async get(input: unknown) {
+      const payload = validateWebinarsGetInput(input);
+      const response = await client.fetchJSON(`/v2/webinars/${payload.webinarId}`);
+      if (response.status === 200) {
+        return { ok: true as const, webinar: response.body as Record<string, unknown> };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Webinar not found." } };
+      }
+      return handleError(response.status, response.headers, "Zoom rejected the webinars.get request.");
+    },
+  };
+}
+
+export function getWebinar(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWebinarsGetClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "zoom", action: "webinars.get", source: "connector", webinar: result.webinar };
+    });
+  }
+  return { connector: "zoom", action: "webinars.get", source: "connector", validated: validateWebinarsGetInput(input) };
+}

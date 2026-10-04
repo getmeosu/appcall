@@ -9,6 +9,7 @@ describe("monday manifest", () => {
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.models.length).toBeGreaterThan(0);
+    expect(manifest.version).toBe("0.2.0");
   });
 
   it("declares api_key setup for the personal API token, agreeing with http.auth.field", () => {
@@ -28,7 +29,7 @@ describe("monday manifest", () => {
     expect(manifest.network.allowedHosts).not.toContain("auth.monday.com");
   });
 
-  it("declares exactly the 13 operations the brief lists", () => {
+  it("declares the original 13 operations plus the depth slice and EventOnly webhooks", () => {
     expect(Object.keys(operations).sort()).toEqual(
       [
         "healthcheck",
@@ -44,6 +45,14 @@ describe("monday manifest", () => {
         "board.list",
         "group.create",
         "group.list",
+        "boards.get",
+        "items.update",
+        "items.delete",
+        "items.duplicate",
+        "columns.change_value",
+        "webhook.item_created",
+        "webhook.item_updated",
+        "webhook.board_created",
       ].sort(),
     );
   });
@@ -56,6 +65,7 @@ describe("monday manifest", () => {
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind === "webhook") continue;
       expect(operation.kind).toBe("action");
       expect(operation.timeoutMs as number).toBeGreaterThan(0);
       expect(operation.maxInputBytes as number).toBeGreaterThan(0);
@@ -71,6 +81,7 @@ describe("monday manifest", () => {
 
   it("posts every operation to /v2 — the only endpoint the provider has", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind === "webhook") continue;
       const request = operation.request as Record<string, unknown>;
       expect(String(request.method ?? "GET"), `${key} must POST`).toBe("POST");
       expect(request.path, `${key} must target /v2`).toBe("/v2");
@@ -82,6 +93,7 @@ describe("monday manifest", () => {
   // monday call — including every read — is POST /v2. ---
   it("classifies GraphQL operations by mutation-vs-query, not by HTTP method", () => {
     for (const [key, op] of Object.entries(operations)) {
+      if (op.kind === "webhook") continue;
       const query = String(((op.request as Record<string, unknown>).body as Record<string, unknown>).query ?? "");
       const expected = query.trimStart().startsWith("mutation") ? "write" : "read";
       expect(op.sideEffect, `${key} is a GraphQL ${expected}`).toBe(expected);
@@ -247,6 +259,7 @@ describe("monday manifest", () => {
 
   it("only interpolates body placeholders the operation's schema declares", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind === "webhook") continue;
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { properties?: Record<string, unknown> };
       const declared = Object.keys(schema.properties ?? {});
@@ -265,8 +278,51 @@ describe("monday manifest", () => {
     }
   });
 
+  it("declares EventOnly item and board webhook triggers", () => {
+    for (const key of ["webhook.item_created", "webhook.item_updated", "webhook.board_created"]) {
+      expect(operations[key]).toMatchObject({
+        kind: "webhook",
+        timeoutMs: 30000,
+        maxInputBytes: 1048576,
+        maxResponseBytes: 1048576,
+      });
+      expect(operations[key]!.inputSchema).toBeUndefined();
+      expect(operations[key]!.request).toBeUndefined();
+    }
+  });
+
+  it("requires ids on boards.get", () => {
+    const schema = operations["boards.get"]!.inputSchema as { required?: string[] };
+    expect(schema.required ?? []).toContain("ids");
+  });
+
+  it("requires boardId, itemId and columnValues on items.update", () => {
+    const schema = operations["items.update"]!.inputSchema as { required?: string[] };
+    expect(schema.required ?? []).toEqual(expect.arrayContaining(["boardId", "itemId", "columnValues"]));
+  });
+
+  it("requires itemId on items.delete", () => {
+    const schema = operations["items.delete"]!.inputSchema as { required?: string[] };
+    expect(schema.required ?? []).toContain("itemId");
+  });
+
+  it("requires boardId and itemId on items.duplicate", () => {
+    const schema = operations["items.duplicate"]!.inputSchema as { required?: string[] };
+    expect(schema.required ?? []).toEqual(expect.arrayContaining(["boardId", "itemId"]));
+  });
+
+  it("requires boardId, itemId, columnId and value on columns.change_value, with value as a JSON string", () => {
+    const schema = operations["columns.change_value"]!.inputSchema as {
+      required?: string[];
+      properties?: Record<string, { type?: string }>;
+    };
+    expect(schema.required ?? []).toEqual(expect.arrayContaining(["boardId", "itemId", "columnId", "value"]));
+    expect(schema.properties?.value?.type).toBe("string");
+  });
+
   it("uses variables rather than string interpolation for every GraphQL document", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind === "webhook") continue;
       const body = (operation.request as Record<string, unknown>).body as Record<string, unknown>;
       if (key === "healthcheck") {
         expect(body.variables).toBeUndefined();
