@@ -5,6 +5,14 @@ import conversationsHistoryFixture from "../fixtures/conversations_history.json"
 import conversationsInfoFixture from "../fixtures/conversations_info.json";
 import conversationsInviteFixture from "../fixtures/conversations_invite.json";
 import conversationsMembersFixture from "../fixtures/conversations_members.json";
+import conversationsRepliesFixture from "../fixtures/conversations_replies.json";
+import conversationsJoinFixture from "../fixtures/conversations_join.json";
+import conversationsLeaveFixture from "../fixtures/conversations_leave.json";
+import conversationsArchiveFixture from "../fixtures/conversations_archive.json";
+import conversationsUnarchiveFixture from "../fixtures/conversations_unarchive.json";
+import conversationsRenameFixture from "../fixtures/conversations_rename.json";
+import conversationsSetTopicFixture from "../fixtures/conversations_set_topic.json";
+import conversationsKickFixture from "../fixtures/conversations_kick.json";
 import {
   createSlackConversationsClient,
   normalizeChannel,
@@ -14,6 +22,14 @@ import {
   validateConversationsInfoInput,
   validateConversationsInviteInput,
   validateConversationsMembersInput,
+  validateConversationsRepliesInput,
+  validateConversationsJoinInput,
+  validateConversationsLeaveInput,
+  validateConversationsArchiveInput,
+  validateConversationsUnarchiveInput,
+  validateConversationsRenameInput,
+  validateConversationsSetTopicInput,
+  validateConversationsKickInput,
 } from "../src/conversations";
 import {
   createConversation,
@@ -22,6 +38,14 @@ import {
   getConversationInfo,
   inviteToConversation,
   getConversationMembers,
+  getConversationReplies,
+  joinConversation,
+  leaveConversation,
+  archiveConversation,
+  unarchiveConversation,
+  renameConversation,
+  setConversationTopic,
+  kickFromConversation,
 } from "../src/actions";
 
 // ─── normalizeChannel ─────────────────────────────────────────────────────────
@@ -349,5 +373,246 @@ describe("conversations.members live (mocked fetch)", () => {
     const result = await client.members({ channel: "C999" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+});
+
+describe("conversations.replies validators", () => {
+  test("requires channel and ts", () => {
+    expect(() => validateConversationsRepliesInput({ channel: "C001", ts: "" })).toThrow();
+    expect(validateConversationsRepliesInput({ channel: "C001", ts: "1715680861.000200" }))
+      .toMatchObject({ channel: "C001", ts: "1715680861.000200" });
+  });
+});
+
+describe("conversations.replies action static validation", () => {
+  test("returns validated without token", () => {
+    const result = getConversationReplies({ channel: "C001", ts: "1715680861.000200" });
+    expect((result as Record<string, unknown>).source).toBe("connector");
+    expect((result as Record<string, unknown>).validated).toMatchObject({ channel: "C001", ts: "1715680861.000200" });
+  });
+});
+
+describe("conversations.replies live (mocked fetch)", () => {
+  test("GETs conversations.replies with Bearer token", async () => {
+    const requests: Request[] = [];
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(conversationsRepliesFixture);
+      },
+    });
+
+    const result = await client.replies({ channel: "C001", ts: "1715680861.000200" });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toContain("https://slack.com/api/conversations.replies");
+    expect(requests[0].url).toContain("channel=C001");
+    expect(requests[0].url).toContain("ts=1715680861.000200");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer xoxb-test-token");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.messages).toHaveLength(2);
+      expect(result.hasMore).toBe(false);
+      expect(result.nextCursor).toBeNull();
+    }
+  });
+
+  test("maps thread_not_found to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async () => Response.json({ ok: false, error: "thread_not_found" }),
+    });
+    const result = await client.replies({ channel: "C001", ts: "0" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.providerError).toBe("thread_not_found");
+  });
+});
+
+describe("conversations join/leave/archive validators", () => {
+  test("join/leave/archive/unarchive require channel", () => {
+    expect(() => validateConversationsJoinInput({ channel: "" })).toThrow();
+    expect(validateConversationsJoinInput({ channel: "C001" })).toEqual({ channel: "C001" });
+    expect(validateConversationsLeaveInput({ channel: "C001" })).toEqual({ channel: "C001" });
+    expect(validateConversationsArchiveInput({ channel: "C001" })).toEqual({ channel: "C001" });
+    expect(validateConversationsUnarchiveInput({ channel: "C001" })).toEqual({ channel: "C001" });
+  });
+
+  test("rename requires name", () => {
+    expect(() => validateConversationsRenameInput({ channel: "C001", name: "" })).toThrow();
+    expect(validateConversationsRenameInput({ channel: "C001", name: "renamed-channel" }))
+      .toEqual({ channel: "C001", name: "renamed-channel" });
+  });
+
+  test("setTopic accepts topic including empty string", () => {
+    expect(validateConversationsSetTopicInput({ channel: "C001", topic: "New topic" }))
+      .toEqual({ channel: "C001", topic: "New topic" });
+    expect(validateConversationsSetTopicInput({ channel: "C001", topic: "" }))
+      .toEqual({ channel: "C001", topic: "" });
+  });
+
+  test("kick requires user", () => {
+    expect(() => validateConversationsKickInput({ channel: "C001", user: "" })).toThrow();
+    expect(validateConversationsKickInput({ channel: "C001", user: "U002" }))
+      .toEqual({ channel: "C001", user: "U002" });
+  });
+});
+
+describe("conversations mutator action static validation", () => {
+  test("validates without token", () => {
+    expect((joinConversation({ channel: "C001" }) as Record<string, unknown>).validated).toEqual({ channel: "C001" });
+    expect((leaveConversation({ channel: "C001" }) as Record<string, unknown>).validated).toEqual({ channel: "C001" });
+    expect((archiveConversation({ channel: "C001" }) as Record<string, unknown>).validated).toEqual({ channel: "C001" });
+    expect((unarchiveConversation({ channel: "C001" }) as Record<string, unknown>).validated).toEqual({ channel: "C001" });
+    expect((renameConversation({ channel: "C001", name: "renamed-channel" }) as Record<string, unknown>).validated)
+      .toEqual({ channel: "C001", name: "renamed-channel" });
+    expect((setConversationTopic({ channel: "C001", topic: "New topic" }) as Record<string, unknown>).validated)
+      .toEqual({ channel: "C001", topic: "New topic" });
+    expect((kickFromConversation({ channel: "C001", user: "U002" }) as Record<string, unknown>).validated)
+      .toEqual({ channel: "C001", user: "U002" });
+  });
+});
+
+describe("conversations.join live (mocked fetch)", () => {
+  test("POSTs to conversations.join with Bearer token", async () => {
+    const requests: Request[] = [];
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(conversationsJoinFixture);
+      },
+    });
+    const result = await client.join({ channel: "C001" });
+    expect(requests[0].url).toBe("https://slack.com/api/conversations.join");
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer xoxb-test-token");
+    expect(await requests[0].json()).toEqual({ channel: "C001" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.channel.id).toBe("C001");
+  });
+});
+
+describe("conversations.leave live (mocked fetch)", () => {
+  test("POSTs to conversations.leave", async () => {
+    const requests: Request[] = [];
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(conversationsLeaveFixture);
+      },
+    });
+    const result = await client.leave({ channel: "C001" });
+    expect(requests[0].url).toBe("https://slack.com/api/conversations.leave");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.channel).toBe("C001");
+  });
+
+  test("maps last_member to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async () => Response.json({ ok: false, error: "last_member" }),
+    });
+    const result = await client.leave({ channel: "C001" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.providerError).toBe("last_member");
+  });
+});
+
+describe("conversations.archive live (mocked fetch)", () => {
+  test("POSTs to conversations.archive", async () => {
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async () => Response.json(conversationsArchiveFixture),
+    });
+    const result = await client.archive({ channel: "C001" });
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("conversations.unarchive live (mocked fetch)", () => {
+  test("POSTs to conversations.unarchive", async () => {
+    const requests: Request[] = [];
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(conversationsUnarchiveFixture);
+      },
+    });
+    const result = await client.unarchive({ channel: "C001" });
+    expect(requests[0].url).toBe("https://slack.com/api/conversations.unarchive");
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("conversations.rename live (mocked fetch)", () => {
+  test("POSTs to conversations.rename", async () => {
+    const requests: Request[] = [];
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(conversationsRenameFixture);
+      },
+    });
+    const result = await client.rename({ channel: "C001", name: "renamed-channel" });
+    expect(requests[0].url).toBe("https://slack.com/api/conversations.rename");
+    expect(await requests[0].json()).toEqual({ channel: "C001", name: "renamed-channel" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.channel.name).toBe("renamed-channel");
+  });
+});
+
+describe("conversations.setTopic live (mocked fetch)", () => {
+  test("POSTs to conversations.setTopic", async () => {
+    const requests: Request[] = [];
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(conversationsSetTopicFixture);
+      },
+    });
+    const result = await client.setTopic({ channel: "C001", topic: "New topic" });
+    expect(requests[0].url).toBe("https://slack.com/api/conversations.setTopic");
+    expect(await requests[0].json()).toEqual({ channel: "C001", topic: "New topic" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.topic).toBe("New topic");
+  });
+});
+
+describe("conversations.kick live (mocked fetch)", () => {
+  test("POSTs to conversations.kick", async () => {
+    const requests: Request[] = [];
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(conversationsKickFixture);
+      },
+    });
+    const result = await client.kick({ channel: "C001", user: "U002" });
+    expect(requests[0].url).toBe("https://slack.com/api/conversations.kick");
+    expect(await requests[0].json()).toEqual({ channel: "C001", user: "U002" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.user).toBe("U002");
+  });
+
+  test("maps cant_kick_self to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createSlackConversationsClient({
+      token: "xoxb-test-token",
+      fetch: async () => Response.json({ ok: false, error: "cant_kick_self" }),
+    });
+    const result = await client.kick({ channel: "C001", user: "U001" });
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "CONNECTOR_UPSTREAM_ERROR",
+        message: "Slack rejected the conversations.kick request.",
+        providerError: "cant_kick_self",
+      },
+    });
   });
 });

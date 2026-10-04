@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import usersListFixture from "../fixtures/users_list.json";
+import usersInfoFixture from "../fixtures/users_info.json";
+import usersLookupByEmailFixture from "../fixtures/users_lookup_by_email.json";
 import {
   createSlackUsersClient,
   normalizeUser,
   validateUsersListInput,
+  validateUsersInfoInput,
+  validateUsersLookupByEmailInput,
 } from "../src/users";
-import { listUsers } from "../src/actions";
+import { listUsers, getUserInfo, lookupUserByEmail } from "../src/actions";
 
 // ─── normalizeUser ────────────────────────────────────────────────────────────
 
@@ -166,5 +170,115 @@ describe("listUsers action with mocked fetch", () => {
     expect(result.action).toBe("users.list");
     expect(result.source).toBe("connector");
     expect(Array.isArray(result.members)).toBe(true);
+  });
+});
+
+describe("users.info validators", () => {
+  test("validateUsersInfoInput requires user", () => {
+    expect(() => validateUsersInfoInput({ user: "" })).toThrow();
+    expect(validateUsersInfoInput({ user: "U001" })).toEqual({ user: "U001" });
+  });
+});
+
+describe("users.info action static validation", () => {
+  test("returns validated without token", () => {
+    const result = getUserInfo({ user: "U001" });
+    expect((result as Record<string, unknown>).source).toBe("connector");
+    expect((result as Record<string, unknown>).validated).toEqual({ user: "U001" });
+  });
+});
+
+describe("users.info live (mocked fetch)", () => {
+  test("GETs users.info with Bearer token and normalizes the user", async () => {
+    const requests: Request[] = [];
+    const client = createSlackUsersClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(usersInfoFixture);
+      },
+    });
+
+    const result = await client.info({ user: "U001" });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toContain("https://slack.com/api/users.info");
+    expect(requests[0].url).toContain("user=U001");
+    expect(requests[0].method).toBe("GET");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer xoxb-test-token");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.user.id).toBe("U001");
+      expect(result.user.email).toBe("alice@example.com");
+    }
+  });
+
+  test("maps Slack error to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createSlackUsersClient({
+      token: "xoxb-test-token",
+      fetch: async () => Response.json({ ok: false, error: "user_not_found" }),
+    });
+    const result = await client.info({ user: "U999" });
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "CONNECTOR_UPSTREAM_ERROR",
+        message: "Slack rejected the users.info request.",
+        providerError: "user_not_found",
+      },
+    });
+  });
+});
+
+describe("users.lookupByEmail validators", () => {
+  test("validateUsersLookupByEmailInput requires email", () => {
+    expect(() => validateUsersLookupByEmailInput({ email: "" })).toThrow();
+    expect(validateUsersLookupByEmailInput({ email: "alice@example.com" }))
+      .toEqual({ email: "alice@example.com" });
+  });
+});
+
+describe("users.lookupByEmail action static validation", () => {
+  test("returns validated without token", () => {
+    const result = lookupUserByEmail({ email: "alice@example.com" });
+    expect((result as Record<string, unknown>).source).toBe("connector");
+    expect((result as Record<string, unknown>).validated).toEqual({ email: "alice@example.com" });
+  });
+});
+
+describe("users.lookupByEmail live (mocked fetch)", () => {
+  test("GETs users.lookupByEmail with Bearer token", async () => {
+    const requests: Request[] = [];
+    const client = createSlackUsersClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(usersLookupByEmailFixture);
+      },
+    });
+
+    const result = await client.lookupByEmail({ email: "alice@example.com" });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toContain("https://slack.com/api/users.lookupByEmail");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer xoxb-test-token");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.user.id).toBe("U001");
+      expect(result.user.email).toBe("alice@example.com");
+    }
+  });
+
+  test("maps users_not_found to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createSlackUsersClient({
+      token: "xoxb-test-token",
+      fetch: async () => Response.json({ ok: false, error: "users_not_found" }),
+    });
+    const result = await client.lookupByEmail({ email: "missing@example.com" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+      expect(result.error.providerError).toBe("users_not_found");
+    }
   });
 });

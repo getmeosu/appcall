@@ -21,6 +21,17 @@ export type ChatPostEphemeralInput = {
   text: string;
 };
 
+export type ChatScheduleMessageInput = {
+  channel: string;
+  text: string;
+  postAt: number;
+};
+
+export type ChatMeMessageInput = {
+  channel: string;
+  text: string;
+};
+
 export type ChatUpdateResult =
   | { ok: true; channel: string; ts: string; text: string; raw: Record<string, unknown> }
   | { ok: false; error: ConnectorError };
@@ -31,6 +42,14 @@ export type ChatDeleteResult =
 
 export type ChatPostEphemeralResult =
   | { ok: true; messageTs: string }
+  | { ok: false; error: ConnectorError };
+
+export type ChatScheduleMessageResult =
+  | { ok: true; channel: string; scheduledMessageId: string; postAt: number }
+  | { ok: false; error: ConnectorError };
+
+export type ChatMeMessageResult =
+  | { ok: true; channel: string; ts: string }
   | { ok: false; error: ConnectorError };
 
 export type SlackChatClientOptions = {
@@ -72,6 +91,27 @@ export function validateChatPostEphemeralInput(input: unknown): ChatPostEphemera
   if (text.length === 0) throw new Error("text is required");
   if (text.length > 40000) throw new Error("text exceeds Slack message limit");
   return { channel, user, text };
+}
+
+export function validateChatScheduleMessageInput(input: unknown): ChatScheduleMessageInput {
+  if (!isRecord(input)) throw new Error("chat.scheduleMessage input must be an object");
+  const channel = requireString(input.channel, "channel").trim();
+  const text = requireString(input.text, "text").trim();
+  if (channel.length === 0) throw new Error("channel is required");
+  if (text.length === 0) throw new Error("text is required");
+  if (text.length > 40000) throw new Error("text exceeds Slack message limit");
+  if (typeof input.postAt !== "number" || !Number.isFinite(input.postAt)) throw new Error("postAt is required");
+  return { channel, text, postAt: input.postAt };
+}
+
+export function validateChatMeMessageInput(input: unknown): ChatMeMessageInput {
+  if (!isRecord(input)) throw new Error("chat.meMessage input must be an object");
+  const channel = requireString(input.channel, "channel").trim();
+  const text = requireString(input.text, "text").trim();
+  if (channel.length === 0) throw new Error("channel is required");
+  if (text.length === 0) throw new Error("text is required");
+  if (text.length > 40000) throw new Error("text exceeds Slack message limit");
+  return { channel, text };
 }
 
 // ─── Client factory ───────────────────────────────────────────────────────────
@@ -157,6 +197,48 @@ export function createSlackChatClient(options: SlackChatClientOptions) {
       return {
         ok: true,
         messageTs: typeof data.message_ts === "string" ? data.message_ts : "",
+      };
+    },
+
+    async scheduleMessage(input: unknown): Promise<ChatScheduleMessageResult> {
+      const payload = validateChatScheduleMessageInput(input);
+      const { status, data } = await slackPost("chat.scheduleMessage", {
+        channel: payload.channel,
+        text: payload.text,
+        post_at: payload.postAt,
+      });
+      const rateLimit = parseRateLimitMetadata(status, {});
+      if (rateLimit.limited) {
+        return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "The upstream provider rate limited this request.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
+      }
+      if (data.ok !== true) {
+        return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Slack rejected the chat.scheduleMessage request.", providerError: typeof data.error === "string" ? data.error : undefined } };
+      }
+      return {
+        ok: true,
+        channel: typeof data.channel === "string" ? data.channel : payload.channel,
+        scheduledMessageId: typeof data.scheduled_message_id === "string" ? data.scheduled_message_id : "",
+        postAt: typeof data.post_at === "number" ? data.post_at : payload.postAt,
+      };
+    },
+
+    async meMessage(input: unknown): Promise<ChatMeMessageResult> {
+      const payload = validateChatMeMessageInput(input);
+      const { status, data } = await slackPost("chat.meMessage", {
+        channel: payload.channel,
+        text: payload.text,
+      });
+      const rateLimit = parseRateLimitMetadata(status, {});
+      if (rateLimit.limited) {
+        return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "The upstream provider rate limited this request.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
+      }
+      if (data.ok !== true) {
+        return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Slack rejected the chat.meMessage request.", providerError: typeof data.error === "string" ? data.error : undefined } };
+      }
+      return {
+        ok: true,
+        channel: typeof data.channel === "string" ? data.channel : payload.channel,
+        ts: typeof data.ts === "string" ? data.ts : "",
       };
     },
   };
