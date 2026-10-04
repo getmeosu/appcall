@@ -386,6 +386,9 @@ const authoredOperationMethods = {
       "boards.get": "GET",
       "items.list": "GET",
       "items.get": "GET",
+      "members.list": "GET",
+      "members.get": "GET",
+      "tags.list": "GET",
     },
   },
   "float": { operationMethods: {

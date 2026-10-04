@@ -561,7 +561,6 @@ import {
   createCustomer as wooCreateCustomer, getCustomer as wooGetCustomer, updateCustomer as wooUpdateCustomer, createCoupon as wooCreateCoupon,
 } from "../../connectors/woocommerce/src/actions";
 import quickbooksManifest from "../../connectors/quickbooks/manifest.json";
-import { healthcheck as quickbooksHealthcheck } from "../../connectors/quickbooks/src/healthcheck";
 import { executeInvoicesListSync as listQBInvoices, executeCustomersListSync as listQBCustomers, executePaymentsListSync as listQBPayments } from "../../connectors/quickbooks/src/sync";
 import greenhouseManifest from "../../connectors/greenhouse/manifest.json";
 import {
@@ -980,7 +979,6 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     klaviyo: klaviyoHealthcheck,
     shopify: shopifyHealthcheck,
     woocommerce: woocommerceHealthcheck,
-    quickbooks: quickbooksHealthcheck,
     workable: workableHealthcheck,
     recruitee: recruiteeHealthcheck,
     "zoho-recruit": zohoRecruitHealthcheck,

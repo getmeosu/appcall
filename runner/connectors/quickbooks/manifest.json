@@ -1,9 +1,11 @@
 {
   "key": "quickbooks",
   "name": "QuickBooks Online",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
-  "categories": ["accounting"],
+  "categories": [
+    "accounting"
+  ],
   "auth": {
     "type": "oauth2",
     "scopes": [
@@ -11,13 +13,54 @@
     ],
     "setup": {
       "mode": "oauth2",
-      "fields": []
+      "fields": [
+        {
+          "key": "realmId",
+          "label": "QuickBooks company ID (realmId)",
+          "required": true,
+          "secret": false
+        }
+      ]
+    },
+    "oauth": {
+      "authorizeUrl": "https://appcenter.intuit.com/connect/oauth2",
+      "tokenUrl": "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+      "pkce": false,
+      "supportsRefresh": true
     }
   },
   "network": {
     "allowedHosts": [
-      "quickbooks.api.intuit.com"
+      "quickbooks.api.intuit.com",
+      "appcenter.intuit.com",
+      "oauth.platform.intuit.com"
     ]
+  },
+  "http": {
+    "baseUrl": "https://quickbooks.api.intuit.com/v3/company/{{realmId}}",
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "Fault.Error.0.Message",
+        "Fault.Error.0.Detail",
+        "message",
+        "error"
+      ]
+    }
   },
   "operations": {
     "invoices.list": {
@@ -40,11 +83,12 @@
     },
     "healthcheck": {
       "kind": "action",
-      "timeoutMs": 5000,
+      "timeoutMs": 10000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "sideEffect": "read",
       "title": "Healthcheck",
-      "description": "Verify connectivity and credentials for the QuickBooks Online connector. Takes no input and returns the connector health status.",
+      "description": "Verify QuickBooks Online credentials by reading CompanyInfo for the connected realm.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -55,15 +99,830 @@
         "properties": {
           "status": {
             "type": "string",
-            "description": "Connector health status, e.g. \"ok\" or \"error\"."
+            "description": "Connector health status."
+          },
+          "company": {
+            "type": "object",
+            "description": "QuickBooks CompanyInfo entity."
           }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companyinfo/{{realmId}}",
+        "success": [
+          200
+        ],
+        "echo": {
+          "status": "ok"
+        },
+        "result": {
+          "status": "ok",
+          "company": "{{response.CompanyInfo}}"
         }
       }
+    },
+    "company.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Company Info",
+      "description": "Get CompanyInfo for the connected QuickBooks Online company via GET /v3/company/{realmId}/companyinfo/{realmId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "company": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "company"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companyinfo/{{realmId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "company": "{{response.CompanyInfo}}"
+        }
+      }
+    },
+    "query.run": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Run Query",
+      "description": "Run a QuickBooks Online SQL-like query via GET /v3/company/{realmId}/query. Example: SELECT * FROM Customer MAXRESULTS 20.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks query language statement."
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "queryResponse": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "queryResponse"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/query",
+        "query": {
+          "query": "{{query}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "queryResponse": "{{response.QueryResponse}}"
+        }
+      }
+    },
+    "customers.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Customer",
+      "description": "Get one QuickBooks customer by Id via GET /v3/company/{realmId}/customer/{customerId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks customer Id."
+          }
+        },
+        "required": [
+          "customerId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "customer"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/customer/{{customerId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "customer": "{{response.Customer}}"
+        }
+      }
+    },
+    "customers.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Customer",
+      "description": "Create a QuickBooks customer via POST /v3/company/{realmId}/customer. DisplayName is required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer display name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Primary email address."
+          },
+          "companyName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Notes stored on the customer."
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "customer"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/customer",
+        "success": [
+          200
+        ],
+        "body": {
+          "DisplayName": "{{displayName}}",
+          "CompanyName": "{{companyName}}",
+          "Notes": "{{notes}}",
+          "PrimaryEmailAddr": {
+            "Address": "{{email}}"
+          }
+        },
+        "result": {
+          "customer": "{{response.Customer}}"
+        }
+      }
+    },
+    "customers.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Customer",
+      "description": "Sparse-update a QuickBooks customer via POST /v3/company/{realmId}/customer. Id and SyncToken are required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks customer Id."
+          },
+          "syncToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Current SyncToken from a prior read."
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated display name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated primary email address."
+          }
+        },
+        "required": [
+          "customerId",
+          "syncToken"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "customer"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/customer",
+        "success": [
+          200
+        ],
+        "body": {
+          "sparse": true,
+          "Id": "{{customerId}}",
+          "SyncToken": "{{syncToken}}",
+          "DisplayName": "{{displayName}}",
+          "PrimaryEmailAddr": {
+            "Address": "{{email}}"
+          }
+        },
+        "result": {
+          "customer": "{{response.Customer}}"
+        }
+      }
+    },
+    "invoices.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Invoice",
+      "description": "Get one QuickBooks invoice by Id via GET /v3/company/{realmId}/invoice/{invoiceId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks invoice Id."
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invoice": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "invoice"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/invoice/{{invoiceId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "invoice": "{{response.Invoice}}"
+        }
+      }
+    },
+    "invoices.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Invoice",
+      "description": "Create a QuickBooks invoice via POST /v3/company/{realmId}/invoice. Requires customerId, itemId, and amount.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer Id for CustomerRef.value."
+          },
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Item Id for the sales line ItemRef.value."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Line amount in the company home currency."
+          },
+          "docNumber": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional document number."
+          }
+        },
+        "required": [
+          "customerId",
+          "itemId",
+          "amount"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invoice": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "invoice"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/invoice",
+        "success": [
+          200
+        ],
+        "body": {
+          "DocNumber": "{{docNumber}}",
+          "CustomerRef": {
+            "value": "{{customerId}}"
+          },
+          "Line": [
+            {
+              "Amount": "{{amount}}",
+              "DetailType": "SalesItemLineDetail",
+              "SalesItemLineDetail": {
+                "ItemRef": {
+                  "value": "{{itemId}}"
+                }
+              }
+            }
+          ]
+        },
+        "result": {
+          "invoice": "{{response.Invoice}}"
+        }
+      }
+    },
+    "invoices.send": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Send Invoice",
+      "description": "Email a QuickBooks invoice via POST /v3/company/{realmId}/invoice/{invoiceId}/send. Optional sendTo overrides the customer email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks invoice Id."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Override recipient email (sendTo)."
+          }
+        },
+        "required": [
+          "invoiceId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "invoice": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "invoice"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/invoice/{{invoiceId}}/send",
+        "query": {
+          "sendTo": "{{email}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "invoice": "{{response.Invoice}}"
+        }
+      }
+    },
+    "payments.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Payment",
+      "description": "Get one QuickBooks payment by Id via GET /v3/company/{realmId}/payment/{paymentId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks payment Id."
+          }
+        },
+        "required": [
+          "paymentId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "payment": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "payment"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/payment/{{paymentId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "payment": "{{response.Payment}}"
+        }
+      }
+    },
+    "payments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Payment",
+      "description": "Create a QuickBooks payment via POST /v3/company/{realmId}/payment. Requires customerId and amount.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer Id for CustomerRef.value."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Payment TotalAmt in the company home currency."
+          }
+        },
+        "required": [
+          "customerId",
+          "amount"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "payment": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "payment"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/payment",
+        "success": [
+          200
+        ],
+        "body": {
+          "CustomerRef": {
+            "value": "{{customerId}}"
+          },
+          "TotalAmt": "{{amount}}"
+        },
+        "result": {
+          "payment": "{{response.Payment}}"
+        }
+      }
+    },
+    "vendors.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Vendor",
+      "description": "Get one QuickBooks vendor by Id via GET /v3/company/{realmId}/vendor/{vendorId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "vendorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks vendor Id."
+          }
+        },
+        "required": [
+          "vendorId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "vendor": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "vendor"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/vendor/{{vendorId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "vendor": "{{response.Vendor}}"
+        }
+      }
+    },
+    "vendors.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Vendor",
+      "description": "Create a QuickBooks vendor via POST /v3/company/{realmId}/vendor. DisplayName is required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Vendor display name."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Primary email address."
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "vendor": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "vendor"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/vendor",
+        "success": [
+          200
+        ],
+        "body": {
+          "DisplayName": "{{displayName}}",
+          "PrimaryEmailAddr": {
+            "Address": "{{email}}"
+          }
+        },
+        "result": {
+          "vendor": "{{response.Vendor}}"
+        }
+      }
+    },
+    "items.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Item",
+      "description": "Get one QuickBooks item by Id via GET /v3/company/{realmId}/item/{itemId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks item Id."
+          }
+        },
+        "required": [
+          "itemId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "item"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/item/{{itemId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "item": "{{response.Item}}"
+        }
+      }
+    },
+    "bills.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Bill",
+      "description": "Get one QuickBooks bill by Id via GET /v3/company/{realmId}/bill/{billId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "billId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks bill Id."
+          }
+        },
+        "required": [
+          "billId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "bill": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "bill"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bill/{{billId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "bill": "{{response.Bill}}"
+        }
+      }
+    },
+    "estimates.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Estimate",
+      "description": "Get one QuickBooks estimate by Id via GET /v3/company/{realmId}/estimate/{estimateId}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "estimateId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "QuickBooks estimate Id."
+          }
+        },
+        "required": [
+          "estimateId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "estimate": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "estimate"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/estimate/{{estimateId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "estimate": "{{response.Estimate}}"
+        }
+      }
+    },
+    "webhook.customer_changed": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Customer Changed",
+      "description": "Intuit webhook for Customer Create, Update, Delete, Merge, or Void on the connected QuickBooks Online company."
+    },
+    "webhook.invoice_changed": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Invoice Changed",
+      "description": "Intuit webhook for Invoice Create, Update, Delete, Merge, or Void on the connected QuickBooks Online company."
+    },
+    "webhook.payment_changed": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Payment Changed",
+      "description": "Intuit webhook for Payment Create, Update, Delete, Merge, or Void on the connected QuickBooks Online company."
     }
   },
   "models": [
     "invoice",
     "customer",
-    "payment"
+    "payment",
+    "vendor",
+    "item",
+    "bill",
+    "estimate",
+    "company"
   ]
 }
