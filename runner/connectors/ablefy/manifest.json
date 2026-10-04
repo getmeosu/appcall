@@ -62,7 +62,12 @@
   "models": [
     "account",
     "product",
-    "pricing-plan"
+    "pricing-plan",
+    "order",
+    "invoice",
+    "payment",
+    "webhook-endpoint",
+    "funnel"
   ],
   "name": "ablefy",
   "network": {
@@ -266,6 +271,1006 @@
       "timeoutMs": 15000,
       "title": "List products",
       "validationMode": "strict-generated"
+    },
+    "products.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create product",
+      "description": "Create an ablefy product and receive checkout URLs.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product name."
+          },
+          "success_url": {
+            "type": "string",
+            "description": "Checkout success URL."
+          },
+          "cancel_url": {
+            "type": "string",
+            "description": "Checkout cancel URL."
+          },
+          "error_url": {
+            "type": "string",
+            "description": "Checkout error URL."
+          },
+          "webhook_url": {
+            "type": "string",
+            "description": "Payment notification URL."
+          },
+          "free": {
+            "type": "boolean",
+            "description": "Whether the product is free."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the product is active."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Whether the product is private."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/products",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "success_url": "{{success_url}}",
+          "cancel_url": "{{cancel_url}}",
+          "error_url": "{{error_url}}",
+          "webhook_url": "{{webhook_url}}",
+          "free": "{{free}}",
+          "active": "{{active}}",
+          "private": "{{private}}"
+        }
+      }
+    },
+    "products.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update product",
+      "description": "Update an ablefy product by numeric identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Product identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product name."
+          },
+          "success_url": {
+            "type": "string",
+            "description": "Checkout success URL."
+          },
+          "cancel_url": {
+            "type": "string",
+            "description": "Checkout cancel URL."
+          },
+          "error_url": {
+            "type": "string",
+            "description": "Checkout error URL."
+          },
+          "webhook_url": {
+            "type": "string",
+            "description": "Payment notification URL."
+          },
+          "free": {
+            "type": "boolean",
+            "description": "Whether the product is free."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the product is active."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Whether the product is private."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/products/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "success_url": "{{success_url}}",
+          "cancel_url": "{{cancel_url}}",
+          "error_url": "{{error_url}}",
+          "webhook_url": "{{webhook_url}}",
+          "free": "{{free}}",
+          "active": "{{active}}",
+          "private": "{{private}}"
+        }
+      }
+    },
+    "pricing-plans.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete pricing plan",
+      "description": "Delete an ablefy pricing plan by numeric identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric ablefy identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/pricing_plans/{{id}}",
+        "success": [
+          204
+        ]
+      }
+    },
+    "orders.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get order",
+      "description": "Get one ablefy order by numeric identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric ablefy identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/orders/{{id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "orders.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create order",
+      "description": "Create a free ablefy order that grants product access.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "product_id",
+          "email",
+          "first_name",
+          "last_name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "product_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Product identifier."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Buyer email."
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Buyer first name."
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Buyer last name."
+          },
+          "ticket_date_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional event ticket date."
+          },
+          "pid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional publisher identifier."
+          },
+          "prid": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional pricing plan identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/orders",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "product_id": "{{product_id}}",
+          "email": "{{email}}",
+          "first_name": "{{first_name}}",
+          "last_name": "{{last_name}}",
+          "ticket_date_id": "{{ticket_date_id}}",
+          "pid": "{{pid}}",
+          "prid": "{{prid}}"
+        }
+      }
+    },
+    "orders.cancel": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Cancel order",
+      "description": "Cancel an ablefy order by order token.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order token."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/orders/{{token}}/cancel",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      }
+    },
+    "invoices.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List invoices",
+      "description": "List ablefy invoices with optional date, state, and product filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "date_from": {
+            "type": "string",
+            "description": "Inclusive start timestamp."
+          },
+          "date_to": {
+            "type": "string",
+            "description": "Inclusive end timestamp."
+          },
+          "invoice_state": {
+            "type": "string",
+            "enum": [
+              "unpaid",
+              "paid",
+              "canceled",
+              "non_payable",
+              "issued"
+            ],
+            "description": "Invoice status filter."
+          },
+          "payment_state": {
+            "type": "string",
+            "enum": [
+              "payment_waiting",
+              "paying",
+              "paid",
+              "payment_paused",
+              "payment_canceled",
+              "payment_refunded",
+              "payment_not_completed",
+              "payment_chargebacked",
+              "payment_pending"
+            ],
+            "description": "Order payment status filter."
+          },
+          "product_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Product identifier filter."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/invoices",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "date_from": "{{date_from}}",
+          "date_to": "{{date_to}}",
+          "invoice_state": "{{invoice_state}}",
+          "payment_state": "{{payment_state}}",
+          "product_id": "{{product_id}}"
+        }
+      }
+    },
+    "payments.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get payment",
+      "description": "Get ablefy payment information by payment identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payment identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/payments/{{id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "webhook-endpoints.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List webhook endpoints",
+      "description": "List webhook endpoints in the connected ablefy account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/webhook_endpoints",
+        "success": [
+          200
+        ]
+      }
+    },
+    "webhook-endpoints.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get webhook endpoint",
+      "description": "Get one ablefy webhook endpoint by numeric identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric ablefy identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/webhook_endpoints/{{id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "webhook-endpoints.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create webhook endpoint",
+      "description": "Create an ablefy webhook endpoint URL for payment and order events.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "name",
+          "url"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook endpoint name."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook endpoint URL."
+          },
+          "event_form": {
+            "type": "string",
+            "enum": [
+              "all_events",
+              "selected_events"
+            ],
+            "description": "Event selection mode."
+          },
+          "event_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Selected event identifiers."
+          },
+          "request_format": {
+            "type": "string",
+            "enum": [
+              "x_www_form_urlencoded",
+              "json"
+            ],
+            "description": "Delivery encoding."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/webhook_endpoints",
+        "success": [
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "url": "{{url}}",
+          "event_form": "{{event_form}}",
+          "event_ids": "{{event_ids}}",
+          "request_format": "{{request_format}}"
+        }
+      }
+    },
+    "webhook-endpoints.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update webhook endpoint",
+      "description": "Update an ablefy webhook endpoint by numeric identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "url"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Webhook endpoint identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook endpoint name."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook endpoint URL."
+          },
+          "event_form": {
+            "type": "string",
+            "enum": [
+              "all_events",
+              "selected_events"
+            ],
+            "description": "Event selection mode."
+          },
+          "event_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Selected event identifiers."
+          },
+          "request_format": {
+            "type": "string",
+            "enum": [
+              "x_www_form_urlencoded",
+              "json"
+            ],
+            "description": "Delivery encoding."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/webhook_endpoints/{{id}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "url": "{{url}}",
+          "event_form": "{{event_form}}",
+          "event_ids": "{{event_ids}}",
+          "request_format": "{{request_format}}"
+        }
+      }
+    },
+    "webhook-endpoints.delete": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "destructive",
+      "title": "Delete webhook endpoint",
+      "description": "Delete an ablefy webhook endpoint by numeric identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric ablefy identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/webhook_endpoints/{{id}}",
+        "success": [
+          204
+        ]
+      }
+    },
+    "funnels.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List funnels",
+      "description": "List sales funnels in the connected ablefy account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/funnels",
+        "success": [
+          200
+        ]
+      }
+    },
+    "funnels.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get funnel",
+      "description": "Get one ablefy funnel by numeric identifier.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Numeric ablefy identifier."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/funnels/{{id}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "webhook.payment_paid": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Payment paid",
+      "description": "ablefy webhook for a paid payment. Fires when checkout completes successfully.",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.payment_refunded": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Payment refunded",
+      "description": "ablefy webhook for a refunded payment.",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.payment_chargebacked": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Payment chargebacked",
+      "description": "ablefy webhook for a chargeback on a payment.",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
@@ -275,6 +1280,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }

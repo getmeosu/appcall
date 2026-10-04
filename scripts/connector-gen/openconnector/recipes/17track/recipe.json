@@ -77,8 +77,17 @@
     "operations": [
       "healthcheck",
       "quota.get",
+      "trackings.get",
       "trackings.list",
-      "trackings.get"
+      "trackings.register",
+      "trackings.changeinfo",
+      "trackings.changecarrier",
+      "trackings.stop",
+      "trackings.retrack",
+      "trackings.delete",
+      "trackings.realtime",
+      "webhook.tracking_updated",
+      "webhook.tracking_stopped"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -208,22 +217,152 @@
       "adaptations": [
         "Maps to documented POST /gettrackinfo with a JSON array of {number, carrier}. Native requires the trackings array (1-40 items) instead of flattening fields."
       ]
+    },
+    "trackings.register": {
+      "upstreamActionId": "get_tracking_details",
+      "sourceRefs": [
+        "request-auth",
+        "api-base",
+        "assert-envelope"
+      ],
+      "documentationUrls": [
+        "https://asset.17track.net/api/document/v2.4_en/index.html",
+        "https://www.17track.net/en/api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /register with a JSON array of tracking numbers."
+      ]
+    },
+    "trackings.changeinfo": {
+      "upstreamActionId": "get_tracking_details",
+      "sourceRefs": [
+        "request-auth",
+        "api-base",
+        "assert-envelope"
+      ],
+      "documentationUrls": [
+        "https://asset.17track.net/api/document/v2.4_en/index.html",
+        "https://www.17track.net/en/api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /changeinfo for tag and extra registration fields."
+      ]
+    },
+    "trackings.changecarrier": {
+      "upstreamActionId": "get_tracking_details",
+      "sourceRefs": [
+        "request-auth",
+        "api-base",
+        "assert-envelope"
+      ],
+      "documentationUrls": [
+        "https://asset.17track.net/api/document/v2.4_en/index.html",
+        "https://www.17track.net/en/api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /changecarrier with carrier_old and carrier_new."
+      ]
+    },
+    "trackings.stop": {
+      "upstreamActionId": "get_tracking_details",
+      "sourceRefs": [
+        "request-auth",
+        "api-base",
+        "assert-envelope"
+      ],
+      "documentationUrls": [
+        "https://asset.17track.net/api/document/v2.4_en/index.html",
+        "https://www.17track.net/en/api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /stoptrack."
+      ]
+    },
+    "trackings.retrack": {
+      "upstreamActionId": "get_tracking_details",
+      "sourceRefs": [
+        "request-auth",
+        "api-base",
+        "assert-envelope"
+      ],
+      "documentationUrls": [
+        "https://asset.17track.net/api/document/v2.4_en/index.html",
+        "https://www.17track.net/en/api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /retrack for stopped numbers."
+      ]
+    },
+    "trackings.delete": {
+      "upstreamActionId": "get_tracking_details",
+      "sourceRefs": [
+        "request-auth",
+        "api-base",
+        "assert-envelope"
+      ],
+      "documentationUrls": [
+        "https://asset.17track.net/api/document/v2.4_en/index.html",
+        "https://www.17track.net/en/api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /deletetrack."
+      ]
+    },
+    "trackings.realtime": {
+      "upstreamActionId": "get_tracking_details",
+      "sourceRefs": [
+        "request-auth",
+        "api-base",
+        "assert-envelope"
+      ],
+      "documentationUrls": [
+        "https://asset.17track.net/api/document/v2.4_en/index.html",
+        "https://www.17track.net/en/api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to documented POST /getRealTimeTrackInfo billed realtime lookup."
+      ]
+    },
+    "webhook.tracking_updated": {
+      "upstreamActionId": "get_tracking_details",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://asset.17track.net/api/document/v2.4_en/index.html",
+        "https://www.17track.net/en/api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly TRACKING_UPDATED vendor webhook. No HTTP request."
+      ]
+    },
+    "webhook.tracking_stopped": {
+      "upstreamActionId": "get_tracking_details",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://asset.17track.net/api/document/v2.4_en/index.html",
+        "https://www.17track.net/en/api"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly TRACKING_STOPPED vendor webhook. No HTTP request."
+      ]
     }
   },
   "manifest": {
-    "key": "17track",
-    "name": "17TRACK",
-    "version": "0.1.0",
-    "runtime": "bun",
-    "visibility": "public",
-    "categories": [
-      "ecommerce"
-    ],
     "auth": {
-      "type": "api_key",
       "scopes": [],
       "setup": {
-        "mode": "api_key",
         "fields": [
           {
             "key": "apiKey",
@@ -231,192 +370,271 @@
             "required": true,
             "secret": true
           }
-        ]
+        ],
+        "mode": "api_key"
+      },
+      "type": "api_key"
+    },
+    "categories": [
+      "ecommerce"
+    ],
+    "evidence": {
+      "fixture": {
+        "status": "supplied"
+      },
+      "live": {
+        "status": "unverified"
       }
     },
-    "network": {
-      "allowedHosts": [
-        "api.17track.net"
-      ]
-    },
-    "models": [
-      "quota",
-      "tracking"
-    ],
     "http": {
-      "baseUrl": "https://api.17track.net/track/v2.4",
       "auth": {
         "field": "apiKey",
         "in": "header",
         "name": "17token",
         "value": "{{apiKey}}"
       },
-      "headers": {
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      },
+      "baseUrl": "https://api.17track.net/track/v2.4",
       "errors": {
-        "rateLimitStatuses": [
-          429
+        "bodyErrorPaths": [
+          "data.errors"
         ],
-        "retryAfterHeader": "retry-after",
         "defaultRetryAfterSeconds": 30,
         "messagePaths": [
           "data.errors.0.message",
           "message",
           "error"
         ],
-        "bodyErrorPaths": [
-          "data.errors"
-        ]
+        "rateLimitStatuses": [
+          429
+        ],
+        "retryAfterHeader": "retry-after"
+      },
+      "headers": {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
       }
+    },
+    "key": "17track",
+    "models": [
+      "quota",
+      "tracking"
+    ],
+    "name": "17TRACK",
+    "network": {
+      "allowedHosts": [
+        "api.17track.net"
+      ]
     },
     "operations": {
       "healthcheck": {
-        "timeoutMs": 5000,
+        "description": "Validate the 17TRACK API key by reading account quota counters.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 4096,
         "maxResponseBytes": 65536,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Healthcheck",
-        "description": "Validate the 17TRACK API key by reading account quota counters.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
+          "body": [],
           "method": "POST",
           "path": "/getquota",
-          "body": [],
           "success": [
             200
           ]
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 5000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
       },
       "quota.get": {
-        "timeoutMs": 15000,
+        "description": "Get 17TRACK tracking and email quota counters for the authenticated account.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "kind": "action",
-        "sideEffect": "read",
-        "title": "Get quota",
-        "description": "Get 17TRACK tracking and email quota counters for the authenticated account.",
-        "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
         "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
-          ],
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
+          "body": [],
           "method": "POST",
           "path": "/getquota",
-          "body": [],
           "success": [
             200
           ]
-        }
-      },
-      "trackings.list": {
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "kind": "action",
+        },
+        "responseFormat": "json",
         "sideEffect": "read",
-        "title": "List trackings",
-        "description": "List registered 17TRACK shipments with optional number, carrier, and page filters.",
+        "timeoutMs": 15000,
+        "title": "Get quota",
+        "validationMode": "strict-generated"
+      },
+      "trackings.get": {
+        "description": "Get current tracking details for registered 17TRACK tracking numbers.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "number": {
-              "type": "string",
-              "minLength": 5
-            },
-            "carrier": {
-              "type": "integer",
-              "minimum": 1
-            },
-            "page_no": {
-              "type": "integer",
-              "minimum": 0
+            "trackings": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "carrier": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "number": {
+                    "minLength": 5,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "number"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
             }
           },
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
           "required": [
-            "data"
+            "trackings"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json",
         "request": {
+          "body": "{{trackings}}",
           "method": "POST",
-          "path": "/gettracklist",
-          "body": {
-            "number": "{{number}}",
-            "carrier": "{{carrier}}",
-            "page_no": "{{page_no}}"
-          },
+          "path": "/gettrackinfo",
           "success": [
             200
           ]
-        }
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get tracking details",
+        "validationMode": "strict-generated"
       },
-      "trackings.get": {
+      "trackings.list": {
+        "description": "List registered 17TRACK shipments with optional number, carrier, and page filters.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "carrier": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "number": {
+              "minLength": 5,
+              "type": "string"
+            },
+            "page_no": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "body": {
+            "carrier": "{{carrier}}",
+            "number": "{{number}}",
+            "page_no": "{{page_no}}"
+          },
+          "method": "POST",
+          "path": "/gettracklist",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List trackings",
+        "validationMode": "strict-generated"
+      },
+      "trackings.register": {
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
         "kind": "action",
-        "sideEffect": "read",
-        "title": "Get tracking details",
-        "description": "Get current tracking details for registered 17TRACK tracking numbers.",
+        "sideEffect": "write",
+        "title": "Register trackings",
+        "description": "Register tracking numbers with 17TRACK for automatic carrier tracking.",
         "inputSchema": {
           "type": "object",
           "required": [
             "trackings"
           ],
+          "additionalProperties": false,
           "properties": {
             "trackings": {
               "type": "array",
               "minItems": 1,
+              "description": "Tracking numbers, at most 40 per request.",
               "items": {
                 "type": "object",
                 "required": [
@@ -426,17 +644,26 @@
                 "properties": {
                   "number": {
                     "type": "string",
-                    "minLength": 5
+                    "minLength": 5,
+                    "description": "Tracking number."
                   },
                   "carrier": {
                     "type": "integer",
-                    "minimum": 1
+                    "minimum": 1,
+                    "description": "17TRACK carrier code."
+                  },
+                  "tag": {
+                    "type": "string",
+                    "description": "Optional shipment tag."
+                  },
+                  "lang": {
+                    "type": "string",
+                    "description": "Event translation language code."
                   }
                 }
               }
             }
-          },
-          "additionalProperties": false
+          }
         },
         "outputSchema": {
           "type": "object",
@@ -455,27 +682,507 @@
         "responseFormat": "json",
         "request": {
           "method": "POST",
-          "path": "/gettrackinfo",
-          "body": "{{trackings}}",
+          "path": "/register",
           "success": [
             200
-          ]
+          ],
+          "body": "{{trackings}}"
         }
+      },
+      "trackings.changeinfo": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Change tracking info",
+        "description": "Update tag or extra registration fields for 17TRACK tracking numbers.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "trackings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "trackings": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Tracking numbers, at most 40 per request.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "number"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "number": {
+                    "type": "string",
+                    "minLength": 5,
+                    "description": "Tracking number."
+                  },
+                  "carrier": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "17TRACK carrier code."
+                  },
+                  "tag": {
+                    "type": "string",
+                    "description": "Optional shipment tag."
+                  },
+                  "lang": {
+                    "type": "string",
+                    "description": "Event translation language code."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/changeinfo",
+          "success": [
+            200
+          ],
+          "body": "{{trackings}}"
+        }
+      },
+      "trackings.changecarrier": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Change carrier",
+        "description": "Change the carrier code for registered 17TRACK tracking numbers.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "trackings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "trackings": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Carrier change payloads, at most 40 per request.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "number",
+                  "carrier_old",
+                  "carrier_new"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "number": {
+                    "type": "string",
+                    "minLength": 5,
+                    "description": "Tracking number."
+                  },
+                  "carrier_old": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Current carrier code."
+                  },
+                  "carrier_new": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Replacement carrier code."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/changecarrier",
+          "success": [
+            200
+          ],
+          "body": "{{trackings}}"
+        }
+      },
+      "trackings.stop": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Stop tracking",
+        "description": "Stop automatic tracking for registered 17TRACK tracking numbers.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "trackings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "trackings": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Tracking numbers, at most 40 per request.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "number"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "number": {
+                    "type": "string",
+                    "minLength": 5,
+                    "description": "Tracking number."
+                  },
+                  "carrier": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "17TRACK carrier code."
+                  },
+                  "tag": {
+                    "type": "string",
+                    "description": "Optional shipment tag."
+                  },
+                  "lang": {
+                    "type": "string",
+                    "description": "Event translation language code."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/stoptrack",
+          "success": [
+            200
+          ],
+          "body": "{{trackings}}"
+        }
+      },
+      "trackings.retrack": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Retrack",
+        "description": "Reactivate tracking for previously stopped 17TRACK tracking numbers.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "trackings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "trackings": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Tracking numbers, at most 40 per request.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "number"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "number": {
+                    "type": "string",
+                    "minLength": 5,
+                    "description": "Tracking number."
+                  },
+                  "carrier": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "17TRACK carrier code."
+                  },
+                  "tag": {
+                    "type": "string",
+                    "description": "Optional shipment tag."
+                  },
+                  "lang": {
+                    "type": "string",
+                    "description": "Event translation language code."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/retrack",
+          "success": [
+            200
+          ],
+          "body": "{{trackings}}"
+        }
+      },
+      "trackings.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete trackings",
+        "description": "Permanently delete registered 17TRACK tracking numbers.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "trackings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "trackings": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Tracking numbers, at most 40 per request.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "number"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "number": {
+                    "type": "string",
+                    "minLength": 5,
+                    "description": "Tracking number."
+                  },
+                  "carrier": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "17TRACK carrier code."
+                  },
+                  "tag": {
+                    "type": "string",
+                    "description": "Optional shipment tag."
+                  },
+                  "lang": {
+                    "type": "string",
+                    "description": "Event translation language code."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/deletetrack",
+          "success": [
+            200
+          ],
+          "body": "{{trackings}}"
+        }
+      },
+      "trackings.realtime": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Get realtime tracking",
+        "description": "Request a billed real-time 17TRACK lookup for registered tracking numbers.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "trackings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "trackings": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Tracking numbers, at most 40 per request.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "number"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "number": {
+                    "type": "string",
+                    "minLength": 5,
+                    "description": "Tracking number."
+                  },
+                  "carrier": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "17TRACK carrier code."
+                  },
+                  "tag": {
+                    "type": "string",
+                    "description": "Optional shipment tag."
+                  },
+                  "lang": {
+                    "type": "string",
+                    "description": "Event translation language code."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json",
+        "request": {
+          "method": "POST",
+          "path": "/getRealTimeTrackInfo",
+          "success": [
+            200
+          ],
+          "body": "{{trackings}}"
+        }
+      },
+      "webhook.tracking_updated": {
+        "kind": "webhook",
+        "sideEffect": "read",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "title": "Tracking updated",
+        "description": "17TRACK webhook TRACKING_UPDATED. Fires when registered shipment tracking details change.",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhook.tracking_stopped": {
+        "kind": "webhook",
+        "sideEffect": "read",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "title": "Tracking stopped",
+        "description": "17TRACK webhook TRACKING_STOPPED. Fires when automatic tracking stops for a shipment.",
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
       }
     },
     "provenance": {
       "source": {
-        "url": "https://github.com/oomol-lab/open-connector",
-        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+        "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
+        "url": "https://github.com/oomol-lab/open-connector"
       }
     },
-    "evidence": {
-      "fixture": {
-        "status": "supplied"
-      },
-      "live": {
-        "status": "unverified"
-      }
-    }
+    "runtime": "bun",
+    "version": "0.2.0",
+    "visibility": "public"
   }
 }
