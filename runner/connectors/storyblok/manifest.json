@@ -1,7 +1,7 @@
 {
   "key": "storyblok",
   "name": "Storyblok",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -24,7 +24,8 @@
   },
   "network": {
     "allowedHosts": [
-      "api.storyblok.com"
+      "api.storyblok.com",
+      "mapi.storyblok.com"
     ]
   },
   "http": {
@@ -37,6 +38,17 @@
     },
     "headers": {
       "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message"
+      ]
     }
   },
   "operations": {
@@ -123,11 +135,830 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "stories.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Get a story",
+      "description": "Retrieve one published or draft story by id, uuid, or slug from the Content Delivery API.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1
+          },
+          "find_by": {
+            "type": "string",
+            "enum": [
+              "uuid"
+            ]
+          },
+          "resolve_links": {
+            "type": "string",
+            "enum": [
+              "story",
+              "url",
+              "link"
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/stories/{{id}}",
+        "query": {
+          "version": "{{version}}",
+          "language": "{{language}}",
+          "find_by": "{{find_by}}",
+          "resolve_links": "{{resolve_links}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "links.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List links",
+      "description": "List story links from the Content Delivery API.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "starts_with": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published"
+            ]
+          },
+          "paginated": {
+            "type": "integer",
+            "enum": [
+              1
+            ]
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/links",
+        "query": {
+          "starts_with": "{{starts_with}}",
+          "version": "{{version}}",
+          "paginated": "{{paginated}}",
+          "page": "{{page}}",
+          "per_page": "{{per_page}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List tags",
+      "description": "List tags from the Content Delivery API.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "starts_with": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "query": {
+          "starts_with": "{{starts_with}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "datasources.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List datasources",
+      "description": "List datasources from the Content Delivery API.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasources",
+        "success": [
+          200
+        ]
+      }
+    },
+    "datasource_entries.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List datasource entries",
+      "description": "List entries for a named datasource from the Content Delivery API.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "datasource": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dimension": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "datasource"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/datasource_entries",
+        "query": {
+          "datasource": "{{datasource}}",
+          "dimension": "{{dimension}}",
+          "page": "{{page}}",
+          "per_page": "{{per_page}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "spaces.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List spaces",
+      "description": "List Management API spaces for the personal access token.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "request": {
+        "method": "GET",
+        "path": "/spaces",
+        "baseUrl": "https://mapi.storyblok.com/v1",
+        "headers": {
+          "Authorization": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "spaces.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Get a space",
+      "description": "Retrieve one Management API space by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "spaceId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "spaceId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/spaces/{{spaceId}}",
+        "baseUrl": "https://mapi.storyblok.com/v1",
+        "headers": {
+          "Authorization": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "stories.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Create a story",
+      "description": "Create a Management API story in a space. Stories are unpublished unless publish is true.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "spaceId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content": {
+            "type": "object"
+          },
+          "publish": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "spaceId",
+          "name",
+          "slug",
+          "content"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/spaces/{{spaceId}}/stories",
+        "baseUrl": "https://mapi.storyblok.com/v1",
+        "headers": {
+          "Authorization": "{{apiKey}}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "publish": "{{publish}}",
+          "story": {
+            "name": "{{name}}",
+            "slug": "{{slug}}",
+            "content": "{{content}}"
+          }
+        },
+        "success": [
+          200,
+          201
+        ]
+      }
+    },
+    "stories.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Update a story",
+      "description": "Update a Management API story by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "spaceId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "storyId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content": {
+            "type": "object"
+          },
+          "publish": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "spaceId",
+          "storyId"
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/spaces/{{spaceId}}/stories/{{storyId}}",
+        "baseUrl": "https://mapi.storyblok.com/v1",
+        "headers": {
+          "Authorization": "{{apiKey}}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "publish": "{{publish}}",
+          "story": {
+            "name": "{{name}}",
+            "slug": "{{slug}}",
+            "content": "{{content}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "stories.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Delete a story",
+      "description": "Delete a Management API story by numeric id.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "spaceId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "storyId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "spaceId",
+          "storyId"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/spaces/{{spaceId}}/stories/{{storyId}}",
+        "baseUrl": "https://mapi.storyblok.com/v1",
+        "headers": {
+          "Authorization": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "stories.publish": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Publish a story",
+      "description": "Publish a Management API story. Official endpoint is GET /stories/:id/publish.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "spaceId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "storyId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "spaceId",
+          "storyId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/spaces/{{spaceId}}/stories/{{storyId}}/publish",
+        "baseUrl": "https://mapi.storyblok.com/v1",
+        "headers": {
+          "Authorization": "{{apiKey}}"
+        },
+        "query": {
+          "lang": "{{lang}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "stories.unpublish": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Unpublish a story",
+      "description": "Unpublish a Management API story. Official endpoint is GET /stories/:id/unpublish.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "spaceId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "storyId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "lang": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "spaceId",
+          "storyId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/spaces/{{spaceId}}/stories/{{storyId}}/unpublish",
+        "baseUrl": "https://mapi.storyblok.com/v1",
+        "headers": {
+          "Authorization": "{{apiKey}}"
+        },
+        "query": {
+          "lang": "{{lang}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "components.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List components",
+      "description": "List Management API components for a space.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "spaceId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "spaceId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/spaces/{{spaceId}}/components",
+        "baseUrl": "https://mapi.storyblok.com/v1",
+        "headers": {
+          "Authorization": "{{apiKey}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "assets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List assets",
+      "description": "List Management API assets for a space.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "spaceId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "search": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "spaceId"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/spaces/{{spaceId}}/assets",
+        "baseUrl": "https://mapi.storyblok.com/v1",
+        "headers": {
+          "Authorization": "{{apiKey}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{per_page}}",
+          "search": "{{search}}"
+        },
+        "success": [
+          200
+        ]
+      }
     }
   },
   "models": [
     "space",
-    "story"
+    "story",
+    "link",
+    "tag",
+    "datasource",
+    "component",
+    "asset"
   ],
   "evidence": {
     "fixture": {

@@ -52,7 +52,9 @@
   "key": "bitly",
   "models": [
     "user",
-    "group"
+    "group",
+    "bitlink",
+    "organization"
   ],
   "name": "Bitly",
   "network": {
@@ -184,6 +186,758 @@
       "timeoutMs": 5000,
       "title": "Healthcheck",
       "validationMode": "strict-generated"
+    },
+    "bitlinks.shorten": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Shorten a link",
+      "description": "Create a Bitlink from a long URL via POST /v4/shorten.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "longUrl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1
+          },
+          "groupGuid": {
+            "type": "string",
+            "minLength": 1
+          },
+          "forceNewLink": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "longUrl"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/shorten",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "long_url": "{{longUrl}}",
+          "domain": "{{domain}}",
+          "group_guid": "{{groupGuid}}",
+          "force_new_link": "{{forceNewLink}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      }
+    },
+    "bitlinks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Create a bitlink",
+      "description": "Create a Bitlink with optional title and tags via POST /v4/bitlinks.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "longUrl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 1
+          },
+          "groupGuid": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "longUrl"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/bitlinks",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "long_url": "{{longUrl}}",
+          "domain": "{{domain}}",
+          "group_guid": "{{groupGuid}}",
+          "title": "{{title}}",
+          "tags": "{{tags}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      }
+    },
+    "bitlinks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Get a bitlink",
+      "description": "Retrieve a Bitlink by domain/hash id. The slash in the id is percent-encoded.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bitlink": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "bitlink"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bitlinks/{{bitlink}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "bitlinks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Update a bitlink",
+      "description": "Update title, archive flag, tags, or destination of an existing Bitlink.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bitlink": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "longUrl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "bitlink"
+        ]
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/bitlinks/{{bitlink}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "archived": "{{archived}}",
+          "long_url": "{{longUrl}}",
+          "tags": "{{tags}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "bitlinks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Delete a bitlink",
+      "description": "Delete an unedited hash Bitlink.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bitlink": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "bitlink"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/bitlinks/{{bitlink}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "bitlinks.expand": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Expand a bitlink",
+      "description": "Expand a Bitlink id to its long URL via POST /v4/expand.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bitlinkId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "bitlinkId"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/expand",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "bitlink_id": "{{bitlinkId}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "bitlinks.clicks": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Get bitlink clicks",
+      "description": "Return click counts for a Bitlink over a time window.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bitlink": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "minute",
+              "hour",
+              "day",
+              "week",
+              "month"
+            ]
+          },
+          "units": {
+            "type": "integer",
+            "minimum": -1
+          },
+          "unitReference": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "bitlink"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bitlinks/{{bitlink}}/clicks",
+        "query": {
+          "unit": "{{unit}}",
+          "units": "{{units}}",
+          "unit_reference": "{{unitReference}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "bitlinks.clicksSummary": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Get bitlink click summary",
+      "description": "Return rolled-up click counts for a Bitlink.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bitlink": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "minute",
+              "hour",
+              "day",
+              "week",
+              "month"
+            ]
+          },
+          "units": {
+            "type": "integer",
+            "minimum": -1
+          },
+          "unitReference": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "bitlink"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bitlinks/{{bitlink}}/clicks/summary",
+        "query": {
+          "unit": "{{unit}}",
+          "units": "{{units}}",
+          "unit_reference": "{{unitReference}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "bitlinks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List bitlinks for a group",
+      "description": "List Bitlinks in a group with optional size and query filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "groupGuid": {
+            "type": "string",
+            "minLength": 1
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "archived": {
+            "type": "string",
+            "enum": [
+              "on",
+              "off",
+              "both"
+            ]
+          }
+        },
+        "required": [
+          "groupGuid"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/groups/{{groupGuid}}/bitlinks",
+        "query": {
+          "size": "{{size}}",
+          "query": "{{query}}",
+          "archived": "{{archived}}"
+        },
+        "success": [
+          200
+        ]
+      }
+    },
+    "organizations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List organizations",
+      "description": "List Bitly organizations available to the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "success": [
+          200
+        ]
+      }
+    },
+    "organizations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Get organization",
+      "description": "Retrieve one Bitly organization by GUID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organizationGuid": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "organizationGuid"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationGuid}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "groups.tags": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List group tags",
+      "description": "List tags used by Bitlinks in a group.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "groupGuid": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "groupGuid"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/groups/{{groupGuid}}/tags",
+        "success": [
+          200
+        ]
+      }
+    },
+    "groups.preferences": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "Get group preferences",
+      "description": "Retrieve preferences for a Bitly group.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "groupGuid": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "groupGuid"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/groups/{{groupGuid}}/preferences",
+        "success": [
+          200
+        ]
+      }
+    },
+    "bsds.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "title": "List branded short domains",
+      "description": "List branded short domains available to the authenticated user.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bsds",
+        "success": [
+          200
+        ]
+      }
     }
   },
   "provenance": {
@@ -193,6 +947,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }
