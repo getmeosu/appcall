@@ -1,1 +1,1325 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Process Street API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"X-API-Key","value":"{{apiKey}}"},"baseUrl":"https://public-api.process.st/api/v1.1","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["error","errorMessage","errorCode"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"process-street","models":["workflow","workflow-run"],"name":"Process Street","network":{"allowedHosts":["public-api.process.st"]},"operations":{"healthcheck":{"description":"Validate the Process Street API key with GET /workflows.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/workflows","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"workflow-runs.get":{"description":"Get one Process Street workflow run by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"workflowRunId":{"minLength":1,"type":"string"}},"required":["workflowRunId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/workflow-runs/{{workflowRunId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get workflow run","validationMode":"strict-generated"},"workflow-runs.list":{"description":"List Process Street workflow runs with optional workflow, status, and cursor filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"cursor":{"minLength":1,"type":"string"},"status":{"minLength":1,"type":"string"},"workflowId":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/workflow-runs","query":{"_":"{{cursor}}","status":"{{status}}","workflowId":"{{workflowId}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List workflow runs","validationMode":"strict-generated"},"workflows.get":{"description":"Get one Process Street workflow by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"workflowId":{"minLength":1,"type":"string"}},"required":["workflowId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/workflows/{{workflowId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get workflow","validationMode":"strict-generated"},"workflows.list":{"description":"List Process Street workflows with optional name filter and cursor pagination.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"cursor":{"minLength":1,"type":"string"},"name":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/workflows","query":{"_":"{{cursor}}","name":"{{name}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List workflows","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "process-street",
+  "name": "Process Street",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Process Street API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "public-api.process.st"
+    ]
+  },
+  "models": [
+    "workflow",
+    "workflow-run",
+    "task",
+    "comment",
+    "user",
+    "folder",
+    "webhook"
+  ],
+  "http": {
+    "baseUrl": "https://public-api.process.st/api/v1.1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "errorMessage",
+        "errorCode"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Process Street API key with GET /workflows.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workflows",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflows.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List workflows",
+      "description": "List Process Street workflows with optional name filter and cursor pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workflows",
+        "query": {
+          "name": "{{name}}",
+          "_": "{{cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflows.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get workflow",
+      "description": "Get one Process Street workflow by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "workflowId"
+        ],
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workflows/{{workflowId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflow-runs.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List workflow runs",
+      "description": "List Process Street workflow runs with optional workflow, status, and cursor filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workflow-runs",
+        "query": {
+          "workflowId": "{{workflowId}}",
+          "status": "{{status}}",
+          "_": "{{cursor}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflow-runs.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get workflow run",
+      "description": "Get one Process Street workflow run by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "workflowRunId"
+        ],
+        "properties": {
+          "workflowRunId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workflow-runs/{{workflowRunId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflows.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create workflow",
+      "description": "Create a Process Street workflow in a folder.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow name."
+          },
+          "folderId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Folder ID."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description."
+          },
+          "shareLevel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow share level.",
+            "enum": [
+              "None",
+              "Overview",
+              "View",
+              "Run"
+            ]
+          },
+          "runLinkShareLevel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Run-link share level.",
+            "enum": [
+              "Organization",
+              "Public"
+            ]
+          },
+          "allowComments": {
+            "type": "boolean",
+            "description": "Allow comments on runs."
+          },
+          "sharedRunsByDefault": {
+            "type": "boolean",
+            "description": "Share new runs by default."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "folderId",
+          "shareLevel",
+          "runLinkShareLevel",
+          "allowComments",
+          "sharedRunsByDefault"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workflows",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "folderId": "{{folderId}}",
+          "description": "{{description}}",
+          "shareLevel": "{{shareLevel}}",
+          "runLinkShareLevel": "{{runLinkShareLevel}}",
+          "allowComments": "{{allowComments}}",
+          "sharedRunsByDefault": "{{sharedRunsByDefault}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflows.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update workflow",
+      "description": "Update a Process Street workflow. PUT semantics require the documented fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow name."
+          },
+          "folderId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Folder ID."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description."
+          },
+          "shareLevel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow share level.",
+            "enum": [
+              "None",
+              "Overview",
+              "View",
+              "Run"
+            ]
+          },
+          "runLinkShareLevel": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Run-link share level.",
+            "enum": [
+              "Organization",
+              "Public"
+            ]
+          },
+          "allowComments": {
+            "type": "boolean",
+            "description": "Allow comments on runs."
+          },
+          "sharedRunsByDefault": {
+            "type": "boolean",
+            "description": "Share new runs by default."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workflowId",
+          "name",
+          "folderId",
+          "shareLevel",
+          "runLinkShareLevel",
+          "allowComments",
+          "sharedRunsByDefault"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/workflows/{{workflowId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "folderId": "{{folderId}}",
+          "description": "{{description}}",
+          "shareLevel": "{{shareLevel}}",
+          "runLinkShareLevel": "{{runLinkShareLevel}}",
+          "allowComments": "{{allowComments}}",
+          "sharedRunsByDefault": "{{sharedRunsByDefault}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflows.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete workflow",
+      "description": "Delete a Process Street workflow.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workflowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/workflows/{{workflowId}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflow-runs.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create workflow run",
+      "description": "Start a Process Street workflow run from a workflow template.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Run name."
+          },
+          "dueDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Due date as an ISO-8601 timestamp."
+          },
+          "shared": {
+            "type": "boolean",
+            "description": "Whether the run is publicly shared."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workflowId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workflow-runs",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "workflowId": "{{workflowId}}",
+          "name": "{{name}}",
+          "dueDate": "{{dueDate}}",
+          "shared": "{{shared}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflow-runs.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update workflow run",
+      "description": "Update a Process Street workflow run name, status, sharing, or due date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowRunId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow run ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Run name."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Run status.",
+            "enum": [
+              "Active",
+              "Completed",
+              "Archived",
+              "Deleted"
+            ]
+          },
+          "shared": {
+            "type": "boolean",
+            "description": "Whether the run is publicly shared."
+          },
+          "dueDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Due date as an ISO-8601 timestamp."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workflowRunId",
+          "name",
+          "status",
+          "shared"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/workflow-runs/{{workflowRunId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "status": "{{status}}",
+          "shared": "{{shared}}",
+          "dueDate": "{{dueDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workflow-runs.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete workflow run",
+      "description": "Delete a Process Street workflow run.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowRunId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow run ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workflowRunId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/workflow-runs/{{workflowRunId}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tasks",
+      "description": "List tasks in a Process Street workflow run.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowRunId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow run ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workflowRunId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workflow-runs/{{workflowRunId}}/tasks",
+        "success": [
+          200
+        ],
+        "query": {
+          "_": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get task",
+      "description": "Get one task in a Process Street workflow run.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowRunId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow run ID."
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workflowRunId",
+          "taskId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workflow-runs/{{workflowRunId}}/tasks/{{taskId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tasks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update task",
+      "description": "Complete or reopen a Process Street task and optionally set its due date.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowRunId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow run ID."
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task ID."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task status.",
+            "enum": [
+              "NotCompleted",
+              "Completed"
+            ]
+          },
+          "dueDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Due date as an ISO-8601 timestamp."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workflowRunId",
+          "taskId",
+          "status"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/workflow-runs/{{workflowRunId}}/tasks/{{taskId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "{{status}}",
+          "dueDate": "{{dueDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List comments",
+      "description": "List Process Street comments, optionally filtered by workflow run or task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by workflow ID."
+          },
+          "workflowRunId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by workflow run ID."
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by task ID."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/comments",
+        "success": [
+          200
+        ],
+        "query": {
+          "workflowId": "{{workflowId}}",
+          "workflowRunId": "{{workflowRunId}}",
+          "taskId": "{{taskId}}",
+          "_": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create comment",
+      "description": "Create a comment on a task in a Process Street workflow run.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workflowRunId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow run ID."
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Task ID."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comment text."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workflowRunId",
+          "taskId",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/comments",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "workflowRunId": "{{workflowRunId}}",
+          "taskId": "{{taskId}}",
+          "text": "{{text}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List users in the Process Street organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "_": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List folders",
+      "description": "List Process Street folders the API key can read.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/folders",
+        "success": [
+          200
+        ],
+        "query": {
+          "_": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhooks",
+      "description": "List Process Street webhook subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque pagination cursor."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "_": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create webhook",
+      "description": "Create a Process Street webhook subscription for one or more triggers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination URL."
+          },
+          "triggers": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Webhook trigger names.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workflowId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit the subscription to one workflow."
+          },
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit the subscription to one task."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/webhooks",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "url": "{{url}}",
+          "triggers": "{{triggers}}",
+          "workflowId": "{{workflowId}}",
+          "taskId": "{{taskId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.task_checked": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Task Checked",
+      "description": "Process Street webhook. Fires when a task is checked off."
+    },
+    "webhook.task_unchecked": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Task Unchecked",
+      "description": "Process Street webhook. Fires when a previously checked task is unchecked."
+    },
+    "webhook.task_checked_unchecked": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Task Checked or Unchecked",
+      "description": "Process Street webhook. Fires when a task is checked or unchecked."
+    },
+    "webhook.task_ready": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Task Ready",
+      "description": "Process Street webhook. Fires when a task becomes ready to work on."
+    },
+    "webhook.workflow_run_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Workflow Run Created",
+      "description": "Process Street webhook. Fires when a workflow run is created."
+    },
+    "webhook.workflow_run_completed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Workflow Run Completed",
+      "description": "Process Street webhook. Fires when a workflow run is completed."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}

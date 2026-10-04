@@ -1,1 +1,1286 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Beeminder auth token","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"query","name":"auth_token"},"baseUrl":"https://www.beeminder.com/api/v1","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["errors","error","message","reason"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"beeminder","models":["user","goal","datapoint"],"name":"Beeminder","network":{"allowedHosts":["www.beeminder.com"]},"operations":{"datapoints.list":{"description":"List datapoints for one Beeminder goal.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"count":{"minimum":0,"type":"integer"},"goalSlug":{"minLength":1,"type":"string"},"page":{"minimum":1,"type":"integer"},"per":{"minimum":1,"type":"integer"},"username":{"minLength":1,"type":"string"}},"required":["username","goalSlug"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/users/{{username}}/goals/{{goalSlug}}/datapoints.json","query":{"count":"{{count}}","page":"{{page}}","per":"{{per}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List datapoints","validationMode":"strict-generated"},"goals.get":{"description":"Get one Beeminder goal, optionally including datapoints.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"datapoints":{"type":"boolean"},"goalSlug":{"minLength":1,"type":"string"},"username":{"minLength":1,"type":"string"}},"required":["username","goalSlug"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/users/{{username}}/goals/{{goalSlug}}.json","query":{"datapoints":"{{datapoints}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get goal","validationMode":"strict-generated"},"goals.list":{"description":"List active Beeminder goals for a user.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"username":{"minLength":1,"type":"string"}},"required":["username"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"array"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/users/{{username}}/goals.json","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List goals","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Beeminder auth token with GET /users/me.json.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/users/me.json","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Healthcheck","validationMode":"strict-generated"},"users.get":{"description":"Get Beeminder user information by username.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"associations":{"type":"boolean"},"datapointsCount":{"minimum":1,"type":"integer"},"diffSince":{"minimum":0,"type":"integer"},"skinny":{"type":"boolean"},"username":{"minLength":1,"type":"string"}},"required":["username"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/users/{{username}}.json","query":{"associations":"{{associations}}","datapoints_count":"{{datapointsCount}}","diff_since":"{{diffSince}}","skinny":"{{skinny}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get user","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "beeminder",
+  "name": "Beeminder",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Beeminder auth token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "www.beeminder.com"
+    ]
+  },
+  "models": [
+    "user",
+    "goal",
+    "datapoint",
+    "charge"
+  ],
+  "http": {
+    "baseUrl": "https://www.beeminder.com/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "auth_token"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "errors",
+        "error",
+        "message",
+        "reason"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Beeminder auth token with GET /users/me.json.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/me.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Get Beeminder user information by username.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1
+          },
+          "associations": {
+            "type": "boolean"
+          },
+          "diffSince": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "skinny": {
+            "type": "boolean"
+          },
+          "datapointsCount": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{username}}.json",
+        "query": {
+          "associations": "{{associations}}",
+          "diff_since": "{{diffSince}}",
+          "skinny": "{{skinny}}",
+          "datapoints_count": "{{datapointsCount}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List goals",
+      "description": "List active Beeminder goals for a user.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{username}}/goals.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get goal",
+      "description": "Get one Beeminder goal, optionally including datapoints.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "username",
+          "goalSlug"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "datapoints": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{username}}/goals/{{goalSlug}}.json",
+        "query": {
+          "datapoints": "{{datapoints}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datapoints.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List datapoints",
+      "description": "List datapoints for one Beeminder goal.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "username",
+          "goalSlug"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "per": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/datapoints.json",
+        "query": {
+          "count": "{{count}}",
+          "page": "{{page}}",
+          "per": "{{per}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.archived.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List archived goals",
+      "description": "List archived Beeminder goals for a user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{username}}/goals/archived.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create goal",
+      "description": "Create a Beeminder goal. Exactly two of goaldate, goalval, and rate are required.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug used in the URL."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display title."
+          },
+          "goalType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal type such as hustler, fatloser, or custom."
+          },
+          "gunits": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Units plotted on the y-axis."
+          },
+          "goaldate": {
+            "type": "integer",
+            "description": "Unix timestamp of the goal date.",
+            "minimum": 0
+          },
+          "goalval": {
+            "type": "number",
+            "description": "Target value."
+          },
+          "rate": {
+            "type": "number",
+            "description": "Bright red line rate."
+          },
+          "initval": {
+            "type": "number",
+            "description": "Initial value for today."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "slug",
+          "title",
+          "goalType",
+          "gunits"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/{{username}}/goals.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "slug": "{{slug}}",
+          "title": "{{title}}",
+          "goal_type": "{{goalType}}",
+          "gunits": "{{gunits}}",
+          "goaldate": "{{goaldate}}",
+          "goalval": "{{goalval}}",
+          "rate": "{{rate}}",
+          "initval": "{{initval}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update goal",
+      "description": "Update a Beeminder goal's title, visibility, axis label, or datapoint webhook URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display title."
+          },
+          "yaxis": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Y-axis label."
+          },
+          "secret": {
+            "type": "boolean",
+            "description": "Hide the goal from public view."
+          },
+          "datapublic": {
+            "type": "boolean",
+            "description": "Publish datapoints."
+          },
+          "callbackUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Datapoint webhook callback URL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/users/{{username}}/goals/{{goalSlug}}.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "title": "{{title}}",
+          "yaxis": "{{yaxis}}",
+          "secret": "{{secret}}",
+          "datapublic": "{{datapublic}}",
+          "callback_url": "{{callbackUrl}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.refresh": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Refresh goal graph",
+      "description": "Force a fetch of autodata and refresh the Beeminder graph.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/refresh_graph.json",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.shortcircuit": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Short circuit pledge",
+      "description": "Short circuit a Beeminder goal's pledge.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/shortcircuit.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.stepdown": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Step down pledge",
+      "description": "Schedule a step down of a Beeminder goal's pledge.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/stepdown.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.cancel_stepdown": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Cancel step down",
+      "description": "Cancel a scheduled Beeminder pledge step down.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/cancel_stepdown.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.uncle": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Call uncle",
+      "description": "Instantly derail a Beeminder goal by calling uncle.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/uncleme.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {}
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "goals.ratchet": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Ratchet goal",
+      "description": "Ratchet a Beeminder goal's safety buffer down to a value.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          },
+          "value": {
+            "type": "number",
+            "description": "Ratchet value."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/ratchet.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "value": "{{value}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datapoints.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create datapoint",
+      "description": "Add a datapoint to a Beeminder goal.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          },
+          "value": {
+            "type": "number",
+            "description": "Datapoint value."
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "Unix timestamp in seconds.",
+            "minimum": 0
+          },
+          "daystamp": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Daystamp in YYYYMMDD form."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Optional comment."
+          },
+          "requestid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key for retries."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/datapoints.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "value": "{{value}}",
+          "timestamp": "{{timestamp}}",
+          "daystamp": "{{daystamp}}",
+          "comment": "{{comment}}",
+          "requestid": "{{requestid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datapoints.create_all": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create datapoints",
+      "description": "Create multiple Beeminder datapoints in one request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          },
+          "datapoints": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Datapoints to create.",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug",
+          "datapoints"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/datapoints/create_all.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "datapoints": "{{datapoints}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datapoints.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update datapoint",
+      "description": "Update one Beeminder datapoint by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          },
+          "datapointId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Datapoint ID."
+          },
+          "value": {
+            "type": "number",
+            "description": "Datapoint value."
+          },
+          "comment": {
+            "type": "string",
+            "description": "Optional comment."
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "Unix timestamp in seconds.",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug",
+          "datapointId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/datapoints/{{datapointId}}.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "value": "{{value}}",
+          "comment": "{{comment}}",
+          "timestamp": "{{timestamp}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "datapoints.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete datapoint",
+      "description": "Delete one Beeminder datapoint by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Beeminder username."
+          },
+          "goalSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Goal slug."
+          },
+          "datapointId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Datapoint ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "goalSlug",
+          "datapointId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/users/{{username}}/goals/{{goalSlug}}/datapoints/{{datapointId}}.json",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "charges.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create charge",
+      "description": "Charge a Beeminder user an arbitrary USD amount.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Username of the user being charged."
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount in US dollars. Minimum 1.00.",
+            "minimum": 1
+          },
+          "note": {
+            "type": "string",
+            "description": "Explanation of the charge."
+          },
+          "dryrun": {
+            "type": "boolean",
+            "description": "Return the charge JSON without creating it."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId",
+          "amount"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/charges.json",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_id": "{{userId}}",
+          "amount": "{{amount}}",
+          "note": "{{note}}",
+          "dryrun": "{{dryrun}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.datapoint": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Datapoint",
+      "description": "Beeminder goal callback_url webhook. Fires when a datapoint is added or changed on the goal."
+    },
+    "webhook.reminder": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Reminder",
+      "description": "Beeminder reminder webhook. Fires when a goal is about to derail."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
