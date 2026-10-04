@@ -2,13 +2,62 @@ import { describe, expect, it } from "bun:test";
 import manifest from "../manifest.json";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
+const actionOperations = Object.fromEntries(
+  Object.entries(operations).filter(([, operation]) => operation.kind === "action"),
+);
+const webhookOperations = Object.fromEntries(
+  Object.entries(operations).filter(([, operation]) => operation.kind === "webhook"),
+);
+
+const EXPECTED_ACTIONS = [
+  "healthcheck",
+  "card.create",
+  "card.get",
+  "card.update",
+  "card.delete",
+  "card.addComment",
+  "card.addChecklist",
+  "card.addMember",
+  "card.removeMember",
+  "card.addLabel",
+  "card.removeLabel",
+  "card.attachments.create",
+  "card.attachments.list",
+  "checklist.addItem",
+  "list.create",
+  "list.update",
+  "list.getCards",
+  "list.moveAllCards",
+  "board.create",
+  "board.update",
+  "board.delete",
+  "board.getLists",
+  "board.getCards",
+  "label.list",
+  "label.create",
+  "member.get",
+  "member.getBoards",
+  "search.query",
+];
+
+const EXPECTED_WEBHOOKS = [
+  "webhook.card_created",
+  "webhook.card_updated",
+  "webhook.card_deleted",
+  "webhook.card_comment",
+  "webhook.list_created",
+  "webhook.board_updated",
+  "webhook.member_added",
+  "webhook.checklist_updated",
+];
 
 describe("trello manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("trello");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
-    expect(manifest.models.length).toBeGreaterThan(0);
+    expect(manifest.models).toEqual(expect.arrayContaining(["card", "list", "board", "checklist", "member", "label", "attachment"]));
   });
 
   it("declares api_key setup, since Trello is OAuth 1.0a only and the runner rejects a 1.0a manifest", () => {
@@ -30,31 +79,14 @@ describe("trello manifest", () => {
     expect(manifest.http.errors.messagePaths).toEqual(["message", "error"]);
   });
 
-  it("declares exactly the 16 operations the brief lists", () => {
-    expect(Object.keys(operations).sort()).toEqual(
-      [
-        "healthcheck",
-        "card.create",
-        "card.get",
-        "card.update",
-        "card.delete",
-        "card.addComment",
-        "card.addChecklist",
-        "checklist.addItem",
-        "list.create",
-        "list.update",
-        "list.getCards",
-        "board.create",
-        "board.getLists",
-        "board.getCards",
-        "member.getBoards",
-        "search.query",
-      ].sort(),
-    );
+  it("declares the depth-slice actions and EventOnly webhooks without renaming existing keys", () => {
+    expect(Object.keys(actionOperations).sort()).toEqual([...EXPECTED_ACTIONS].sort());
+    expect(Object.keys(webhookOperations).sort()).toEqual([...EXPECTED_WEBHOOKS].sort());
+    expect(Object.keys(operations).sort()).toEqual([...EXPECTED_ACTIONS, ...EXPECTED_WEBHOOKS].sort());
   });
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOperations)) {
       expect(operation.kind).toBe("action");
       expect(operation.timeoutMs as number).toBeGreaterThan(0);
       expect(operation.maxInputBytes as number).toBeGreaterThan(0);
@@ -68,18 +100,29 @@ describe("trello manifest", () => {
     }
   });
 
+  it("declares EventOnly webhooks in the Apollo phone_revealed shape, with no handler", () => {
+    for (const [key, operation] of Object.entries(webhookOperations)) {
+      expect(operation.kind).toBe("webhook");
+      expect(operation.timeoutMs).toBe(30000);
+      expect(operation.maxInputBytes).toBe(1048576);
+      expect(operation.maxResponseBytes).toBe(1048576);
+      expect(operation.request, `${key} must not declare a request`).toBeUndefined();
+      expect(operation.inputSchema, `${key} must not declare an inputSchema`).toBeUndefined();
+    }
+  });
+
   it("classifies every mutating operation as a write — a safety control, not metadata", () => {
-    const writes = Object.entries(operations)
+    const writes = Object.entries(actionOperations)
       .filter(([, operation]) => ["POST", "PUT", "PATCH", "DELETE"].includes(String((operation.request as Record<string, unknown>).method)))
       .map(([key]) => key);
     expect(writes.length).toBeGreaterThan(0);
     for (const key of writes) {
-      expect(operations[key]!.sideEffect, `${key} mutates and must be sideEffect write`).toBe("write");
+      expect(actionOperations[key]!.sideEffect, `${key} mutates and must be sideEffect write`).toBe("write");
     }
   });
 
   it("keeps every request inside the declared outbound host", () => {
-    for (const operation of Object.values(operations)) {
+    for (const operation of Object.values(actionOperations)) {
       const request = operation.request as Record<string, unknown>;
       const baseUrl = String(request.baseUrl ?? manifest.http.baseUrl);
       expect(new URL(baseUrl).hostname).toBe("api.trello.com");
@@ -87,7 +130,7 @@ describe("trello manifest", () => {
   });
 
   it("only interpolates path placeholders the operation's schema requires", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOperations)) {
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { required?: string[] };
       const placeholders = [...String(request.path ?? "").matchAll(/\{\{\s*([A-Za-z0-9_.$-]+)\s*\}\}/g)].map((match) => match[1]);
@@ -98,7 +141,7 @@ describe("trello manifest", () => {
   });
 
   it("templates every query and body value from a declared input", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOperations)) {
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { properties?: Record<string, unknown> };
       const declared = Object.keys(schema.properties ?? {});
@@ -138,7 +181,7 @@ describe("trello manifest", () => {
   });
 
   it("puts write parameters in the query string, because Trello ignores a JSON body", () => {
-    for (const [key, op] of Object.entries(operations)) {
+    for (const [key, op] of Object.entries(actionOperations)) {
       const request = op.request as Record<string, unknown>;
       if (!["POST", "PUT"].includes(String(request.method))) continue;
       expect(request.body, `${key} must not send a JSON body`).toBeUndefined();
@@ -194,7 +237,7 @@ describe("trello manifest", () => {
   });
 
   it("does not invent a cursor for the unpaginated collection endpoints", () => {
-    const unpaginated = ["list.getCards", "board.getLists", "board.getCards", "member.getBoards"];
+    const unpaginated = ["list.getCards", "board.getLists", "board.getCards", "member.getBoards", "card.attachments.list", "label.list"];
     for (const key of unpaginated) {
       const schema = operations[key]!.inputSchema as { properties?: Record<string, unknown> };
       expect(Object.keys(schema.properties ?? {}), `${key} must not declare a cursor`).not.toContain("cursor");
@@ -222,5 +265,30 @@ describe("trello manifest", () => {
 
   it("does not declare a trello.com host, since the authorize redirect is not implemented", () => {
     expect(manifest.network.allowedHosts).not.toContain("trello.com");
+  });
+
+  it("closes a board on board.delete rather than permanently deleting it", () => {
+    const request = actionOperations["board.delete"]!.request as Record<string, unknown>;
+    expect(request.method).toBe("PUT");
+    expect(request.path).toBe("/boards/{{id}}");
+    expect((request.query as Record<string, unknown>).closed).toBe("true");
+    expect(String(actionOperations["board.delete"]!.description).toLowerCase()).toContain("close");
+  });
+
+  it("moves every card off a list onto a destination list on the same or another board", () => {
+    const schema = actionOperations["list.moveAllCards"]!.inputSchema as { required?: string[] };
+    expect(schema.required ?? []).toEqual(expect.arrayContaining(["id", "idBoard", "idList"]));
+    const request = actionOperations["list.moveAllCards"]!.request as Record<string, unknown>;
+    expect(request.method).toBe("POST");
+    expect(request.path).toBe("/lists/{{id}}/moveAllCards");
+  });
+
+  it("attaches a URL rather than a multipart file on card.attachments.create", () => {
+    const schema = actionOperations["card.attachments.create"]!.inputSchema as { required?: string[]; properties?: Record<string, unknown> };
+    expect(schema.required ?? []).toEqual(expect.arrayContaining(["id", "url"]));
+    expect(Object.keys(schema.properties ?? {})).not.toContain("file");
+    const request = actionOperations["card.attachments.create"]!.request as Record<string, unknown>;
+    expect(request.method).toBe("POST");
+    expect(request.path).toBe("/cards/{{id}}/attachments");
   });
 });

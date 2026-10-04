@@ -13,8 +13,16 @@ import checkitemFixture from "../fixtures/checkitem.json";
 import commentActionFixture from "../fixtures/comment_action.json";
 import searchResultsFixture from "../fixtures/search_results.json";
 import rateLimitedFixture from "../fixtures/error_rate_limited.json";
+import labelFixture from "../fixtures/label.json";
+import labelsFixture from "../fixtures/labels.json";
+import attachmentFixture from "../fixtures/attachment.json";
+import attachmentsFixture from "../fixtures/attachments.json";
+import memberFixture from "../fixtures/member.json";
 
 const { actions } = compileDeclarativeConnector(manifest as never);
+const actionKeys = Object.entries(manifest.operations)
+  .filter(([, operation]) => (operation as { kind?: string }).kind === "action")
+  .map(([key]) => key);
 
 type Call = { url: string; init?: RequestInit };
 
@@ -40,8 +48,13 @@ function mockText(body: string, status: number, headers: Record<string, string> 
 }
 
 describe("trello connector surface", () => {
-  it("compiles one handler per declared operation", () => {
-    expect(Object.keys(actions).sort()).toEqual(Object.keys(manifest.operations).sort());
+  it("compiles one handler per declared action and skips EventOnly webhooks", () => {
+    expect(Object.keys(actions).sort()).toEqual(actionKeys.sort());
+    for (const key of Object.keys(manifest.operations)) {
+      if (key.startsWith("webhook.")) {
+        expect(actions[key]).toBeUndefined();
+      }
+    }
   });
 });
 
@@ -400,6 +413,243 @@ describe("search.query", () => {
     expect(url.searchParams.get("cards_limit")).toBe("10");
     expect(url.searchParams.get("cards_page")).toBe("0");
     expect(result.results).toEqual(searchResultsFixture);
+  });
+});
+
+describe("board.update", () => {
+  it("requires id", () => {
+    expect(() => actions["board.update"]!({ apiKey: "k", token: "t", name: "Q4 Launch" })).toThrow("id is required");
+  });
+
+  it("PUTs changed fields in the query string and leaves omitted fields off the wire", async () => {
+    const { calls, fetchFn } = mockJson(boardFixture);
+    const result = await actions["board.update"]!({
+      apiKey: "k", token: "t", id: "5f1e9a2b3c4d5e6f7a8b9c0a", name: "Q4 Launch", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("PUT");
+    expect(calls[0]!.init?.body).toBeUndefined();
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/1/boards/5f1e9a2b3c4d5e6f7a8b9c0a");
+    expect(url.searchParams.get("name")).toBe("Q4 Launch");
+    expect(url.searchParams.has("closed")).toBe(false);
+    expect(result.board).toEqual(boardFixture);
+  });
+});
+
+describe("board.delete", () => {
+  it("requires id", () => {
+    expect(() => actions["board.delete"]!({ apiKey: "k", token: "t" })).toThrow("id is required");
+  });
+
+  it("closes the board with PUT closed=true rather than issuing a permanent DELETE", async () => {
+    const { calls, fetchFn } = mockJson({ ...boardFixture, closed: true });
+    const result = await actions["board.delete"]!({
+      apiKey: "k", token: "t", id: "5f1e9a2b3c4d5e6f7a8b9c0a", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("PUT");
+    expect(calls[0]!.init?.body).toBeUndefined();
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/1/boards/5f1e9a2b3c4d5e6f7a8b9c0a");
+    expect(url.searchParams.get("closed")).toBe("true");
+    expect(result).toEqual({
+      connector: "trello",
+      action: "board.delete",
+      source: "provider",
+      closed: true,
+      id: "5f1e9a2b3c4d5e6f7a8b9c0a",
+    });
+  });
+});
+
+describe("list.moveAllCards", () => {
+  it("requires id, idBoard, and idList", () => {
+    expect(() => actions["list.moveAllCards"]!({ apiKey: "k", token: "t", idBoard: "b1", idList: "l2" })).toThrow("id is required");
+    expect(() => actions["list.moveAllCards"]!({ apiKey: "k", token: "t", id: "l1", idList: "l2" })).toThrow("idBoard is required");
+    expect(() => actions["list.moveAllCards"]!({ apiKey: "k", token: "t", id: "l1", idBoard: "b1" })).toThrow("idList is required");
+  });
+
+  it("posts the destination board and list in the query string", async () => {
+    const { calls, fetchFn } = mockJson(cardsFixture);
+    const result = await actions["list.moveAllCards"]!({
+      apiKey: "k",
+      token: "t",
+      id: "5f1e9a2b3c4d5e6f7a8b9c0d",
+      idBoard: "5f1e9a2b3c4d5e6f7a8b9c0a",
+      idList: "5f1e9a2b3c4d5e6f7a8b9c0e",
+      fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(calls[0]!.init?.body).toBeUndefined();
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/1/lists/5f1e9a2b3c4d5e6f7a8b9c0d/moveAllCards");
+    expect(url.searchParams.get("idBoard")).toBe("5f1e9a2b3c4d5e6f7a8b9c0a");
+    expect(url.searchParams.get("idList")).toBe("5f1e9a2b3c4d5e6f7a8b9c0e");
+    expect(result.cards).toEqual(cardsFixture);
+  });
+});
+
+describe("card.addMember / card.removeMember", () => {
+  it("requires id and idMember", () => {
+    expect(() => actions["card.addMember"]!({ apiKey: "k", token: "t", idMember: "m1" })).toThrow("id is required");
+    expect(() => actions["card.addMember"]!({ apiKey: "k", token: "t", id: "c1" })).toThrow("idMember is required");
+    expect(() => actions["card.removeMember"]!({ apiKey: "k", token: "t", idMember: "m1" })).toThrow("id is required");
+    expect(() => actions["card.removeMember"]!({ apiKey: "k", token: "t", id: "c1" })).toThrow("idMember is required");
+  });
+
+  it("adds a member by posting value=idMember on the card's idMembers collection", async () => {
+    const { calls, fetchFn } = mockJson(memberFixture);
+    const result = await actions["card.addMember"]!({
+      apiKey: "k", token: "t", id: "5f1e9a2b3c4d5e6f7a8b9c1a", idMember: "5abbe4b7ddc1b351ef961414", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(calls[0]!.init?.body).toBeUndefined();
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/1/cards/5f1e9a2b3c4d5e6f7a8b9c1a/idMembers");
+    expect(url.searchParams.get("value")).toBe("5abbe4b7ddc1b351ef961414");
+    expect(result.member).toEqual(memberFixture);
+  });
+
+  it("removes a member and echoes the ids, since Trello's DELETE body carries no identity", async () => {
+    const { calls, fetchFn } = mockJson({}, 200);
+    const result = await actions["card.removeMember"]!({
+      apiKey: "k", token: "t", id: "5f1e9a2b3c4d5e6f7a8b9c1a", idMember: "5abbe4b7ddc1b351ef961414", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("DELETE");
+    expect(new URL(calls[0]!.url).pathname).toBe("/1/cards/5f1e9a2b3c4d5e6f7a8b9c1a/idMembers/5abbe4b7ddc1b351ef961414");
+    expect(result).toEqual({
+      connector: "trello",
+      action: "card.removeMember",
+      source: "provider",
+      removed: true,
+      id: "5f1e9a2b3c4d5e6f7a8b9c1a",
+      idMember: "5abbe4b7ddc1b351ef961414",
+    });
+  });
+});
+
+describe("card.addLabel / card.removeLabel", () => {
+  it("requires id and idLabel", () => {
+    expect(() => actions["card.addLabel"]!({ apiKey: "k", token: "t", idLabel: "l1" })).toThrow("id is required");
+    expect(() => actions["card.addLabel"]!({ apiKey: "k", token: "t", id: "c1" })).toThrow("idLabel is required");
+    expect(() => actions["card.removeLabel"]!({ apiKey: "k", token: "t", idLabel: "l1" })).toThrow("id is required");
+    expect(() => actions["card.removeLabel"]!({ apiKey: "k", token: "t", id: "c1" })).toThrow("idLabel is required");
+  });
+
+  it("adds a label by posting value=idLabel on the card's idLabels collection", async () => {
+    const { calls, fetchFn } = mockJson(labelFixture);
+    const result = await actions["card.addLabel"]!({
+      apiKey: "k", token: "t", id: "5f1e9a2b3c4d5e6f7a8b9c1a", idLabel: "5f1e9a2b3c4d5e6f7a8b9c4e", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("POST");
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/1/cards/5f1e9a2b3c4d5e6f7a8b9c1a/idLabels");
+    expect(url.searchParams.get("value")).toBe("5f1e9a2b3c4d5e6f7a8b9c4e");
+    expect(result.label).toEqual(labelFixture);
+  });
+
+  it("removes a label and echoes the ids", async () => {
+    const { calls, fetchFn } = mockJson({}, 200);
+    const result = await actions["card.removeLabel"]!({
+      apiKey: "k", token: "t", id: "5f1e9a2b3c4d5e6f7a8b9c1a", idLabel: "5f1e9a2b3c4d5e6f7a8b9c4e", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("DELETE");
+    expect(new URL(calls[0]!.url).pathname).toBe("/1/cards/5f1e9a2b3c4d5e6f7a8b9c1a/idLabels/5f1e9a2b3c4d5e6f7a8b9c4e");
+    expect(result).toEqual({
+      connector: "trello",
+      action: "card.removeLabel",
+      source: "provider",
+      removed: true,
+      id: "5f1e9a2b3c4d5e6f7a8b9c1a",
+      idLabel: "5f1e9a2b3c4d5e6f7a8b9c4e",
+    });
+  });
+});
+
+describe("card.attachments.create / card.attachments.list", () => {
+  it("requires id and url to attach a URL, not a multipart file", () => {
+    expect(() => actions["card.attachments.create"]!({ apiKey: "k", token: "t", url: "https://example.com/notes.md" })).toThrow("id is required");
+    expect(() => actions["card.attachments.create"]!({ apiKey: "k", token: "t", id: "c1" })).toThrow("url is required");
+  });
+
+  it("posts the URL in the query string", async () => {
+    const { calls, fetchFn } = mockJson(attachmentFixture);
+    const result = await actions["card.attachments.create"]!({
+      apiKey: "k",
+      token: "t",
+      id: "5f1e9a2b3c4d5e6f7a8b9c1a",
+      url: "https://example.com/notes.md",
+      name: "Release notes",
+      fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(calls[0]!.init?.body).toBeUndefined();
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/1/cards/5f1e9a2b3c4d5e6f7a8b9c1a/attachments");
+    expect(url.searchParams.get("url")).toBe("https://example.com/notes.md");
+    expect(url.searchParams.get("name")).toBe("Release notes");
+    expect(result.attachment).toEqual(attachmentFixture);
+  });
+
+  it("lists attachments on the card with no cursor", async () => {
+    expect(() => actions["card.attachments.list"]!({ apiKey: "k", token: "t" })).toThrow("id is required");
+    const { calls, fetchFn } = mockJson(attachmentsFixture);
+    const result = await actions["card.attachments.list"]!({
+      apiKey: "k", token: "t", id: "5f1e9a2b3c4d5e6f7a8b9c1a", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/1/cards/5f1e9a2b3c4d5e6f7a8b9c1a/attachments");
+    expect(result.attachments).toEqual(attachmentsFixture);
+    expect("cursor" in result).toBe(false);
+  });
+});
+
+describe("label.list / label.create", () => {
+  it("lists a board's labels by board id", async () => {
+    expect(() => actions["label.list"]!({ apiKey: "k", token: "t" })).toThrow("id is required");
+    const { calls, fetchFn } = mockJson(labelsFixture);
+    const result = await actions["label.list"]!({
+      apiKey: "k", token: "t", id: "5f1e9a2b3c4d5e6f7a8b9c0a", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/1/boards/5f1e9a2b3c4d5e6f7a8b9c0a/labels");
+    expect(result.labels).toEqual(labelsFixture);
+  });
+
+  it("requires name and idBoard to create a label", () => {
+    expect(() => actions["label.create"]!({ apiKey: "k", token: "t", idBoard: "b1" })).toThrow("name is required");
+    expect(() => actions["label.create"]!({ apiKey: "k", token: "t", name: "Urgent" })).toThrow("idBoard is required");
+  });
+
+  it("creates a label via query parameters", async () => {
+    const { calls, fetchFn } = mockJson(labelFixture);
+    const result = await actions["label.create"]!({
+      apiKey: "k", token: "t", name: "Urgent", color: "red", idBoard: "5f1e9a2b3c4d5e6f7a8b9c0a", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.init?.method).toBe("POST");
+    expect(calls[0]!.init?.body).toBeUndefined();
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/1/labels");
+    expect(url.searchParams.get("name")).toBe("Urgent");
+    expect(url.searchParams.get("color")).toBe("red");
+    expect(url.searchParams.get("idBoard")).toBe("5f1e9a2b3c4d5e6f7a8b9c0a");
+    expect(result.label).toEqual(labelFixture);
+  });
+});
+
+describe("member.get", () => {
+  it("requires id", () => {
+    expect(() => actions["member.get"]!({ apiKey: "k", token: "t" })).toThrow("id is required");
+  });
+
+  it("accepts the literal \"me\" for the caller", async () => {
+    const { calls, fetchFn } = mockJson(memberFixture);
+    const result = await actions["member.get"]!({ apiKey: "k", token: "t", id: "me", fetch: fetchFn }) as Record<string, unknown>;
+    expect(new URL(calls[0]!.url).pathname).toBe("/1/members/me");
+    expect(result.member).toEqual(memberFixture);
+  });
+
+  it("also accepts a member id or username", async () => {
+    const { calls, fetchFn } = mockJson(memberFixture);
+    await actions["member.get"]!({ apiKey: "k", token: "t", id: "jdoe", fetch: fetchFn });
+    expect(new URL(calls[0]!.url).pathname).toBe("/1/members/jdoe");
   });
 });
 
