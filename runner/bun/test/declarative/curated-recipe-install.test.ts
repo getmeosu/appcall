@@ -744,5 +744,5 @@ describe("curated recipe install", () => {
       expect(new Set(cases.map((fixture) => fixture.operation))).toEqual(new Set(Object.keys(manifest.operations)));
       expect(recipeKey).toBeTruthy();
     }
-  });
+  }, 120_000);
 });

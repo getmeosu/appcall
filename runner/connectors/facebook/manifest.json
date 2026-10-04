@@ -1,7 +1,7 @@
 {
   "key": "facebook",
   "name": "Facebook Pages",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "description": "Facebook Pages curated publishing operations with a manually supplied OAuth2 token.",
   "categories": [
@@ -446,9 +446,771 @@
           "Content-Type": "application/json"
         }
       }
+    },
+    "pages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read the configured Page",
+      "description": "Read the configured Facebook Page profile fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "page"
+        ],
+        "properties": {
+          "page": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{pageId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,name,about,fan_count,category,link"
+        },
+        "result": {
+          "page": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "posts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get a Page post",
+      "description": "Read a Facebook Page post by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Page post ID belonging to the Page represented by this token."
+          }
+        },
+        "required": [
+          "postId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "post"
+        ],
+        "properties": {
+          "post": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{postId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,message,created_time"
+        },
+        "result": {
+          "post": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List comments on a Page post",
+      "description": "List comments on a Facebook Page post. Follow after cursors only while pages contain results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Page post ID belonging to the Page represented by this token."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; provider validates its allowed range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from the prior response. Omit for the first page."
+          }
+        },
+        "required": [
+          "postId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comments": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider comments."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque continuation cursor, if supplied by the provider."
+          }
+        },
+        "required": [
+          "comments"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{postId}}/comments",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,message,created_time",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "result": {
+          "comments": "{{response.data}}",
+          "after": "{{response.paging.cursors.after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "comments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create a comment on a Page post",
+      "description": "Publish a comment on a Facebook Page post as the Page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Page post ID belonging to the Page represented by this token."
+          },
+          "message": {
+            "type": "string",
+            "description": "Comment text."
+          }
+        },
+        "required": [
+          "postId",
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "commentId"
+        ],
+        "properties": {
+          "commentId": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/{{postId}}/comments",
+        "success": [
+          200
+        ],
+        "body": {
+          "message": "{{message}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "commentId": "{{response.id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "comments.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get a comment",
+      "description": "Read a Facebook comment by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "description": "Comment ID on a Page post."
+          }
+        },
+        "required": [
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "comment"
+        ],
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{commentId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,message,created_time"
+        },
+        "result": {
+          "comment": "{{response}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "comments.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete a comment",
+      "description": "Delete a Facebook comment using the Page token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "type": "string",
+            "description": "Comment ID on a Page post."
+          }
+        },
+        "required": [
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/{{commentId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "success": "{{response.success}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "photos.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Page photos",
+      "description": "List photos on the configured Facebook Page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; provider validates its allowed range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from the prior response. Omit for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider photos."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque continuation cursor, if supplied by the provider."
+          }
+        },
+        "required": [
+          "photos"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{pageId}}/photos",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,created_time,name",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "result": {
+          "photos": "{{response.data}}",
+          "after": "{{response.paging.cursors.after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "videos.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Page videos",
+      "description": "List videos on the configured Facebook Page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; provider validates its allowed range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from the prior response. Omit for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "videos": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider videos."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque continuation cursor, if supplied by the provider."
+          }
+        },
+        "required": [
+          "videos"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{pageId}}/videos",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,created_time,description",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "result": {
+          "videos": "{{response.data}}",
+          "after": "{{response.paging.cursors.after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "reactions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List reactions on a Page post",
+      "description": "List reactions on a Facebook Page post.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "Page post ID belonging to the Page represented by this token."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; provider validates its allowed range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from the prior response. Omit for the first page."
+          }
+        },
+        "required": [
+          "postId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "reactions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider reactions."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque continuation cursor, if supplied by the provider."
+          }
+        },
+        "required": [
+          "reactions"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{postId}}/reactions",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "result": {
+          "reactions": "{{response.data}}",
+          "after": "{{response.paging.cursors.after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "insights.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Page insights",
+      "description": "Read Facebook Page insights metrics for the configured Page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string",
+            "description": "Comma-separated Page insights metric names."
+          },
+          "period": {
+            "type": "string",
+            "description": "Aggregation period such as day, week, or days_28."
+          }
+        },
+        "required": [
+          "metric"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "insights"
+        ],
+        "properties": {
+          "insights": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{pageId}}/insights",
+        "success": [
+          200
+        ],
+        "query": {
+          "metric": "{{metric}}",
+          "period": "{{period}}"
+        },
+        "result": {
+          "insights": "{{response.data}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "albums.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Page albums",
+      "description": "List photo albums on the configured Facebook Page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; provider validates its allowed range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from the prior response. Omit for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "albums": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider albums."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque continuation cursor, if supplied by the provider."
+          }
+        },
+        "required": [
+          "albums"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{pageId}}/albums",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,name,created_time",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "result": {
+          "albums": "{{response.data}}",
+          "after": "{{response.paging.cursors.after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Page events",
+      "description": "List events on the configured Facebook Page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; provider validates its allowed range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from the prior response. Omit for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider events."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque continuation cursor, if supplied by the provider."
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{pageId}}/events",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,name,start_time",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "result": {
+          "events": "{{response.data}}",
+          "after": "{{response.paging.cursors.after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "conversations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Page conversations",
+      "description": "List Messenger conversations for the configured Facebook Page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size; provider validates its allowed range."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque after cursor from the prior response. Omit for the first page."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "conversations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Provider conversations."
+          },
+          "after": {
+            "type": "string",
+            "description": "Opaque continuation cursor, if supplied by the provider."
+          }
+        },
+        "required": [
+          "conversations"
+        ]
+      },
+      "request": {
+        "method": "GET",
+        "path": "/{{pageId}}/conversations",
+        "success": [
+          200
+        ],
+        "query": {
+          "fields": "id,updated_time",
+          "limit": "{{limit}}",
+          "after": "{{after}}"
+        },
+        "result": {
+          "conversations": "{{response.data}}",
+          "after": "{{response.paging.cursors.after}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json"
+    },
+    "webhook.feed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Page feed",
+      "description": "Facebook Page webhook for feed. Fires when the Page feed changes, including posts and comments on the feed."
+    },
+    "webhook.comments": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Page comments",
+      "description": "Facebook Page webhook for comments. Fires when a comment is added, edited, or removed on a Page post."
+    },
+    "webhook.mention": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Page mention",
+      "description": "Facebook Page webhook for mention. Fires when the Page is mentioned."
+    },
+    "webhook.ratings": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Page ratings",
+      "description": "Facebook Page webhook for ratings. Fires when a rating or recommendation is added to the Page."
     }
   },
   "models": [
-    "post"
-  ]
+    "post",
+    "comment",
+    "photo",
+    "page",
+    "album",
+    "event"
+  ],
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

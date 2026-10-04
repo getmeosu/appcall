@@ -1,4 +1,4 @@
-use appcall_connectors::{ErrorCode, Registry};
+use appcall_connectors::{ErrorCode, OperationKind, Registry};
 use serde_json::Value;
 use std::path::Path;
 
@@ -37,6 +37,10 @@ fn curated_batch_manifests_preserve_pinned_read_only_contracts() {
             .any(|o| matches!(o.side_effect.as_str(), "write" | "destructive"));
         for (operation_key, operation) in &manifest.operations {
             operation_count += 1;
+            // EventOnly webhooks have no HTTP input schema.
+            if operation.kind == OperationKind::Webhook {
+                continue;
+            }
             if deepened {
                 assert!(
                     matches!(
