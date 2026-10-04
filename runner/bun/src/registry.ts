@@ -505,6 +505,7 @@ import {
   listRepoComments as ghListRepoComments,
   getRepoKey as ghGetRepoKey,
   listRepoKeys as ghListRepoKeys,
+  listRepoPullComments as ghListRepoPullComments,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1778,6 +1779,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "repos.comments.list": ghListRepoComments,
       "repos.keys.get": ghGetRepoKey,
       "repos.keys.list": ghListRepoKeys,
+      "repos.pulls.comments.list": ghListRepoPullComments,
     },
     salesforce: {
       "contacts.create": createContact,
