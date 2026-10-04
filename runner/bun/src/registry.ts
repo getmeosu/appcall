@@ -496,6 +496,11 @@ import {
   listOrgCodeScanningAlerts as ghListOrgCodeScanningAlerts,
   getGlobalAdvisory as ghGetGlobalAdvisory,
   listGlobalAdvisories as ghListGlobalAdvisories,
+  getEmojis as ghGetEmojis,
+  getFeeds as ghGetFeeds,
+  getMeta as ghGetMeta,
+  listMetaVersions as ghListMetaVersions,
+  getOctocat as ghGetOctocat,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1760,6 +1765,11 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "orgs.code_scanning.alerts.list": ghListOrgCodeScanningAlerts,
       "advisories.get": ghGetGlobalAdvisory,
       "advisories.list": ghListGlobalAdvisories,
+      "emojis.get": ghGetEmojis,
+      "feeds.get": ghGetFeeds,
+      "meta.get": ghGetMeta,
+      "meta.versions.list": ghListMetaVersions,
+      "meta.octocat.get": ghGetOctocat,
     },
     salesforce: {
       "contacts.create": createContact,
