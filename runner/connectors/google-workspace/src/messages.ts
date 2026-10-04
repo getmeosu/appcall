@@ -60,8 +60,17 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
   const getClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.get" });
   const modifyClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.modify" });
   const trashClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.trash" });
+  const untrashClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.untrash" });
+  const deleteClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.delete" });
+  const attachmentClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "messages.attachments.get" });
+  const threadsListClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "threads.list" });
+  const threadsGetClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "threads.get" });
   const draftClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drafts.create" });
+  const draftSendClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drafts.send" });
+  const draftDeleteClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drafts.delete" });
   const labelsClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "labels.list" });
+  const labelsCreateClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "labels.create" });
+  const labelsGetClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "labels.get" });
 
   const authHeaders = { Authorization: `Bearer ${options.accessToken}` };
   const jsonHeaders = { ...authHeaders, "Content-Type": "application/json" };
@@ -216,6 +225,185 @@ export function createGmailClient(options: { accessToken: string; fetch?: typeof
         : [];
       return { ok: true, labels };
     },
+
+    async untrashMessage(input: unknown): Promise<TrashMessageResult> {
+      const payload = validateUntrashMessageInput(input);
+      const response = await untrashClient.fetchText(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}/untrash`,
+        { method: "POST", headers: jsonHeaders, body: "{}" },
+      );
+      const res = await handleGmailResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      const b = res.body;
+      return {
+        ok: true,
+        message: {
+          id: requireString(b.id, "id"),
+          threadId: requireString(b.threadId, "threadId"),
+          labelIds: Array.isArray(b.labelIds) ? b.labelIds.filter((l): l is string => typeof l === "string") : [],
+        },
+      };
+    },
+
+    async deleteMessage(input: unknown): Promise<DeleteMessageResult> {
+      const payload = validateDeleteMessageInput(input);
+      const response = await deleteClient.fetchText(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}`,
+        { method: "DELETE", headers: authHeaders },
+      );
+      const rateLimit = parseGoogleRateLimitMetadata(response.status, response.headers);
+      if (rateLimit.limited) {
+        return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Gmail rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
+      }
+      if (response.status === 204 || response.status === 200) {
+        return { ok: true, deleted: true, messageId: payload.messageId };
+      }
+      const res = await handleGmailResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return { ok: true, deleted: true, messageId: payload.messageId };
+    },
+
+    async getAttachment(input: unknown): Promise<GetAttachmentResult> {
+      const payload = validateGetAttachmentInput(input);
+      const response = await attachmentClient.fetchText(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(payload.messageId)}/attachments/${encodeURIComponent(payload.attachmentId)}`,
+        { headers: authHeaders },
+      );
+      const res = await handleGmailResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return {
+        ok: true,
+        size: typeof res.body.size === "number" ? res.body.size : 0,
+        data: typeof res.body.data === "string" ? res.body.data : "",
+      };
+    },
+
+    async listThreads(input: unknown): Promise<ListThreadsResult> {
+      const payload = validateListThreadsInput(input);
+      const params = new URLSearchParams();
+      if (payload.q) params.set("q", payload.q);
+      if (payload.maxResults !== undefined) params.set("maxResults", String(payload.maxResults));
+      if (payload.pageToken) params.set("pageToken", payload.pageToken);
+      for (const labelId of payload.labelIds ?? []) params.append("labelIds", labelId);
+      const qs = params.toString() ? `?${params}` : "";
+      const response = await threadsListClient.fetchText(
+        `https://gmail.googleapis.com/gmail/v1/users/me/threads${qs}`,
+        { headers: authHeaders },
+      );
+      const res = await handleGmailResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      const threads = Array.isArray(res.body.threads)
+        ? res.body.threads.filter(isRecord).map((t) => ({
+            id: typeof t.id === "string" ? t.id : "",
+            snippet: typeof t.snippet === "string" ? t.snippet : undefined,
+            historyId: typeof t.historyId === "string" ? t.historyId : undefined,
+          }))
+        : [];
+      return {
+        ok: true,
+        threads,
+        nextPageToken: typeof res.body.nextPageToken === "string" ? res.body.nextPageToken : undefined,
+        resultSizeEstimate: typeof res.body.resultSizeEstimate === "number" ? res.body.resultSizeEstimate : undefined,
+      };
+    },
+
+    async getThread(input: unknown): Promise<GetThreadResult> {
+      const payload = validateGetThreadInput(input);
+      const params = new URLSearchParams();
+      if (payload.format) params.set("format", payload.format);
+      const qs = params.toString() ? `?${params}` : "";
+      const response = await threadsGetClient.fetchText(
+        `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(payload.threadId)}${qs}`,
+        { headers: authHeaders },
+      );
+      const res = await handleGmailResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      const messages = Array.isArray(res.body.messages) ? res.body.messages.filter(isRecord) : [];
+      return {
+        ok: true,
+        thread: {
+          id: typeof res.body.id === "string" ? res.body.id : payload.threadId,
+          historyId: typeof res.body.historyId === "string" ? res.body.historyId : undefined,
+          messages,
+        },
+      };
+    },
+
+    async sendDraft(input: unknown): Promise<SendDraftResult> {
+      const payload = validateSendDraftInput(input);
+      const response = await draftSendClient.fetchText(
+        "https://gmail.googleapis.com/gmail/v1/users/me/drafts/send",
+        { method: "POST", headers: jsonHeaders, body: JSON.stringify({ id: payload.draftId }) },
+      );
+      const res = await handleGmailResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return {
+        ok: true,
+        messageId: typeof res.body.id === "string" ? res.body.id : "",
+        threadId: typeof res.body.threadId === "string" ? res.body.threadId : "",
+      };
+    },
+
+    async deleteDraft(input: unknown): Promise<DeleteDraftResult> {
+      const payload = validateDeleteDraftInput(input);
+      const response = await draftDeleteClient.fetchText(
+        `https://gmail.googleapis.com/gmail/v1/users/me/drafts/${encodeURIComponent(payload.draftId)}`,
+        { method: "DELETE", headers: authHeaders },
+      );
+      const rateLimit = parseGoogleRateLimitMetadata(response.status, response.headers);
+      if (rateLimit.limited) {
+        return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Gmail rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
+      }
+      if (response.status === 204 || response.status === 200) {
+        return { ok: true, deleted: true, draftId: payload.draftId };
+      }
+      const res = await handleGmailResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return { ok: true, deleted: true, draftId: payload.draftId };
+    },
+
+    async createLabel(input: unknown): Promise<CreateLabelResult> {
+      const payload = validateCreateLabelInput(input);
+      const body: Record<string, unknown> = { name: payload.name };
+      if (payload.labelListVisibility) body.labelListVisibility = payload.labelListVisibility;
+      if (payload.messageListVisibility) body.messageListVisibility = payload.messageListVisibility;
+      const response = await labelsCreateClient.fetchText(
+        "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+        { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) },
+      );
+      const res = await handleGmailResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return {
+        ok: true,
+        label: {
+          id: typeof res.body.id === "string" ? res.body.id : "",
+          name: typeof res.body.name === "string" ? res.body.name : payload.name,
+          type: typeof res.body.type === "string" ? res.body.type : undefined,
+        },
+      };
+    },
+
+    async getLabel(input: unknown): Promise<GetLabelResult> {
+      const payload = validateGetLabelInput(input);
+      const response = await labelsGetClient.fetchText(
+        `https://gmail.googleapis.com/gmail/v1/users/me/labels/${encodeURIComponent(payload.labelId)}`,
+        { headers: authHeaders },
+      );
+      const res = await handleGmailResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return {
+        ok: true,
+        label: {
+          id: typeof res.body.id === "string" ? res.body.id : payload.labelId,
+          name: typeof res.body.name === "string" ? res.body.name : "",
+          type: typeof res.body.type === "string" ? res.body.type : undefined,
+          messagesTotal: typeof res.body.messagesTotal === "number" ? res.body.messagesTotal : undefined,
+          messagesUnread: typeof res.body.messagesUnread === "number" ? res.body.messagesUnread : undefined,
+          threadsTotal: typeof res.body.threadsTotal === "number" ? res.body.threadsTotal : undefined,
+          threadsUnread: typeof res.body.threadsUnread === "number" ? res.body.threadsUnread : undefined,
+        },
+      };
+    },
   };
 }
 
@@ -224,8 +412,17 @@ export type GmailClient = {
   getMessage(input: unknown): Promise<GetMessageResult>;
   modifyMessage(input: unknown): Promise<ModifyMessageResult>;
   trashMessage(input: unknown): Promise<TrashMessageResult>;
+  untrashMessage(input: unknown): Promise<TrashMessageResult>;
+  deleteMessage(input: unknown): Promise<DeleteMessageResult>;
+  getAttachment(input: unknown): Promise<GetAttachmentResult>;
+  listThreads(input: unknown): Promise<ListThreadsResult>;
+  getThread(input: unknown): Promise<GetThreadResult>;
   createDraft(input: unknown): Promise<CreateDraftResult>;
+  sendDraft(input: unknown): Promise<SendDraftResult>;
+  deleteDraft(input: unknown): Promise<DeleteDraftResult>;
   listLabels(): Promise<ListLabelsResult>;
+  createLabel(input: unknown): Promise<CreateLabelResult>;
+  getLabel(input: unknown): Promise<GetLabelResult>;
 };
 
 // --- messages.get ---
@@ -287,6 +484,107 @@ export function validateTrashMessageInput(input: unknown): TrashMessageInput {
   return {
     messageId: requireString(input.messageId, "messageId"),
   };
+}
+
+export type DeleteMessageResult =
+  | { ok: true; deleted: boolean; messageId: string }
+  | { ok: false; error: ConnectorError };
+
+export function validateUntrashMessageInput(input: unknown): TrashMessageInput {
+  if (!isRecord(input)) throw new Error("untrash message input must be an object");
+  return { messageId: requireString(input.messageId, "messageId") };
+}
+
+export function validateDeleteMessageInput(input: unknown): TrashMessageInput {
+  if (!isRecord(input)) throw new Error("delete message input must be an object");
+  return { messageId: requireString(input.messageId, "messageId") };
+}
+
+export type GetAttachmentInput = { messageId: string; attachmentId: string };
+export type GetAttachmentResult =
+  | { ok: true; size: number; data: string }
+  | { ok: false; error: ConnectorError };
+
+export function validateGetAttachmentInput(input: unknown): GetAttachmentInput {
+  if (!isRecord(input)) throw new Error("get attachment input must be an object");
+  return {
+    messageId: requireString(input.messageId, "messageId"),
+    attachmentId: requireString(input.attachmentId, "attachmentId"),
+  };
+}
+
+export type ListThreadsInput = { q?: string; maxResults?: number; pageToken?: string; labelIds?: string[] };
+export type GmailThreadSummary = { id: string; snippet?: string; historyId?: string };
+export type ListThreadsResult =
+  | { ok: true; threads: GmailThreadSummary[]; nextPageToken?: string; resultSizeEstimate?: number }
+  | { ok: false; error: ConnectorError };
+
+export function validateListThreadsInput(input: unknown): ListThreadsInput {
+  if (input === undefined || input === null) return {};
+  if (!isRecord(input)) throw new Error("list threads input must be an object");
+  return {
+    q: typeof input.q === "string" ? input.q : undefined,
+    maxResults: typeof input.maxResults === "number" ? input.maxResults : undefined,
+    pageToken: typeof input.pageToken === "string" ? input.pageToken : undefined,
+    labelIds: Array.isArray(input.labelIds) ? input.labelIds.filter((id): id is string => typeof id === "string") : undefined,
+  };
+}
+
+export type GetThreadInput = { threadId: string; format?: string };
+export type GetThreadResult =
+  | { ok: true; thread: { id: string; historyId?: string; messages: Record<string, unknown>[] } }
+  | { ok: false; error: ConnectorError };
+
+export function validateGetThreadInput(input: unknown): GetThreadInput {
+  if (!isRecord(input)) throw new Error("get thread input must be an object");
+  return {
+    threadId: requireString(input.threadId, "threadId"),
+    format: typeof input.format === "string" ? input.format : undefined,
+  };
+}
+
+export type SendDraftInput = { draftId: string };
+export type SendDraftResult =
+  | { ok: true; messageId: string; threadId: string }
+  | { ok: false; error: ConnectorError };
+
+export function validateSendDraftInput(input: unknown): SendDraftInput {
+  if (!isRecord(input)) throw new Error("send draft input must be an object");
+  return { draftId: requireString(input.draftId, "draftId") };
+}
+
+export type DeleteDraftInput = { draftId: string };
+export type DeleteDraftResult =
+  | { ok: true; deleted: boolean; draftId: string }
+  | { ok: false; error: ConnectorError };
+
+export function validateDeleteDraftInput(input: unknown): DeleteDraftInput {
+  if (!isRecord(input)) throw new Error("delete draft input must be an object");
+  return { draftId: requireString(input.draftId, "draftId") };
+}
+
+export type CreateLabelInput = { name: string; labelListVisibility?: string; messageListVisibility?: string };
+export type CreateLabelResult =
+  | { ok: true; label: GmailLabel }
+  | { ok: false; error: ConnectorError };
+
+export function validateCreateLabelInput(input: unknown): CreateLabelInput {
+  if (!isRecord(input)) throw new Error("create label input must be an object");
+  return {
+    name: requireString(input.name, "name"),
+    labelListVisibility: typeof input.labelListVisibility === "string" ? input.labelListVisibility : undefined,
+    messageListVisibility: typeof input.messageListVisibility === "string" ? input.messageListVisibility : undefined,
+  };
+}
+
+export type GetLabelInput = { labelId: string };
+export type GetLabelResult =
+  | { ok: true; label: GmailLabel & { messagesTotal?: number; messagesUnread?: number; threadsTotal?: number; threadsUnread?: number } }
+  | { ok: false; error: ConnectorError };
+
+export function validateGetLabelInput(input: unknown): GetLabelInput {
+  if (!isRecord(input)) throw new Error("get label input must be an object");
+  return { labelId: requireString(input.labelId, "labelId") };
 }
 
 // --- drafts.create ---

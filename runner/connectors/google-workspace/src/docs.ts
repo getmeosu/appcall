@@ -100,6 +100,28 @@ export function createDocsClient(options: { accessToken: string; fetch?: typeof 
         revisionId: String(body.revisionId ?? ""),
       };
     },
+
+    async updateDocument(input: unknown): Promise<UpdateDocumentResult> {
+      const payload = validateUpdateDocumentInput(input);
+      const googleRequests = payload.requests.map(toGoogleDocsRequest);
+      const response = await createHttpClient("docs.update").fetchText(
+        `https://docs.googleapis.com/v1/documents/${encodeURIComponent(payload.documentId)}:batchUpdate`,
+        {
+          method: "POST",
+          headers: jsonHeaders,
+          body: JSON.stringify({ requests: googleRequests }),
+        },
+      );
+      const body = readJsonObject(response.body);
+      const parsedError = parseGoogleError(body);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Docs API rejected the update request");
+      }
+      return {
+        documentId: String(body.documentId ?? payload.documentId),
+        replies: Array.isArray(body.replies) ? body.replies : [],
+      };
+    },
   };
 }
 
@@ -120,9 +142,95 @@ export function validateCreateDocumentInput(input: unknown): CreateDocumentInput
   };
 }
 
+export type SafeDocsUpdateRequest =
+  | { insertText: { index: number; text: string } }
+  | { deleteContentRange: { startIndex: number; endIndex: number } }
+  | { replaceAllText: { find: string; replace: string; matchCase?: boolean } };
+
+export type UpdateDocumentInput = {
+  documentId: string;
+  requests: SafeDocsUpdateRequest[];
+};
+
+export type UpdateDocumentResult = {
+  documentId: string;
+  replies: unknown[];
+};
+
+export function validateUpdateDocumentInput(input: unknown): UpdateDocumentInput {
+  if (!isRecord(input)) throw new Error("update document input must be an object");
+  const documentId = requireString(input.documentId, "documentId");
+  if (!Array.isArray(input.requests)) throw new Error("requests must be an array");
+  if (input.requests.length === 0) throw new Error("requests must not be empty");
+  if (input.requests.length > 50) throw new Error("requests must contain at most 50 items");
+  return {
+    documentId,
+    requests: input.requests.map(validateSafeDocsUpdateRequest),
+  };
+}
+
+function validateSafeDocsUpdateRequest(value: unknown): SafeDocsUpdateRequest {
+  if (!isRecord(value)) throw new Error("docs update request must be an object");
+  const keys = Object.keys(value);
+  if (keys.length !== 1) throw new Error("docs update request must contain exactly one supported operation");
+  if (isRecord(value.insertText)) {
+    return {
+      insertText: {
+        index: requireNumber(value.insertText.index, "insertText.index"),
+        text: requireString(value.insertText.text, "insertText.text"),
+      },
+    };
+  }
+  if (isRecord(value.deleteContentRange)) {
+    return {
+      deleteContentRange: {
+        startIndex: requireNumber(value.deleteContentRange.startIndex, "deleteContentRange.startIndex"),
+        endIndex: requireNumber(value.deleteContentRange.endIndex, "deleteContentRange.endIndex"),
+      },
+    };
+  }
+  if (isRecord(value.replaceAllText)) {
+    return {
+      replaceAllText: {
+        find: requireString(value.replaceAllText.find, "replaceAllText.find"),
+        replace: requireString(value.replaceAllText.replace, "replaceAllText.replace"),
+        matchCase: typeof value.replaceAllText.matchCase === "boolean" ? value.replaceAllText.matchCase : undefined,
+      },
+    };
+  }
+  throw new Error(`unsupported docs update operation: ${keys[0] ?? "unknown"}`);
+}
+
+function toGoogleDocsRequest(request: SafeDocsUpdateRequest): Record<string, unknown> {
+  if ("insertText" in request) {
+    return { insertText: { location: { index: request.insertText.index }, text: request.insertText.text } };
+  }
+  if ("deleteContentRange" in request) {
+    return {
+      deleteContentRange: {
+        range: { startIndex: request.deleteContentRange.startIndex, endIndex: request.deleteContentRange.endIndex },
+      },
+    };
+  }
+  return {
+    replaceAllText: {
+      containsText: { text: request.replaceAllText.find, matchCase: request.replaceAllText.matchCase ?? false },
+      replaceText: request.replaceAllText.replace,
+    },
+  };
+}
+
+function requireNumber(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`${field} must be a number`);
+  }
+  return value;
+}
+
 export type DocsClient = {
   getDocument(input: unknown): Promise<GetDocumentResult>;
   createDocument(input: unknown): Promise<CreateDocumentResult>;
+  updateDocument(input: unknown): Promise<UpdateDocumentResult>;
 };
 
 function requireString(value: unknown, field: string): string {

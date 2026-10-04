@@ -231,16 +231,80 @@ function incompleteCalendarResponse(resource: string): ConnectorError {
   return { code: "CONNECTOR_UPSTREAM_ERROR", message: `Google Calendar API returned an incomplete ${resource} response.` };
 }
 
+export type ListEventInstancesInput = {
+  calendarId: string;
+  eventId: string;
+  maxResults?: number;
+  pageToken?: string;
+  timeMin?: string;
+  timeMax?: string;
+};
+
+export type ListEventInstancesResult =
+  | { ok: true; instances: NonNullable<CalendarEventActionResult["event"]>[]; nextPageToken?: string }
+  | { ok: false; error: ConnectorError };
+
+export type GetCalendarInput = { calendarId: string };
+export type GetCalendarResult =
+  | { ok: true; calendar: { id: string; summary: string; description?: string; timeZone?: string } }
+  | { ok: false; error: ConnectorError };
+
+export type ListAclInput = { calendarId: string };
+export type ListAclResult =
+  | { ok: true; rules: Array<{ id: string; role: string; scopeType?: string; scopeValue?: string }> }
+  | { ok: false; error: ConnectorError };
+
+export type MoveEventInput = { calendarId: string; eventId: string; destination: string };
+
+export function validateListEventInstancesInput(input: unknown): ListEventInstancesInput {
+  if (!isRecord(input)) throw new Error("list event instances input must be an object");
+  return {
+    calendarId: requireString(input.calendarId, "calendarId"),
+    eventId: requireString(input.eventId, "eventId"),
+    maxResults: typeof input.maxResults === "number" ? input.maxResults : undefined,
+    pageToken: typeof input.pageToken === "string" ? input.pageToken : undefined,
+    timeMin: typeof input.timeMin === "string" ? input.timeMin : undefined,
+    timeMax: typeof input.timeMax === "string" ? input.timeMax : undefined,
+  };
+}
+
+export function validateGetCalendarInput(input: unknown): GetCalendarInput {
+  if (!isRecord(input)) throw new Error("get calendar input must be an object");
+  return { calendarId: requireString(input.calendarId, "calendarId") };
+}
+
+export function validateListAclInput(input: unknown): ListAclInput {
+  if (!isRecord(input)) throw new Error("list acl input must be an object");
+  return { calendarId: requireString(input.calendarId, "calendarId") };
+}
+
+export function validateMoveEventInput(input: unknown): MoveEventInput {
+  if (!isRecord(input)) throw new Error("move event input must be an object");
+  return {
+    calendarId: requireString(input.calendarId, "calendarId"),
+    eventId: requireString(input.eventId, "eventId"),
+    destination: requireString(input.destination, "destination"),
+  };
+}
+
 export type CalendarActionsClient = {
   createEvent(input: unknown): Promise<CalendarEventActionResult>;
   updateEvent(input: unknown): Promise<CalendarEventActionResult>;
   deleteEvent(input: unknown): Promise<DeleteEventResult>;
   getEvent(input: unknown): Promise<CalendarEventActionResult>;
   listCalendars(input: unknown): Promise<CalendarListResult>;
+  listEventInstances(input: unknown): Promise<ListEventInstancesResult>;
+  getCalendar(input: unknown): Promise<GetCalendarResult>;
+  listAcl(input: unknown): Promise<ListAclResult>;
+  moveEvent(input: unknown): Promise<CalendarEventActionResult>;
 };
 
 export function createCalendarActionsClient(options: { accessToken: string; fetch?: typeof fetch; httpClient?: ConnectorHttpClient }): CalendarActionsClient {
   const client = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "calendar.events.create" });
+  const instancesClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "calendar.events.instances" });
+  const getCalendarClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "calendar.calendars.get" });
+  const aclClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "calendar.acl.list" });
+  const moveClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "calendar.events.move" });
   const authHeaders = { Authorization: `Bearer ${options.accessToken}` };
   const jsonHeaders = { ...authHeaders, "Content-Type": "application/json" };
 
@@ -333,6 +397,83 @@ export function createCalendarActionsClient(options: { accessToken: string; fetc
           accessRole: typeof c.accessRole === "string" ? c.accessRole : undefined,
         })),
       };
+    },
+
+    async listEventInstances(input: unknown): Promise<ListEventInstancesResult> {
+      const p = validateListEventInstancesInput(input);
+      const params = new URLSearchParams();
+      if (p.maxResults !== undefined) params.set("maxResults", String(p.maxResults));
+      if (p.pageToken) params.set("pageToken", p.pageToken);
+      if (p.timeMin) params.set("timeMin", p.timeMin);
+      if (p.timeMax) params.set("timeMax", p.timeMax);
+      const qs = params.toString() ? `?${params}` : "";
+      const response = await instancesClient.fetchText(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events/${encodeURIComponent(p.eventId)}/instances${qs}`,
+        { headers: authHeaders },
+      );
+      const res = await handleCalendarResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      const items = Array.isArray(res.body.items) ? res.body.items.filter(isRecord) : [];
+      return {
+        ok: true,
+        instances: items.map((item) => normalizeEventResponse(item)).filter((event): event is NonNullable<CalendarEventActionResult["event"]> => event !== null),
+        nextPageToken: typeof res.body.nextPageToken === "string" ? res.body.nextPageToken : undefined,
+      };
+    },
+
+    async getCalendar(input: unknown): Promise<GetCalendarResult> {
+      const p = validateGetCalendarInput(input);
+      const response = await getCalendarClient.fetchText(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}`,
+        { headers: authHeaders },
+      );
+      const res = await handleCalendarResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return {
+        ok: true,
+        calendar: {
+          id: typeof res.body.id === "string" ? res.body.id : p.calendarId,
+          summary: typeof res.body.summary === "string" ? res.body.summary : "",
+          description: typeof res.body.description === "string" ? res.body.description : undefined,
+          timeZone: typeof res.body.timeZone === "string" ? res.body.timeZone : undefined,
+        },
+      };
+    },
+
+    async listAcl(input: unknown): Promise<ListAclResult> {
+      const p = validateListAclInput(input);
+      const response = await aclClient.fetchText(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/acl`,
+        { headers: authHeaders },
+      );
+      const res = await handleCalendarResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      const items = Array.isArray(res.body.items) ? res.body.items.filter(isRecord) : [];
+      return {
+        ok: true,
+        rules: items.map((rule) => {
+          const scope = isRecord(rule.scope) ? rule.scope : {};
+          return {
+            id: typeof rule.id === "string" ? rule.id : "",
+            role: typeof rule.role === "string" ? rule.role : "",
+            scopeType: typeof scope.type === "string" ? scope.type : undefined,
+            scopeValue: typeof scope.value === "string" ? scope.value : undefined,
+          };
+        }),
+      };
+    },
+
+    async moveEvent(input: unknown): Promise<CalendarEventActionResult> {
+      const p = validateMoveEventInput(input);
+      const params = new URLSearchParams({ destination: p.destination });
+      const response = await moveClient.fetchText(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(p.calendarId)}/events/${encodeURIComponent(p.eventId)}/move?${params}`,
+        { method: "POST", headers: jsonHeaders, body: "{}" },
+      );
+      const res = await handleCalendarResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      const event = normalizeEventResponse(res.body);
+      return event ? { ok: true, event } : { ok: false, error: incompleteCalendarResponse("event") };
     },
   };
 }

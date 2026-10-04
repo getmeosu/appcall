@@ -291,6 +291,61 @@ export function createSheetsClient(options: { accessToken: string; fetch?: typeo
         replies: Array.isArray(respBody.replies) ? respBody.replies : [],
       };
     },
+
+    async getSpreadsheet(input: unknown): Promise<GetSpreadsheetResult> {
+      const payload = validateGetSpreadsheetInput(input);
+      const params = new URLSearchParams();
+      if (payload.includeGridData) params.set("includeGridData", "true");
+      const qs = params.toString() ? `?${params}` : "";
+      const response = await createHttpClient("sheets.spreadsheets.get").fetchText(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}${qs}`,
+        { headers: authHeaders },
+      );
+      const respBody = readJsonObject(response.body);
+      const parsedError = parseGoogleError(respBody);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Sheets API rejected the get spreadsheet request");
+      }
+      const properties = isRecord(respBody.properties) ? respBody.properties : {};
+      return {
+        spreadsheetId: String(respBody.spreadsheetId ?? payload.spreadsheetId),
+        spreadsheetUrl: String(respBody.spreadsheetUrl ?? ""),
+        title: String(properties.title ?? ""),
+        sheets: Array.isArray(respBody.sheets) ? respBody.sheets : [],
+      };
+    },
+
+    async batchUpdateValues(input: unknown): Promise<BatchUpdateValuesResult> {
+      const payload = validateBatchUpdateValuesInput(input);
+      const response = await createHttpClient("sheets.values.batchUpdate").fetchText(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(payload.spreadsheetId)}/values:batchUpdate`,
+        {
+          method: "POST",
+          headers: jsonHeaders,
+          body: JSON.stringify({
+            valueInputOption: payload.valueInputOption ?? "USER_ENTERED",
+            data: payload.data.map((item) => ({
+              range: item.range,
+              values: item.values,
+              majorDimension: item.majorDimension ?? "ROWS",
+            })),
+          }),
+        },
+      );
+      const respBody = readJsonObject(response.body);
+      const parsedError = parseGoogleError(respBody);
+      if (response.status >= 400 || parsedError?.code === "CONNECTOR_RATE_LIMITED") {
+        throwGoogleResponseError(response, parsedError, "Sheets API rejected the values batch update request");
+      }
+      return {
+        spreadsheetId: String(respBody.spreadsheetId ?? payload.spreadsheetId),
+        totalUpdatedRows: Number(respBody.totalUpdatedRows ?? 0),
+        totalUpdatedColumns: Number(respBody.totalUpdatedColumns ?? 0),
+        totalUpdatedCells: Number(respBody.totalUpdatedCells ?? 0),
+        totalUpdatedSheets: Number(respBody.totalUpdatedSheets ?? 0),
+        responses: Array.isArray(respBody.responses) ? respBody.responses : [],
+      };
+    },
   };
 }
 
@@ -391,6 +446,69 @@ export function validateBatchUpdateSpreadsheetInput(input: unknown): BatchUpdate
   };
 }
 
+export type GetSpreadsheetInput = {
+  spreadsheetId: string;
+  includeGridData?: boolean;
+};
+
+export type GetSpreadsheetResult = {
+  spreadsheetId: string;
+  spreadsheetUrl: string;
+  title: string;
+  sheets: unknown[];
+};
+
+export type BatchUpdateValuesData = {
+  range: string;
+  values: unknown[][];
+  majorDimension?: string;
+};
+
+export type BatchUpdateValuesInput = {
+  spreadsheetId: string;
+  data: BatchUpdateValuesData[];
+  valueInputOption?: string;
+};
+
+export type BatchUpdateValuesResult = {
+  spreadsheetId: string;
+  totalUpdatedRows: number;
+  totalUpdatedColumns: number;
+  totalUpdatedCells: number;
+  totalUpdatedSheets: number;
+  responses: unknown[];
+};
+
+export function validateGetSpreadsheetInput(input: unknown): GetSpreadsheetInput {
+  if (!isRecord(input)) throw new Error("get spreadsheet input must be an object");
+  return {
+    spreadsheetId: requireString(input.spreadsheetId, "spreadsheetId"),
+    includeGridData: typeof input.includeGridData === "boolean" ? input.includeGridData : undefined,
+  };
+}
+
+export function validateBatchUpdateValuesInput(input: unknown): BatchUpdateValuesInput {
+  if (!isRecord(input)) throw new Error("batch update values input must be an object");
+  const spreadsheetId = requireString(input.spreadsheetId, "spreadsheetId");
+  const data = requireArray(input.data, "data");
+  if (data.length === 0) throw new Error("data must not be empty");
+  if (data.length > 50) throw new Error("data must contain at most 50 items");
+  return {
+    spreadsheetId,
+    valueInputOption: typeof input.valueInputOption === "string" ? input.valueInputOption : undefined,
+    data: data.map((item, index) => {
+      if (!isRecord(item)) throw new Error(`data[${index}] must be an object`);
+      const values = requireArray(item.values, `data[${index}].values`);
+      if (!values.every((row) => Array.isArray(row))) throw new Error(`data[${index}].values must be a 2D array`);
+      return {
+        range: requireString(item.range, `data[${index}].range`),
+        values,
+        majorDimension: typeof item.majorDimension === "string" ? item.majorDimension : undefined,
+      };
+    }),
+  };
+}
+
 export type SheetsClient = {
   getValues(input: unknown): Promise<GetValuesResult>;
   appendValues(input: unknown): Promise<AppendValuesResult>;
@@ -398,6 +516,8 @@ export type SheetsClient = {
   clearValues(input: unknown): Promise<ClearValuesResult>;
   createSpreadsheet(input: unknown): Promise<CreateSpreadsheetResult>;
   batchUpdateSpreadsheet(input: unknown): Promise<BatchUpdateSpreadsheetResult>;
+  getSpreadsheet(input: unknown): Promise<GetSpreadsheetResult>;
+  batchUpdateValues(input: unknown): Promise<BatchUpdateValuesResult>;
 };
 
 function validateSafeBatchUpdateRequest(value: unknown): SafeBatchUpdateRequest {

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import sheetsUpdateFixture from "../fixtures/sheets_update.json";
 import sheetsClearFixture from "../fixtures/sheets_clear.json";
 import spreadsheetCreateFixture from "../fixtures/spreadsheet_create.json";
+import sheetsValuesBatchUpdateFixture from "../fixtures/sheets_values_batch_update.json";
 import rateLimitedFixture from "../fixtures/rate_limited.json";
 import {
   createSheetsClient,
@@ -9,6 +10,8 @@ import {
   validateClearValuesInput,
   validateCreateSpreadsheetInput,
   validateBatchUpdateSpreadsheetInput,
+  validateGetSpreadsheetInput,
+  validateBatchUpdateValuesInput,
 } from "../src/sheets";
 
 const sheetsOperations: Array<{ name: string; invoke: (client: ReturnType<typeof createSheetsClient>) => Promise<unknown> }> = [
@@ -22,6 +25,14 @@ const sheetsOperations: Array<{ name: string; invoke: (client: ReturnType<typeof
     invoke: (client) => client.batchUpdateSpreadsheet({
       spreadsheetId: "spreadsheet-id",
       requests: [{ freezeRows: { sheetId: 0, rowCount: 1 } }],
+    }),
+  },
+  { name: "sheets.spreadsheets.get", invoke: (client) => client.getSpreadsheet({ spreadsheetId: "spreadsheet-id" }) },
+  {
+    name: "sheets.values.batchUpdate",
+    invoke: (client) => client.batchUpdateValues({
+      spreadsheetId: "spreadsheet-id",
+      data: [{ range: "Sheet1!A1", values: [["value"]] }],
     }),
   },
 ];
@@ -313,6 +324,16 @@ describe("google-workspace Sheets extended actions", () => {
       name: "ConnectorHttpError",
       code: "OUTBOUND_RESPONSE_TOO_LARGE",
     });
+    await expect(client.getSpreadsheet({ spreadsheetId: "spreadId" })).resolves.toMatchObject({
+      spreadsheetId: "spreadId",
+    });
+    await expect(client.batchUpdateValues({
+      spreadsheetId: "spreadId",
+      data: [{ range: "Sheet1!A1", values: [["value"]] }],
+    })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
   });
 
   test("batchUpdateSpreadsheet throws on upstream error", async () => {
@@ -444,5 +465,66 @@ describe("google-workspace Sheets extended actions", () => {
         expect(error).not.toHaveProperty("retryAfterSeconds");
       }
     }
+  });
+
+  // ─── sheets.spreadsheets.get ────────────────────────────────────────────
+
+  test("validateGetSpreadsheetInput requires spreadsheetId", () => {
+    expect(validateGetSpreadsheetInput({ spreadsheetId: "spreadId" }).spreadsheetId).toBe("spreadId");
+    expect(() => validateGetSpreadsheetInput({})).toThrow();
+  });
+
+  test("getSpreadsheet fetches spreadsheet metadata", async () => {
+    const requests: Request[] = [];
+    const client = createSheetsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(spreadsheetCreateFixture);
+      },
+    });
+
+    const result = await client.getSpreadsheet({ spreadsheetId: "newSpreadsheetId123" });
+
+    expect(requests[0].url).toBe("https://sheets.googleapis.com/v4/spreadsheets/newSpreadsheetId123");
+    expect(requests[0].method).toBe("GET");
+    expect(result.spreadsheetId).toBe("newSpreadsheetId123");
+    expect(result.title).toBe("My New Spreadsheet");
+    expect(result.spreadsheetUrl).toContain("newSpreadsheetId123");
+  });
+
+  // ─── sheets.values.batchUpdate ──────────────────────────────────────────
+
+  test("validateBatchUpdateValuesInput requires spreadsheetId and data", () => {
+    const r = validateBatchUpdateValuesInput({
+      spreadsheetId: "spreadId",
+      data: [{ range: "Sheet1!A1", values: [["a"]] }],
+    });
+    expect(r.data).toHaveLength(1);
+    expect(() => validateBatchUpdateValuesInput({ spreadsheetId: "s", data: [] })).toThrow();
+    expect(() => validateBatchUpdateValuesInput({ spreadsheetId: "s" })).toThrow();
+  });
+
+  test("batchUpdateValues posts to values:batchUpdate", async () => {
+    const requests: Request[] = [];
+    const client = createSheetsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(sheetsValuesBatchUpdateFixture);
+      },
+    });
+
+    const result = await client.batchUpdateValues({
+      spreadsheetId: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
+      data: [{ range: "Sheet1!A1:C2", values: [["a", "b", "c"], ["d", "e", "f"]] }],
+    });
+
+    expect(requests[0].url).toBe("https://sheets.googleapis.com/v4/spreadsheets/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/values:batchUpdate");
+    expect(requests[0].method).toBe("POST");
+    const body = await requests[0].json() as Record<string, unknown>;
+    expect(body.valueInputOption).toBe("USER_ENTERED");
+    expect(result.spreadsheetId).toBe("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms");
+    expect(result.totalUpdatedCells).toBe(6);
   });
 });

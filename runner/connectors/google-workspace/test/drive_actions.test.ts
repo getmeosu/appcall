@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import driveFileFixture from "../fixtures/drive_file.json";
 import drivePermissionFixture from "../fixtures/drive_permission.json";
+import drivePermissionsListFixture from "../fixtures/drive_permissions_list.json";
 import rateLimitedFixture from "../fixtures/rate_limited.json";
 import {
   createDriveActionsClient,
@@ -8,6 +9,10 @@ import {
   validateCreateDriveFileInput,
   validateDeleteFileInput,
   validateCreatePermissionInput,
+  validateCopyFileInput,
+  validateUpdateFileInput,
+  validateListPermissionsInput,
+  validateDeletePermissionInput,
 } from "../src/files";
 
 describe("google-workspace Drive actions", () => {
@@ -88,6 +93,22 @@ describe("google-workspace Drive actions", () => {
       code: "OUTBOUND_RESPONSE_TOO_LARGE",
     });
     await expect(client.createPermission({ fileId: "permission-file", role: "reader", type: "user" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.copyFile({ fileId: "copy-file" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.updateFile({ fileId: "update-file", name: "Renamed" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.listPermissions({ fileId: "list-permissions" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.deletePermission({ fileId: "delete-permission", permissionId: "perm123" })).rejects.toMatchObject({
       name: "ConnectorHttpError",
       code: "OUTBOUND_RESPONSE_TOO_LARGE",
     });
@@ -267,5 +288,120 @@ describe("google-workspace Drive actions", () => {
     const result = await client.createPermission({ fileId: "abc", role: "reader", type: "user" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
+  // ─── drive.files.copy ───────────────────────────────────────────────────
+
+  test("validateCopyFileInput requires fileId", () => {
+    expect(validateCopyFileInput({ fileId: "abc", name: "Copy" }).name).toBe("Copy");
+    expect(() => validateCopyFileInput({})).toThrow();
+  });
+
+  test("copyFile posts to the copy endpoint", async () => {
+    const requests: Request[] = [];
+    const client = createDriveActionsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(driveFileFixture);
+      },
+    });
+
+    const result = await client.copyFile({
+      fileId: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
+      name: "My Document copy",
+    });
+
+    expect(requests[0].url).toContain("https://www.googleapis.com/drive/v3/files/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/copy");
+    expect(requests[0].method).toBe("POST");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.file.id).toBe("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms");
+  });
+
+  // ─── drive.files.update ─────────────────────────────────────────────────
+
+  test("validateUpdateFileInput requires fileId", () => {
+    const r = validateUpdateFileInput({ fileId: "abc", name: "Renamed", description: "note" });
+    expect(r.name).toBe("Renamed");
+    expect(r.description).toBe("note");
+    expect(() => validateUpdateFileInput({ name: "x" })).toThrow();
+  });
+
+  test("updateFile patches file metadata", async () => {
+    const requests: Request[] = [];
+    const client = createDriveActionsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json({ ...driveFileFixture, name: "Renamed" });
+      },
+    });
+
+    const result = await client.updateFile({
+      fileId: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
+      name: "Renamed",
+    });
+
+    expect(requests[0].url).toContain("https://www.googleapis.com/drive/v3/files/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms");
+    expect(requests[0].method).toBe("PATCH");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.file.name).toBe("Renamed");
+  });
+
+  // ─── drive.permissions.list ─────────────────────────────────────────────
+
+  test("validateListPermissionsInput requires fileId", () => {
+    expect(validateListPermissionsInput({ fileId: "abc" }).fileId).toBe("abc");
+    expect(() => validateListPermissionsInput({})).toThrow();
+  });
+
+  test("listPermissions fetches the permissions collection", async () => {
+    const requests: Request[] = [];
+    const client = createDriveActionsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(drivePermissionsListFixture);
+      },
+    });
+
+    const result = await client.listPermissions({ fileId: "fileId123" });
+
+    expect(requests[0].url).toContain("https://www.googleapis.com/drive/v3/files/fileId123/permissions");
+    expect(requests[0].method).toBe("GET");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.permissions).toHaveLength(2);
+      expect(result.permissions[0].permissionId).toBe("perm123");
+    }
+  });
+
+  // ─── drive.permissions.delete ───────────────────────────────────────────
+
+  test("validateDeletePermissionInput requires fileId and permissionId", () => {
+    const r = validateDeletePermissionInput({ fileId: "abc", permissionId: "perm123" });
+    expect(r.permissionId).toBe("perm123");
+    expect(() => validateDeletePermissionInput({ fileId: "abc" })).toThrow();
+  });
+
+  test("deletePermission sends DELETE and returns deleted:true on 204", async () => {
+    const requests: Request[] = [];
+    const client = createDriveActionsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 204 });
+      },
+    });
+
+    const result = await client.deletePermission({ fileId: "fileId123", permissionId: "perm123" });
+
+    expect(requests[0].url).toBe("https://www.googleapis.com/drive/v3/files/fileId123/permissions/perm123");
+    expect(requests[0].method).toBe("DELETE");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.deleted).toBe(true);
+      expect(result.permissionId).toBe("perm123");
+    }
   });
 });

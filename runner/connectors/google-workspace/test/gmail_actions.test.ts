@@ -2,7 +2,13 @@ import { describe, expect, test } from "bun:test";
 import messageGetFixture from "../fixtures/message_get.json";
 import messageModifyFixture from "../fixtures/message_modify.json";
 import draftCreateFixture from "../fixtures/draft_create.json";
+import draftSendFixture from "../fixtures/draft_send.json";
 import labelsListFixture from "../fixtures/labels_list.json";
+import labelCreateFixture from "../fixtures/label_create.json";
+import labelGetFixture from "../fixtures/label_get.json";
+import attachmentGetFixture from "../fixtures/attachment_get.json";
+import threadsListFixture from "../fixtures/threads_list.json";
+import threadGetFixture from "../fixtures/thread_get.json";
 import rateLimitedFixture from "../fixtures/rate_limited.json";
 import {
   createGmailClient,
@@ -10,6 +16,15 @@ import {
   validateModifyMessageInput,
   validateTrashMessageInput,
   validateCreateDraftInput,
+  validateUntrashMessageInput,
+  validateDeleteMessageInput,
+  validateGetAttachmentInput,
+  validateListThreadsInput,
+  validateGetThreadInput,
+  validateSendDraftInput,
+  validateDeleteDraftInput,
+  validateCreateLabelInput,
+  validateGetLabelInput,
 } from "../src/messages";
 
 describe("google-workspace Gmail actions", () => {
@@ -111,6 +126,35 @@ describe("google-workspace Gmail actions", () => {
       name: "ConnectorHttpError",
       code: "OUTBOUND_RESPONSE_TOO_LARGE",
     });
+    await expect(client.untrashMessage({ messageId: "untrash-message" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.deleteMessage({ messageId: "delete-message" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.sendDraft({ draftId: "draft-id" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.deleteDraft({ draftId: "draft-id" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.createLabel({ name: "Follow Up" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.getLabel({ labelId: "Label_1234" })).rejects.toMatchObject({
+      name: "ConnectorHttpError",
+      code: "OUTBOUND_RESPONSE_TOO_LARGE",
+    });
+    await expect(client.getAttachment({ messageId: "msg", attachmentId: "att" })).resolves.toMatchObject({
+      ok: true,
+    });
+    await expect(client.listThreads({})).resolves.toMatchObject({ ok: true });
+    await expect(client.getThread({ threadId: "thread" })).resolves.toMatchObject({ ok: true });
   });
 
   // ─── messages.modify ────────────────────────────────────────────────────
@@ -306,5 +350,290 @@ describe("google-workspace Gmail actions", () => {
     const result = await client.listLabels();
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
+  // ─── messages.untrash ───────────────────────────────────────────────────
+
+  test("validateUntrashMessageInput accepts valid input", () => {
+    expect(validateUntrashMessageInput({ messageId: "abc123" }).messageId).toBe("abc123");
+  });
+
+  test("validateUntrashMessageInput throws on missing messageId", () => {
+    expect(() => validateUntrashMessageInput({})).toThrow();
+  });
+
+  test("untrashMessage posts to the untrash URL", async () => {
+    const requests: Request[] = [];
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(messageModifyFixture);
+      },
+    });
+
+    const result = await client.untrashMessage({ messageId: "18e4a3c29a8d7a7e" });
+
+    expect(requests[0].url).toBe("https://gmail.googleapis.com/gmail/v1/users/me/messages/18e4a3c29a8d7a7e/untrash");
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer ya29.test-token");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.message.id).toBe("18e4a3c29a8d7a7e");
+  });
+
+  test("untrashMessage maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    const client = createGmailClient({
+      accessToken: "token",
+      fetch: async () => new Response(JSON.stringify(rateLimitedFixture), {
+        status: 429,
+        headers: { "Retry-After": "12" },
+      }),
+    });
+    const result = await client.untrashMessage({ messageId: "abc" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
+  });
+
+  // ─── messages.delete ────────────────────────────────────────────────────
+
+  test("validateDeleteMessageInput accepts valid input", () => {
+    expect(validateDeleteMessageInput({ messageId: "abc123" }).messageId).toBe("abc123");
+  });
+
+  test("validateDeleteMessageInput throws on missing messageId", () => {
+    expect(() => validateDeleteMessageInput({})).toThrow();
+  });
+
+  test("deleteMessage sends DELETE and returns deleted:true on 204", async () => {
+    const requests: Request[] = [];
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 204 });
+      },
+    });
+
+    const result = await client.deleteMessage({ messageId: "18e4a3c29a8d7a7e" });
+
+    expect(requests[0].url).toBe("https://gmail.googleapis.com/gmail/v1/users/me/messages/18e4a3c29a8d7a7e");
+    expect(requests[0].method).toBe("DELETE");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.deleted).toBe(true);
+      expect(result.messageId).toBe("18e4a3c29a8d7a7e");
+    }
+  });
+
+  test("deleteMessage maps upstream error to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createGmailClient({
+      accessToken: "token",
+      fetch: async () => new Response(
+        JSON.stringify({ error: { code: 404, message: "Not Found", status: 404 } }),
+        { status: 404 },
+      ),
+    });
+    const result = await client.deleteMessage({ messageId: "missing" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_UPSTREAM_ERROR");
+  });
+
+  // ─── messages.attachments.get ───────────────────────────────────────────
+
+  test("validateGetAttachmentInput accepts valid input", () => {
+    const r = validateGetAttachmentInput({ messageId: "msg1", attachmentId: "att1" });
+    expect(r.messageId).toBe("msg1");
+    expect(r.attachmentId).toBe("att1");
+  });
+
+  test("validateGetAttachmentInput throws on missing fields", () => {
+    expect(() => validateGetAttachmentInput({ messageId: "msg1" })).toThrow();
+    expect(() => validateGetAttachmentInput({})).toThrow();
+  });
+
+  test("getAttachment fetches the Gmail attachments endpoint", async () => {
+    const requests: Request[] = [];
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(attachmentGetFixture);
+      },
+    });
+
+    const result = await client.getAttachment({ messageId: "18e4a3c29a8d7a7e", attachmentId: "ANGjdJ8x" });
+
+    expect(requests[0].url).toBe("https://gmail.googleapis.com/gmail/v1/users/me/messages/18e4a3c29a8d7a7e/attachments/ANGjdJ8x");
+    expect(requests[0].method).toBe("GET");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.size).toBe(24);
+      expect(result.data).toBe("SGVsbG8gYXR0YWNobWVudA");
+    }
+  });
+
+  // ─── threads.list / threads.get ─────────────────────────────────────────
+
+  test("validateListThreadsInput accepts optional query fields", () => {
+    const r = validateListThreadsInput({ q: "is:unread", maxResults: 10, pageToken: "p1", labelIds: ["INBOX"] });
+    expect(r.q).toBe("is:unread");
+    expect(r.maxResults).toBe(10);
+    expect(r.pageToken).toBe("p1");
+    expect(r.labelIds).toEqual(["INBOX"]);
+  });
+
+  test("listThreads fetches the threads collection", async () => {
+    const requests: Request[] = [];
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(threadsListFixture);
+      },
+    });
+
+    const result = await client.listThreads({ q: "is:unread", maxResults: 10 });
+
+    expect(requests[0].url).toContain("https://gmail.googleapis.com/gmail/v1/users/me/threads?");
+    expect(requests[0].url).toContain("q=is%3Aunread");
+    expect(requests[0].url).toContain("maxResults=10");
+    expect(requests[0].method).toBe("GET");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.threads).toHaveLength(2);
+      expect(result.threads[0].id).toBe("18e4a3c29a8d7a7e");
+      expect(result.nextPageToken).toBe("thread_page_abc");
+    }
+  });
+
+  test("validateGetThreadInput requires threadId", () => {
+    expect(validateGetThreadInput({ threadId: "t1" }).threadId).toBe("t1");
+    expect(() => validateGetThreadInput({})).toThrow();
+  });
+
+  test("getThread fetches a thread by id", async () => {
+    const requests: Request[] = [];
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(threadGetFixture);
+      },
+    });
+
+    const result = await client.getThread({ threadId: "18e4a3c29a8d7a7e" });
+
+    expect(requests[0].url).toBe("https://gmail.googleapis.com/gmail/v1/users/me/threads/18e4a3c29a8d7a7e");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.thread.id).toBe("18e4a3c29a8d7a7e");
+      expect(result.thread.messages).toHaveLength(2);
+    }
+  });
+
+  // ─── drafts.send / drafts.delete ────────────────────────────────────────
+
+  test("validateSendDraftInput requires draftId", () => {
+    expect(validateSendDraftInput({ draftId: "r-1234567890" }).draftId).toBe("r-1234567890");
+    expect(() => validateSendDraftInput({})).toThrow();
+  });
+
+  test("sendDraft posts to drafts/send", async () => {
+    const requests: Request[] = [];
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(draftSendFixture);
+      },
+    });
+
+    const result = await client.sendDraft({ draftId: "r-1234567890" });
+
+    expect(requests[0].url).toBe("https://gmail.googleapis.com/gmail/v1/users/me/drafts/send");
+    expect(requests[0].method).toBe("POST");
+    expect(await requests[0].json()).toEqual({ id: "r-1234567890" });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.messageId).toBe("18e4a3c29a8d7a82");
+      expect(result.threadId).toBe("18e4a3c29a8d7a82");
+    }
+  });
+
+  test("validateDeleteDraftInput requires draftId", () => {
+    expect(validateDeleteDraftInput({ draftId: "r-1" }).draftId).toBe("r-1");
+    expect(() => validateDeleteDraftInput({})).toThrow();
+  });
+
+  test("deleteDraft sends DELETE and returns deleted:true on 204", async () => {
+    const requests: Request[] = [];
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response("", { status: 204 });
+      },
+    });
+
+    const result = await client.deleteDraft({ draftId: "r-1234567890" });
+
+    expect(requests[0].url).toBe("https://gmail.googleapis.com/gmail/v1/users/me/drafts/r-1234567890");
+    expect(requests[0].method).toBe("DELETE");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.deleted).toBe(true);
+  });
+
+  // ─── labels.create / labels.get ─────────────────────────────────────────
+
+  test("validateCreateLabelInput requires name", () => {
+    expect(validateCreateLabelInput({ name: "Follow Up" }).name).toBe("Follow Up");
+    expect(() => validateCreateLabelInput({})).toThrow();
+  });
+
+  test("createLabel posts to the labels collection", async () => {
+    const requests: Request[] = [];
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(labelCreateFixture);
+      },
+    });
+
+    const result = await client.createLabel({ name: "Follow Up" });
+
+    expect(requests[0].url).toBe("https://gmail.googleapis.com/gmail/v1/users/me/labels");
+    expect(requests[0].method).toBe("POST");
+    expect(await requests[0].json()).toEqual({ name: "Follow Up" });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.label.id).toBe("Label_5678");
+      expect(result.label.name).toBe("Follow Up");
+    }
+  });
+
+  test("validateGetLabelInput requires labelId", () => {
+    expect(validateGetLabelInput({ labelId: "Label_1234" }).labelId).toBe("Label_1234");
+    expect(() => validateGetLabelInput({})).toThrow();
+  });
+
+  test("getLabel fetches a label by id", async () => {
+    const requests: Request[] = [];
+    const client = createGmailClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(labelGetFixture);
+      },
+    });
+
+    const result = await client.getLabel({ labelId: "Label_1234" });
+
+    expect(requests[0].url).toBe("https://gmail.googleapis.com/gmail/v1/users/me/labels/Label_1234");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.label.id).toBe("Label_1234");
+      expect(result.label.name).toBe("My Label");
+    }
   });
 });

@@ -1,8 +1,8 @@
-import { createGmailClient, validateSendMessageInput, validateGetMessageInput, validateModifyMessageInput, validateTrashMessageInput, validateCreateDraftInput } from "./messages";
-import { createSheetsClient, validateGetValuesInput, validateAppendValuesInput, validateUpdateValuesInput, validateClearValuesInput, validateCreateSpreadsheetInput, validateBatchUpdateSpreadsheetInput } from "./sheets";
-import { createDocsClient, validateGetDocumentInput, validateCreateDocumentInput } from "./docs";
-import { createCalendarActionsClient, validateCreateEventInput, validateUpdateEventInput, validateDeleteEventInput, validateGetEventInput } from "./events";
-import { createDriveActionsClient, validateGetFileInput, validateCreateDriveFileInput, validateDeleteFileInput, validateCreatePermissionInput } from "./files";
+import { createGmailClient, validateSendMessageInput, validateGetMessageInput, validateModifyMessageInput, validateTrashMessageInput, validateCreateDraftInput, validateUntrashMessageInput, validateDeleteMessageInput, validateGetAttachmentInput, validateListThreadsInput, validateGetThreadInput, validateSendDraftInput, validateDeleteDraftInput, validateCreateLabelInput, validateGetLabelInput } from "./messages";
+import { createSheetsClient, validateGetValuesInput, validateAppendValuesInput, validateUpdateValuesInput, validateClearValuesInput, validateCreateSpreadsheetInput, validateBatchUpdateSpreadsheetInput, validateGetSpreadsheetInput, validateBatchUpdateValuesInput } from "./sheets";
+import { createDocsClient, validateGetDocumentInput, validateCreateDocumentInput, validateUpdateDocumentInput } from "./docs";
+import { createCalendarActionsClient, validateCreateEventInput, validateUpdateEventInput, validateDeleteEventInput, validateGetEventInput, validateListEventInstancesInput, validateGetCalendarInput, validateListAclInput, validateMoveEventInput } from "./events";
+import { createDriveActionsClient, validateGetFileInput, validateCreateDriveFileInput, validateDeleteFileInput, validateCreatePermissionInput, validateCopyFileInput, validateUpdateFileInput, validateListPermissionsInput, validateDeletePermissionInput } from "./files";
 
 // ---- helpers ----
 
@@ -672,4 +672,249 @@ export function createDrivePermission(input: unknown): Record<string, unknown> |
     source: "connector",
     validated: validateCreatePermissionInput(input),
   };
+}
+
+function gmailClient(input: Record<string, unknown>) {
+  return createGmailClient({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+  });
+}
+
+export function untrashMessage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return gmailClient(input).untrashMessage(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "messages.untrash", source: "connector", id: result.message.id, threadId: result.message.threadId, labelIds: result.message.labelIds };
+    });
+  }
+  return { connector: "google-workspace", action: "messages.untrash", source: "connector", validated: validateUntrashMessageInput(input) };
+}
+
+export function deleteMessage(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return gmailClient(input).deleteMessage(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "messages.delete", source: "connector", deleted: result.deleted, messageId: result.messageId };
+    });
+  }
+  return { connector: "google-workspace", action: "messages.delete", source: "connector", validated: validateDeleteMessageInput(input) };
+}
+
+export function getAttachment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return gmailClient(input).getAttachment(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "messages.attachments.get", source: "connector", size: result.size, data: result.data };
+    });
+  }
+  return { connector: "google-workspace", action: "messages.attachments.get", source: "connector", validated: validateGetAttachmentInput(input) };
+}
+
+export function listThreads(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return gmailClient(input).listThreads(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "threads.list", source: "connector", threads: result.threads, nextPageToken: result.nextPageToken, resultSizeEstimate: result.resultSizeEstimate };
+    });
+  }
+  return { connector: "google-workspace", action: "threads.list", source: "connector", validated: validateListThreadsInput(input) };
+}
+
+export function getThread(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return gmailClient(input).getThread(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "threads.get", source: "connector", ...result.thread };
+    });
+  }
+  return { connector: "google-workspace", action: "threads.get", source: "connector", validated: validateGetThreadInput(input) };
+}
+
+export function sendDraft(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return gmailClient(input).sendDraft(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "drafts.send", source: "connector", messageId: result.messageId, threadId: result.threadId };
+    });
+  }
+  return { connector: "google-workspace", action: "drafts.send", source: "connector", validated: validateSendDraftInput(input) };
+}
+
+export function deleteDraft(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return gmailClient(input).deleteDraft(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "drafts.delete", source: "connector", deleted: result.deleted, draftId: result.draftId };
+    });
+  }
+  return { connector: "google-workspace", action: "drafts.delete", source: "connector", validated: validateDeleteDraftInput(input) };
+}
+
+export function createLabel(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return gmailClient(input).createLabel(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "labels.create", source: "connector", ...result.label };
+    });
+  }
+  return { connector: "google-workspace", action: "labels.create", source: "connector", validated: validateCreateLabelInput(input) };
+}
+
+export function getLabel(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return gmailClient(input).getLabel(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "labels.get", source: "connector", ...result.label };
+    });
+  }
+  return { connector: "google-workspace", action: "labels.get", source: "connector", validated: validateGetLabelInput(input) };
+}
+
+function calendarClient(input: Record<string, unknown>) {
+  return createCalendarActionsClient({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+  });
+}
+
+export function listEventInstances(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return calendarClient(input).listEventInstances(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "calendar.events.instances", source: "connector", instances: result.instances, nextPageToken: result.nextPageToken };
+    });
+  }
+  return { connector: "google-workspace", action: "calendar.events.instances", source: "connector", validated: validateListEventInstancesInput(input) };
+}
+
+export function getCalendar(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return calendarClient(input).getCalendar(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "calendar.calendars.get", source: "connector", ...result.calendar };
+    });
+  }
+  return { connector: "google-workspace", action: "calendar.calendars.get", source: "connector", validated: validateGetCalendarInput(input) };
+}
+
+export function listAcl(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return calendarClient(input).listAcl(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "calendar.acl.list", source: "connector", rules: result.rules };
+    });
+  }
+  return { connector: "google-workspace", action: "calendar.acl.list", source: "connector", validated: validateListAclInput(input) };
+}
+
+export function moveCalendarEvent(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return calendarClient(input).moveEvent(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "calendar.events.move", source: "connector", ...result.event };
+    });
+  }
+  return { connector: "google-workspace", action: "calendar.events.move", source: "connector", validated: validateMoveEventInput(input) };
+}
+
+function driveClient(input: Record<string, unknown>) {
+  return createDriveActionsClient({
+    accessToken: input.accessToken as string,
+    fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+  });
+}
+
+export function copyDriveFile(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return driveClient(input).copyFile(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "drive.files.copy", source: "connector", ...result.file };
+    });
+  }
+  return { connector: "google-workspace", action: "drive.files.copy", source: "connector", validated: validateCopyFileInput(input) };
+}
+
+export function updateDriveFile(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return driveClient(input).updateFile(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "drive.files.update", source: "connector", ...result.file };
+    });
+  }
+  return { connector: "google-workspace", action: "drive.files.update", source: "connector", validated: validateUpdateFileInput(input) };
+}
+
+export function listDrivePermissions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return driveClient(input).listPermissions(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "drive.permissions.list", source: "connector", permissions: result.permissions };
+    });
+  }
+  return { connector: "google-workspace", action: "drive.permissions.list", source: "connector", validated: validateListPermissionsInput(input) };
+}
+
+export function deleteDrivePermission(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return driveClient(input).deletePermission(input).then((result) => {
+      if (!result.ok) throwError(result);
+      return { connector: "google-workspace", action: "drive.permissions.delete", source: "connector", deleted: result.deleted, permissionId: result.permissionId, fileId: result.fileId };
+    });
+  }
+  return { connector: "google-workspace", action: "drive.permissions.delete", source: "connector", validated: validateDeletePermissionInput(input) };
+}
+
+export function getSpreadsheet(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createSheetsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).getSpreadsheet(input).then((result) => ({
+      connector: "google-workspace",
+      action: "sheets.spreadsheets.get",
+      source: "connector",
+      spreadsheetId: result.spreadsheetId,
+      spreadsheetUrl: result.spreadsheetUrl,
+      title: result.title,
+      sheets: result.sheets,
+    }));
+  }
+  return { connector: "google-workspace", action: "sheets.spreadsheets.get", source: "connector", validated: validateGetSpreadsheetInput(input) };
+}
+
+export function batchUpdateSheetValues(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createSheetsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).batchUpdateValues(input).then((result) => ({
+      connector: "google-workspace",
+      action: "sheets.values.batchUpdate",
+      source: "connector",
+      spreadsheetId: result.spreadsheetId,
+      totalUpdatedRows: result.totalUpdatedRows,
+      totalUpdatedColumns: result.totalUpdatedColumns,
+      totalUpdatedCells: result.totalUpdatedCells,
+      totalUpdatedSheets: result.totalUpdatedSheets,
+      responses: result.responses,
+    }));
+  }
+  return { connector: "google-workspace", action: "sheets.values.batchUpdate", source: "connector", validated: validateBatchUpdateValuesInput(input) };
+}
+
+export function updateDocument(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createDocsClient({
+      accessToken: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).updateDocument(input).then((result) => ({
+      connector: "google-workspace",
+      action: "docs.update",
+      source: "connector",
+      documentId: result.documentId,
+      replies: result.replies,
+    }));
+  }
+  return { connector: "google-workspace", action: "docs.update", source: "connector", validated: validateUpdateDocumentInput(input) };
 }
