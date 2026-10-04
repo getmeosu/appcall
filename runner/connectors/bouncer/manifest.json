@@ -1,7 +1,17 @@
 {
+  "key": "bouncer",
+  "name": "Bouncer",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,80 +19,69 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "utility"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.usebouncer.com"
+    ]
+  },
+  "models": [
+    "credits",
+    "email",
+    "domain",
+    "batch",
+    "toxicity"
+  ],
   "http": {
+    "baseUrl": "https://api.usebouncer.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "x-api-key",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.usebouncer.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "bouncer",
-  "models": [
-    "credits",
-    "email",
-    "domain"
-  ],
-  "name": "Bouncer",
-  "network": {
-    "allowedHosts": [
-      "api.usebouncer.com"
-    ]
-  },
   "operations": {
-    "credits.get": {
-      "description": "Get the current Bouncer credit balance.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Bouncer API key by reading the credit balance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -91,89 +90,78 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get credits",
-      "validationMode": "strict-generated"
-    },
-    "domains.verify": {
-      "description": "Verify one domain with Bouncer. This operation consumes one credit.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "domain": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "domain"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "credits.get": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get credits",
+      "description": "Get the current Bouncer credit balance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1.1/domain",
-        "query": {
-          "domain": "{{domain}}"
-        },
+        "path": "/v1.1/credits",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Verify domain",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "emails.verify": {
+      "timeoutMs": 35000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Verify email",
       "description": "Verify a single email address with Bouncer in real time. This operation consumes credits except for documented sandbox addresses.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "email": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
           "email"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -186,56 +174,742 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 35000,
-      "title": "Verify email",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Bouncer API key by reading the credit balance.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "domains.verify": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
       "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
+      "sideEffect": "read",
+      "title": "Verify domain",
+      "description": "Verify one domain with Bouncer. This operation consumes one credit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "domain"
+        ],
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1.1/credits",
+        "path": "/v1.1/domain",
+        "query": {
+          "domain": "{{domain}}"
+        },
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "batches.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create batch",
+      "description": "Create an asynchronous Bouncer batch email verification job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Email objects to verify.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Email address to verify."
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "email"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "emails"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1.1/email/verify/batch",
+        "success": [
+          200,
+          201
+        ],
+        "body": "{{emails}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "batches.createCallback": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create batch with callback",
+      "description": "Create a Bouncer batch verification job that POSTs completion to a callback URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Email objects to verify.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Email address to verify."
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "email"
+              ]
+            }
+          },
+          "callback": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS callback URL notified when the batch completes."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "emails",
+          "callback"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1.1/email/verify/batch",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "callback": "{{callback}}"
+        },
+        "body": "{{emails}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "batches.get": {
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get batch",
+      "description": "Retrieve status for a Bouncer batch email verification job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Batch identifier returned by create."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "batchId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1.1/email/verify/batch/{{batchId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "batches.stats": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get batch stats",
+      "description": "Retrieve a Bouncer batch job with processing statistics.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Batch identifier returned by create."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "batchId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1.1/email/verify/batch/{{batchId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "with-stats": "true"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "batches.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete batch",
+      "description": "Delete a Bouncer batch verification job and its stored results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Batch identifier to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "batchId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1.1/email/verify/batch/{{batchId}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "batches.finish": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Finish batch",
+      "description": "Stop a running Bouncer batch early and credit remaining unverified emails.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Batch identifier to finish."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "batchId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1.1/email/verify/batch/{{batchId}}/finish",
+        "success": [
+          200,
+          202
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "batches.results": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get batch results",
+      "description": "Download JSON results for a completed Bouncer batch verification job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Batch identifier whose results should be downloaded."
+          },
+          "download": {
+            "type": "string",
+            "description": "Optional status filter.",
+            "enum": [
+              "all",
+              "deliverable",
+              "risky",
+              "undeliverable",
+              "unknown"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "batchId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1.1/email/verify/batch/{{batchId}}/download",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "query": {
+          "download": "{{download}}"
+        },
+        "result": {
+          "data": {
+            "results": "{{response}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "batches.sync": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Sync batch verify",
+      "description": "Verify emails through Bouncer's synchronous batch queue and return known results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Email addresses to enqueue.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "emails"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1.1/email/verify/batch/sync",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": "{{emails}}",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "result": {
+          "data": {
+            "results": "{{response}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "toxicity.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create toxicity job",
+      "description": "Create a Bouncer toxicity analysis job for a list of email addresses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Email addresses to score.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "emails"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/toxicity/list",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "body": "{{emails}}",
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "toxicity.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get toxicity job",
+      "description": "Retrieve status for a Bouncer toxicity analysis job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Toxicity job identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/toxicity/list/{{id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "toxicity.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete toxicity job",
+      "description": "Delete a Bouncer toxicity analysis job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Toxicity job identifier to delete."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/toxicity/list/{{id}}",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "toxicity.results": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get toxicity results",
+      "description": "Download results for a completed Bouncer toxicity analysis job.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Toxicity job identifier whose results should be downloaded."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/toxicity/list/{{id}}/data",
+        "success": [
+          200,
+          201,
+          202,
+          204
+        ],
+        "result": {
+          "data": {
+            "results": "{{response}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.batch_completed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Batch completed",
+      "description": "Bouncer batch callback. Fires when an asynchronous email verification batch completes."
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
