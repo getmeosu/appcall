@@ -54,7 +54,8 @@
     "workspace",
     "channel",
     "message",
-    "contact"
+    "contact",
+    "webhook-subscription"
   ],
   "name": "Bird",
   "network": {
@@ -63,94 +64,86 @@
     ]
   },
   "operations": {
-    "channels.get": {
-      "description": "Get one Bird workspace channel by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "channelId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "workspaceId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "workspaceId",
-          "channelId"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate a Bird access key with GET /workspaces?limit=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/workspaces/{{workspaceId}}/channels/{{channelId}}",
+        "path": "/workspaces",
+        "query": {
+          "limit": 1
+        },
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get channel",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "channels.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List channels",
       "description": "List channels configured for a Bird workspace.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "limit": {
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "pageToken": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "workspaceId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "workspaceId"
         ],
-        "type": "object"
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -163,51 +156,198 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List channels",
-      "validationMode": "strict-generated"
-    },
-    "contacts.get": {
-      "description": "Get one Bird contact by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "attribute": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "contactId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "workspaceId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "workspaceId",
-          "contactId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "title": "Get channel",
+      "description": "Get one Bird workspace channel by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "workspaceId",
+          "channelId"
+        ],
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "channelId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/channels/{{channelId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get message",
+      "description": "Get one Bird channel message by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "workspaceId",
+          "channelId",
+          "messageId"
+        ],
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "channelId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "messageId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/channels/{{channelId}}/messages/{{messageId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contacts",
+      "description": "List contacts in a Bird workspace.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "workspaceId"
+        ],
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/contacts",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get contact",
+      "description": "Get one Bird contact by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "workspaceId",
+          "contactId"
+        ],
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contactId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "attribute": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -219,157 +359,820 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get contact",
-      "validationMode": "strict-generated"
-    },
-    "contacts.list": {
-      "description": "List contacts in a Bird workspace.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "workspaceId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "workspaceId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "List messages",
+      "description": "List messages on a Bird channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Channel id.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "pageToken": {
+            "type": "string",
+            "description": "Pagination token.",
+            "minLength": 1
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "channelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/workspaces/{{workspaceId}}/contacts",
+        "path": "/workspaces/{{workspaceId}}/channels/{{channelId}}/messages",
         "success": [
           200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "pageToken": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Send message",
+      "description": "Send a text message on a Bird channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "channelId": {
+            "type": "string",
+            "description": "Channel id.",
+            "minLength": 1
+          },
+          "identifierValue": {
+            "type": "string",
+            "description": "Receiver identifier such as a phone number or email.",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "description": "Message text.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "channelId",
+          "identifierValue",
+          "text"
         ]
       },
-      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/channels/{{channelId}}/messages",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "receiver": {
+            "contacts": [
+              {
+                "identifierValue": "{{identifierValue}}"
+              }
+            ]
+          },
+          "body": {
+            "type": "text",
+            "text": {
+              "text": "{{text}}"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.interactions.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List contacts",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate a Bird access key with GET /workspaces?limit=1.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List message interactions",
+      "description": "List delivery and engagement interactions for a Bird message.",
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/workspaces",
-        "query": {
-          "limit": 1
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "messages.get": {
-      "description": "Get one Bird channel message by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
           "channelId": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "description": "Channel id.",
+            "minLength": 1
           },
           "messageId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "workspaceId": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "description": "Message id.",
+            "minLength": 1
           }
         },
+        "additionalProperties": false,
         "required": [
           "workspaceId",
           "channelId",
           "messageId"
-        ],
-        "type": "object"
+        ]
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/workspaces/{{workspaceId}}/channels/{{channelId}}/messages/{{messageId}}",
+        "path": "/workspaces/{{workspaceId}}/channels/{{channelId}}/messages/{{messageId}}/interactions",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create contact",
+      "description": "Create a Bird workspace contact.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Contact display name.",
+            "minLength": 1
+          },
+          "identifierKey": {
+            "type": "string",
+            "description": "Identifier key such as phonenumber or emailaddress.",
+            "minLength": 1
+          },
+          "identifierValue": {
+            "type": "string",
+            "description": "Identifier value.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "displayName",
+          "identifierKey",
+          "identifierValue"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/contacts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "displayName": "{{displayName}}",
+          "identifiers": [
+            {
+              "key": "{{identifierKey}}",
+              "value": "{{identifierValue}}"
+            }
+          ]
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update contact",
+      "description": "Update a Bird workspace contact display name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "contactId": {
+            "type": "string",
+            "description": "Contact id.",
+            "minLength": 1
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Updated display name.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/workspaces/{{workspaceId}}/contacts/{{contactId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "displayName": "{{displayName}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete contact",
+      "description": "Delete a Bird workspace contact by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "contactId": {
+            "type": "string",
+            "description": "Contact id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/workspaces/{{workspaceId}}/contacts/{{contactId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.contactId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhookSubscriptions.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get message",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhook subscriptions",
+      "description": "List Bird webhook subscriptions for a workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/webhook-subscriptions",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhookSubscriptions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get webhook subscription",
+      "description": "Get one Bird webhook subscription by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "subscriptionId": {
+            "type": "string",
+            "description": "Webhook subscription id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "subscriptionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/webhook-subscriptions/{{subscriptionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhookSubscriptions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create webhook subscription",
+      "description": "Create a Bird webhook subscription for channel or conversation events.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "service": {
+            "type": "string",
+            "description": "Subscribed service.",
+            "enum": [
+              "channels",
+              "conversations",
+              "numbers",
+              "payments",
+              "templates"
+            ]
+          },
+          "event": {
+            "type": "string",
+            "description": "Event name such as sms.outbound or inbound.",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "description": "Destination webhook URL.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "service",
+          "event",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workspaces/{{workspaceId}}/webhook-subscriptions",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "service": "{{service}}",
+          "event": "{{event}}",
+          "url": "{{url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhookSubscriptions.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete webhook subscription",
+      "description": "Delete a Bird webhook subscription by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "subscriptionId": {
+            "type": "string",
+            "description": "Webhook subscription id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId",
+          "subscriptionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/workspaces/{{workspaceId}}/webhook-subscriptions/{{subscriptionId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.subscriptionId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workspaces.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List workspaces",
+      "description": "List Bird workspaces available to the access key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.messages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List workspace channel messages",
+      "description": "List messages across channels in a Bird workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "description": "Bird workspace id.",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "workspaceId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{workspaceId}}/channels/messages",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.inbound": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Inbound message",
+      "description": "Bird channels inbound webhook. Fires when a message is received on a channel.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.outbound": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Outbound message",
+      "description": "Bird channels outbound webhook. Fires when a message is sent on a channel.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.interaction": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Message interaction",
+      "description": "Bird channels interaction webhook. Fires on delivery, read, or unsubscribe interactions.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.conversation_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Conversation created",
+      "description": "Bird conversations webhook. Fires when a conversation is created.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }

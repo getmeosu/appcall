@@ -63,7 +63,11 @@
   "models": [
     "account",
     "contact",
-    "message"
+    "message",
+    "ticket",
+    "broadcast",
+    "tag",
+    "user"
   ],
   "name": "Avochato",
   "network": {
@@ -72,38 +76,76 @@
     ]
   },
   "operations": {
-    "contacts.list": {
-      "description": "List Avochato contacts with optional after_page cursor and limit.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "afterPage": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
+    "healthcheck": {
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate Avochato credentials with GET /v1/whoami.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/whoami",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List contacts",
+      "description": "List Avochato contacts with optional after_page cursor and limit.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "afterPage": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -116,78 +158,121 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List contacts",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate Avochato credentials with GET /v1/whoami.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List messages",
+      "description": "List or search Avochato messages with optional filters and page.",
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdFrom": {
+            "type": "number"
+          },
+          "createdTo": {
+            "type": "number"
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1/whoami",
+        "path": "/v1/messages",
+        "query": {
+          "query": "{{query}}",
+          "page": "{{page}}",
+          "direction": "{{direction}}",
+          "status": "{{status}}",
+          "from": "{{from}}",
+          "to": "{{to}}",
+          "created_at[from]": "{{createdFrom}}",
+          "created_at[to]": "{{createdTo}}"
+        },
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 10000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "messages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get message",
       "description": "Get one Avochato message by Event ID.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "eventId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "eventId"
         ],
-        "type": "object"
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -196,99 +281,1141 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get message",
-      "validationMode": "strict-generated"
-    },
-    "messages.list": {
-      "description": "List or search Avochato messages with optional filters and page.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "createdFrom": {
-            "type": "number"
-          },
-          "createdTo": {
-            "type": "number"
-          },
-          "direction": {
-            "enum": [
-              "in",
-              "out"
-            ],
-            "type": "string"
-          },
-          "from": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "query": {
-            "type": "string"
-          },
-          "status": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "to": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "Get contact",
+      "description": "Fetch one or more Avochato contacts by comma-separated contact ids.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "contactId": {
+            "type": "string",
+            "description": "Comma-separated Avochato contact id(s).",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "contactId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v1/messages",
+        "path": "/v1/contacts/{{contactId}}",
+        "success": [
+          200
+        ],
         "query": {
-          "created_at[from]": "{{createdFrom}}",
-          "created_at[to]": "{{createdTo}}",
-          "direction": "{{direction}}",
-          "from": "{{from}}",
-          "page": "{{page}}",
-          "query": "{{query}}",
-          "status": "{{status}}",
-          "to": "{{to}}"
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.upsert": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Upsert contact",
+      "description": "Create or update an Avochato contact by phone number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "Contact phone number.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Contact name.",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "description": "Contact email.",
+            "minLength": 1
+          },
+          "company": {
+            "type": "string",
+            "description": "Company name.",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags to apply.",
+            "minLength": 1
+          },
+          "optedOut": {
+            "type": "boolean",
+            "description": "Opt the contact out of outbound messages."
+          }
         },
+        "additionalProperties": false,
+        "required": [
+          "phone"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/contacts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "phone": "{{phone}}",
+          "name": "{{name}}",
+          "email": "{{email}}",
+          "company": "{{company}}",
+          "tags": "{{tags}}",
+          "opted_out": "{{optedOut}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.send": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Send message",
+      "description": "Send an SMS or MMS to an Avochato contact by phone number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "Recipient phone number.",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "description": "Message body.",
+            "minLength": 1
+          },
+          "from": {
+            "type": "string",
+            "description": "Avochato sending number in E.164.",
+            "minLength": 1
+          },
+          "mediaUrl": {
+            "type": "string",
+            "description": "MMS media URL.",
+            "minLength": 1
+          },
+          "tags": {
+            "type": "string",
+            "description": "Comma-separated tags to apply.",
+            "minLength": 1
+          },
+          "markAddressed": {
+            "type": "boolean",
+            "description": "Mark the conversation addressed."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "phone",
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/messages",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "phone": "{{phone}}",
+          "message": "{{message}}",
+          "from": "{{from}}",
+          "media_url": "{{mediaUrl}}",
+          "tags": "{{tags}}",
+          "mark_addressed": "{{markAddressed}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.scheduled.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List scheduled messages",
+      "description": "List scheduled Avochato messages with optional search query and page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/messages/scheduled",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "messages.cancel": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Cancel scheduled message",
+      "description": "Cancel a scheduled Avochato message by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "description": "Scheduled message id.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "messageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/messages/{{messageId}}",
+        "success": [
+          204,
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tickets",
+      "description": "List Avochato tickets with optional search query and page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query, for example status:Open."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/tickets",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get ticket",
+      "description": "Fetch one or more Avochato tickets by comma-separated ticket ids.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "description": "Comma-separated ticket id(s).",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ticketId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/tickets/{{ticketId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update ticket",
+      "description": "Update Avochato ticket status or assignment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ticketId": {
+            "type": "string",
+            "description": "Ticket id.",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "description": "Ticket status.",
+            "enum": [
+              "New",
+              "Open",
+              "Pending",
+              "Closed"
+            ]
+          },
+          "userId": {
+            "type": "string",
+            "description": "Assignee user id.",
+            "minLength": 1
+          },
+          "userEmail": {
+            "type": "string",
+            "description": "Assignee user email.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "ticketId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/v1/tickets/{{ticketId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "status": "{{status}}",
+          "user_id": "{{userId}}",
+          "user_email": "{{userEmail}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "broadcasts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List broadcasts",
+      "description": "List Avochato broadcasts with optional created-at range and page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "createdFrom": {
+            "type": "number",
+            "description": "Created-after unix timestamp."
+          },
+          "createdTo": {
+            "type": "number",
+            "description": "Created-before unix timestamp."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/broadcasts",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "created_at[from]": "{{createdFrom}}",
+          "created_at[to]": "{{createdTo}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "broadcasts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get broadcast",
+      "description": "Fetch one or more Avochato broadcasts by comma-separated ids.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "broadcastId": {
+            "type": "string",
+            "description": "Comma-separated broadcast id(s).",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "broadcastId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/broadcasts/{{broadcastId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "broadcasts.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create broadcast",
+      "description": "Create an Avochato broadcast draft.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Broadcast message body.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Broadcast name.",
+            "minLength": 1
+          },
+          "mediaUrl": {
+            "type": "string",
+            "description": "MMS media URL.",
+            "minLength": 1
+          },
+          "viaTags": {
+            "type": "string",
+            "description": "Comma-separated contact tags.",
+            "minLength": 1
+          },
+          "viaContactIds": {
+            "type": "string",
+            "description": "Comma-separated contact ids.",
+            "minLength": 1
+          },
+          "viaPhoneNumbers": {
+            "type": "string",
+            "description": "Comma-separated phone numbers.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "message"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/broadcasts",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "message": "{{message}}",
+          "name": "{{name}}",
+          "media_url": "{{mediaUrl}}",
+          "via_tags": "{{viaTags}}",
+          "via_contact_ids": "{{viaContactIds}}",
+          "via_phone_numbers": "{{viaPhoneNumbers}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "broadcasts.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update broadcast",
+      "description": "Update an Avochato broadcast draft or add audience contacts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "broadcastId": {
+            "type": "string",
+            "description": "Broadcast id.",
+            "minLength": 1
+          },
+          "message": {
+            "type": "string",
+            "description": "Broadcast message body.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Broadcast name.",
+            "minLength": 1
+          },
+          "viaTags": {
+            "type": "string",
+            "description": "Comma-separated contact tags to add.",
+            "minLength": 1
+          },
+          "viaContactIds": {
+            "type": "string",
+            "description": "Comma-separated contact ids to add.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "broadcastId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/broadcasts/{{broadcastId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "message": "{{message}}",
+          "name": "{{name}}",
+          "via_tags": "{{viaTags}}",
+          "via_contact_ids": "{{viaContactIds}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "broadcasts.publish": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Publish broadcast",
+      "description": "Publish an Avochato broadcast immediately or on a schedule.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "broadcastId": {
+            "type": "string",
+            "description": "Broadcast id.",
+            "minLength": 1
+          },
+          "asap": {
+            "type": "boolean",
+            "description": "Ignore scheduled_for and send as soon as possible."
+          },
+          "scheduledFor": {
+            "type": "number",
+            "description": "Unix timestamp to deliver the broadcast."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "broadcastId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/broadcasts/{{broadcastId}}/publish",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "asap": "{{asap}}",
+          "scheduled_for": "{{scheduledFor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List tags",
+      "description": "List Avochato tags in the inbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/tags",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add tag",
+      "description": "Add a tag to an Avochato contact by phone number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "Contact phone number.",
+            "minLength": 1
+          },
+          "tag": {
+            "type": "string",
+            "description": "Tag to apply.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "phone",
+          "tag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/tags",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "phone": "{{phone}}",
+          "tag": "{{tag}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List Avochato users in the account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Get one Avochato user by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "User id or email.",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "userId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/users/{{userId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "accounts.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List messages",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List accounts",
+      "description": "List Avochato inboxes the API credentials can access.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/accounts",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.message": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Message",
+      "description": "Avochato inbound or outbound message webhook. Fires when a text is sent or received.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.contact_opt_out": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Contact opt-out",
+      "description": "Avochato contact opt-out webhook. Fires when a contact sends STOP or is opted out.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.contact_opt_in": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Contact opt-in",
+      "description": "Avochato contact opt-in webhook. Fires when a contact opts back in.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.ticket_status": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket status",
+      "description": "Avochato ticket status webhook. Fires when a conversation ticket status changes.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.widget_submission": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Widget submission",
+      "description": "Avochato widget form submission webhook. Fires for SMS or live-chat widget submissions.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }
