@@ -472,6 +472,16 @@ import {
   listOrgCodeScanningAlerts as ghListOrgCodeScanningAlerts,
   getGlobalAdvisory as ghGetGlobalAdvisory,
   listGlobalAdvisories as ghListGlobalAdvisories,
+  updateOrg as ghUpdateOrg,
+  blockOrgUser as ghBlockOrgUser,
+  unblockOrgUser as ghUnblockOrgUser,
+  listOrgInvitations as ghListOrgInvitations,
+  createOrgInvitation as ghCreateOrgInvitation,
+  cancelOrgInvitation as ghCancelOrgInvitation,
+  getOrgMembership as ghGetOrgMembership,
+  updateOrgMembership as ghUpdateOrgMembership,
+  removeOrgMembership as ghRemoveOrgMembership,
+  getSingleGitRef as ghGetSingleGitRef,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1553,6 +1563,16 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "orgs.code_scanning.alerts.list": ghListOrgCodeScanningAlerts,
       "advisories.get": ghGetGlobalAdvisory,
       "advisories.list": ghListGlobalAdvisories,
+      "orgs.update": ghUpdateOrg,
+      "orgs.blocks.block": ghBlockOrgUser,
+      "orgs.blocks.unblock": ghUnblockOrgUser,
+      "orgs.invitations.list": ghListOrgInvitations,
+      "orgs.invitations.create": ghCreateOrgInvitation,
+      "orgs.invitations.cancel": ghCancelOrgInvitation,
+      "orgs.memberships.get": ghGetOrgMembership,
+      "orgs.memberships.update": ghUpdateOrgMembership,
+      "orgs.memberships.remove": ghRemoveOrgMembership,
+      "git.ref.get": ghGetSingleGitRef,
     },
     salesforce: {
       "contacts.create": createContact,

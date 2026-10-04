@@ -405,6 +405,19 @@ import {
   validateGetLicenseInput,
   validateGetZenInput,
 } from "./card14_reads";
+import {
+  createOrgMembershipClient,
+  validateUpdateOrgInput,
+  validateBlockOrgUserInput,
+  validateUnblockOrgUserInput,
+  validateListOrgInvitationsInput,
+  validateCreateOrgInvitationInput,
+  validateCancelOrgInvitationInput,
+  validateGetOrgMembershipInput,
+  validateUpdateOrgMembershipInput,
+  validateRemoveOrgMembershipInput,
+  validateGetGitRefInput as validateGetSingleGitRefInput,
+} from "./card_org_membership";
 
 
 
@@ -6210,6 +6223,117 @@ export function listGlobalAdvisories(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "advisories.list", source: "connector", validated: validateListGlobalAdvisoriesInput(input) };
+}
+
+// ─── org membership writes + git.ref.get ─────────────────────────────────────
+
+function liveOrgMembershipClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createOrgMembershipClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function updateOrg(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "orgs.update").updateOrg(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.update", source: "connector", organization: result.organization };
+    });
+  }
+  return { connector: "github", action: "orgs.update", source: "connector", validated: validateUpdateOrgInput(input) };
+}
+
+export function blockOrgUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "orgs.blocks.block").blockUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.blocks.block", source: "connector", blocked: result.blocked, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.blocks.block", source: "connector", validated: validateBlockOrgUserInput(input) };
+}
+
+export function unblockOrgUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "orgs.blocks.unblock").unblockUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.blocks.unblock", source: "connector", blocked: result.blocked, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.blocks.unblock", source: "connector", validated: validateUnblockOrgUserInput(input) };
+}
+
+export function listOrgInvitations(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "orgs.invitations.list").listInvitations(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.invitations.list", source: "connector", invitations: result.invitations };
+    });
+  }
+  return { connector: "github", action: "orgs.invitations.list", source: "connector", validated: validateListOrgInvitationsInput(input) };
+}
+
+export function createOrgInvitation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "orgs.invitations.create").createInvitation(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.invitations.create", source: "connector", invitation: result.invitation };
+    });
+  }
+  return { connector: "github", action: "orgs.invitations.create", source: "connector", validated: validateCreateOrgInvitationInput(input) };
+}
+
+export function cancelOrgInvitation(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "orgs.invitations.cancel").cancelInvitation(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.invitations.cancel", source: "connector", cancelled: result.cancelled, invitationId: result.invitationId };
+    });
+  }
+  return { connector: "github", action: "orgs.invitations.cancel", source: "connector", validated: validateCancelOrgInvitationInput(input) };
+}
+
+export function getOrgMembership(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "orgs.memberships.get").getMembership(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.memberships.get", source: "connector", membership: result.membership };
+    });
+  }
+  return { connector: "github", action: "orgs.memberships.get", source: "connector", validated: validateGetOrgMembershipInput(input) };
+}
+
+export function updateOrgMembership(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "orgs.memberships.update").updateMembership(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.memberships.update", source: "connector", membership: result.membership };
+    });
+  }
+  return { connector: "github", action: "orgs.memberships.update", source: "connector", validated: validateUpdateOrgMembershipInput(input) };
+}
+
+export function removeOrgMembership(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "orgs.memberships.remove").removeMembership(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.memberships.remove", source: "connector", removed: result.removed, username: result.username };
+    });
+  }
+  return { connector: "github", action: "orgs.memberships.remove", source: "connector", validated: validateRemoveOrgMembershipInput(input) };
+}
+
+export function getSingleGitRef(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveOrgMembershipClient(input, "git.ref.get").getRef(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "git.ref.get", source: "connector", ref: result.ref };
+    });
+  }
+  return { connector: "github", action: "git.ref.get", source: "connector", validated: validateGetSingleGitRefInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
