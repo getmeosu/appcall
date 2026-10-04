@@ -463,6 +463,16 @@ import {
   getZen as ghGetZen,
   getLicense as ghGetLicense,
   getGitignoreTemplate as ghGetGitignoreTemplate,
+  listOrgIssues as ghListOrgIssues,
+  listIssueBlockedBy as ghListIssueBlockedBy,
+  listIssueBlocking as ghListIssueBlocking,
+  listRepoReviewComments as ghListRepoReviewComments,
+  pinIssueComment as ghPinIssueComment,
+  unpinIssueComment as ghUnpinIssueComment,
+  addIssueBlockedBy as ghAddIssueBlockedBy,
+  removeIssueBlockedBy as ghRemoveIssueBlockedBy,
+  rerequestPullReviewers as ghRerequestPullReviewers,
+  renderMarkdown as ghRenderMarkdown,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1535,6 +1545,16 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "meta.zen.get": ghGetZen,
       "licenses.get": ghGetLicense,
       "gitignore.templates.get": ghGetGitignoreTemplate,
+      "orgs.issues.list": ghListOrgIssues,
+      "issues.dependencies.blocked_by.list": ghListIssueBlockedBy,
+      "issues.dependencies.blocking.list": ghListIssueBlocking,
+      "pulls.review_comments.repo.list": ghListRepoReviewComments,
+      "issues.comments.pin": ghPinIssueComment,
+      "issues.comments.unpin": ghUnpinIssueComment,
+      "issues.dependencies.blocked_by.add": ghAddIssueBlockedBy,
+      "issues.dependencies.blocked_by.remove": ghRemoveIssueBlockedBy,
+      "pulls.reviewers.rerequest": ghRerequestPullReviewers,
+      "markdown.render": ghRenderMarkdown,
     },
     salesforce: {
       "contacts.create": createContact,

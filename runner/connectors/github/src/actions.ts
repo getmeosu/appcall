@@ -394,6 +394,20 @@ import {
   validateGetZenInput,
 } from "./card14_reads";
 
+import {
+  createCardIssuesRemainingClient,
+  validateAddIssueBlockedByInput,
+  validateListIssueBlockedByInput,
+  validateListIssueBlockingInput,
+  validateListOrgIssuesInput,
+  validateListRepoReviewCommentsInput,
+  validatePinIssueCommentInput,
+  validateRemoveIssueBlockedByInput,
+  validateRenderMarkdownInput,
+  validateRerequestPullReviewersInput,
+  validateUnpinIssueCommentInput,
+} from "./card_issues_remaining";
+
 
 
 import {
@@ -6097,6 +6111,117 @@ export function getGitignoreTemplate(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
+}
+
+// ─── remaining issue ops: org issues, dependencies, pin, markdown ────────────
+
+function liveCardIssuesRemainingClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCardIssuesRemainingClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listOrgIssues(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "orgs.issues.list").listOrgIssues(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.issues.list", source: "connector", issues: result.issues };
+    });
+  }
+  return { connector: "github", action: "orgs.issues.list", source: "connector", validated: validateListOrgIssuesInput(input) };
+}
+
+export function listIssueBlockedBy(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "issues.dependencies.blocked_by.list").listBlockedBy(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.dependencies.blocked_by.list", source: "connector", issues: result.issues };
+    });
+  }
+  return { connector: "github", action: "issues.dependencies.blocked_by.list", source: "connector", validated: validateListIssueBlockedByInput(input) };
+}
+
+export function listIssueBlocking(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "issues.dependencies.blocking.list").listBlocking(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.dependencies.blocking.list", source: "connector", issues: result.issues };
+    });
+  }
+  return { connector: "github", action: "issues.dependencies.blocking.list", source: "connector", validated: validateListIssueBlockingInput(input) };
+}
+
+export function listRepoReviewComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "pulls.review_comments.repo.list").listRepoReviewComments(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "pulls.review_comments.repo.list", source: "connector", comments: result.comments };
+    });
+  }
+  return { connector: "github", action: "pulls.review_comments.repo.list", source: "connector", validated: validateListRepoReviewCommentsInput(input) };
+}
+
+export function pinIssueComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "issues.comments.pin").pinComment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.comments.pin", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "issues.comments.pin", source: "connector", validated: validatePinIssueCommentInput(input) };
+}
+
+export function unpinIssueComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "issues.comments.unpin").unpinComment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.comments.unpin", source: "connector", unpinned: result.unpinned, commentId: result.commentId };
+    });
+  }
+  return { connector: "github", action: "issues.comments.unpin", source: "connector", validated: validateUnpinIssueCommentInput(input) };
+}
+
+export function addIssueBlockedBy(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "issues.dependencies.blocked_by.add").addBlockedBy(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.dependencies.blocked_by.add", source: "connector", issue: result.issue };
+    });
+  }
+  return { connector: "github", action: "issues.dependencies.blocked_by.add", source: "connector", validated: validateAddIssueBlockedByInput(input) };
+}
+
+export function removeIssueBlockedBy(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "issues.dependencies.blocked_by.remove").removeBlockedBy(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "issues.dependencies.blocked_by.remove", source: "connector", issue: result.issue };
+    });
+  }
+  return { connector: "github", action: "issues.dependencies.blocked_by.remove", source: "connector", validated: validateRemoveIssueBlockedByInput(input) };
+}
+
+export function rerequestPullReviewers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "pulls.reviewers.rerequest").rerequestReviewers(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "pulls.reviewers.rerequest", source: "connector", rerequested: result.rerequested };
+    });
+  }
+  return { connector: "github", action: "pulls.reviewers.rerequest", source: "connector", validated: validateRerequestPullReviewersInput(input) };
+}
+
+export function renderMarkdown(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardIssuesRemainingClient(input, "markdown.render").renderMarkdown(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "markdown.render", source: "connector", html: result.html };
+    });
+  }
+  return { connector: "github", action: "markdown.render", source: "connector", validated: validateRenderMarkdownInput(input) };
 }
 
 
