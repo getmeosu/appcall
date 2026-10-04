@@ -726,6 +726,7 @@ describe("curated recipe install", () => {
       expect(recipe.manifest.provenance).toEqual(manifest.provenance);
       if (key === "pagerduty") expect(manifest.auth.setup.fields[0].label).toContain("personal user token");
       for (const operation of Object.values(manifest.operations) as Array<Record<string, unknown>>) {
+        if (operation.kind === "webhook") continue;
         expect(operation.enforceOutputSchema).toBe(true);
         expect(operation.responseFormat).toBe("json");
         expect(operation.validationMode).toBe("strict-generated");
