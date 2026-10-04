@@ -2,13 +2,17 @@ import { describe, expect, test } from "bun:test";
 import chatUpdateFixture from "../fixtures/chat_update.json";
 import chatDeleteFixture from "../fixtures/chat_delete.json";
 import chatPostEphemeralFixture from "../fixtures/chat_post_ephemeral.json";
+import chatScheduleMessageFixture from "../fixtures/chat_schedule_message.json";
+import chatMeMessageFixture from "../fixtures/chat_me_message.json";
 import {
   createSlackChatClient,
   validateChatUpdateInput,
   validateChatDeleteInput,
   validateChatPostEphemeralInput,
+  validateChatScheduleMessageInput,
+  validateChatMeMessageInput,
 } from "../src/chat";
-import { updateMessage, deleteMessage, postEphemeral } from "../src/actions";
+import { updateMessage, deleteMessage, postEphemeral, scheduleMessage, meMessage } from "../src/actions";
 
 // ─── Validation tests ─────────────────────────────────────────────────────────
 
@@ -222,5 +226,122 @@ describe("chat.postEphemeral live (mocked fetch)", () => {
     if (!result.ok) {
       expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
     }
+  });
+});
+
+describe("chat.scheduleMessage validators", () => {
+  test("accepts channel, text, and postAt", () => {
+    expect(validateChatScheduleMessageInput({ channel: "C123", text: "later", postAt: 1715700000 }))
+      .toEqual({ channel: "C123", text: "later", postAt: 1715700000 });
+  });
+
+  test("rejects missing postAt", () => {
+    expect(() => validateChatScheduleMessageInput({ channel: "C123", text: "later" })).toThrow();
+  });
+});
+
+describe("chat.scheduleMessage action static validation", () => {
+  test("returns validated without token", () => {
+    const result = scheduleMessage({ channel: "C123", text: "later", postAt: 1715700000 });
+    expect((result as Record<string, unknown>).source).toBe("connector");
+    expect((result as Record<string, unknown>).validated).toEqual({ channel: "C123", text: "later", postAt: 1715700000 });
+  });
+});
+
+describe("chat.scheduleMessage live (mocked fetch)", () => {
+  test("POSTs to chat.scheduleMessage with Bearer token", async () => {
+    const requests: Request[] = [];
+    const client = createSlackChatClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(chatScheduleMessageFixture);
+      },
+    });
+
+    const result = await client.scheduleMessage({ channel: "C123", text: "later", postAt: 1715700000 });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://slack.com/api/chat.scheduleMessage");
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer xoxb-test-token");
+    expect(await requests[0].json()).toEqual({ channel: "C123", text: "later", post_at: 1715700000 });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.channel).toBe("C123");
+      expect(result.scheduledMessageId).toBe("Q001");
+      expect(result.postAt).toBe(1715700000);
+    }
+  });
+
+  test("maps Slack error to CONNECTOR_UPSTREAM_ERROR", async () => {
+    const client = createSlackChatClient({
+      token: "xoxb-test-token",
+      fetch: async () => Response.json({ ok: false, error: "time_in_past" }),
+    });
+    const result = await client.scheduleMessage({ channel: "C123", text: "later", postAt: 1 });
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "CONNECTOR_UPSTREAM_ERROR",
+        message: "Slack rejected the chat.scheduleMessage request.",
+        providerError: "time_in_past",
+      },
+    });
+  });
+});
+
+describe("chat.meMessage validators", () => {
+  test("accepts channel and text", () => {
+    expect(validateChatMeMessageInput({ channel: "C123", text: "waves" }))
+      .toEqual({ channel: "C123", text: "waves" });
+  });
+
+  test("rejects empty text", () => {
+    expect(() => validateChatMeMessageInput({ channel: "C123", text: "" })).toThrow();
+  });
+});
+
+describe("chat.meMessage action static validation", () => {
+  test("returns validated without token", () => {
+    const result = meMessage({ channel: "C123", text: "waves" });
+    expect((result as Record<string, unknown>).source).toBe("connector");
+    expect((result as Record<string, unknown>).validated).toEqual({ channel: "C123", text: "waves" });
+  });
+});
+
+describe("chat.meMessage live (mocked fetch)", () => {
+  test("POSTs to chat.meMessage with Bearer token", async () => {
+    const requests: Request[] = [];
+    const client = createSlackChatClient({
+      token: "xoxb-test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(chatMeMessageFixture);
+      },
+    });
+
+    const result = await client.meMessage({ channel: "C123", text: "waves" });
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toBe("https://slack.com/api/chat.meMessage");
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].headers.get("Authorization")).toBe("Bearer xoxb-test-token");
+    expect(await requests[0].json()).toEqual({ channel: "C123", text: "waves" });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.channel).toBe("C123");
+      expect(result.ts).toBe("1715683000.000100");
+    }
+  });
+
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    const client = createSlackChatClient({
+      token: "xoxb-test-token",
+      fetch: async () => new Response(JSON.stringify({ ok: false, error: "ratelimited" }), { status: 429 }),
+    });
+    const result = await client.meMessage({ channel: "C123", text: "waves" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
   });
 });

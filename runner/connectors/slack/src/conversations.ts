@@ -65,6 +65,32 @@ export type ConversationsMembersInput = {
   limit?: number;
 };
 
+export type ConversationsRepliesInput = {
+  channel: string;
+  ts: string;
+  cursor?: string;
+  limit?: number;
+};
+
+export type ConversationsChannelInput = {
+  channel: string;
+};
+
+export type ConversationsRenameInput = {
+  channel: string;
+  name: string;
+};
+
+export type ConversationsSetTopicInput = {
+  channel: string;
+  topic: string;
+};
+
+export type ConversationsKickInput = {
+  channel: string;
+  user: string;
+};
+
 export type ConversationsCreateResult =
   | { ok: true; channel: NormalizedChannel }
   | { ok: false; error: ConnectorError };
@@ -87,6 +113,26 @@ export type ConversationsInviteResult =
 
 export type ConversationsMembersResult =
   | { ok: true; members: string[]; nextCursor: string | null }
+  | { ok: false; error: ConnectorError };
+
+export type ConversationsRepliesResult =
+  | { ok: true; messages: Record<string, unknown>[]; hasMore: boolean; nextCursor: string | null }
+  | { ok: false; error: ConnectorError };
+
+export type ConversationsChannelResult =
+  | { ok: true; channel: NormalizedChannel }
+  | { ok: false; error: ConnectorError };
+
+export type ConversationsAckResult =
+  | { ok: true; channel: string }
+  | { ok: false; error: ConnectorError };
+
+export type ConversationsSetTopicResult =
+  | { ok: true; topic: string }
+  | { ok: false; error: ConnectorError };
+
+export type ConversationsKickResult =
+  | { ok: true; channel: string; user: string }
   | { ok: false; error: ConnectorError };
 
 export type SlackConversationsClientOptions = {
@@ -172,6 +218,69 @@ export function validateConversationsMembersInput(input: unknown): Conversations
     cursor: typeof input.cursor === "string" ? input.cursor : undefined,
     limit: typeof input.limit === "number" ? Math.min(Math.max(1, input.limit), 1000) : undefined,
   };
+}
+
+function validateChannelOnly(input: unknown, operation: string): ConversationsChannelInput {
+  if (!isRecord(input)) throw new Error(`${operation} input must be an object`);
+  const channel = requireString(input.channel, "channel").trim();
+  if (channel.length === 0) throw new Error("channel is required");
+  return { channel };
+}
+
+export function validateConversationsRepliesInput(input: unknown): ConversationsRepliesInput {
+  if (!isRecord(input)) throw new Error("conversations.replies input must be an object");
+  const channel = requireString(input.channel, "channel").trim();
+  const ts = requireString(input.ts, "ts").trim();
+  if (channel.length === 0) throw new Error("channel is required");
+  if (ts.length === 0) throw new Error("ts is required");
+  return {
+    channel,
+    ts,
+    cursor: typeof input.cursor === "string" ? input.cursor : undefined,
+    limit: typeof input.limit === "number" ? Math.min(Math.max(1, input.limit), 1000) : undefined,
+  };
+}
+
+export function validateConversationsJoinInput(input: unknown): ConversationsChannelInput {
+  return validateChannelOnly(input, "conversations.join");
+}
+
+export function validateConversationsLeaveInput(input: unknown): ConversationsChannelInput {
+  return validateChannelOnly(input, "conversations.leave");
+}
+
+export function validateConversationsArchiveInput(input: unknown): ConversationsChannelInput {
+  return validateChannelOnly(input, "conversations.archive");
+}
+
+export function validateConversationsUnarchiveInput(input: unknown): ConversationsChannelInput {
+  return validateChannelOnly(input, "conversations.unarchive");
+}
+
+export function validateConversationsRenameInput(input: unknown): ConversationsRenameInput {
+  if (!isRecord(input)) throw new Error("conversations.rename input must be an object");
+  const channel = requireString(input.channel, "channel").trim();
+  const name = requireString(input.name, "name").trim();
+  if (channel.length === 0) throw new Error("channel is required");
+  if (name.length === 0) throw new Error("name is required");
+  return { channel, name };
+}
+
+export function validateConversationsSetTopicInput(input: unknown): ConversationsSetTopicInput {
+  if (!isRecord(input)) throw new Error("conversations.setTopic input must be an object");
+  const channel = requireString(input.channel, "channel").trim();
+  if (channel.length === 0) throw new Error("channel is required");
+  if (typeof input.topic !== "string") throw new Error("topic is required");
+  return { channel, topic: input.topic };
+}
+
+export function validateConversationsKickInput(input: unknown): ConversationsKickInput {
+  if (!isRecord(input)) throw new Error("conversations.kick input must be an object");
+  const channel = requireString(input.channel, "channel").trim();
+  const user = requireString(input.user, "user").trim();
+  if (channel.length === 0) throw new Error("channel is required");
+  if (user.length === 0) throw new Error("user is required");
+  return { channel, user };
 }
 
 // ─── Client factory ───────────────────────────────────────────────────────────
@@ -307,6 +416,86 @@ export function createSlackConversationsClient(options: SlackConversationsClient
       if (data.ok !== true) return { ok: false, error: upstreamError(data, "Slack rejected the conversations.members request.") };
       const members = Array.isArray(data.members) ? data.members.filter((m): m is string => typeof m === "string") : [];
       return { ok: true, members, nextCursor: extractNextCursor(data) };
+    },
+
+    async replies(input: unknown): Promise<ConversationsRepliesResult> {
+      const payload = validateConversationsRepliesInput(input);
+      const { status, data } = await slackGet("conversations.replies", {
+        channel: payload.channel,
+        ts: payload.ts,
+        cursor: payload.cursor,
+        limit: payload.limit,
+      });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) return { ok: false, error: upstreamError(data, "Slack rejected the conversations.replies request.") };
+      const messages = Array.isArray(data.messages) ? data.messages.filter(isRecord) : [];
+      const hasMore = typeof data.has_more === "boolean" ? data.has_more : false;
+      return { ok: true, messages, hasMore, nextCursor: extractNextCursor(data) };
+    },
+
+    async join(input: unknown): Promise<ConversationsChannelResult> {
+      const payload = validateConversationsJoinInput(input);
+      const { status, data } = await slackPost("conversations.join", { channel: payload.channel });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) return { ok: false, error: upstreamError(data, "Slack rejected the conversations.join request.") };
+      return { ok: true, channel: normalizeChannel(requireRecord(data.channel, "channel") as SlackChannel) };
+    },
+
+    async leave(input: unknown): Promise<ConversationsAckResult> {
+      const payload = validateConversationsLeaveInput(input);
+      const { status, data } = await slackPost("conversations.leave", { channel: payload.channel });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) return { ok: false, error: upstreamError(data, "Slack rejected the conversations.leave request.") };
+      return { ok: true, channel: payload.channel };
+    },
+
+    async archive(input: unknown): Promise<ConversationsAckResult> {
+      const payload = validateConversationsArchiveInput(input);
+      const { status, data } = await slackPost("conversations.archive", { channel: payload.channel });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) return { ok: false, error: upstreamError(data, "Slack rejected the conversations.archive request.") };
+      return { ok: true, channel: payload.channel };
+    },
+
+    async unarchive(input: unknown): Promise<ConversationsAckResult> {
+      const payload = validateConversationsUnarchiveInput(input);
+      const { status, data } = await slackPost("conversations.unarchive", { channel: payload.channel });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) return { ok: false, error: upstreamError(data, "Slack rejected the conversations.unarchive request.") };
+      return { ok: true, channel: payload.channel };
+    },
+
+    async rename(input: unknown): Promise<ConversationsChannelResult> {
+      const payload = validateConversationsRenameInput(input);
+      const { status, data } = await slackPost("conversations.rename", { channel: payload.channel, name: payload.name });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) return { ok: false, error: upstreamError(data, "Slack rejected the conversations.rename request.") };
+      return { ok: true, channel: normalizeChannel(requireRecord(data.channel, "channel") as SlackChannel) };
+    },
+
+    async setTopic(input: unknown): Promise<ConversationsSetTopicResult> {
+      const payload = validateConversationsSetTopicInput(input);
+      const { status, data } = await slackPost("conversations.setTopic", { channel: payload.channel, topic: payload.topic });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) return { ok: false, error: upstreamError(data, "Slack rejected the conversations.setTopic request.") };
+      const topic = isRecord(data.topic) && typeof data.topic.value === "string" ? data.topic.value : payload.topic;
+      return { ok: true, topic };
+    },
+
+    async kick(input: unknown): Promise<ConversationsKickResult> {
+      const payload = validateConversationsKickInput(input);
+      const { status, data } = await slackPost("conversations.kick", { channel: payload.channel, user: payload.user });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) return { ok: false, error: upstreamError(data, "Slack rejected the conversations.kick request.") };
+      return { ok: true, channel: payload.channel, user: payload.user };
     },
   };
 }

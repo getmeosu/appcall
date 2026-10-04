@@ -38,8 +38,24 @@ export type UsersListInput = {
   limit?: number;
 };
 
+export type UsersInfoInput = {
+  user: string;
+};
+
+export type UsersLookupByEmailInput = {
+  email: string;
+};
+
 export type UsersListResult =
   | { ok: true; members: NormalizedUser[]; nextCursor: string | null }
+  | { ok: false; error: ConnectorError };
+
+export type UsersInfoResult =
+  | { ok: true; user: NormalizedUser }
+  | { ok: false; error: ConnectorError };
+
+export type UsersLookupByEmailResult =
+  | { ok: true; user: NormalizedUser }
   | { ok: false; error: ConnectorError };
 
 export type SlackUsersClientOptions = {
@@ -74,6 +90,20 @@ export function validateUsersListInput(input: unknown): UsersListInput {
     cursor: typeof input.cursor === "string" ? input.cursor : undefined,
     limit: typeof input.limit === "number" ? Math.min(Math.max(1, input.limit), 1000) : undefined,
   };
+}
+
+export function validateUsersInfoInput(input: unknown): UsersInfoInput {
+  if (!isRecord(input)) throw new Error("users.info input must be an object");
+  const user = requireString(input.user, "user").trim();
+  if (user.length === 0) throw new Error("user is required");
+  return { user };
+}
+
+export function validateUsersLookupByEmailInput(input: unknown): UsersLookupByEmailInput {
+  if (!isRecord(input)) throw new Error("users.lookupByEmail input must be an object");
+  const email = requireString(input.email, "email").trim();
+  if (email.length === 0) throw new Error("email is required");
+  return { email };
 }
 
 // ─── Client factory ───────────────────────────────────────────────────────────
@@ -132,6 +162,28 @@ export function createSlackUsersClient(options: SlackUsersClientOptions) {
       const members = Array.isArray(data.members) ? data.members.filter(isRecord).map((u) => normalizeUser(u as SlackUser)) : [];
       return { ok: true, members, nextCursor: extractNextCursor(data) };
     },
+
+    async info(input: unknown): Promise<UsersInfoResult> {
+      const payload = validateUsersInfoInput(input);
+      const { status, data } = await slackGet("users.info", { user: payload.user });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) {
+        return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Slack rejected the users.info request.", providerError: typeof data.error === "string" ? data.error : undefined } };
+      }
+      return { ok: true, user: normalizeUser(requireRecord(data.user, "user") as SlackUser) };
+    },
+
+    async lookupByEmail(input: unknown): Promise<UsersLookupByEmailResult> {
+      const payload = validateUsersLookupByEmailInput(input);
+      const { status, data } = await slackGet("users.lookupByEmail", { email: payload.email });
+      const rl = rateLimitError(status);
+      if (rl) return { ok: false, error: rl };
+      if (data.ok !== true) {
+        return { ok: false, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Slack rejected the users.lookupByEmail request.", providerError: typeof data.error === "string" ? data.error : undefined } };
+      }
+      return { ok: true, user: normalizeUser(requireRecord(data.user, "user") as SlackUser) };
+    },
   };
 }
 
@@ -148,6 +200,11 @@ function safeJsonObject(bodyText: string): Record<string, unknown> {
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
+  return value;
+}
+
+function requireRecord(value: unknown, field: string): Record<string, unknown> {
+  if (!isRecord(value)) throw new Error(`${field} is required`);
   return value;
 }
 
