@@ -1,6 +1,6 @@
 # Bookingmood
 
-Read-only **Bookingmood API v1** recipe at `https://api.bookingmood.com/v1`. This is the managed Amsterdam Cloud API documented by Bookingmood, not a caller-supplied host.
+Bookingmood API v1 recipe at `https://api.bookingmood.com/v1`. This is the managed Amsterdam Cloud API documented by Bookingmood, not a caller-supplied host.
 
 ## Setup
 
@@ -8,16 +8,9 @@ Create an API key from the organization settings page in the Bookingmood admin d
 
 ## Operations
 
-- `healthcheck`: `GET /products?select=id,name&limit=1` with empty input (pinned credential probe).
-- `products.list`: `GET /products` with optional `select`, `limit`, `offset`, `order`, `id`, and `organization_id`.
-- `bookings.list`: `GET /bookings` with optional `select`, `limit`, `offset`, `order`, `id`, `organization_id`, and `product_id`.
-- `availability.get`: `GET /availability` with required `product_id` and optional `start`/`end`.
+Read, write, search, book, and EventOnly webhook operations for products, bookings, availability, organizations, sites, contacts, invoices, calendar events, webhooks, and booking details. Existing keys `healthcheck`, `products.list`, `bookings.list`, and `availability.get` are unchanged.
 
-Successful responses are raw provider JSON under AppCall `data`. Search, book, and other writes are omitted.
-
-## Adaptations
-
-Pinned source sends filter values as raw query params rather than PostgREST `eq.` operators. Native defaults omitted `select` to `*`; this template omits the query param when the caller does not pass `select`. Official availability docs list `product_ids`; documented curl and pinned source use `product_id`. Native GETs omit the upstream user-agent. Native category is `scheduling` (source Productivity).
+Successful action responses are raw provider JSON under AppCall `data`. Incoming vendor events are declared as `kind: webhook` EventOnly operations.
 
 ## License and evidence
 

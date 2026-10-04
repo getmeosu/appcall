@@ -94,11 +94,27 @@
     "disposition": "APPROVED",
     "edition": "international Griptape Cloud API",
     "operations": [
+      "assistant-runs.get",
+      "assistants.get",
+      "assistants.list",
       "healthcheck",
       "organizations.get",
-      "assistants.list",
-      "assistants.get",
-      "assistant-runs.get"
+      "assistants.create",
+      "assistants.update",
+      "assistants.delete",
+      "assistants.run",
+      "assistant-runs.list",
+      "structures.list",
+      "structures.get",
+      "structures.run",
+      "structure-runs.get",
+      "threads.list",
+      "threads.get",
+      "threads.create",
+      "threads.messages.list",
+      "buckets.list",
+      "knowledge-bases.list",
+      "rulesets.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -252,7 +268,7 @@
   "manifest": {
     "key": "griptape",
     "name": "Griptape",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -281,7 +297,13 @@
     "models": [
       "organization",
       "assistant",
-      "assistant-run"
+      "assistant-run",
+      "structure",
+      "structure-run",
+      "thread",
+      "bucket",
+      "knowledge-base",
+      "ruleset"
     ],
     "http": {
       "baseUrl": "https://cloud.griptape.ai/api",
@@ -309,30 +331,166 @@
       }
     },
     "operations": {
-      "healthcheck": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 10000,
-        "maxInputBytes": 4096,
-        "maxResponseBytes": 1048576,
-        "title": "Healthcheck",
-        "description": "Validate the Griptape Cloud API key by listing organizations.",
+      "assistant-runs.get": {
+        "description": "Retrieve one Griptape Cloud assistant run by ID.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        },
-        "outputSchema": {
-          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "assistant_run_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
           "required": [
-            "data"
+            "assistant_run_id"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/assistant-runs/{{assistant_run_id}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get assistant run",
+        "validationMode": "strict-generated"
+      },
+      "assistants.get": {
+        "description": "Retrieve one Griptape Cloud assistant by ID.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "assistant_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "assistant_id"
+          ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/assistants/{{assistant_id}}",
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get assistant",
+        "validationMode": "strict-generated"
+      },
+      "assistants.list": {
+        "description": "List Griptape Cloud assistants with optional pagination.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "page": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "page_size": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "request": {
+          "method": "GET",
+          "path": "/assistants",
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "List assistants",
+        "validationMode": "strict-generated"
+      },
+      "healthcheck": {
+        "description": "Validate the Griptape Cloud API key by listing organizations.",
+        "enforceOutputSchema": true,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {},
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 4096,
+        "maxResponseBytes": 1048576,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -341,42 +499,42 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
+        "responseFormat": "json",
+        "sideEffect": "read",
+        "timeoutMs": 10000,
+        "title": "Healthcheck",
+        "validationMode": "strict-generated"
       },
       "organizations.get": {
-        "kind": "action",
-        "sideEffect": "read",
-        "timeoutMs": 15000,
-        "maxInputBytes": 65536,
-        "maxResponseBytes": 5242880,
-        "title": "Get organization",
         "description": "Retrieve one Griptape Cloud organization by ID.",
+        "enforceOutputSchema": true,
         "inputSchema": {
-          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "organization_id": {
-              "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "organization_id"
-          ]
-        },
-        "outputSchema": {
-          "type": "object",
-          "required": [
-            "data"
           ],
+          "type": "object"
+        },
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
           "properties": {
             "data": {
               "type": "object"
             }
           },
-          "additionalProperties": false
+          "required": [
+            "data"
+          ],
+          "type": "object"
         },
         "request": {
           "method": "GET",
@@ -385,32 +543,54 @@
             200
           ]
         },
-        "enforceOutputSchema": true,
-        "validationMode": "strict-generated",
-        "responseFormat": "json"
-      },
-      "assistants.list": {
-        "kind": "action",
+        "responseFormat": "json",
         "sideEffect": "read",
+        "timeoutMs": 15000,
+        "title": "Get organization",
+        "validationMode": "strict-generated"
+      },
+      "assistants.create": {
+        "kind": "action",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "List assistants",
-        "description": "List Griptape Cloud assistants with optional pagination.",
+        "title": "Create assistant",
+        "description": "Create a Griptape Cloud assistant via POST /assistants.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "page": {
-              "type": "integer",
-              "minimum": 1
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Assistant name."
             },
-            "page_size": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Assistant description."
+            },
+            "knowledge_base_ids": {
+              "type": "array",
+              "description": "Knowledge base IDs."
+            },
+            "ruleset_ids": {
+              "type": "array",
+              "description": "Ruleset IDs."
+            },
+            "structure_ids": {
+              "type": "array",
+              "description": "Structure IDs."
+            },
+            "tool_ids": {
+              "type": "array",
+              "description": "Tool IDs."
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ]
         },
         "outputSchema": {
           "type": "object",
@@ -425,34 +605,249 @@
           "additionalProperties": false
         },
         "request": {
-          "method": "GET",
+          "method": "POST",
           "path": "/assistants",
           "success": [
-            200
+            200,
+            201
           ],
-          "query": {
-            "page": "{{page}}",
-            "page_size": "{{page_size}}"
+          "body": {
+            "name": "{{name}}",
+            "description": "{{description}}",
+            "knowledge_base_ids": "{{knowledge_base_ids}}",
+            "ruleset_ids": "{{ruleset_ids}}",
+            "structure_ids": "{{structure_ids}}",
+            "tool_ids": "{{tool_ids}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
           }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "assistants.get": {
+      "assistants.update": {
         "kind": "action",
-        "sideEffect": "read",
+        "sideEffect": "write",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get assistant",
-        "description": "Retrieve one Griptape Cloud assistant by ID.",
+        "title": "Update assistant",
+        "description": "Update a Griptape Cloud assistant via PATCH /assistants/{assistant_id}.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "assistant_id": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Assistant ID."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated name."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Updated description."
+            },
+            "knowledge_base_ids": {
+              "type": "array",
+              "description": "Replacement knowledge base IDs."
+            },
+            "ruleset_ids": {
+              "type": "array",
+              "description": "Replacement ruleset IDs."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "PATCH",
+          "path": "/assistants/{{assistant_id}}",
+          "success": [
+            200
+          ],
+          "body": {
+            "name": "{{name}}",
+            "description": "{{description}}",
+            "knowledge_base_ids": "{{knowledge_base_ids}}",
+            "ruleset_ids": "{{ruleset_ids}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete assistant",
+        "description": "Delete a Griptape Cloud assistant via DELETE /assistants/{assistant_id}.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Assistant ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/assistants/{{assistant_id}}",
+          "success": [
+            204,
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistants.run": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Run assistant",
+        "description": "Create a Griptape Cloud assistant run via POST /assistants/{assistant_id}/runs.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Assistant ID."
+            },
+            "input": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User input for the run."
+            },
+            "thread_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Existing thread ID."
+            },
+            "args": {
+              "type": "array",
+              "description": "Optional run arguments."
+            },
+            "stream": {
+              "type": "boolean",
+              "description": "Whether to stream run events."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "assistant_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/assistants/{{assistant_id}}/runs",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "input": "{{input}}",
+            "thread_id": "{{thread_id}}",
+            "args": "{{args}}",
+            "stream": "{{stream}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "assistant-runs.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List assistant runs",
+        "description": "List runs for one Griptape Cloud assistant.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "assistant_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Assistant ID."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number."
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Page size."
             }
           },
           "additionalProperties": false,
@@ -474,34 +869,91 @@
         },
         "request": {
           "method": "GET",
-          "path": "/assistants/{{assistant_id}}",
+          "path": "/assistants/{{assistant_id}}/runs",
           "success": [
             200
-          ]
+          ],
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
       },
-      "assistant-runs.get": {
+      "structures.list": {
         "kind": "action",
         "sideEffect": "read",
         "timeoutMs": 15000,
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,
-        "title": "Get assistant run",
-        "description": "Retrieve one Griptape Cloud assistant run by ID.",
+        "title": "List structures",
+        "description": "List Griptape Cloud structures with optional pagination.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "assistant_run_id": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number."
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/structures",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "structures.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get structure",
+        "description": "Retrieve one Griptape Cloud structure by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "structure_id": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Structure ID."
             }
           },
           "additionalProperties": false,
           "required": [
-            "assistant_run_id"
+            "structure_id"
           ]
         },
         "outputSchema": {
@@ -518,10 +970,485 @@
         },
         "request": {
           "method": "GET",
-          "path": "/assistant-runs/{{assistant_run_id}}",
+          "path": "/structures/{{structure_id}}",
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "structures.run": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Run structure",
+        "description": "Create a Griptape Cloud structure run via POST /structures/{structure_id}/runs.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "structure_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Structure ID."
+            },
+            "args": {
+              "type": "array",
+              "description": "Structure run arguments."
+            },
+            "env": {
+              "type": "object",
+              "description": "Optional environment overrides."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "structure_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/structures/{{structure_id}}/runs",
+          "success": [
+            200,
+            201,
+            202
+          ],
+          "body": {
+            "args": "{{args}}",
+            "env": "{{env}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "structure-runs.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get structure run",
+        "description": "Retrieve one Griptape Cloud structure run by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "structure_run_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Structure run ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "structure_run_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/structure-runs/{{structure_run_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "threads.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List threads",
+        "description": "List Griptape Cloud threads with optional pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number."
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/threads",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "threads.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get thread",
+        "description": "Retrieve one Griptape Cloud thread by ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "thread_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Thread ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "thread_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/threads/{{thread_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "threads.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create thread",
+        "description": "Create a Griptape Cloud conversation thread via POST /threads.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Thread name."
+            },
+            "alias": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional unique thread alias."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/threads",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "name": "{{name}}",
+            "alias": "{{alias}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "threads.messages.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List thread messages",
+        "description": "List messages on a Griptape Cloud thread.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "thread_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Thread ID."
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number."
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "thread_id"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/threads/{{thread_id}}/messages",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "buckets.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List buckets",
+        "description": "List Griptape Cloud data-lake buckets with optional pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number."
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/buckets",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "knowledge-bases.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List knowledge bases",
+        "description": "List Griptape Cloud knowledge bases with optional pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number."
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/knowledge-bases",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "rulesets.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List rulesets",
+        "description": "List Griptape Cloud rulesets with optional pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number."
+            },
+            "page_size": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Page size."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/rulesets",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",

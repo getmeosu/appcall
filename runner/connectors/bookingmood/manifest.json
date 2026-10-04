@@ -53,7 +53,13 @@
   "models": [
     "product",
     "booking",
-    "availability"
+    "availability",
+    "organization",
+    "site",
+    "contact",
+    "invoice",
+    "calendar-event",
+    "webhook"
   ],
   "name": "Bookingmood",
   "network": {
@@ -313,6 +319,1125 @@
       "timeoutMs": 15000,
       "title": "List products",
       "validationMode": "strict-generated"
+    },
+    "products.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get product",
+      "description": "Fetch one Bookingmood product by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource id."
+          },
+          "select": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST select list."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}",
+          "select": "{{select}}",
+          "limit": 1
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create product",
+      "description": "Create a Bookingmood bookable product via POST /products.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Default product name."
+          },
+          "rent_period": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Rent period, e.g. nightly."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "IANA timezone of the unit."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "rent_period",
+          "timezone"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/products",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": {
+            "default": "{{name}}"
+          },
+          "rent_period": "{{rent_period}}",
+          "timezone": "{{timezone}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update product",
+      "description": "Patch a Bookingmood product filtered by id via PATCH /products.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product id to update."
+          },
+          "name": {
+            "type": "object",
+            "description": "Updated localized name object, e.g. {\"default\": \"Canal house\"}."
+          },
+          "rent_period": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated rent period."
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated IANA timezone."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/products",
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "id": "{{id}}"
+        },
+        "body": {
+          "name": "{{name}}",
+          "rent_period": "{{rent_period}}",
+          "timezone": "{{timezone}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bookings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get booking",
+      "description": "Fetch one Bookingmood booking by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource id."
+          },
+          "select": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST select list."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bookings",
+        "success": [
+          200
+        ],
+        "query": {
+          "id": "{{id}}",
+          "select": "{{select}}",
+          "limit": 1
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bookings.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create booking row",
+      "description": "Insert a Bookingmood booking row via POST /bookings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product to book."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id."
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Interval start."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Interval end."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Booking status."
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public booking reference."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "product_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/bookings",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "product_id": "{{product_id}}",
+          "organization_id": "{{organization_id}}",
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "status": "{{status}}",
+          "reference": "{{reference}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "book.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Book",
+      "description": "Perform a Bookingmood booking via POST /book with product, interval, and occupancy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product to book."
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Interval start date."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Interval end date."
+          },
+          "occupancy": {
+            "type": "object",
+            "description": "Occupancy map of capacity_group id to guest count."
+          },
+          "form_values": {
+            "type": "object",
+            "description": "Form values keyed by form field ids."
+          },
+          "redirect_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Redirect URL after payment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "product_id",
+          "start",
+          "end"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/book",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "product_id": "{{product_id}}",
+          "interval": {
+            "start": "{{start}}",
+            "end": "{{end}}"
+          },
+          "occupancy": "{{occupancy}}",
+          "form_values": "{{form_values}}",
+          "redirect_url": "{{redirect_url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "search.availability": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Search availability",
+      "description": "Search Bookingmood product availability for a date range via POST /search.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Interval start."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Interval end."
+          },
+          "occupancy": {
+            "type": "object",
+            "description": "Occupancy filter."
+          },
+          "option_ids": {
+            "type": "array",
+            "description": "Attribute option ids to match."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/search",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "interval": {
+            "start": "{{start}}",
+            "end": "{{end}}"
+          },
+          "occupancy": "{{occupancy}}",
+          "option_ids": "{{option_ids}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "organizations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List organizations",
+      "description": "List Bookingmood organizations with optional PostgREST filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "select": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST select list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row offset."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST order clause."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by resource id."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organization id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "success": [
+          200
+        ],
+        "query": {
+          "select": "{{select}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "id": "{{id}}",
+          "organization_id": "{{organization_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sites.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List sites",
+      "description": "List Bookingmood sites with optional PostgREST filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "select": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST select list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row offset."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST order clause."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by resource id."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organization id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sites",
+        "success": [
+          200
+        ],
+        "query": {
+          "select": "{{select}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "id": "{{id}}",
+          "organization_id": "{{organization_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List contacts",
+      "description": "List Bookingmood contacts with optional PostgREST filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "select": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST select list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row offset."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST order clause."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by resource id."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organization id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/contacts",
+        "success": [
+          200
+        ],
+        "query": {
+          "select": "{{select}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "id": "{{id}}",
+          "organization_id": "{{organization_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "invoices.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List invoices",
+      "description": "List Bookingmood invoices with optional PostgREST filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "select": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST select list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row offset."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST order clause."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by resource id."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organization id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/invoices",
+        "success": [
+          200
+        ],
+        "query": {
+          "select": "{{select}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "id": "{{id}}",
+          "organization_id": "{{organization_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "calendar-events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List calendar events",
+      "description": "List Bookingmood calendar events with optional PostgREST filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "select": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST select list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row offset."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST order clause."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by resource id."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organization id."
+          },
+          "product_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by product id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/calendar_events",
+        "success": [
+          200
+        ],
+        "query": {
+          "select": "{{select}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "id": "{{id}}",
+          "organization_id": "{{organization_id}}",
+          "product_id": "{{product_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List webhooks",
+      "description": "List Bookingmood webhook subscriptions with optional PostgREST filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "select": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST select list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row offset."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST order clause."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by resource id."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organization id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "select": "{{select}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "id": "{{id}}",
+          "organization_id": "{{organization_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "booking-details.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List booking details",
+      "description": "List Bookingmood booking detail rows with optional PostgREST filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "select": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST select list."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum rows to return."
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Row offset."
+          },
+          "order": {
+            "type": "string",
+            "minLength": 1,
+            "description": "PostgREST order clause."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by resource id."
+          },
+          "organization_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by organization id."
+          },
+          "booking_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by booking id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/booking_details",
+        "success": [
+          200
+        ],
+        "query": {
+          "select": "{{select}}",
+          "limit": "{{limit}}",
+          "offset": "{{offset}}",
+          "order": "{{order}}",
+          "id": "{{id}}",
+          "organization_id": "{{organization_id}}",
+          "booking_id": "{{booking_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.bookings_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Booking created",
+      "description": "Bookingmood webhook event bookings.created. Fires when a booking is created."
+    },
+    "webhook.bookings_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Booking updated",
+      "description": "Bookingmood webhook event bookings.updated. Fires when a booking is updated."
+    },
+    "webhook.calendar_events_confirmed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Calendar event confirmed",
+      "description": "Bookingmood webhook event calendar_events.confirmed. Fires when a calendar event is confirmed."
+    },
+    "webhook.payments_paid": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Payment paid",
+      "description": "Bookingmood webhook event payments.paid. Fires when a payment is paid."
+    },
+    "webhook.products_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Product updated",
+      "description": "Bookingmood webhook event products.updated. Fires when a product is updated."
+    },
+    "webhook.contacts_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Contact created",
+      "description": "Bookingmood webhook event contacts.created. Fires when a contact is created."
     }
   },
   "provenance": {
@@ -322,6 +1447,6 @@
     }
   },
   "runtime": "bun",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "visibility": "public"
 }
