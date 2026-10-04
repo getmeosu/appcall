@@ -1,7 +1,17 @@
 {
+  "key": "bannerbear",
+  "name": "Bannerbear",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,81 +19,72 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "utility"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.bannerbear.com"
+    ]
+  },
+  "models": [
+    "project",
+    "template",
+    "image",
+    "video",
+    "collection",
+    "screenshot",
+    "font"
+  ],
   "http": {
+    "baseUrl": "https://api.bannerbear.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.bannerbear.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "errors"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
-  },
-  "key": "bannerbear",
-  "models": [
-    "project",
-    "template",
-    "image"
-  ],
-  "name": "Bannerbear",
-  "network": {
-    "allowedHosts": [
-      "api.bannerbear.com"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate the Bannerbear API key with GET /v2/auth.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Bannerbear API key with GET /v2/auth.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -92,125 +93,73 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "images.get": {
-      "description": "Retrieve one Bannerbear image by UID.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "uid": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "uid"
-        ],
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "account.get": {
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Get account",
+      "description": "Read Bannerbear account quota and current project usage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/images/{{uid}}",
+        "path": "/v2/account",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get image",
-      "validationMode": "strict-generated"
-    },
-    "templates.get": {
-      "description": "Retrieve one Bannerbear template by UID.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "uid": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "uid"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/templates/{{uid}}",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get template",
-      "validationMode": "strict-generated"
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "templates.list": {
-      "description": "List Bannerbear templates in the connected project.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 5242880,
+      "title": "List templates",
+      "description": "List Bannerbear templates in the connected project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "type": "object"
-            },
-            "type": "array"
-          }
-        },
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -219,20 +168,1061 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List templates",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get template",
+      "description": "Retrieve one Bannerbear template by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/templates/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create template",
+      "description": "Create a blank Bannerbear template with a name and canvas size.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template name."
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Canvas width in pixels."
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Canvas height in pixels."
+          },
+          "metadata": {
+            "type": "string",
+            "description": "Optional caller metadata."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "width",
+          "height"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/templates",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "name": "{{name}}",
+          "width": "{{width}}",
+          "height": "{{height}}",
+          "metadata": "{{metadata}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update template",
+      "description": "Update Bannerbear template name, tags, or canvas size.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Template name."
+          },
+          "metadata": {
+            "type": "string",
+            "description": "Optional caller metadata."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/templates/{{uid}}",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "name": "{{name}}",
+          "metadata": "{{metadata}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "templates.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete template",
+      "description": "Permanently delete a Bannerbear template. This cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/templates/{{uid}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List images",
+      "description": "List generated Bannerbear images in the connected project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size, max 100."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/images",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get image",
+      "description": "Retrieve one Bannerbear image by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/images/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "images.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create image",
+      "description": "Queue a Bannerbear image render from a template and layer modifications. Rendering is asynchronous; poll images.get or use a webhook.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          },
+          "modifications": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Layer modifications.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Layer name."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Replacement text."
+                },
+                "image_url": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Replacement image URL."
+                }
+              }
+            }
+          },
+          "webhook_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional completion webhook URL."
+          },
+          "metadata": {
+            "type": "string",
+            "description": "Optional caller metadata."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "template",
+          "modifications"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/images",
+        "success": [
+          202,
+          200,
+          201
+        ],
+        "body": {
+          "template": "{{template}}",
+          "modifications": "{{modifications}}",
+          "webhook_url": "{{webhook_url}}",
+          "metadata": "{{metadata}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List videos",
+      "description": "List generated Bannerbear videos in the connected project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page of results."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/videos",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get video",
+      "description": "Retrieve one Bannerbear video by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/videos/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create video",
+      "description": "Queue a Bannerbear video render from a video template and input media URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "video_template": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          },
+          "input_media_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source video or audio URL."
+          },
+          "webhook_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional completion webhook URL."
+          },
+          "metadata": {
+            "type": "string",
+            "description": "Optional caller metadata."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "video_template"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/videos",
+        "success": [
+          202,
+          200,
+          201
+        ],
+        "body": {
+          "video_template": "{{video_template}}",
+          "input_media_url": "{{input_media_url}}",
+          "webhook_url": "{{webhook_url}}",
+          "metadata": "{{metadata}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videos.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update video",
+      "description": "Approve a Bannerbear video or patch its transcription so rendering can start.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          },
+          "approved": {
+            "type": "boolean",
+            "description": "Set true to approve and start rendering."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v2/videos",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "body": {
+          "uid": "{{uid}}",
+          "approved": "{{approved}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List collections",
+      "description": "List Bannerbear collections (multi-template image sets) in the connected project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/collections",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get collection",
+      "description": "Retrieve one Bannerbear collection by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/collections/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collections.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create collection",
+      "description": "Queue a Bannerbear collection render against a template set.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "template_set": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          },
+          "modifications": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Layer modifications.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Layer name."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Replacement text."
+                },
+                "image_url": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Replacement image URL."
+                }
+              }
+            }
+          },
+          "webhook_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional completion webhook URL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "template_set",
+          "modifications"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/collections",
+        "success": [
+          202,
+          200,
+          201
+        ],
+        "body": {
+          "template_set": "{{template_set}}",
+          "modifications": "{{modifications}}",
+          "webhook_url": "{{webhook_url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "screenshots.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List screenshots",
+      "description": "List Bannerbear website screenshots in the connected project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/screenshots",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "screenshots.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get screenshot",
+      "description": "Retrieve one Bannerbear screenshot by UID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/screenshots/{{uid}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "screenshots.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create screenshot",
+      "description": "Queue a Bannerbear screenshot of a public website URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website URL to capture."
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Browser width in pixels."
+          },
+          "webhook_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional completion webhook URL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/screenshots",
+        "success": [
+          202,
+          200,
+          201
+        ],
+        "body": {
+          "url": "{{url}}",
+          "width": "{{width}}",
+          "webhook_url": "{{webhook_url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fonts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List fonts",
+      "description": "List valid Bannerbear font families grouped by style.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/fonts",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.image_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Image created",
+      "description": "Bannerbear project webhook when an image render completes. Maps event=image_created."
+    },
+    "webhook.video_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Video created",
+      "description": "Bannerbear project webhook when a video render completes. Maps event=video_created."
+    },
+    "webhook.template_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Template created",
+      "description": "Bannerbear project webhook when a template is created. Maps event=template_created."
+    },
+    "webhook.screenshot_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Screenshot created",
+      "description": "Bannerbear project webhook when a screenshot render completes. Maps event=screenshot_created."
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
