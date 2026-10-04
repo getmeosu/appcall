@@ -1,1 +1,1329 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Gumroad access token","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"query","name":"access_token","value":"{{apiKey}}"},"baseUrl":"https://api.gumroad.com/v2","errors":{"bodyErrorPaths":["message"],"defaultRetryAfterSeconds":30,"messagePaths":["message"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"gumroad","models":["user","product","sale"],"name":"Gumroad","network":{"allowedHosts":["api.gumroad.com"]},"operations":{"healthcheck":{"description":"Validate the Gumroad access token with GET /v2/user.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/user","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"products.get":{"description":"Get one Gumroad product by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"productId":{"minLength":1,"type":"string"}},"required":["productId"],"type":"object"},"kind":"action","maxInputBytes":16384,"maxResponseBytes":1048576,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/products/{{productId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Get product","validationMode":"strict-generated"},"products.list":{"description":"List products owned by the authenticated Gumroad user.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/products","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List products","validationMode":"strict-generated"},"sales.get":{"description":"Get one Gumroad sale by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"saleId":{"minLength":1,"type":"string"}},"required":["saleId"],"type":"object"},"kind":"action","maxInputBytes":16384,"maxResponseBytes":1048576,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/sales/{{saleId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":10000,"title":"Get sale","validationMode":"strict-generated"},"sales.list":{"description":"List Gumroad sales with optional filters and page key.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"after":{"minLength":1,"type":"string"},"before":{"minLength":1,"type":"string"},"email":{"minLength":1,"type":"string"},"pageKey":{"minLength":1,"type":"string"},"productId":{"minLength":1,"type":"string"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/sales","query":{"after":"{{after}}","before":"{{before}}","email":"{{email}}","page_key":"{{pageKey}}","product_id":"{{productId}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List sales","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "gumroad",
+  "name": "Gumroad",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Gumroad access token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.gumroad.com"
+    ]
+  },
+  "models": [
+    "user",
+    "product",
+    "sale",
+    "subscriber",
+    "offerCode",
+    "license",
+    "resourceSubscription"
+  ],
+  "http": {
+    "baseUrl": "https://api.gumroad.com/v2",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "access_token",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message"
+      ],
+      "bodyErrorPaths": [
+        "message"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Gumroad access token with GET /v2/user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List products",
+      "description": "List products owned by the authenticated Gumroad user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get product",
+      "description": "Get one Gumroad product by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "productId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products/{{productId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create product",
+      "description": "Create a Gumroad product with a name and price in cents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product name."
+          },
+          "price": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Price in cents."
+          },
+          "description": {
+            "type": "string",
+            "description": "Product description."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Custom permalink."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "price"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/products",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "price": "{{price}}",
+          "description": "{{description}}",
+          "url": "{{url}}"
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update product",
+      "description": "Update a Gumroad product name, price, or description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated product name."
+          },
+          "price": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Updated price in cents."
+          },
+          "description": {
+            "type": "string",
+            "description": "Updated description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/products/{{productId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "price": "{{price}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete product",
+      "description": "Permanently delete a Gumroad product.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/products/{{productId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.enable": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enable product",
+      "description": "Publish a Gumroad product so it can be purchased.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/products/{{productId}}/enable",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "products.disable": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Disable product",
+      "description": "Unpublish a Gumroad product.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/products/{{productId}}/disable",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sales.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List sales",
+      "description": "List Gumroad sales with optional filters and page key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "minLength": 1
+          },
+          "before": {
+            "type": "string",
+            "minLength": 1
+          },
+          "productId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pageKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sales",
+        "query": {
+          "after": "{{after}}",
+          "before": "{{before}}",
+          "product_id": "{{productId}}",
+          "email": "{{email}}",
+          "page_key": "{{pageKey}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sales.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 16384,
+      "maxResponseBytes": 1048576,
+      "title": "Get sale",
+      "description": "Get one Gumroad sale by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "saleId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "saleId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/sales/{{saleId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sales.mark_as_shipped": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Mark sale shipped",
+      "description": "Mark a Gumroad sale as shipped, optionally with a tracking URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "saleId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sale ID."
+          },
+          "trackingUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Shipment tracking URL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "saleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/sales/{{saleId}}/mark_as_shipped",
+        "success": [
+          200
+        ],
+        "body": {
+          "tracking_url": "{{trackingUrl}}"
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "sales.refund": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Refund sale",
+      "description": "Refund a Gumroad sale in full or for an amount in cents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "saleId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sale ID."
+          },
+          "amountCents": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Partial refund amount in cents."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "saleId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/sales/{{saleId}}/refund",
+        "success": [
+          200
+        ],
+        "body": {
+          "amount_cents": "{{amountCents}}"
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List subscribers",
+      "description": "List active subscribers for a Gumroad product.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by subscriber email."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products/{{productId}}/subscribers",
+        "success": [
+          200
+        ],
+        "query": {
+          "email": "{{email}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "subscribers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get subscriber",
+      "description": "Get one Gumroad subscriber by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subscriberId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Subscriber ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subscriberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/subscribers/{{subscriberId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "offer_codes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List offer codes",
+      "description": "List offer codes for a Gumroad product, including universal codes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/products/{{productId}}/offer_codes",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "offer_codes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create offer code",
+      "description": "Create a percentage or fixed-amount offer code for a Gumroad product.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Offer code name."
+          },
+          "amountOff": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Percent or cents off."
+          },
+          "offerType": {
+            "type": "string",
+            "enum": [
+              "percent",
+              "cents"
+            ],
+            "description": "Discount type."
+          },
+          "maxPurchaseCount": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum redemptions."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId",
+          "name",
+          "amountOff"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/products/{{productId}}/offer_codes",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}",
+          "amount_off": "{{amountOff}}",
+          "offer_type": "{{offerType}}",
+          "max_purchase_count": "{{maxPurchaseCount}}"
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "offer_codes.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete offer code",
+      "description": "Delete an offer code from a Gumroad product.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          },
+          "offerCodeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Offer code ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId",
+          "offerCodeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/products/{{productId}}/offer_codes/{{offerCodeId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "licenses.verify": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Verify license",
+      "description": "Verify a Gumroad license key for a product.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          },
+          "licenseKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "License key."
+          },
+          "incrementUsesCount": {
+            "type": "boolean",
+            "description": "When true, increment the uses counter."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId",
+          "licenseKey"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/licenses/verify",
+        "success": [
+          200
+        ],
+        "body": {
+          "product_id": "{{productId}}",
+          "license_key": "{{licenseKey}}",
+          "increment_uses_count": "{{incrementUsesCount}}"
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "licenses.enable": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Enable license",
+      "description": "Re-enable a previously disabled Gumroad license key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          },
+          "licenseKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "License key."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId",
+          "licenseKey"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/licenses/enable",
+        "success": [
+          200
+        ],
+        "body": {
+          "product_id": "{{productId}}",
+          "license_key": "{{licenseKey}}"
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "licenses.disable": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Disable license",
+      "description": "Disable a Gumroad license key so it can no longer be verified as valid.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product ID."
+          },
+          "licenseKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "License key."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "productId",
+          "licenseKey"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/licenses/disable",
+        "success": [
+          200
+        ],
+        "body": {
+          "product_id": "{{productId}}",
+          "license_key": "{{licenseKey}}"
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "resource_subscriptions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List resource subscriptions",
+      "description": "List Gumroad resource subscriptions for a webhook resource name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "resourceName": {
+            "type": "string",
+            "enum": [
+              "sale",
+              "refund",
+              "dispute",
+              "dispute_won",
+              "cancellation",
+              "subscription_updated",
+              "subscription_ended",
+              "subscription_restarted"
+            ],
+            "description": "Resource name to list."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "resourceName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/resource_subscriptions",
+        "success": [
+          200
+        ],
+        "query": {
+          "resource_name": "{{resourceName}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "resource_subscriptions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create resource subscription",
+      "description": "Subscribe a POST URL to a Gumroad sale or subscription webhook resource.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "resourceName": {
+            "type": "string",
+            "enum": [
+              "sale",
+              "refund",
+              "dispute",
+              "dispute_won",
+              "cancellation",
+              "subscription_updated",
+              "subscription_ended",
+              "subscription_restarted"
+            ],
+            "description": "Resource to subscribe to."
+          },
+          "postUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTPS URL that receives webhook POSTs."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "resourceName",
+          "postUrl"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/resource_subscriptions",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "resource_name": "{{resourceName}}",
+          "post_url": "{{postUrl}}"
+        },
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        "bodyEncoding": "form"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.sale": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Sale",
+      "description": "Gumroad resource subscription ping when a sale is completed."
+    },
+    "webhook.refund": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Refund",
+      "description": "Gumroad resource subscription ping when a sale is refunded."
+    },
+    "webhook.cancellation": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Cancellation",
+      "description": "Gumroad resource subscription ping when a subscription is cancelled by the customer."
+    },
+    "webhook.subscription_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Subscription updated",
+      "description": "Gumroad resource subscription ping when a subscription is updated."
+    },
+    "webhook.subscription_ended": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Subscription ended",
+      "description": "Gumroad resource subscription ping when a subscription ends after its billing cycles."
+    },
+    "webhook.subscription_restarted": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Subscription restarted",
+      "description": "Gumroad resource subscription ping when a cancelled subscription is restarted."
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
