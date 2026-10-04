@@ -1,7 +1,7 @@
 {
   "key": "intercom",
   "name": "Intercom",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -31,7 +31,9 @@
     "administrator",
     "contact",
     "company",
-    "conversation"
+    "conversation",
+    "ticket",
+    "tag"
   ],
   "http": {
     "baseUrl": "https://api.intercom.io",
@@ -725,6 +727,704 @@
             "starting_after": "{{startingAfter}}"
           }
         },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Contact",
+      "description": "Create an Intercom contact via POST /contacts. email is required. Optional role (user or lead), name, externalId, phone.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact email."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "lead"
+            ],
+            "description": "Contact role. Defaults to user on the provider side if omitted."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact name."
+          },
+          "externalId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External id (maps to external_id)."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Phone number."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts",
+        "body": {
+          "email": "{{email}}",
+          "role": "{{role}}",
+          "name": "{{name}}",
+          "external_id": "{{externalId}}",
+          "phone": "{{phone}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Update Contact",
+      "description": "Update an Intercom contact via PUT /contacts/{id}. id is required. Only the fields you pass are changed.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom contact id."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "lead"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "externalId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External id (maps to external_id)."
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/contacts/{{id}}",
+        "body": {
+          "email": "{{email}}",
+          "role": "{{role}}",
+          "name": "{{name}}",
+          "external_id": "{{externalId}}",
+          "phone": "{{phone}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "destructive",
+      "title": "Delete Contact",
+      "description": "Permanently delete an Intercom contact via DELETE /contacts/{id}. This cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom contact id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/contacts/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Company",
+      "description": "Create an Intercom company via POST /companies. companyId is the caller-defined company id (maps to company_id) and is required. Optional name, website, industry, plan.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Caller-defined company id (maps to company_id)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          },
+          "website": {
+            "type": "string",
+            "minLength": 1
+          },
+          "industry": {
+            "type": "string",
+            "minLength": 1
+          },
+          "plan": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/companies",
+        "body": {
+          "company_id": "{{companyId}}",
+          "name": "{{name}}",
+          "website": "{{website}}",
+          "industry": "{{industry}}",
+          "plan": "{{plan}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Company",
+      "description": "Retrieve a single Intercom company by id via GET /companies/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom company id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companies/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.list": {
+      "kind": "action",
+      "timeoutMs": 20000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Tickets",
+      "description": "Search Intercom tickets via POST /tickets/search (Intercom has no unfiltered GET /tickets list). Pass an Intercom Search query object; optional perPage/startingAfter map to pagination.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "object",
+            "description": "Intercom Search query (single filter {field,operator,value} or AND/OR tree)."
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 150,
+            "description": "Results per page (maps to pagination.per_page)."
+          },
+          "startingAfter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor (maps to pagination.starting_after)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets/search",
+        "body": {
+          "query": "{{query}}",
+          "pagination": {
+            "per_page": "{{perPage}}",
+            "starting_after": "{{startingAfter}}"
+          }
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Ticket",
+      "description": "Create an Intercom ticket via POST /tickets. ticketTypeId and contacts are required. Optional ticketAttributes is the Intercom ticket_attributes object (e.g. _default_title_, _default_description_).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "ticketTypeId",
+          "contacts"
+        ],
+        "properties": {
+          "ticketTypeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticket type id (maps to ticket_type_id)."
+          },
+          "contacts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object"
+            },
+            "description": "Contacts to attach, each typically {id} or {email}."
+          },
+          "ticketAttributes": {
+            "type": "object",
+            "description": "Ticket attributes object (maps to ticket_attributes)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets",
+        "body": {
+          "ticket_type_id": "{{ticketTypeId}}",
+          "contacts": "{{contacts}}",
+          "ticket_attributes": "{{ticketAttributes}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.reply": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Reply to Ticket",
+      "description": "Reply to an Intercom ticket via POST /tickets/{id}/reply as an admin (comment or note).",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "messageType",
+          "type",
+          "adminId",
+          "body"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom ticket id."
+          },
+          "messageType": {
+            "type": "string",
+            "enum": [
+              "comment",
+              "note"
+            ],
+            "description": "comment posts to the customer; note is internal."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "admin"
+            ],
+            "description": "Reply author type (admin)."
+          },
+          "adminId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Admin id authoring the reply."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Reply or note body."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets/{{id}}/reply",
+        "body": {
+          "message_type": "{{messageType}}",
+          "type": "{{type}}",
+          "admin_id": "{{adminId}}",
+          "body": "{{body}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Tags",
+      "description": "List Intercom tags via GET /tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tags.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Create Tag",
+      "description": "Create an Intercom tag via POST /tags. name is required. If a tag with that name exists, Intercom returns the existing tag.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag name."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tags",
+        "body": {
+          "name": "{{name}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contacts.tag": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "write",
+      "title": "Tag Contact",
+      "description": "Attach a tag to an Intercom contact via POST /contacts/{id}/tags. Body id is the tag id.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id",
+          "tagId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact id (path)."
+          },
+          "tagId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tag id (maps to body id)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/contacts/{{id}}/tags",
+        "body": {
+          "id": "{{tagId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "admins.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Admin",
+      "description": "Retrieve a single Intercom administrator by id via GET /admins/{id}.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intercom admin id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/admins/{{id}}",
         "success": [
           200
         ]

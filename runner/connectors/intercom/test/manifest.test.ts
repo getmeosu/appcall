@@ -6,8 +6,8 @@ describe("Intercom manifest", () => {
     expect(manifest.key).toBe("intercom");
   });
 
-  it("has version 0.3.0", () => {
-    expect(manifest.version).toBe("0.3.0");
+  it("has version 0.4.0", () => {
+    expect(manifest.version).toBe("0.4.0");
   });
 
   it("uses bun runtime", () => {
@@ -42,10 +42,17 @@ describe("Intercom manifest", () => {
 
   it("declares deepen ops (close/assign/tag/reply + get/search) plus lists", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
+      "admins.get",
       "admins.list",
+      "companies.create",
+      "companies.get",
       "companies.list",
+      "contacts.create",
+      "contacts.delete",
       "contacts.get",
       "contacts.list",
+      "contacts.tag",
+      "contacts.update",
       "conversations.assign",
       "conversations.close",
       "conversations.get",
@@ -54,6 +61,11 @@ describe("Intercom manifest", () => {
       "conversations.search",
       "conversations.tag",
       "healthcheck",
+      "tags.create",
+      "tags.list",
+      "tickets.create",
+      "tickets.list",
+      "tickets.reply",
     ]);
     expect(manifest.operations["conversations.list"].sideEffect).toBe("read");
     expect(manifest.operations["conversations.get"].sideEffect).toBe("read");
@@ -117,7 +129,44 @@ describe("Intercom manifest", () => {
     }
   });
 
-  it("declares administrator/contact/company/conversation models", () => {
-    expect(manifest.models).toEqual(["administrator", "contact", "company", "conversation"]);
+  it("declares administrator/contact/company/conversation/ticket/tag models", () => {
+    expect(manifest.models).toEqual(["administrator", "contact", "company", "conversation", "ticket", "tag"]);
   });
+
+  it("declares contact/company/ticket/tag write and read ops with tool schemas", () => {
+    const ops = manifest.operations as Record<string, Record<string, unknown>>;
+    expect(ops["contacts.create"].sideEffect).toBe("write");
+    expect(ops["contacts.update"].sideEffect).toBe("write");
+    expect(ops["contacts.delete"].sideEffect).toBe("destructive");
+    expect(ops["contacts.delete"].request).toMatchObject({ method: "DELETE", path: "/contacts/{{id}}" });
+    expect(ops["companies.create"].request).toMatchObject({ method: "POST", path: "/companies" });
+    expect(ops["companies.get"].request).toMatchObject({ method: "GET", path: "/companies/{{id}}" });
+    expect(ops["tickets.list"].request).toMatchObject({ method: "POST", path: "/tickets/search" });
+    expect(ops["tickets.create"].request).toMatchObject({ method: "POST", path: "/tickets" });
+    expect(ops["tickets.reply"].request).toMatchObject({ method: "POST", path: "/tickets/{{id}}/reply" });
+    expect(ops["tags.list"].request).toMatchObject({ method: "GET", path: "/tags" });
+    expect(ops["tags.create"].request).toMatchObject({ method: "POST", path: "/tags" });
+    expect(ops["contacts.tag"].request).toMatchObject({ method: "POST", path: "/contacts/{{id}}/tags" });
+    expect(ops["admins.get"].request).toMatchObject({ method: "GET", path: "/admins/{{id}}" });
+    for (const key of [
+      "contacts.create",
+      "contacts.update",
+      "contacts.delete",
+      "companies.create",
+      "companies.get",
+      "tickets.list",
+      "tickets.create",
+      "tickets.reply",
+      "tags.list",
+      "tags.create",
+      "contacts.tag",
+      "admins.get",
+    ]) {
+      expect(String(ops[key].title ?? "").length).toBeGreaterThan(0);
+      expect(String(ops[key].description ?? "").length).toBeGreaterThan(0);
+      expect((ops[key].inputSchema as { type?: string }).type).toBe("object");
+      expect(ops[key].outputSchema).toBeDefined();
+    }
+  });
+
 });

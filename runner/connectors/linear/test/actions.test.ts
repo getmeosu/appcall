@@ -7,16 +7,30 @@ import issueUpdateFixture from "../fixtures/issue_update.json";
 import issueFixture from "../fixtures/issue.json";
 import issuesFixture from "../fixtures/issues.json";
 import commentCreateFixture from "../fixtures/comment_create.json";
+import commentsFixture from "../fixtures/comments.json";
+import commentUpdateFixture from "../fixtures/comment_update.json";
 import teamsFixture from "../fixtures/teams.json";
+import teamFixture from "../fixtures/team.json";
 import workflowStatesFixture from "../fixtures/workflow_states.json";
 import projectsFixture from "../fixtures/projects.json";
 import projectFixture from "../fixtures/project.json";
+import projectCreateFixture from "../fixtures/project_create.json";
+import projectUpdateFixture from "../fixtures/project_update.json";
 import usersFixture from "../fixtures/users.json";
+import userFixture from "../fixtures/user.json";
 import organizationFixture from "../fixtures/organization.json";
+import issueArchiveFixture from "../fixtures/issue_archive.json";
+import labelsFixture from "../fixtures/labels.json";
+import labelCreateFixture from "../fixtures/label_create.json";
+import cyclesFixture from "../fixtures/cycles.json";
+import attachmentCreateFixture from "../fixtures/attachment_create.json";
 import errorGraphqlFixture from "../fixtures/error_graphql.json";
 import errorRateLimitedFixture from "../fixtures/error_rate_limited.json";
 
 const { actions } = compileDeclarativeConnector(manifest as never);
+const actionKeys = Object.entries(manifest.operations)
+  .filter(([, operation]) => operation.kind === "action")
+  .map(([key]) => key);
 
 type Call = { url: string; init?: RequestInit };
 
@@ -37,8 +51,20 @@ function bodyOf(call: Call): Record<string, unknown> {
 }
 
 describe("linear connector surface", () => {
-  it("compiles one handler per declared operation", () => {
-    expect(Object.keys(actions).sort()).toEqual(Object.keys(manifest.operations).sort());
+  it("compiles one handler per declared action; webhook ops stay manifest-only", () => {
+    expect(Object.keys(actions).sort()).toEqual(actionKeys.sort());
+    const webhooks = Object.entries(manifest.operations)
+      .filter(([, operation]) => operation.kind === "webhook")
+      .map(([key]) => key)
+      .sort();
+    expect(webhooks).toEqual([
+      "webhook.Comment.create",
+      "webhook.Issue.create",
+      "webhook.Issue.update",
+    ]);
+    for (const key of webhooks) {
+      expect(actions[key]).toBeUndefined();
+    }
   });
 });
 
@@ -234,6 +260,28 @@ describe("issues.search", () => {
   });
 });
 
+describe("issues.archive", () => {
+  it("requires id", () => {
+    expect(() => actions["issues.archive"]!({ apiKey: "k" })).toThrow("id is required");
+  });
+
+  it("is classified as a destructive GraphQL mutation", () => {
+    expect(manifest.operations["issues.archive"]!.sideEffect).toBe("destructive");
+  });
+
+  it("sends issueArchive and reports success", async () => {
+    const { calls, fetchFn } = mockJson(issueArchiveFixture);
+    const result = await actions["issues.archive"]!({
+      apiKey: "k", id: "ENG-123", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("mutation IssueArchive");
+    expect(String(sent.query)).toContain("issueArchive(id: $id");
+    expect((sent.variables as Record<string, unknown>).id).toBe("ENG-123");
+    expect(result.success).toBe(true);
+  });
+});
+
 describe("comments.create", () => {
   it("requires issueId and body", () => {
     expect(() => actions["comments.create"]!({ apiKey: "k", body: "hi" })).toThrow("issueId is required");
@@ -256,6 +304,47 @@ describe("comments.create", () => {
     const comment = result.comment as Record<string, unknown>;
     expect(comment.id).toBe("a1b2c3d4-0008-4a11-8b11-000000000008");
     expect(comment.url).toContain("comment-a1b2c3d4");
+  });
+});
+
+describe("comments.list", () => {
+  it("requires id (the issue)", () => {
+    expect(() => actions["comments.list"]!({ apiKey: "k" })).toThrow("id is required");
+  });
+
+  it("lists comments on an issue with a relay cursor", async () => {
+    const { calls, fetchFn } = mockJson(commentsFixture);
+    const result = await actions["comments.list"]!({
+      apiKey: "k", id: "ENG-123", first: 25, fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("issue(id: $id)");
+    expect(String(sent.query)).toContain("comments(first: $first, after: $after)");
+    expect((sent.variables as Record<string, unknown>).id).toBe("ENG-123");
+    expect(result.comments).toEqual(commentsFixture.data.issue.comments.nodes);
+    expect(result.nextCursor).toBe("cursor-comments-end");
+    expect(result.hasNextPage).toBe(false);
+  });
+});
+
+describe("comments.update", () => {
+  it("requires id and body", () => {
+    expect(() => actions["comments.update"]!({ apiKey: "k", body: "x" })).toThrow("id is required");
+    expect(() => actions["comments.update"]!({ apiKey: "k", id: "comment-uuid" })).toThrow("body is required");
+  });
+
+  it("sends commentUpdate with the new body", async () => {
+    const { calls, fetchFn } = mockJson(commentUpdateFixture);
+    const result = await actions["comments.update"]!({
+      apiKey: "k", id: "a1b2c3d4-0008-4a11-8b11-000000000008", body: "Confirmed on production.", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("mutation CommentUpdate");
+    expect((sent.variables as Record<string, unknown>).id).toBe("a1b2c3d4-0008-4a11-8b11-000000000008");
+    const input = (sent.variables as Record<string, unknown>).input as Record<string, unknown>;
+    expect(input.body).toBe("Confirmed on production.");
+    const comment = result.comment as Record<string, unknown>;
+    expect(comment.body).toBe("Confirmed on production.");
   });
 });
 
@@ -304,12 +393,152 @@ describe("projects.list and projects.get", () => {
   });
 });
 
+describe("projects.create", () => {
+  it("requires name and teamIds", () => {
+    expect(() => actions["projects.create"]!({ apiKey: "k", teamIds: ["team-uuid"] })).toThrow("name is required");
+    expect(() => actions["projects.create"]!({ apiKey: "k", name: "Q3 Platform Migration" })).toThrow("teamIds is required");
+  });
+
+  it("sends projectCreate nested under variables.input", async () => {
+    const { calls, fetchFn } = mockJson(projectCreateFixture);
+    const result = await actions["projects.create"]!({
+      apiKey: "k",
+      name: "Q3 Platform Migration",
+      teamIds: ["a1b2c3d4-0005-4a11-8b11-000000000005"],
+      fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("mutation ProjectCreate");
+    const input = (sent.variables as Record<string, unknown>).input as Record<string, unknown>;
+    expect(input.name).toBe("Q3 Platform Migration");
+    expect(input.teamIds).toEqual(["a1b2c3d4-0005-4a11-8b11-000000000005"]);
+    expect(result.success).toBe(true);
+    const project = result.project as Record<string, unknown>;
+    expect(project.id).toBe("a1b2c3d4-000b-4a11-8b11-00000000000b");
+  });
+});
+
+describe("projects.update", () => {
+  it("requires id", () => {
+    expect(() => actions["projects.update"]!({ apiKey: "k", name: "x" })).toThrow("id is required");
+  });
+
+  it("sends only the fields provided", async () => {
+    const { calls, fetchFn } = mockJson(projectUpdateFixture);
+    const result = await actions["projects.update"]!({
+      apiKey: "k", id: "project-uuid", statusId: "status-uuid", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("mutation ProjectUpdate");
+    expect((sent.variables as Record<string, unknown>).id).toBe("project-uuid");
+    const input = (sent.variables as Record<string, unknown>).input as Record<string, unknown>;
+    expect(input.statusId).toBe("status-uuid");
+    expect(input.name).toBeUndefined();
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("teams.get", () => {
+  it("requires id", () => {
+    expect(() => actions["teams.get"]!({ apiKey: "k" })).toThrow("id is required");
+  });
+
+  it("fetches a single team", async () => {
+    const { fetchFn } = mockJson(teamFixture);
+    const result = await actions["teams.get"]!({ apiKey: "k", id: "team-uuid", fetch: fetchFn }) as Record<string, unknown>;
+    expect(result.team).toEqual(teamFixture.data.team);
+  });
+});
+
+describe("labels.list and labels.create", () => {
+  it("lists issue labels with a relay cursor", async () => {
+    const { fetchFn } = mockJson(labelsFixture);
+    const result = await actions["labels.list"]!({ apiKey: "k", fetch: fetchFn }) as Record<string, unknown>;
+    expect(result.labels).toEqual(labelsFixture.data.issueLabels.nodes);
+    expect(result.nextCursor).toBe("cursor-labels-end");
+    expect(result.hasNextPage).toBe(false);
+  });
+
+  it("requires name on labels.create", () => {
+    expect(() => actions["labels.create"]!({ apiKey: "k" })).toThrow("name is required");
+  });
+
+  it("sends issueLabelCreate", async () => {
+    const { calls, fetchFn } = mockJson(labelCreateFixture);
+    const result = await actions["labels.create"]!({
+      apiKey: "k", name: "bug", color: "#eb5757", teamId: "team-uuid", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("mutation IssueLabelCreate");
+    const input = (sent.variables as Record<string, unknown>).input as Record<string, unknown>;
+    expect(input.name).toBe("bug");
+    expect(input.color).toBe("#eb5757");
+    expect(input.teamId).toBe("team-uuid");
+    const label = result.label as Record<string, unknown>;
+    expect(label.id).toBe("a1b2c3d4-000d-4a11-8b11-00000000000d");
+  });
+});
+
+describe("cycles.list", () => {
+  it("lists cycles with a relay cursor", async () => {
+    const { calls, fetchFn } = mockJson(cyclesFixture);
+    const result = await actions["cycles.list"]!({
+      apiKey: "k", filter: { team: { id: { eq: "team-uuid" } } }, fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("cycles(filter: $filter, first: $first, after: $after)");
+    expect((sent.variables as Record<string, unknown>).filter).toEqual({ team: { id: { eq: "team-uuid" } } });
+    expect(result.cycles).toEqual(cyclesFixture.data.cycles.nodes);
+    expect(result.nextCursor).toBe("cursor-cycles-end");
+  });
+});
+
 describe("users.list", () => {
   it("lists users with a relay cursor, to resolve assigneeId", async () => {
     const { fetchFn } = mockJson(usersFixture);
     const result = await actions["users.list"]!({ apiKey: "k", fetch: fetchFn }) as Record<string, unknown>;
     expect(result.users).toEqual(usersFixture.data.users.nodes);
     expect(result.hasNextPage).toBe(false);
+  });
+});
+
+describe("users.get", () => {
+  it("requires id", () => {
+    expect(() => actions["users.get"]!({ apiKey: "k" })).toThrow("id is required");
+  });
+
+  it("fetches a single user", async () => {
+    const { fetchFn } = mockJson(userFixture);
+    const result = await actions["users.get"]!({ apiKey: "k", id: "user-uuid", fetch: fetchFn }) as Record<string, unknown>;
+    expect(result.user).toEqual(userFixture.data.user);
+  });
+});
+
+describe("attachments.create", () => {
+  it("requires issueId and url — URL attachments, not file uploads", () => {
+    expect(() => actions["attachments.create"]!({ apiKey: "k", url: "https://example.com" })).toThrow("issueId is required");
+    expect(() => actions["attachments.create"]!({ apiKey: "k", issueId: "ENG-123" })).toThrow("url is required");
+  });
+
+  it("sends attachmentCreate without touching uploads.linear.app", async () => {
+    const { calls, fetchFn } = mockJson(attachmentCreateFixture);
+    const result = await actions["attachments.create"]!({
+      apiKey: "k",
+      issueId: "ENG-123",
+      url: "https://github.com/example/app/pull/482",
+      title: "PR #482",
+      fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const sent = bodyOf(calls[0]!);
+    expect(String(sent.query)).toContain("mutation AttachmentCreate");
+    const input = (sent.variables as Record<string, unknown>).input as Record<string, unknown>;
+    expect(input.issueId).toBe("ENG-123");
+    expect(input.url).toBe("https://github.com/example/app/pull/482");
+    expect(input.title).toBe("PR #482");
+    const url = new URL(calls[0]!.url);
+    expect(url.hostname).toBe("api.linear.app");
+    const attachment = result.attachment as Record<string, unknown>;
+    expect(attachment.id).toBe("a1b2c3d4-0010-4a11-8b11-000000000010");
   });
 });
 

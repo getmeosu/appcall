@@ -15,8 +15,16 @@ import workspacesFixture from "../fixtures/workspaces.json";
 import emptyResponseFixture from "../fixtures/empty_response.json";
 import unauthorizedFixture from "../fixtures/error_unauthorized.json";
 import rateLimitedFixture from "../fixtures/error_rate_limited.json";
+import tasksSearchFixture from "../fixtures/tasks_search.json";
+import usersFixture from "../fixtures/users.json";
+import tagFixture from "../fixtures/tag.json";
+import tagsFixture from "../fixtures/tags.json";
+import attachmentFixture from "../fixtures/attachment.json";
 
 const { actions } = compileDeclarativeConnector(manifest as never);
+const actionKeys = Object.entries(manifest.operations)
+  .filter(([, operation]) => operation.kind === "action")
+  .map(([key]) => key);
 
 type Call = { url: string; init?: RequestInit };
 
@@ -41,8 +49,16 @@ function sentBody(call: Call): unknown {
 }
 
 describe("asana connector surface", () => {
-  it("compiles one handler per declared operation", () => {
-    expect(Object.keys(actions).sort()).toEqual(Object.keys(manifest.operations).sort());
+  it("compiles one handler per declared action; webhook ops stay manifest-only", () => {
+    expect(Object.keys(actions).sort()).toEqual(actionKeys.sort());
+    const webhooks = Object.entries(manifest.operations)
+      .filter(([, operation]) => operation.kind === "webhook")
+      .map(([key]) => key)
+      .sort();
+    expect(webhooks).toEqual(["webhook.story.added", "webhook.task.added", "webhook.task.changed"]);
+    for (const key of webhooks) {
+      expect(actions[key]).toBeUndefined();
+    }
   });
 });
 
@@ -260,6 +276,90 @@ describe("tasks.listSubtasks", () => {
   });
 });
 
+describe("tasks.delete", () => {
+  it("requires the task gid", () => {
+    expect(() => actions["tasks.delete"]!({ apiToken: "tok" })).toThrow("taskGid is required");
+  });
+
+  it("is classified as destructive", () => {
+    expect(manifest.operations["tasks.delete"]!.sideEffect).toBe("destructive");
+  });
+
+  it("DELETEs the task and echoes the gid, since Asana's body is empty", async () => {
+    const { calls, fetchFn } = mock(emptyResponseFixture);
+    const result = await actions["tasks.delete"]!({
+      apiToken: "tok", taskGid: "1201933996468858", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://app.asana.com/api/1.0/tasks/1201933996468858");
+    expect(calls[0]!.init?.method).toBe("DELETE");
+    expect(result).toEqual({
+      connector: "asana",
+      action: "tasks.delete",
+      source: "provider",
+      deleted: true,
+      taskGid: "1201933996468858",
+    });
+  });
+});
+
+describe("tasks.search", () => {
+  it("requires workspace", () => {
+    expect(() => actions["tasks.search"]!({ apiToken: "tok", text: "launch" })).toThrow("workspace is required");
+  });
+
+  it("GETs the workspace search path with text and completed mapped to query params", async () => {
+    const { calls, fetchFn } = mock(tasksSearchFixture);
+    const result = await actions["tasks.search"]!({
+      apiToken: "tok",
+      workspace: "1201933996468857",
+      text: "launch",
+      completed: false,
+      assignee: "me",
+      fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/api/1.0/workspaces/1201933996468857/tasks/search");
+    expect(url.searchParams.get("text")).toBe("launch");
+    expect(url.searchParams.get("completed")).toBe("false");
+    expect(url.searchParams.get("assignee.any")).toBe("me");
+    expect(result.tasks).toEqual(tasksSearchFixture.data);
+  });
+});
+
+describe("tasks.addProject and tasks.removeProject", () => {
+  it("addProject requires taskGid and project", () => {
+    expect(() => actions["tasks.addProject"]!({ apiToken: "tok", project: "p" })).toThrow("taskGid is required");
+    expect(() => actions["tasks.addProject"]!({ apiToken: "tok", taskGid: "t" })).toThrow("project is required");
+  });
+
+  it("addProject posts the data envelope and echoes the gids from the empty response", async () => {
+    const { calls, fetchFn } = mock(emptyResponseFixture);
+    const result = await actions["tasks.addProject"]!({
+      apiToken: "tok", taskGid: "1201933996468858", project: "1201933996468800", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://app.asana.com/api/1.0/tasks/1201933996468858/addProject");
+    expect(sentBody(calls[0]!)).toEqual({ data: { project: "1201933996468800" } });
+    expect(result).toEqual({
+      connector: "asana",
+      action: "tasks.addProject",
+      source: "provider",
+      added: true,
+      taskGid: "1201933996468858",
+      projectGid: "1201933996468800",
+    });
+  });
+
+  it("removeProject requires taskGid and project and posts to removeProject", async () => {
+    const { calls, fetchFn } = mock(emptyResponseFixture);
+    const result = await actions["tasks.removeProject"]!({
+      apiToken: "tok", taskGid: "1201933996468858", project: "1201933996468800", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://app.asana.com/api/1.0/tasks/1201933996468858/removeProject");
+    expect(sentBody(calls[0]!)).toEqual({ data: { project: "1201933996468800" } });
+    expect(result.removed).toBe(true);
+  });
+});
+
 describe("projects", () => {
   it("projects.list reads the project collection scoped to a workspace", async () => {
     const { calls, fetchFn } = mock(projectsFixture);
@@ -378,6 +478,107 @@ describe("workspaces.list", () => {
     const result = await actions["workspaces.list"]!({ apiToken: "tok", limit: 50, fetch: fetchFn }) as Record<string, unknown>;
     expect(new URL(calls[0]!.url).pathname).toBe("/api/1.0/workspaces");
     expect(result.workspaces).toEqual(workspacesFixture.data);
+  });
+});
+
+describe("stories.get", () => {
+  it("requires storyGid", () => {
+    expect(() => actions["stories.get"]!({ apiToken: "tok" })).toThrow("storyGid is required");
+  });
+
+  it("reads a single story by gid", async () => {
+    const { calls, fetchFn } = mock(storyFixture);
+    const result = await actions["stories.get"]!({
+      apiToken: "tok", storyGid: "1201933996469000", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://app.asana.com/api/1.0/stories/1201933996469000");
+    expect(result.story).toEqual(storyFixture.data);
+  });
+});
+
+describe("users.me and users.list", () => {
+  it("users.me returns the authenticated user object", async () => {
+    const { calls, fetchFn } = mock(userMeFixture);
+    const result = await actions["users.me"]!({ apiToken: "tok", fetch: fetchFn }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://app.asana.com/api/1.0/users/me");
+    expect(result.user).toEqual(userMeFixture.data);
+  });
+
+  it("users.list requires workspace and limit", () => {
+    expect(() => actions["users.list"]!({ apiToken: "tok", limit: 50 })).toThrow("workspace is required");
+    expect(() => actions["users.list"]!({ apiToken: "tok", workspace: "w" })).toThrow("limit is required");
+  });
+
+  it("users.list pages through workspace members", async () => {
+    const { calls, fetchFn } = mock(usersFixture);
+    const result = await actions["users.list"]!({
+      apiToken: "tok", workspace: "1201933996468857", limit: 50, fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/api/1.0/users");
+    expect(url.searchParams.get("workspace")).toBe("1201933996468857");
+    expect(url.searchParams.get("limit")).toBe("50");
+    expect(result.users).toEqual(usersFixture.data);
+    expect(result.nextOffset).toBe(usersFixture.next_page.offset);
+  });
+});
+
+describe("tags.create and tags.list", () => {
+  it("tags.create requires name and workspace", () => {
+    expect(() => actions["tags.create"]!({ apiToken: "tok", workspace: "w" })).toThrow("name is required");
+    expect(() => actions["tags.create"]!({ apiToken: "tok", name: "launch" })).toThrow("workspace is required");
+  });
+
+  it("tags.create posts the data envelope", async () => {
+    const { calls, fetchFn } = mock(tagFixture, 201);
+    const result = await actions["tags.create"]!({
+      apiToken: "tok", name: "launch", workspace: "1201933996468857", fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://app.asana.com/api/1.0/tags");
+    expect(sentBody(calls[0]!)).toEqual({
+      data: { name: "launch", workspace: "1201933996468857" },
+    });
+    expect(result.tag).toEqual(tagFixture.data);
+  });
+
+  it("tags.list requires workspace and limit", async () => {
+    const { calls, fetchFn } = mock(tagsFixture);
+    const result = await actions["tags.list"]!({
+      apiToken: "tok", workspace: "1201933996468857", limit: 50, fetch: fetchFn,
+    }) as Record<string, unknown>;
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/api/1.0/tags");
+    expect(url.searchParams.get("workspace")).toBe("1201933996468857");
+    expect(result.tags).toEqual(tagsFixture.data);
+    expect(result.nextOffset).toBe(tagsFixture.next_page.offset);
+  });
+});
+
+describe("attachments.create", () => {
+  it("requires taskGid and url — URL attachments, not multipart file uploads", () => {
+    expect(() => actions["attachments.create"]!({ apiToken: "tok", url: "https://example.com" })).toThrow("taskGid is required");
+    expect(() => actions["attachments.create"]!({ apiToken: "tok", taskGid: "t" })).toThrow("url is required");
+  });
+
+  it("posts an external URL attachment in the data envelope", async () => {
+    const { calls, fetchFn } = mock(attachmentFixture, 200);
+    const result = await actions["attachments.create"]!({
+      apiToken: "tok",
+      taskGid: "1201933996468858",
+      url: "https://github.com/example/app/pull/482",
+      name: "PR #482",
+      fetch: fetchFn,
+    }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://app.asana.com/api/1.0/attachments");
+    expect(sentBody(calls[0]!)).toEqual({
+      data: {
+        parent: "1201933996468858",
+        url: "https://github.com/example/app/pull/482",
+        name: "PR #482",
+        resource_subtype: "external",
+      },
+    });
+    expect(result.attachment).toEqual(attachmentFixture.data);
   });
 });
 
