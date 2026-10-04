@@ -1,7 +1,7 @@
 {
   "key": "airbrake",
   "name": "Airbrake",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -28,7 +28,11 @@
     ]
   },
   "models": [
-    "project"
+    "project",
+    "group",
+    "notice",
+    "deploy",
+    "activity"
   ],
   "http": {
     "baseUrl": "https://api.airbrake.io",
@@ -74,19 +78,19 @@
         },
         "additionalProperties": false
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/api/v4/projects",
-        "query": {
-          "key": "{{apiKey}}"
-        },
         "success": [
           200
-        ]
-      }
+        ],
+        "query": {
+          "key": "{{apiKey}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "projects.list": {
       "kind": "action",
@@ -95,9 +99,22 @@
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
       "title": "projects.list",
-      "description": "Read Airbrake projects.",
+      "description": "List Airbrake projects.",
       "inputSchema": {
         "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Items per page."
+          }
+        },
         "additionalProperties": false
       },
       "outputSchema": {
@@ -112,19 +129,797 @@
         },
         "additionalProperties": false
       },
-      "enforceOutputSchema": true,
-      "validationMode": "strict-generated",
-      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/api/v4/projects",
+        "success": [
+          200
+        ],
         "query": {
-          "key": "{{apiKey}}"
+          "key": "{{apiKey}}",
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "projects.get",
+      "description": "Get one Airbrake project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          }
         },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/projects/{{projectId}}",
         "success": [
           200
         ]
-      }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "groups.list",
+      "description": "List error groups for an Airbrake project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Items per page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/projects/{{projectId}}/groups",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "groups.get",
+      "description": "Get one Airbrake error group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Error group id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/projects/{{projectId}}/groups/{{groupId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.mute": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "groups.mute",
+      "description": "Mute an Airbrake error group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Error group id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "muted": {
+            "type": "boolean"
+          },
+          "projectId": {
+            "type": "integer"
+          },
+          "groupId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "muted"
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v4/projects/{{projectId}}/groups/{{groupId}}/muted",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "muted": true,
+          "projectId": "{{input.projectId}}",
+          "groupId": "{{input.groupId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.unmute": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "groups.unmute",
+      "description": "Unmute an Airbrake error group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Error group id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "muted": {
+            "type": "boolean"
+          },
+          "projectId": {
+            "type": "integer"
+          },
+          "groupId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "muted"
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/api/v4/projects/{{projectId}}/groups/{{groupId}}/unmuted",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "muted": false,
+          "projectId": "{{input.projectId}}",
+          "groupId": "{{input.groupId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "groups.delete",
+      "description": "Permanently delete an Airbrake error group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Error group id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "deleted"
+        ]
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v4/projects/{{projectId}}/groups/{{groupId}}",
+        "success": [
+          204,
+          200
+        ],
+        "result": {
+          "deleted": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "groups.listAll": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "groups.listAll",
+      "description": "List error groups across all Airbrake projects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Items per page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/groups",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notices.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "notices.list",
+      "description": "List notices for an Airbrake error group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Error group id."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Items per page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/projects/{{projectId}}/groups/{{groupId}}/notices",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "notices.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "notices.get",
+      "description": "Get one Airbrake notice.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Error group id."
+          },
+          "noticeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Notice id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "groupId",
+          "noticeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/projects/{{projectId}}/groups/{{groupId}}/notices/{{noticeId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deploys.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "deploys.list",
+      "description": "List Airbrake deploys for a project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Items per page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/projects/{{projectId}}/deploys",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deploys.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "deploys.get",
+      "description": "Get one Airbrake deploy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "deployId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Deploy id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "deployId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/projects/{{projectId}}/deploys/{{deployId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "deploys.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "deploys.create",
+      "description": "Track an Airbrake deploy.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "environment": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Deploy environment."
+          },
+          "username": {
+            "type": "string",
+            "description": "Deployer username."
+          },
+          "email": {
+            "type": "string",
+            "description": "Deployer email."
+          },
+          "repository": {
+            "type": "string",
+            "description": "Repository URL."
+          },
+          "revision": {
+            "type": "string",
+            "description": "Revision SHA or tag."
+          },
+          "version": {
+            "type": "string",
+            "description": "Application version."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "environment"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v4/projects/{{projectId}}/deploys",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "environment": "{{environment}}",
+          "username": "{{username}}",
+          "email": "{{email}}",
+          "repository": "{{repository}}",
+          "revision": "{{revision}}",
+          "version": "{{version}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "activities.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "activities.list",
+      "description": "List Airbrake project activities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Airbrake project id."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Items per page."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "projectId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v4/projects/{{projectId}}/activities",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "limit": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.error": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Error",
+      "description": "Airbrake error notification webhook. Fires when a new error is received or a resolved group reoccurs."
+    },
+    "webhook.deploy": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Deploy",
+      "description": "Airbrake deploy webhook. Fires when a deploy is tracked for a project."
     }
   },
   "evidence": {
