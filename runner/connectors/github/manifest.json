@@ -1,7 +1,7 @@
 {
   "key": "github",
   "name": "GitHub",
-  "version": "0.43.0",
+  "version": "0.44.0",
   "runtime": "bun",
   "categories": [
     "dev-tools"
@@ -23154,6 +23154,227 @@
                 "type": "string"
               }
             }
+          }
+        }
+      }
+    },
+    "gists.comments.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "gists.comments.get",
+      "title": "Create a gist comment",
+      "description": "POST /gists/{gist_id}/comments. Creates a comment on a gist. EffectPolicy Reconcile observes via gists.comments.get. A 201 is the created comment. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gistId": {
+            "type": "string",
+            "description": "Gist id. A single path segment."
+          },
+          "body": {
+            "type": "string",
+            "description": "Markdown text of the comment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "gistId",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "gists.comments.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "gists.comments.get",
+      "title": "Update a gist comment",
+      "description": "PATCH /gists/{gist_id}/comments/{comment_id}. Updates a gist comment body. EffectPolicy Reconcile observes via gists.comments.get. A 200 is the updated comment. A 404 is CONNECTOR_UPSTREAM_ERROR.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gistId": {
+            "type": "string",
+            "description": "Gist id. A single path segment."
+          },
+          "commentId": {
+            "type": "number",
+            "description": "Gist comment id."
+          },
+          "body": {
+            "type": "string",
+            "description": "New markdown body."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "gistId",
+          "commentId",
+          "body"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "gists.comments.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "effectPolicy": "Idempotent",
+      "title": "Delete a gist comment",
+      "description": "DELETE /gists/{gist_id}/comments/{comment_id}. Deletes a gist comment. Destructive. EffectPolicy Idempotent. A 204 is deleted true. A 404 is CONNECTOR_UPSTREAM_ERROR, not a second success.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gistId": {
+            "type": "string",
+            "description": "Gist id. A single path segment."
+          },
+          "commentId": {
+            "type": "number",
+            "description": "Gist comment id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "gistId",
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "gistId": {
+            "type": "string"
+          },
+          "commentId": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "gists.fork": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "write",
+      "effectPolicy": "Reconcile",
+      "reconcile": "gists.get",
+      "title": "Fork a gist",
+      "description": "POST /gists/{gist_id}/forks. Forks a gist for the authenticated user. EffectPolicy Reconcile observes via gists.get. A 201 is the forked gist. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not GET /gists/{gist_id}/forks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gistId": {
+            "type": "string",
+            "description": "Gist id. A single path segment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "gistId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "gist": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "gists.star": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "write",
+      "effectPolicy": "Idempotent",
+      "title": "Star a gist",
+      "description": "PUT /gists/{gist_id}/star. Stars a gist. EffectPolicy Idempotent. Content-Length is 0. A 204 is starred true. A 404 is CONNECTOR_UPSTREAM_ERROR. This is not GET /gists/{gist_id}/star and not GET /gists/starred.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gistId": {
+            "type": "string",
+            "description": "Gist id. A single path segment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "gistId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "starred": {
+            "type": "boolean"
+          },
+          "gistId": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "gists.unstar": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "sideEffect": "destructive",
+      "effectPolicy": "Idempotent",
+      "title": "Unstar a gist",
+      "description": "DELETE /gists/{gist_id}/star. Unstars a gist. Destructive. EffectPolicy Idempotent: a 204 is starred false and a 404 is already unstarred (starred false), not CONNECTOR_UPSTREAM_ERROR. This is not GET /gists/{gist_id}/star.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gistId": {
+            "type": "string",
+            "description": "Gist id. A single path segment."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "gistId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "starred": {
+            "type": "boolean"
+          },
+          "gistId": {
+            "type": "string"
           }
         }
       }

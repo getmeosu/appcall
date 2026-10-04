@@ -463,6 +463,12 @@ import {
   getZen as ghGetZen,
   getLicense as ghGetLicense,
   getGitignoreTemplate as ghGetGitignoreTemplate,
+  createGistComment as ghCreateGistComment,
+  updateGistComment as ghUpdateGistComment,
+  deleteGistComment as ghDeleteGistComment,
+  forkGist as ghForkGist,
+  starGist as ghStarGist,
+  unstarGist as ghUnstarGist,
 } from "../../connectors/github/src/actions";
 import { healthcheck as githubHealthcheck } from "../../connectors/github/src/healthcheck";
 import { executeIssuesListSync as listGitHubIssues, executePullRequestsListSync as listGitHubPRs, executeCommitsListSync as listGitHubCommits, executeRepositoriesListSync as listGitHubRepos } from "../../connectors/github/src/sync";
@@ -1535,6 +1541,12 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "meta.zen.get": ghGetZen,
       "licenses.get": ghGetLicense,
       "gitignore.templates.get": ghGetGitignoreTemplate,
+      "gists.comments.create": ghCreateGistComment,
+      "gists.comments.update": ghUpdateGistComment,
+      "gists.comments.delete": ghDeleteGistComment,
+      "gists.fork": ghForkGist,
+      "gists.star": ghStarGist,
+      "gists.unstar": ghUnstarGist,
     },
     salesforce: {
       "contacts.create": createContact,
