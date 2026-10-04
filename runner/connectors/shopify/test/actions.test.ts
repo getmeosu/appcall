@@ -4,10 +4,15 @@ import productCreateFixture from "../fixtures/product_create.json";
 import orderGetFixture from "../fixtures/order_get.json";
 import customerGetFixture from "../fixtures/customer_get.json";
 import customerCreateFixture from "../fixtures/customer_create.json";
+import orderCreateFixture from "../fixtures/order_create.json";
+import variantUpdateFixture from "../fixtures/variant_update.json";
+import inventoryLevelSetFixture from "../fixtures/inventory_level_set.json";
+import customersSearchFixture from "../fixtures/customers_search.json";
 import {
-  getProduct, createProduct, updateProduct, deleteProduct,
-  getOrder, updateOrder, closeOrder, cancelOrder,
-  getCustomer, createCustomer, updateCustomer,
+  getProduct, createProduct, updateProduct, deleteProduct, updateProductVariant,
+  getOrder, createOrder, updateOrder, closeOrder, cancelOrder,
+  getCustomer, createCustomer, updateCustomer, searchCustomers,
+  setInventoryLevel,
 } from "../src/actions";
 
 const TOKEN = "shpat_test-token";
@@ -366,5 +371,165 @@ describe("customers.update", () => {
       accessToken: TOKEN, shopDomain: SHOP, customerId: 999,
       fetch: async () => new Response("{}", { status: 500 }),
     })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+// ─── orders.create ────────────────────────────────────────────────────────────
+
+describe("orders.create", () => {
+  test("validates input without credentials", () => {
+    const result = createOrder({ email: "buyer@example.com", lineItems: [{ variantId: 808950810, quantity: 1 }] });
+    expect(result).toMatchObject({ connector: "shopify", action: "orders.create", source: "connector" });
+    expect((result as Record<string, unknown>).validated).toMatchObject({ email: "buyer@example.com" });
+  });
+
+  test("posts new order to Shopify Admin API", async () => {
+    const requests: Request[] = [];
+    const result = await createOrder({
+      accessToken: TOKEN, shopDomain: SHOP, email: "buyer@example.com",
+      lineItems: [{ variantId: 808950810, quantity: 1 }],
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(orderCreateFixture), { status: 201 });
+      },
+    });
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].url).toContain("/orders.json");
+    const body = JSON.parse(await requests[0].text());
+    expect(body.order.email).toBe("buyer@example.com");
+    expect(body.order.line_items).toEqual([{ variant_id: 808950810, quantity: 1 }]);
+    expect(result).toMatchObject({ connector: "shopify", action: "orders.create", source: "connector" });
+    expect((result as Record<string, unknown>).order).toBeDefined();
+  });
+
+  test("throws when lineItems are missing", () => {
+    expect(() => createOrder({ accessToken: TOKEN, shopDomain: SHOP, email: "buyer@example.com" })).toThrow("lineItems is required");
+  });
+
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    await expect(createOrder({
+      accessToken: TOKEN, shopDomain: SHOP, lineItems: [{ variantId: 1, quantity: 1 }],
+      fetch: async () => new Response("{}", { status: 429, headers: { "Retry-After": "6" } }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 6 });
+  });
+});
+
+// ─── products.variants.update ─────────────────────────────────────────────────
+
+describe("products.variants.update", () => {
+  test("validates input without credentials", () => {
+    const result = updateProductVariant({ variantId: 808950810, price: "21.00" });
+    expect(result).toMatchObject({ connector: "shopify", action: "products.variants.update", source: "connector" });
+    expect((result as Record<string, unknown>).validated).toMatchObject({ variantId: 808950810, price: "21.00" });
+  });
+
+  test("puts updated variant to Shopify Admin API", async () => {
+    const requests: Request[] = [];
+    const result = await updateProductVariant({
+      accessToken: TOKEN, shopDomain: SHOP, variantId: 808950810, price: "21.00", sku: "TSHIRT-S",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(variantUpdateFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].method).toBe("PUT");
+    expect(requests[0].url).toContain("/variants/808950810.json");
+    const body = JSON.parse(await requests[0].text());
+    expect(body.variant).toEqual({ price: "21.00", sku: "TSHIRT-S" });
+    expect(result).toMatchObject({ connector: "shopify", action: "products.variants.update", source: "connector" });
+    expect((result as Record<string, unknown>).variant).toBeDefined();
+  });
+
+  test("throws when variantId is missing", () => {
+    expect(() => updateProductVariant({ accessToken: TOKEN, shopDomain: SHOP })).toThrow("variantId must be a number");
+  });
+
+  test("maps 404 to CONNECTOR_UPSTREAM_ERROR", async () => {
+    await expect(updateProductVariant({
+      accessToken: TOKEN, shopDomain: SHOP, variantId: 999,
+      fetch: async () => new Response("{}", { status: 404 }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_UPSTREAM_ERROR" });
+  });
+});
+
+// ─── inventory.levels.set ─────────────────────────────────────────────────────
+
+describe("inventory.levels.set", () => {
+  test("validates input without credentials", () => {
+    const result = setInventoryLevel({ inventoryItemId: 808950810, locationId: 905684977, available: 42 });
+    expect(result).toMatchObject({ connector: "shopify", action: "inventory.levels.set", source: "connector" });
+    expect((result as Record<string, unknown>).validated).toMatchObject({
+      inventoryItemId: 808950810, locationId: 905684977, available: 42,
+    });
+  });
+
+  test("posts to inventory_levels/set", async () => {
+    const requests: Request[] = [];
+    const result = await setInventoryLevel({
+      accessToken: TOKEN, shopDomain: SHOP, inventoryItemId: 808950810, locationId: 905684977, available: 42,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(inventoryLevelSetFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].method).toBe("POST");
+    expect(requests[0].url).toContain("/inventory_levels/set.json");
+    const body = JSON.parse(await requests[0].text());
+    expect(body).toEqual({ inventory_item_id: 808950810, location_id: 905684977, available: 42 });
+    expect(result).toMatchObject({ connector: "shopify", action: "inventory.levels.set", source: "connector" });
+    const level = (result as Record<string, unknown>).inventoryLevel as Record<string, unknown>;
+    expect(level.available).toBe(42);
+    expect(level.inventoryItemId).toBe(808950810);
+  });
+
+  test("throws when available is missing", () => {
+    expect(() => setInventoryLevel({
+      accessToken: TOKEN, shopDomain: SHOP, inventoryItemId: 1, locationId: 2,
+    })).toThrow("available must be a number");
+  });
+
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    await expect(setInventoryLevel({
+      accessToken: TOKEN, shopDomain: SHOP, inventoryItemId: 1, locationId: 2, available: 0,
+      fetch: async () => new Response("{}", { status: 429, headers: { "Retry-After": "8" } }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 8 });
+  });
+});
+
+// ─── customers.search ─────────────────────────────────────────────────────────
+
+describe("customers.search", () => {
+  test("validates input without credentials", () => {
+    const result = searchCustomers({ query: "email:customer@example.com" });
+    expect(result).toMatchObject({ connector: "shopify", action: "customers.search", source: "connector" });
+    expect((result as Record<string, unknown>).validated).toMatchObject({ query: "email:customer@example.com" });
+  });
+
+  test("GETs customers/search with query", async () => {
+    const requests: Request[] = [];
+    const result = await searchCustomers({
+      accessToken: TOKEN, shopDomain: SHOP, query: "email:customer@example.com",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify(customersSearchFixture), { status: 200 });
+      },
+    });
+    expect(requests[0].method).toBe("GET");
+    expect(requests[0].url).toContain("/customers/search.json");
+    expect(new URL(requests[0].url).searchParams.get("query")).toBe("email:customer@example.com");
+    expect(result).toMatchObject({ connector: "shopify", action: "customers.search", source: "connector" });
+    const customers = (result as Record<string, unknown>).customers as unknown[];
+    expect(customers).toHaveLength(1);
+  });
+
+  test("throws when query is missing", () => {
+    expect(() => searchCustomers({ accessToken: TOKEN, shopDomain: SHOP })).toThrow("query is required");
+  });
+
+  test("maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    await expect(searchCustomers({
+      accessToken: TOKEN, shopDomain: SHOP, query: "Jane",
+      fetch: async () => new Response("{}", { status: 429, headers: { "Retry-After": "3" } }),
+    })).rejects.toMatchObject({ ok: false, code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 3 });
   });
 });

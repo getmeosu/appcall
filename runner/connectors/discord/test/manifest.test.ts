@@ -20,6 +20,7 @@ const expectedKeys = [
   "roles.create", "roles.delete", "roles.list", "roles.update",
   "threads.addMember", "threads.create", "threads.createFromMessage", "threads.join", "threads.leave", "threads.listActive", "threads.listArchived",
   "users.get",
+  "webhook.channel_create", "webhook.guild_member_add", "webhook.message_create", "webhook.message_reaction_add",
 ];
 
 const destructive = ["bans.create", "bans.delete", "channels.delete", "events.delete", "invites.revoke", "members.kick", "messages.bulkDelete", "roles.delete"];
@@ -36,10 +37,14 @@ describe("discord manifest", () => {
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
     for (const [key, operation] of Object.entries(operations)) {
-      expect(operation.kind, key).toBe("action");
       expect(operation.timeoutMs as number).toBeGreaterThan(0);
       expect(operation.maxInputBytes as number).toBeGreaterThan(0);
       expect(operation.maxResponseBytes as number).toBeGreaterThan(0);
+      if (operation.kind === "webhook") {
+        expect(key.startsWith("webhook.")).toBe(true);
+        continue;
+      }
+      expect(operation.kind, key).toBe("action");
       expect(String(operation.title ?? "").length, key).toBeGreaterThan(0);
       expect(String(operation.description ?? "").length, key).toBeGreaterThan(0);
       expect((operation.inputSchema as Record<string, unknown>).type, key).toBe("object");
@@ -49,8 +54,20 @@ describe("discord manifest", () => {
     }
   });
 
+  it("declares Discord gateway webhook operations without request blocks", () => {
+    for (const key of ["webhook.message_create", "webhook.message_reaction_add", "webhook.guild_member_add", "webhook.channel_create"]) {
+      expect(operations[key].kind).toBe("webhook");
+      expect(operations[key].request).toBeUndefined();
+    }
+  });
+
+  it("bumps the connector version for the trigger expansion", () => {
+    expect(manifest.version).toBe("0.2.0");
+  });
+
   it("keeps every request inside discord.com", () => {
     for (const operation of Object.values(operations)) {
+      if (operation.kind === "webhook") continue;
       const request = operation.request as Record<string, unknown>;
       const baseUrl = String(request.baseUrl ?? manifest.http.baseUrl);
       expect(new URL(baseUrl).hostname).toBe("discord.com");
@@ -60,6 +77,7 @@ describe("discord manifest", () => {
 
   it("only interpolates path placeholders that the operation requires", () => {
     for (const [key, operation] of Object.entries(operations)) {
+      if (operation.kind === "webhook") continue;
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { required?: string[] };
       const placeholders = [...String(request.path ?? "").matchAll(/\{\{\s*([A-Za-z0-9_.$-]+)\s*\}\}/g)].map((m) => m[1]);
@@ -82,6 +100,7 @@ describe("discord manifest", () => {
   it("never makes a mutation with the bot token in a query string", () => {
     expect(manifest.http.auth.in).toBe("header");
     for (const operation of Object.values(operations)) {
+      if (operation.kind === "webhook") continue;
       const query = ((operation.request as Record<string, unknown>).query ?? {}) as Record<string, string>;
       expect(Object.values(query).join(" ")).not.toContain("botToken");
     }

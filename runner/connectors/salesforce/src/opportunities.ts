@@ -106,6 +106,34 @@ export function validateGetOpportunityInput(input: unknown): GetOpportunityInput
   return { id: requireString(input.id, "id") };
 }
 
+export type UpdateOpportunityInput = {
+  id: string;
+  name?: string;
+  closeDate?: string;
+  stage?: string;
+  amount?: number;
+  accountId?: string;
+};
+
+export function validateUpdateOpportunityInput(input: unknown): UpdateOpportunityInput {
+  if (!isRecord(input)) throw new Error("update opportunity input must be an object");
+  return {
+    id: requireString(input.id, "id"),
+    name: typeof input.name === "string" ? input.name : undefined,
+    closeDate: typeof input.closeDate === "string" ? input.closeDate : undefined,
+    stage: typeof input.stage === "string" ? input.stage : undefined,
+    amount: typeof input.amount === "number" ? input.amount : undefined,
+    accountId: typeof input.accountId === "string" ? input.accountId : undefined,
+  };
+}
+
+export type DeleteOpportunityInput = { id: string };
+
+export function validateDeleteOpportunityInput(input: unknown): DeleteOpportunityInput {
+  if (!isRecord(input)) throw new Error("delete opportunity input must be an object");
+  return { id: requireString(input.id, "id") };
+}
+
 function requireString(value: unknown, field: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${field} is required`);
   return value;

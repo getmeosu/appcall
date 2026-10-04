@@ -100,6 +100,13 @@ export type UpdateLeadInput = {
   leadSource?: string;
 };
 
+export type DeleteLeadInput = { id: string };
+
+export function validateDeleteLeadInput(input: unknown): DeleteLeadInput {
+  if (!isRecord(input)) throw new Error("delete lead input must be an object");
+  return { id: requireString(input.id, "id") };
+}
+
 export function validateUpdateLeadInput(input: unknown): UpdateLeadInput {
   if (!isRecord(input)) throw new Error("update lead input must be an object");
   return {

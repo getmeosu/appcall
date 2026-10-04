@@ -47,6 +47,15 @@ export function validateCreateCustomerInput(input: unknown): { accessToken?: str
 
 // ─── customers.update ─────────────────────────────────────────────────────────
 
+export function validateSearchCustomersInput(input: unknown): { accessToken?: string; shopDomain?: string; query: string } {
+  if (!isRecord(input)) throw new Error("search customers input must be an object");
+  return {
+    accessToken: typeof input.accessToken === "string" ? input.accessToken : undefined,
+    shopDomain: typeof input.shopDomain === "string" ? input.shopDomain : undefined,
+    query: requireString(input.query, "query"),
+  };
+}
+
 export function validateUpdateCustomerInput(input: unknown): { accessToken?: string; shopDomain?: string; customerId: number; email?: string; firstName?: string; lastName?: string; phone?: string; note?: string } {
   if (!isRecord(input)) throw new Error("update customer input must be an object");
   return {
@@ -88,6 +97,18 @@ export function createCustomersClient(options: { accessToken: string; shopDomain
         return { ok: true as const, customer: normalizeCustomer(response.body.customer as Record<string, unknown>) };
       }
       return mapError(response.status, response.headers, "Shopify rejected the create customer request.");
+    },
+
+    async search(input: unknown) {
+      const payload = validateSearchCustomersInput(input);
+      const response = await client.fetchJSON(`/customers/search.json?query=${encodeURIComponent(payload.query)}`);
+      if (response.status === 200 && isRecord(response.body) && Array.isArray(response.body.customers)) {
+        return {
+          ok: true as const,
+          customers: response.body.customers.filter(isRecord).map((c) => normalizeCustomer(c as Record<string, unknown>)),
+        };
+      }
+      return mapError(response.status, response.headers, "Shopify rejected the search customers request.");
     },
 
     async update(input: unknown) {

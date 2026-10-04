@@ -124,6 +124,14 @@ export function createSalesforceClient(options: SalesforceClientOptions) {
     async searchJSON(sosl: string): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
       return this.fetchJSON(`/services/data/${API_VERSION}/search?q=${encodeURIComponent(sosl)}`);
     },
+
+    async describeSobject(sobject: string): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
+      return this.fetchJSON(`/services/data/${API_VERSION}/sobjects/${encodeURIComponent(sobject)}/describe`);
+    },
+
+    async getCurrentUser(): Promise<{ status: number; headers: Record<string, string>; body: unknown }> {
+      return this.fetchJSON(`/services/data/${API_VERSION}/chatter/users/me`);
+    },
   };
 }
 

@@ -42,14 +42,29 @@ describe("salesforce connector manifest", () => {
     expect(manifest.operations["opportunities.get"].kind).toBe("action");
     expect(manifest.operations["sobjects.query"].kind).toBe("action");
     expect(manifest.operations["sobjects.search"].kind).toBe("action");
+    expect(manifest.operations["accounts.delete"].kind).toBe("action");
+    expect(manifest.operations["leads.delete"].kind).toBe("action");
+    expect(manifest.operations["opportunities.update"].kind).toBe("action");
+    expect(manifest.operations["opportunities.delete"].kind).toBe("action");
+    expect(manifest.operations["cases.get"].kind).toBe("action");
+    expect(manifest.operations["cases.update"].kind).toBe("action");
+    expect(manifest.operations["cases.delete"].kind).toBe("action");
+    expect(manifest.operations["sobjects.describe"].kind).toBe("action");
+    expect(manifest.operations["users.me"].kind).toBe("action");
+    expect(manifest.operations["webhook.contact.created"].kind).toBe("webhook");
+    expect(manifest.operations["webhook.opportunity.updated"].kind).toBe("webhook");
+    expect(manifest.operations["webhook.case.created"].kind).toBe("webhook");
   });
 
   test("all new action operations have non-empty title and description", () => {
     const newOps = [
-      "accounts.create", "accounts.get", "accounts.update",
+      "accounts.create", "accounts.get", "accounts.update", "accounts.delete",
       "contacts.get", "contacts.update", "contacts.delete",
-      "leads.update", "opportunities.get",
-      "sobjects.query", "sobjects.search",
+      "leads.update", "leads.delete",
+      "opportunities.get", "opportunities.update", "opportunities.delete",
+      "cases.get", "cases.update", "cases.delete",
+      "sobjects.query", "sobjects.search", "sobjects.describe",
+      "users.me",
     ];
     for (const key of newOps) {
       const op = manifest.operations[key as keyof typeof manifest.operations] as Record<string, unknown>;
@@ -58,6 +73,10 @@ describe("salesforce connector manifest", () => {
       expect(typeof op.description).toBe("string");
       expect((op.description as string).length).toBeGreaterThan(0);
     }
+  });
+
+  test("manifest version is 0.2.0", () => {
+    expect(manifest.version).toBe("0.2.0");
   });
 
   test("manifest declares CRM models", () => {

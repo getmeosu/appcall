@@ -1,7 +1,7 @@
 {
   "key": "shopify",
   "name": "Shopify",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["ecommerce"],
   "auth": {
@@ -12,7 +12,9 @@
       "read_orders",
       "write_orders",
       "read_customers",
-      "write_customers"
+      "write_customers",
+      "read_inventory",
+      "write_inventory"
     ],
     "setup": {
       "mode": "oauth2",
@@ -372,6 +374,154 @@
           "customer": { "type": "object", "description": "Normalized updated customer." }
         }
       }
+    },
+    "orders.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Create Order",
+      "description": "Create a new order in the Shopify store via the Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "email": { "type": "string", "description": "Customer email address." },
+          "note": { "type": "string", "description": "Internal order note." },
+          "financialStatus": { "type": "string", "description": "Financial status, e.g. pending, paid, or authorized." },
+          "lineItems": {
+            "type": "array",
+            "description": "Line items for the order. Each item needs quantity and either variantId or title.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "variantId": { "type": "number", "description": "Numeric Shopify variant ID." },
+                "title": { "type": "string", "description": "Custom line item title when no variant is set." },
+                "quantity": { "type": "number", "description": "Quantity to order." },
+                "price": { "type": "string", "description": "Unit price for custom line items." }
+              },
+              "required": ["quantity"]
+            }
+          }
+        },
+        "required": ["accessToken", "shopDomain", "lineItems"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "order": { "type": "object", "description": "Normalized created order." }
+        }
+      }
+    },
+    "products.variants.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Update Product Variant",
+      "description": "Update a Shopify product variant via the Admin REST API, including price, SKU, and barcode.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "variantId": { "type": "number", "description": "Numeric Shopify variant ID." },
+          "price": { "type": "string", "description": "Variant price." },
+          "sku": { "type": "string", "description": "Stock keeping unit." },
+          "title": { "type": "string", "description": "Variant title." },
+          "barcode": { "type": "string", "description": "Barcode or ISBN." },
+          "compareAtPrice": { "type": "string", "description": "Compare-at price." }
+        },
+        "required": ["accessToken", "shopDomain", "variantId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "variant": { "type": "object", "description": "Normalized updated variant." }
+        }
+      }
+    },
+    "inventory.levels.set": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Set Inventory Level",
+      "description": "Set the available inventory quantity for an inventory item at a location via the Shopify Admin REST API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "inventoryItemId": { "type": "number", "description": "Numeric Shopify inventory item ID." },
+          "locationId": { "type": "number", "description": "Numeric Shopify location ID." },
+          "available": { "type": "number", "description": "Available quantity to set at the location." }
+        },
+        "required": ["accessToken", "shopDomain", "inventoryItemId", "locationId", "available"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "inventoryLevel": { "type": "object", "description": "Updated inventory level." }
+        }
+      }
+    },
+    "customers.search": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 524288,
+      "title": "Search Customers",
+      "description": "Search Shopify customers using the Admin REST customers/search query syntax.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string", "description": "Shopify private app or OAuth access token." },
+          "shopDomain": { "type": "string", "description": "The myshopify.com subdomain." },
+          "query": { "type": "string", "description": "Shopify customer search query, e.g. email:buyer@example.com." }
+        },
+        "required": ["accessToken", "shopDomain", "query"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "customers": { "type": "array", "items": { "type": "object" }, "description": "Matching normalized customers." }
+        }
+      }
+    },
+    "webhook.orders.create": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880
+    },
+    "webhook.products.update": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880
+    },
+    "webhook.customers.create": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880
     }
   },
   "models": [

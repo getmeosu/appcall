@@ -17,6 +17,34 @@ function mapError(status: number, headers: Record<string, string>, fallback: str
 
 // ─── orders.get ───────────────────────────────────────────────────────────────
 
+export function validateCreateOrderInput(input: unknown): {
+  accessToken?: string;
+  shopDomain?: string;
+  email?: string;
+  note?: string;
+  financialStatus?: string;
+  lineItems: Array<{ variantId?: number; title?: string; quantity: number; price?: string }>;
+} {
+  if (!isRecord(input)) throw new Error("create order input must be an object");
+  if (!Array.isArray(input.lineItems) || input.lineItems.length === 0) throw new Error("lineItems is required");
+  return {
+    accessToken: typeof input.accessToken === "string" ? input.accessToken : undefined,
+    shopDomain: typeof input.shopDomain === "string" ? input.shopDomain : undefined,
+    email: typeof input.email === "string" ? input.email : undefined,
+    note: typeof input.note === "string" ? input.note : undefined,
+    financialStatus: typeof input.financialStatus === "string" ? input.financialStatus : undefined,
+    lineItems: input.lineItems.map((item, index) => {
+      if (!isRecord(item)) throw new Error(`lineItems[${index}] must be an object`);
+      return {
+        variantId: typeof item.variantId === "number" ? item.variantId : undefined,
+        title: typeof item.title === "string" ? item.title : undefined,
+        quantity: requireNumber(item.quantity, "quantity"),
+        price: typeof item.price === "string" ? item.price : undefined,
+      };
+    }),
+  };
+}
+
 export function validateGetOrderInput(input: unknown): { accessToken?: string; shopDomain?: string; orderId: number } {
   if (!isRecord(input)) throw new Error("get order input must be an object");
   return {
@@ -70,6 +98,27 @@ export function createOrdersClient(options: { accessToken: string; shopDomain: s
   const client = createShopifyClient({ accessToken: options.accessToken, shopDomain: options.shopDomain, fetch: options.fetch, operation: "orders.list" });
 
   return {
+    async create(input: unknown) {
+      const payload = validateCreateOrderInput(input);
+      const order: Record<string, unknown> = {
+        line_items: payload.lineItems.map((item) => {
+          const line: Record<string, unknown> = { quantity: item.quantity };
+          if (item.variantId !== undefined) line.variant_id = item.variantId;
+          if (item.title !== undefined) line.title = item.title;
+          if (item.price !== undefined) line.price = item.price;
+          return line;
+        }),
+      };
+      if (payload.email !== undefined) order.email = payload.email;
+      if (payload.note !== undefined) order.note = payload.note;
+      if (payload.financialStatus !== undefined) order.financial_status = payload.financialStatus;
+      const response = await client.fetchJSON("/orders.json", { method: "POST", body: JSON.stringify({ order }) });
+      if ((response.status === 201 || response.status === 200) && isRecord(response.body) && isRecord(response.body.order)) {
+        return { ok: true as const, order: normalizeOrder(response.body.order as Record<string, unknown>) };
+      }
+      return mapError(response.status, response.headers, "Shopify rejected the create order request.");
+    },
+
     async get(input: unknown) {
       const payload = validateGetOrderInput(input);
       const response = await client.fetchJSON(`/orders/${payload.orderId}.json`);

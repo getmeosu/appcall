@@ -1,10 +1,11 @@
 import { createSalesforceClient, parseSalesforceRateLimit, type SalesforceClient } from "./http";
 import { validateCreateContactInput, validateCreateLeadInput, normalizeContact, type SalesforceContact, validateGetContactInput, validateUpdateContactInput, validateDeleteContactInput } from "./contacts";
-import { normalizeLead, type SalesforceLead, validateUpdateLeadInput } from "./leads";
-import { validateCreateOpportunityInput, normalizeOpportunity, type SalesforceOpportunity, validateGetOpportunityInput } from "./opportunities";
-import { validateCreateCaseInput, normalizeCase, type SalesforceCase } from "./cases";
-import { normalizeAccount, type SalesforceAccount, validateCreateAccountInput, validateGetAccountInput, validateUpdateAccountInput } from "./accounts";
-import { validateQuerySobjectsInput, normalizeQueryResult, validateSearchSobjectsInput, normalizeSearchResult } from "./sobjects";
+import { normalizeLead, type SalesforceLead, validateUpdateLeadInput, validateDeleteLeadInput } from "./leads";
+import { validateCreateOpportunityInput, normalizeOpportunity, type SalesforceOpportunity, validateGetOpportunityInput, validateUpdateOpportunityInput, validateDeleteOpportunityInput } from "./opportunities";
+import { validateCreateCaseInput, normalizeCase, type SalesforceCase, validateGetCaseInput, validateUpdateCaseInput, validateDeleteCaseInput } from "./cases";
+import { normalizeAccount, type SalesforceAccount, validateCreateAccountInput, validateGetAccountInput, validateUpdateAccountInput, validateDeleteAccountInput } from "./accounts";
+import { validateQuerySobjectsInput, normalizeQueryResult, validateSearchSobjectsInput, normalizeSearchResult, validateDescribeSobjectInput, normalizeDescribeResult } from "./sobjects";
+import { normalizeUser, type SalesforceChatterUser, validateGetMeInput } from "./users";
 
 // ── existing actions ────────────────────────────────────────────────────────
 
@@ -343,6 +344,184 @@ export function searchSobjects(input: unknown): Record<string, unknown> | Promis
     });
   }
   return { connector: "salesforce", action: "sobjects.search", source: "connector", validated: validateSearchSobjectsInput(input) };
+}
+
+export function deleteAccount(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.instanceUrl === "string") {
+    const validated = validateDeleteAccountInput(input);
+    return createSalesforceClient({
+      accessToken: input.accessToken,
+      instanceUrl: input.instanceUrl,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      operation: "accounts.delete",
+    }).deleteRecord("Account", validated.id).then((result) => {
+      if (result.status === 204) {
+        return { connector: "salesforce", action: "accounts.delete", source: "connector", deleted: true, id: validated.id };
+      }
+      throw handleError(result);
+    });
+  }
+  return { connector: "salesforce", action: "accounts.delete", source: "connector", validated: validateDeleteAccountInput(input) };
+}
+
+export function deleteLead(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.instanceUrl === "string") {
+    const validated = validateDeleteLeadInput(input);
+    return createSalesforceClient({
+      accessToken: input.accessToken,
+      instanceUrl: input.instanceUrl,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      operation: "leads.delete",
+    }).deleteRecord("Lead", validated.id).then((result) => {
+      if (result.status === 204) {
+        return { connector: "salesforce", action: "leads.delete", source: "connector", deleted: true, id: validated.id };
+      }
+      throw handleError(result);
+    });
+  }
+  return { connector: "salesforce", action: "leads.delete", source: "connector", validated: validateDeleteLeadInput(input) };
+}
+
+export function updateOpportunity(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.instanceUrl === "string") {
+    const validated = validateUpdateOpportunityInput(input);
+    const { id, ...fields } = validated;
+    const body: Record<string, unknown> = {};
+    if (fields.name !== undefined) body.Name = fields.name;
+    if (fields.closeDate !== undefined) body.CloseDate = fields.closeDate;
+    if (fields.stage !== undefined) body.StageName = fields.stage;
+    if (fields.amount !== undefined) body.Amount = fields.amount;
+    if (fields.accountId !== undefined) body.AccountId = fields.accountId;
+    return createSalesforceClient({
+      accessToken: input.accessToken,
+      instanceUrl: input.instanceUrl,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      operation: "opportunities.update",
+    }).updateRecord("Opportunity", id, body).then((result) => {
+      if (result.status === 204) {
+        return { connector: "salesforce", action: "opportunities.update", source: "connector", updated: true, id };
+      }
+      throw handleError(result);
+    });
+  }
+  return { connector: "salesforce", action: "opportunities.update", source: "connector", validated: validateUpdateOpportunityInput(input) };
+}
+
+export function deleteOpportunity(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.instanceUrl === "string") {
+    const validated = validateDeleteOpportunityInput(input);
+    return createSalesforceClient({
+      accessToken: input.accessToken,
+      instanceUrl: input.instanceUrl,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      operation: "opportunities.delete",
+    }).deleteRecord("Opportunity", validated.id).then((result) => {
+      if (result.status === 204) {
+        return { connector: "salesforce", action: "opportunities.delete", source: "connector", deleted: true, id: validated.id };
+      }
+      throw handleError(result);
+    });
+  }
+  return { connector: "salesforce", action: "opportunities.delete", source: "connector", validated: validateDeleteOpportunityInput(input) };
+}
+
+export function getCase(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.instanceUrl === "string") {
+    const validated = validateGetCaseInput(input);
+    return createSalesforceClient({
+      accessToken: input.accessToken,
+      instanceUrl: input.instanceUrl,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      operation: "cases.get",
+    }).getRecord("Case", validated.id).then((result) => {
+      if (result.status === 200) {
+        return { connector: "salesforce", action: "cases.get", source: "connector", case: normalizeCase(result.body as SalesforceCase) };
+      }
+      throw handleError(result);
+    });
+  }
+  return { connector: "salesforce", action: "cases.get", source: "connector", validated: validateGetCaseInput(input) };
+}
+
+export function updateCase(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.instanceUrl === "string") {
+    const validated = validateUpdateCaseInput(input);
+    const { id, ...fields } = validated;
+    const body: Record<string, unknown> = {};
+    if (fields.subject !== undefined) body.Subject = fields.subject;
+    if (fields.description !== undefined) body.Description = fields.description;
+    if (fields.status !== undefined) body.Status = fields.status;
+    if (fields.priority !== undefined) body.Priority = fields.priority;
+    if (fields.origin !== undefined) body.Origin = fields.origin;
+    if (fields.accountId !== undefined) body.AccountId = fields.accountId;
+    if (fields.contactId !== undefined) body.ContactId = fields.contactId;
+    return createSalesforceClient({
+      accessToken: input.accessToken,
+      instanceUrl: input.instanceUrl,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      operation: "cases.update",
+    }).updateRecord("Case", id, body).then((result) => {
+      if (result.status === 204) {
+        return { connector: "salesforce", action: "cases.update", source: "connector", updated: true, id };
+      }
+      throw handleError(result);
+    });
+  }
+  return { connector: "salesforce", action: "cases.update", source: "connector", validated: validateUpdateCaseInput(input) };
+}
+
+export function deleteCase(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.instanceUrl === "string") {
+    const validated = validateDeleteCaseInput(input);
+    return createSalesforceClient({
+      accessToken: input.accessToken,
+      instanceUrl: input.instanceUrl,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      operation: "cases.delete",
+    }).deleteRecord("Case", validated.id).then((result) => {
+      if (result.status === 204) {
+        return { connector: "salesforce", action: "cases.delete", source: "connector", deleted: true, id: validated.id };
+      }
+      throw handleError(result);
+    });
+  }
+  return { connector: "salesforce", action: "cases.delete", source: "connector", validated: validateDeleteCaseInput(input) };
+}
+
+export function describeSobject(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.instanceUrl === "string") {
+    const validated = validateDescribeSobjectInput(input);
+    return createSalesforceClient({
+      accessToken: input.accessToken,
+      instanceUrl: input.instanceUrl,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      operation: "sobjects.describe",
+    }).describeSobject(validated.sobject).then((result) => {
+      if (result.status === 200) {
+        return { connector: "salesforce", action: "sobjects.describe", source: "connector", describe: normalizeDescribeResult(result.body) };
+      }
+      throw handleError(result);
+    });
+  }
+  return { connector: "salesforce", action: "sobjects.describe", source: "connector", validated: validateDescribeSobjectInput(input) };
+}
+
+export function getCurrentUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string" && typeof input.instanceUrl === "string") {
+    validateGetMeInput(input);
+    return createSalesforceClient({
+      accessToken: input.accessToken,
+      instanceUrl: input.instanceUrl,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+      operation: "users.me",
+    }).getCurrentUser().then((result) => {
+      if (result.status === 200) {
+        return { connector: "salesforce", action: "users.me", source: "connector", user: normalizeUser(result.body as SalesforceChatterUser) };
+      }
+      throw handleError(result);
+    });
+  }
+  return { connector: "salesforce", action: "users.me", source: "connector", validated: validateGetMeInput(input) };
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────
