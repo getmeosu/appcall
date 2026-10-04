@@ -393,6 +393,31 @@ import {
   validateGetLicenseInput,
   validateGetZenInput,
 } from "./card14_reads";
+import {
+  createDependabotCodespacesClient,
+  validateGetDependabotAlertInput,
+  validateUpdateDependabotAlertInput,
+  validateListOrgDependabotAlertsInput,
+  validateListDependabotSecretsInput,
+  validateGetDependabotSecretInput,
+  validateCreateOrUpdateDependabotSecretInput,
+  validateDeleteDependabotSecretInput,
+  validateListOrgDependabotSecretsInput,
+  validateGetOrgDependabotSecretInput,
+  validateCreateOrUpdateOrgDependabotSecretInput,
+  validateDeleteOrgDependabotSecretInput,
+  validateGetDependabotRepoPublicKeyInput,
+  validateGetDependabotOrgPublicKeyInput,
+  validateListCodespacesForAuthenticatedUserInput,
+  validateListRepoCodespacesInput,
+  validateGetCodespaceInput,
+  validateCreateCodespaceForAuthenticatedUserInput,
+  validateStartCodespaceInput,
+  validateStopCodespaceInput,
+  validateDeleteCodespaceInput,
+  validateListCodespaceMachinesInput,
+  validateListCodespacesSecretsInput,
+} from "./card_dependabot_codespaces";
 
 
 
@@ -6097,6 +6122,237 @@ export function getGitignoreTemplate(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
+}
+
+// ─── dependabot remaining + codespaces first slice ───────────────────────────
+
+function liveDependabotCodespacesClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createDependabotCodespacesClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getDependabotAlert(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.alerts.get").getAlert(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.alerts.get", source: "connector", alert: result.alert };
+    });
+  }
+  return { connector: "github", action: "dependabot.alerts.get", source: "connector", validated: validateGetDependabotAlertInput(input) };
+}
+
+export function updateDependabotAlert(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.alerts.update").updateAlert(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.alerts.update", source: "connector", alert: result.alert };
+    });
+  }
+  return { connector: "github", action: "dependabot.alerts.update", source: "connector", validated: validateUpdateDependabotAlertInput(input) };
+}
+
+export function listOrgDependabotAlerts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.org_alerts.list").listOrgAlerts(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.org_alerts.list", source: "connector", alerts: result.alerts };
+    });
+  }
+  return { connector: "github", action: "dependabot.org_alerts.list", source: "connector", validated: validateListOrgDependabotAlertsInput(input) };
+}
+
+export function listDependabotSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.secrets.list").listSecrets(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.secrets.list", source: "connector", total_count: result.total_count, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "dependabot.secrets.list", source: "connector", validated: validateListDependabotSecretsInput(input) };
+}
+
+export function getDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.secrets.get").getSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "dependabot.secrets.get", source: "connector", validated: validateGetDependabotSecretInput(input) };
+}
+
+export function createOrUpdateDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.secrets.create_or_update").createOrUpdateSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.secrets.create_or_update", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "dependabot.secrets.create_or_update", source: "connector", validated: validateCreateOrUpdateDependabotSecretInput(input) };
+}
+
+export function deleteDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.secrets.delete").deleteSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.secrets.delete", source: "connector", deleted: result.deleted, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "dependabot.secrets.delete", source: "connector", validated: validateDeleteDependabotSecretInput(input) };
+}
+
+export function listOrgDependabotSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.org_secrets.list").listOrgSecrets(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.org_secrets.list", source: "connector", total_count: result.total_count, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "dependabot.org_secrets.list", source: "connector", validated: validateListOrgDependabotSecretsInput(input) };
+}
+
+export function getOrgDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.org_secrets.get").getOrgSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.org_secrets.get", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "dependabot.org_secrets.get", source: "connector", validated: validateGetOrgDependabotSecretInput(input) };
+}
+
+export function createOrUpdateOrgDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.org_secrets.create_or_update").createOrUpdateOrgSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.org_secrets.create_or_update", source: "connector", secret: result.secret };
+    });
+  }
+  return { connector: "github", action: "dependabot.org_secrets.create_or_update", source: "connector", validated: validateCreateOrUpdateOrgDependabotSecretInput(input) };
+}
+
+export function deleteOrgDependabotSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.org_secrets.delete").deleteOrgSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.org_secrets.delete", source: "connector", deleted: result.deleted, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "dependabot.org_secrets.delete", source: "connector", validated: validateDeleteOrgDependabotSecretInput(input) };
+}
+
+export function getDependabotRepoPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.repo_public_key.get").getRepoPublicKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.repo_public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "dependabot.repo_public_key.get", source: "connector", validated: validateGetDependabotRepoPublicKeyInput(input) };
+}
+
+export function getDependabotOrgPublicKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "dependabot.org_public_key.get").getOrgPublicKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "dependabot.org_public_key.get", source: "connector", publicKey: result.publicKey };
+    });
+  }
+  return { connector: "github", action: "dependabot.org_public_key.get", source: "connector", validated: validateGetDependabotOrgPublicKeyInput(input) };
+}
+
+export function listCodespacesForAuthenticatedUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "codespaces.list_for_authenticated_user").listForAuthenticatedUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codespaces.list_for_authenticated_user", source: "connector", codespaces: result.codespaces };
+    });
+  }
+  return { connector: "github", action: "codespaces.list_for_authenticated_user", source: "connector", validated: validateListCodespacesForAuthenticatedUserInput(input) };
+}
+
+export function listRepoCodespaces(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "codespaces.list_for_repo").listForRepo(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codespaces.list_for_repo", source: "connector", codespaces: result.codespaces };
+    });
+  }
+  return { connector: "github", action: "codespaces.list_for_repo", source: "connector", validated: validateListRepoCodespacesInput(input) };
+}
+
+export function getCodespace(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "codespaces.get").getCodespace(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codespaces.get", source: "connector", codespace: result.codespace };
+    });
+  }
+  return { connector: "github", action: "codespaces.get", source: "connector", validated: validateGetCodespaceInput(input) };
+}
+
+export function createCodespaceForAuthenticatedUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "codespaces.create_for_authenticated_user").createForAuthenticatedUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codespaces.create_for_authenticated_user", source: "connector", codespace: result.codespace };
+    });
+  }
+  return { connector: "github", action: "codespaces.create_for_authenticated_user", source: "connector", validated: validateCreateCodespaceForAuthenticatedUserInput(input) };
+}
+
+export function startCodespace(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "codespaces.start").start(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codespaces.start", source: "connector", codespace: result.codespace };
+    });
+  }
+  return { connector: "github", action: "codespaces.start", source: "connector", validated: validateStartCodespaceInput(input) };
+}
+
+export function stopCodespace(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "codespaces.stop").stop(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codespaces.stop", source: "connector", codespace: result.codespace };
+    });
+  }
+  return { connector: "github", action: "codespaces.stop", source: "connector", validated: validateStopCodespaceInput(input) };
+}
+
+export function deleteCodespace(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "codespaces.delete").delete(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codespaces.delete", source: "connector", deleted: result.deleted, codespaceName: result.codespaceName };
+    });
+  }
+  return { connector: "github", action: "codespaces.delete", source: "connector", validated: validateDeleteCodespaceInput(input) };
+}
+
+export function listCodespaceMachines(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "codespaces.machines.list").listMachines(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codespaces.machines.list", source: "connector", machines: result.machines };
+    });
+  }
+  return { connector: "github", action: "codespaces.machines.list", source: "connector", validated: validateListCodespaceMachinesInput(input) };
+}
+
+export function listCodespacesSecrets(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveDependabotCodespacesClient(input, "codespaces.secrets.list").listSecretsForUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "codespaces.secrets.list", source: "connector", total_count: result.total_count, secrets: result.secrets };
+    });
+  }
+  return { connector: "github", action: "codespaces.secrets.list", source: "connector", validated: validateListCodespacesSecretsInput(input) };
 }
 
 
