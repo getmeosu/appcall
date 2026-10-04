@@ -3,9 +3,17 @@ import manifest from "../manifest.json";
 
 const operations = manifest.operations as Record<string, Record<string, unknown>>;
 
+const actionOps = Object.fromEntries(
+  Object.entries(operations).filter(([, operation]) => operation.kind === "action"),
+) as Record<string, Record<string, unknown>>;
+const webhookOps = Object.fromEntries(
+  Object.entries(operations).filter(([, operation]) => operation.kind === "webhook"),
+) as Record<string, Record<string, unknown>>;
+
 describe("linear manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("linear");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.models.length).toBeGreaterThan(0);
@@ -24,28 +32,42 @@ describe("linear manifest", () => {
     expect(manifest.network.allowedHosts).toEqual(["api.linear.app"]);
   });
 
-  it("declares exactly the 13 operations the brief lists", () => {
+  it("declares the existing surface plus archive, comments, projects write, labels, cycles, attachments, and webhooks", () => {
     expect(Object.keys(operations).sort()).toEqual(
       [
+        "attachments.create",
+        "comments.create",
+        "comments.list",
+        "comments.update",
+        "cycles.list",
         "healthcheck",
+        "issues.archive",
         "issues.create",
-        "issues.update",
         "issues.get",
         "issues.list",
         "issues.search",
-        "comments.create",
-        "teams.list",
-        "workflowStates.list",
-        "projects.list",
-        "projects.get",
-        "users.list",
+        "issues.update",
+        "labels.create",
+        "labels.list",
         "organization.get",
+        "projects.create",
+        "projects.get",
+        "projects.list",
+        "projects.update",
+        "teams.get",
+        "teams.list",
+        "users.get",
+        "users.list",
+        "webhook.Comment.create",
+        "webhook.Issue.create",
+        "webhook.Issue.update",
+        "workflowStates.list",
       ].sort(),
     );
   });
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOps)) {
       expect(operation.kind).toBe("action");
       expect(operation.timeoutMs as number).toBeGreaterThan(0);
       expect(operation.maxInputBytes as number).toBeGreaterThan(0);
@@ -54,13 +76,28 @@ describe("linear manifest", () => {
       expect(String(operation.description ?? "").length).toBeGreaterThan(0);
       expect((operation.inputSchema as Record<string, unknown>).type).toBe("object");
       expect(operation.outputSchema, `${key} must declare an outputSchema`).toBeDefined();
-      expect(["read", "write"]).toContain(operation.sideEffect as string);
+      expect(["read", "write", "destructive"]).toContain(operation.sideEffect as string);
       expect(operation.request, `${key} must declare a request block`).toBeDefined();
     }
   });
 
-  it("posts every operation to /graphql — the only endpoint the provider has", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+  it("declares webhook ops as kind webhook with no request block", () => {
+    expect(Object.keys(webhookOps).sort()).toEqual([
+      "webhook.Comment.create",
+      "webhook.Issue.create",
+      "webhook.Issue.update",
+    ]);
+    for (const [key, operation] of Object.entries(webhookOps)) {
+      expect(operation.kind, key).toBe("webhook");
+      expect(operation.request, key).toBeUndefined();
+      expect(operation.timeoutMs as number).toBeGreaterThan(0);
+      expect(operation.maxInputBytes as number).toBeGreaterThan(0);
+      expect(operation.maxResponseBytes as number).toBeGreaterThan(0);
+    }
+  });
+
+  it("posts every action to /graphql — the only endpoint the provider has", () => {
+    for (const [key, operation] of Object.entries(actionOps)) {
       const request = operation.request as Record<string, unknown>;
       expect(String(request.method ?? "GET"), `${key} must POST`).toBe("POST");
       expect(request.path, `${key} must target /graphql`).toBe("/graphql");
@@ -71,12 +108,17 @@ describe("linear manifest", () => {
   // from the GraphQL operation type, not the HTTP method, because every Linear
   // call — including every read — is a POST. ---
   it("classifies GraphQL operations by mutation-vs-query, not by HTTP method", () => {
-    for (const [key, op] of Object.entries(operations)) {
+    for (const [key, op] of Object.entries(actionOps)) {
       const body = (op.request as Record<string, unknown>).body as Record<string, unknown>;
       const query = String(body.query ?? "");
-      const expected = query.trimStart().startsWith("mutation") ? "write" : "read";
-      expect(op.sideEffect, `${key} is a GraphQL ${expected}`).toBe(expected);
+      const isMutation = query.trimStart().startsWith("mutation");
+      if (isMutation) {
+        expect(["write", "destructive"], `${key} is a GraphQL mutation`).toContain(op.sideEffect);
+      } else {
+        expect(op.sideEffect, `${key} is a GraphQL query`).toBe("read");
+      }
     }
+    expect(actionOps["issues.archive"]!.sideEffect).toBe("destructive");
   });
 
   it("sends the personal API key bare, because Bearer fails Linear auth", () => {
@@ -100,7 +142,7 @@ describe("linear manifest", () => {
   });
 
   it("hands the caller a relay cursor on every paginated list", () => {
-    const paginated = Object.entries(operations).filter(([, op]) =>
+    const paginated = Object.entries(actionOps).filter(([, op]) =>
       Object.prototype.hasOwnProperty.call((op.request as Record<string, unknown>).result ?? {}, "nextCursor"),
     );
     expect(paginated.length).toBeGreaterThan(0);
@@ -141,15 +183,29 @@ describe("linear manifest", () => {
   });
 
   it("does not require anything on the unfiltered list operations", () => {
-    for (const key of ["issues.list", "teams.list", "workflowStates.list", "projects.list", "users.list"]) {
+    for (const key of ["issues.list", "teams.list", "workflowStates.list", "projects.list", "users.list", "labels.list", "cycles.list"]) {
       const schema = operations[key]!.inputSchema as { required?: string[] };
       expect(schema.required ?? [], `${key} should not require input`).toEqual([]);
     }
   });
 
-  it("requires id on projects.get", () => {
-    const schema = operations["projects.get"]!.inputSchema as { required?: string[] };
-    expect(schema.required ?? []).toContain("id");
+  it("requires id on projects.get, teams.get, users.get, and issues.archive", () => {
+    for (const key of ["projects.get", "teams.get", "users.get", "issues.archive"]) {
+      const schema = operations[key]!.inputSchema as { required?: string[] };
+      expect(schema.required ?? [], key).toContain("id");
+    }
+  });
+
+  it("requires name and teamIds on projects.create", () => {
+    const schema = operations["projects.create"]!.inputSchema as { required?: string[] };
+    expect(schema.required ?? []).toEqual(["name", "teamIds"]);
+  });
+
+  it("requires issueId and url on attachments.create, which is a URL attach not a file upload", () => {
+    const schema = operations["attachments.create"]!.inputSchema as { required?: string[] };
+    expect(schema.required ?? []).toEqual(["issueId", "url"]);
+    const body = (operations["attachments.create"]!.request as Record<string, unknown>).body as Record<string, unknown>;
+    expect(String(body.query)).toContain("attachmentCreate");
   });
 
   it("asserts the healthcheck reads data.viewer.id, not just a 200 status", () => {
@@ -159,7 +215,7 @@ describe("linear manifest", () => {
   });
 
   it("only interpolates body placeholders the operation's schema requires", () => {
-    for (const [key, operation] of Object.entries(operations)) {
+    for (const [key, operation] of Object.entries(actionOps)) {
       const request = operation.request as Record<string, unknown>;
       const schema = operation.inputSchema as { properties?: Record<string, unknown> };
       const declared = Object.keys(schema.properties ?? {});
