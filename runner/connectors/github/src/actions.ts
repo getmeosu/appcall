@@ -393,6 +393,21 @@ import {
   validateGetLicenseInput,
   validateGetZenInput,
 } from "./card14_reads";
+import {
+  createCardActivityRemainingClient,
+  validateCheckStarredInput,
+  validateDeleteRepoSubscriptionInput,
+  validateDeleteThreadSubscriptionInput,
+  validateGetMetaRootInput,
+  validateGetRateLimitInput,
+  validateListGitignoreTemplatesInput,
+  validateListLicensesInput,
+  validateListRepoNotificationsInput,
+  validateMarkRepoNotificationsReadInput,
+  validateMarkThreadDoneInput,
+  validatePutRepoSubscriptionInput,
+  validatePutThreadSubscriptionInput,
+} from "./card_activity_remaining";
 
 
 
@@ -6097,6 +6112,137 @@ export function getGitignoreTemplate(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
+}
+
+// ─── activity remaining: licenses, rate limit, notifications, subscriptions ──
+
+function liveCardActivityRemainingClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCardActivityRemainingClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listLicenses(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "licenses.list").listLicenses(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "licenses.list", source: "connector", licenses: result.licenses };
+    });
+  }
+  return { connector: "github", action: "licenses.list", source: "connector", validated: validateListLicensesInput(input) };
+}
+
+export function listGitignoreTemplates(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "gitignore.templates.list").listGitignoreTemplates(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gitignore.templates.list", source: "connector", templates: result.templates };
+    });
+  }
+  return { connector: "github", action: "gitignore.templates.list", source: "connector", validated: validateListGitignoreTemplatesInput(input) };
+}
+
+export function getRateLimit(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "rate_limit.get").getRateLimit(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "rate_limit.get", source: "connector", rateLimit: result.rateLimit };
+    });
+  }
+  return { connector: "github", action: "rate_limit.get", source: "connector", validated: validateGetRateLimitInput(input) };
+}
+
+export function listRepoNotifications(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "activity.repo_notifications.list").listRepoNotifications(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "activity.repo_notifications.list", source: "connector", notifications: result.notifications };
+    });
+  }
+  return { connector: "github", action: "activity.repo_notifications.list", source: "connector", validated: validateListRepoNotificationsInput(input) };
+}
+
+export function checkStarred(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "activity.starred.check").checkStarred(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "activity.starred.check", source: "connector", starred: result.starred };
+    });
+  }
+  return { connector: "github", action: "activity.starred.check", source: "connector", validated: validateCheckStarredInput(input) };
+}
+
+export function getMetaRoot(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "meta.root.get").getMetaRoot(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "meta.root.get", source: "connector", root: result.root };
+    });
+  }
+  return { connector: "github", action: "meta.root.get", source: "connector", validated: validateGetMetaRootInput(input) };
+}
+
+export function markThreadDone(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "activity.thread.mark_done").markThreadDone(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "activity.thread.mark_done", source: "connector", done: result.done, threadId: result.threadId };
+    });
+  }
+  return { connector: "github", action: "activity.thread.mark_done", source: "connector", validated: validateMarkThreadDoneInput(input) };
+}
+
+export function putThreadSubscription(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "activity.thread.subscription.put").putThreadSubscription(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "activity.thread.subscription.put", source: "connector", subscription: result.subscription };
+    });
+  }
+  return { connector: "github", action: "activity.thread.subscription.put", source: "connector", validated: validatePutThreadSubscriptionInput(input) };
+}
+
+export function deleteThreadSubscription(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "activity.thread.subscription.delete").deleteThreadSubscription(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "activity.thread.subscription.delete", source: "connector", deleted: result.deleted, threadId: result.threadId };
+    });
+  }
+  return { connector: "github", action: "activity.thread.subscription.delete", source: "connector", validated: validateDeleteThreadSubscriptionInput(input) };
+}
+
+export function markRepoNotificationsRead(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "activity.repo_notifications.mark_read").markRepoNotificationsRead(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "activity.repo_notifications.mark_read", source: "connector", marked: result.marked };
+    });
+  }
+  return { connector: "github", action: "activity.repo_notifications.mark_read", source: "connector", validated: validateMarkRepoNotificationsReadInput(input) };
+}
+
+export function putRepoSubscription(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "activity.repo.subscription.put").putRepoSubscription(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "activity.repo.subscription.put", source: "connector", subscription: result.subscription };
+    });
+  }
+  return { connector: "github", action: "activity.repo.subscription.put", source: "connector", validated: validatePutRepoSubscriptionInput(input) };
+}
+
+export function deleteRepoSubscription(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCardActivityRemainingClient(input, "activity.repo.subscription.delete").deleteRepoSubscription(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "activity.repo.subscription.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo };
+    });
+  }
+  return { connector: "github", action: "activity.repo.subscription.delete", source: "connector", validated: validateDeleteRepoSubscriptionInput(input) };
 }
 
 
