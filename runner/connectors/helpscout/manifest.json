@@ -1,14 +1,22 @@
 {
   "key": "helpscout",
   "name": "Help Scout",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
-  "categories": ["crm", "productivity"],
+  "categories": [
+    "crm",
+    "productivity"
+  ],
   "auth": {
     "type": "oauth2",
     "scopes": [],
-    "setup": { "mode": "oauth2", "fields": [], "help": "Connect a Help Scout user account through OAuth2.", "docsUrl": "https://developer.helpscout.com/mailbox-api/overview/authentication/" },
+    "setup": {
+      "mode": "oauth2",
+      "fields": [],
+      "help": "Connect a Help Scout user account through OAuth2.",
+      "docsUrl": "https://developer.helpscout.com/mailbox-api/overview/authentication/"
+    },
     "oauth": {
       "authorizeUrl": "https://secure.helpscout.net/authentication/authorizeClientApplication",
       "tokenUrl": "https://api.helpscout.net/v2/oauth2/token",
@@ -17,56 +25,1327 @@
       "clientAuth": "body"
     }
   },
-  "network": { "allowedHosts": ["api.helpscout.net", "secure.helpscout.net"] },
-  "models": ["inbox", "user", "tag", "conversation", "thread"],
+  "network": {
+    "allowedHosts": [
+      "api.helpscout.net",
+      "secure.helpscout.net"
+    ]
+  },
+  "models": [
+    "inbox",
+    "user",
+    "tag",
+    "conversation",
+    "thread",
+    "customer",
+    "mailbox"
+  ],
   "http": {
     "baseUrl": "https://api.helpscout.net/v2",
-    "auth": { "field": "accessToken", "in": "header", "name": "Authorization", "value": "Bearer {{accessToken}}" },
-    "errors": { "rateLimitStatuses": [429], "retryAfterHeader": "Retry-After", "retryAfterKind": "seconds", "defaultRetryAfterSeconds": 5, "messagePaths": ["message", "error"] }
+    "auth": {
+      "field": "accessToken",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{accessToken}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "Retry-After",
+      "retryAfterKind": "seconds",
+      "defaultRetryAfterSeconds": 5,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
   },
   "operations": {
     "healthcheck": {
-      "kind": "action", "sideEffect": "read", "timeoutMs": 5000, "maxInputBytes": 4096, "maxResponseBytes": 65536,
-      "title": "Healthcheck", "description": "Validate the OAuth access token with GET /users and return the first page metadata.",
-      "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-      "outputSchema": { "type": "object", "required": ["status", "users"], "properties": { "status": { "type": "string" }, "users": { "type": "array", "items": { "type": "object" } }, "page": { "type": "object" } } }, "enforceOutputSchema": true,
-      "request": { "method": "GET", "path": "/users", "query": { "page": 1, "pageSize": 50 }, "success": [200], "result": { "status": "ok", "users": "{{response._embedded.users}}", "page": "{{response.page}}" } }
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the OAuth access token with GET /users and return the first page metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "status",
+          "users"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "page": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "query": {
+          "page": 1,
+          "pageSize": 50
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "status": "ok",
+          "users": "{{response._embedded.users}}",
+          "page": "{{response.page}}"
+        }
+      }
     },
     "inboxes.list": {
-      "kind": "action", "sideEffect": "read", "timeoutMs": 15000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "title": "List Inboxes", "description": "List accessible Help Scout mailboxes with explicit 1-based pagination.",
-      "inputSchema": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 } }, "additionalProperties": false },
-      "outputSchema": { "type": "object", "required": ["inboxes"], "properties": { "inboxes": { "type": "array", "items": { "type": "object" } }, "page": { "type": "object" } } }, "enforceOutputSchema": true,
-      "request": { "method": "GET", "path": "/mailboxes", "query": { "page": "{{page}}", "pageSize": 50 }, "success": [200], "result": { "inboxes": "{{response._embedded.mailboxes}}", "page": "{{response.page}}" } }
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Inboxes",
+      "description": "List accessible Help Scout mailboxes with explicit 1-based pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "inboxes"
+        ],
+        "properties": {
+          "inboxes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "page": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/mailboxes",
+        "query": {
+          "page": "{{page}}",
+          "pageSize": 50
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "inboxes": "{{response._embedded.mailboxes}}",
+          "page": "{{response.page}}"
+        }
+      }
     },
     "users.list": {
-      "kind": "action", "sideEffect": "read", "timeoutMs": 15000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "title": "List Users", "description": "List Help Scout users with explicit 1-based pagination.",
-      "inputSchema": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 } }, "additionalProperties": false },
-      "outputSchema": { "type": "object", "required": ["users"], "properties": { "users": { "type": "array", "items": { "type": "object" } }, "page": { "type": "object" } } }, "enforceOutputSchema": true,
-      "request": { "method": "GET", "path": "/users", "query": { "page": "{{page}}", "pageSize": 50 }, "success": [200], "result": { "users": "{{response._embedded.users}}", "page": "{{response.page}}" } }
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Users",
+      "description": "List Help Scout users with explicit 1-based pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "users"
+        ],
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "page": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "query": {
+          "page": "{{page}}",
+          "pageSize": 50
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "users": "{{response._embedded.users}}",
+          "page": "{{response.page}}"
+        }
+      }
     },
     "tags.list": {
-      "kind": "action", "sideEffect": "read", "timeoutMs": 15000, "maxInputBytes": 4096, "maxResponseBytes": 1048576, "title": "List Tags", "description": "List Help Scout tags with explicit 1-based pagination.",
-      "inputSchema": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 } }, "additionalProperties": false },
-      "outputSchema": { "type": "object", "required": ["tags"], "properties": { "tags": { "type": "array", "items": { "type": "object" } }, "page": { "type": "object" } } }, "enforceOutputSchema": true,
-      "request": { "method": "GET", "path": "/tags", "query": { "page": "{{page}}", "pageSize": 50 }, "success": [200], "result": { "tags": "{{response._embedded.tags}}", "page": "{{response.page}}" } }
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Tags",
+      "description": "List Help Scout tags with explicit 1-based pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "tags"
+        ],
+        "properties": {
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "page": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/tags",
+        "query": {
+          "page": "{{page}}",
+          "pageSize": 50
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "tags": "{{response._embedded.tags}}",
+          "page": "{{response.page}}"
+        }
+      }
     },
     "conversations.list": {
-      "kind": "action", "sideEffect": "read", "timeoutMs": 30000, "maxInputBytes": 65536, "maxResponseBytes": 5242880, "title": "List Conversations", "description": "List Help Scout conversations. Conversations use the documented 25 item page size.",
-      "inputSchema": { "type": "object", "properties": { "page": { "type": "integer", "minimum": 1 }, "status": { "type": "string" }, "mailbox": { "type": "integer", "minimum": 1 }, "sortField": { "type": "string" }, "sortOrder": { "type": "string", "enum": ["asc", "desc"] } }, "additionalProperties": false },
-      "outputSchema": { "type": "object", "required": ["conversations"], "properties": { "conversations": { "type": "array", "items": { "type": "object" } }, "page": { "type": "object" } } }, "enforceOutputSchema": true,
-      "request": { "method": "GET", "path": "/conversations", "query": { "page": "{{page}}", "pageSize": 25, "status": "{{status}}", "mailbox": "{{mailbox}}", "sortField": "{{sortField}}", "sortOrder": "{{sortOrder}}" }, "success": [200], "result": { "conversations": "{{response._embedded.conversations}}", "page": "{{response.page}}" } }
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Conversations",
+      "description": "List Help Scout conversations. Conversations use the documented 25 item page size.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "type": "string"
+          },
+          "mailbox": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sortField": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "conversations"
+        ],
+        "properties": {
+          "conversations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "page": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/conversations",
+        "query": {
+          "page": "{{page}}",
+          "pageSize": 25,
+          "status": "{{status}}",
+          "mailbox": "{{mailbox}}",
+          "sortField": "{{sortField}}",
+          "sortOrder": "{{sortOrder}}"
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "conversations": "{{response._embedded.conversations}}",
+          "page": "{{response.page}}"
+        }
+      }
     },
     "conversations.get": {
-      "kind": "action", "sideEffect": "read", "timeoutMs": 15000, "maxInputBytes": 4096, "maxResponseBytes": 5242880, "title": "Get Conversation", "description": "Get one Help Scout conversation by numeric ID.",
-      "inputSchema": { "type": "object", "properties": { "conversationId": { "type": "integer", "minimum": 1 } }, "required": ["conversationId"], "additionalProperties": false },
-      "outputSchema": { "type": "object", "required": ["conversation"], "properties": { "conversation": { "type": "object" } } }, "enforceOutputSchema": true,
-      "request": { "method": "GET", "path": "/conversations/{{conversationId}}", "success": [200], "result": { "conversation": "{{response}}" } }
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "Get Conversation",
+      "description": "Get one Help Scout conversation by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "conversationId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "conversation"
+        ],
+        "properties": {
+          "conversation": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/conversations/{{conversationId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "conversation": "{{response}}"
+        }
+      }
     },
     "threads.list": {
-      "kind": "action", "sideEffect": "read", "timeoutMs": 30000, "maxInputBytes": 4096, "maxResponseBytes": 5242880, "title": "List Threads", "description": "List threads for a Help Scout conversation with explicit pagination.",
-      "inputSchema": { "type": "object", "properties": { "conversationId": { "type": "integer", "minimum": 1 }, "page": { "type": "integer", "minimum": 1 } }, "required": ["conversationId"], "additionalProperties": false },
-      "outputSchema": { "type": "object", "required": ["threads"], "properties": { "threads": { "type": "array", "items": { "type": "object" } }, "page": { "type": "object" } } }, "enforceOutputSchema": true,
-      "request": { "method": "GET", "path": "/conversations/{{conversationId}}/threads", "query": { "page": "{{page}}", "pageSize": 50 }, "success": [200], "result": { "threads": "{{response._embedded.threads}}", "page": "{{response.page}}" } }
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 5242880,
+      "title": "List Threads",
+      "description": "List threads for a Help Scout conversation with explicit pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "conversationId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "threads"
+        ],
+        "properties": {
+          "threads": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "page": {
+            "type": "object"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/conversations/{{conversationId}}/threads",
+        "query": {
+          "page": "{{page}}",
+          "pageSize": 50
+        },
+        "success": [
+          200
+        ],
+        "result": {
+          "threads": "{{response._embedded.threads}}",
+          "page": "{{response.page}}"
+        }
+      }
+    },
+    "mailboxes.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "List Mailboxes",
+      "description": "List Help Scout mailboxes with explicit 1-based pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "mailboxes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Mailboxes."
+          },
+          "page": {
+            "type": "object",
+            "description": "Pagination metadata."
+          }
+        },
+        "required": [
+          "mailboxes"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/mailboxes",
+        "success": [
+          200
+        ],
+        "result": {
+          "mailboxes": "{{response._embedded.mailboxes}}",
+          "page": "{{response.page}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "pageSize": 50
+        }
+      }
+    },
+    "mailboxes.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Mailbox",
+      "description": "Get one Help Scout mailbox by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mailboxId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Mailbox ID."
+          }
+        },
+        "required": [
+          "mailboxId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "mailbox": {
+            "type": "object",
+            "description": "Mailbox."
+          }
+        },
+        "required": [
+          "mailbox"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/mailboxes/{{mailboxId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "mailbox": "{{response}}"
+        }
+      }
+    },
+    "users.me": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Current User",
+      "description": "Get the Help Scout user that owns the OAuth token (GET /users/me).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "Authenticated user."
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/users/me",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get User",
+      "description": "Get a Help Scout user by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "User ID."
+          }
+        },
+        "required": [
+          "userId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "description": "User."
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/users/{{userId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "user": "{{response}}"
+        }
+      }
+    },
+    "customers.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Customers",
+      "description": "List Help Scout customers with optional mailbox and query filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1-based page."
+          },
+          "mailbox": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Mailbox ID filter."
+          },
+          "query": {
+            "type": "string",
+            "description": "Customer search query."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "customers": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Customers."
+          },
+          "page": {
+            "type": "object",
+            "description": "Pagination metadata."
+          }
+        },
+        "required": [
+          "customers"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/customers",
+        "success": [
+          200
+        ],
+        "result": {
+          "customers": "{{response._embedded.customers}}",
+          "page": "{{response.page}}"
+        },
+        "query": {
+          "page": "{{page}}",
+          "pageSize": 50,
+          "mailbox": "{{mailbox}}",
+          "query": "{{query}}"
+        }
+      }
+    },
+    "customers.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 1048576,
+      "title": "Get Customer",
+      "description": "Get one Help Scout customer by numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Customer ID."
+          }
+        },
+        "required": [
+          "customerId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "type": "object",
+            "description": "Customer."
+          }
+        },
+        "required": [
+          "customer"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "GET",
+        "path": "/customers/{{customerId}}",
+        "success": [
+          200
+        ],
+        "result": {
+          "customer": "{{response}}"
+        }
+      }
+    },
+    "customers.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Customer",
+      "description": "Create a Help Scout customer. Returns the new ID in the Resource-ID header.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "First name, 1-40 characters."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name, 1-40 characters."
+          },
+          "email": {
+            "type": "string",
+            "description": "Work email stored as the first emails[] entry."
+          },
+          "jobTitle": {
+            "type": "string",
+            "description": "Job title."
+          },
+          "organization": {
+            "type": "string",
+            "description": "Organization name."
+          },
+          "background": {
+            "type": "string",
+            "description": "Notes field."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location."
+          },
+          "photoUrl": {
+            "type": "string",
+            "description": "Photo URL."
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Created customer ID from Resource-ID."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location header."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/customers",
+        "success": [
+          201
+        ],
+        "result": {
+          "id": "{{headers.resource-id}}",
+          "location": "{{headers.location}}"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "jobTitle": "{{jobTitle}}",
+          "organization": "{{organization}}",
+          "background": "{{background}}",
+          "location": "{{location}}",
+          "photoUrl": "{{photoUrl}}",
+          "emails": [
+            {
+              "type": "work",
+              "value": "{{email}}"
+            }
+          ]
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "customers.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Customer",
+      "description": "Replace a Help Scout customer with PUT /customers/{id}. Omitted fields are cleared.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Customer ID."
+          },
+          "firstName": {
+            "type": "string",
+            "description": "First name."
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name."
+          },
+          "jobTitle": {
+            "type": "string",
+            "description": "Job title."
+          },
+          "organization": {
+            "type": "string",
+            "description": "Organization name."
+          },
+          "background": {
+            "type": "string",
+            "description": "Notes field."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location."
+          },
+          "photoUrl": {
+            "type": "string",
+            "description": "Photo URL."
+          }
+        },
+        "required": [
+          "customerId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Updated customer ID."
+          }
+        },
+        "required": [
+          "customerId"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "PUT",
+        "path": "/customers/{{customerId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "customerId": "{{input.customerId}}"
+        },
+        "body": {
+          "firstName": "{{firstName}}",
+          "lastName": "{{lastName}}",
+          "jobTitle": "{{jobTitle}}",
+          "organization": "{{organization}}",
+          "background": "{{background}}",
+          "location": "{{location}}",
+          "photoUrl": "{{photoUrl}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "conversations.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Conversation",
+      "description": "Create a Help Scout conversation in a mailbox with at least one thread.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Conversation subject."
+          },
+          "mailboxId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Inbox ID."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "email",
+              "chat",
+              "phone"
+            ],
+            "description": "Conversation type."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "closed",
+              "pending"
+            ],
+            "description": "Initial status."
+          },
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Existing customer ID."
+          },
+          "customerEmail": {
+            "type": "string",
+            "description": "Customer email. Creates the customer when no ID is given."
+          },
+          "customerFirstName": {
+            "type": "string",
+            "description": "Customer first name when creating by email."
+          },
+          "customerLastName": {
+            "type": "string",
+            "description": "Customer last name when creating by email."
+          },
+          "text": {
+            "type": "string",
+            "description": "First thread body."
+          },
+          "threadType": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "reply",
+              "phone",
+              "chat"
+            ],
+            "description": "First thread type."
+          },
+          "assignTo": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "User or team ID to assign."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Conversation tags."
+          }
+        },
+        "required": [
+          "subject",
+          "mailboxId",
+          "type",
+          "status",
+          "text",
+          "threadType"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Created conversation ID from Resource-ID."
+          },
+          "location": {
+            "type": "string",
+            "description": "Location header."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/conversations",
+        "success": [
+          201
+        ],
+        "result": {
+          "id": "{{headers.resource-id}}",
+          "location": "{{headers.location}}"
+        },
+        "body": {
+          "subject": "{{subject}}",
+          "mailboxId": "{{mailboxId}}",
+          "type": "{{type}}",
+          "status": "{{status}}",
+          "assignTo": "{{assignTo}}",
+          "customer": {
+            "id": "{{customerId}}",
+            "email": "{{customerEmail}}",
+            "firstName": "{{customerFirstName}}",
+            "lastName": "{{customerLastName}}"
+          },
+          "threads": [
+            {
+              "type": "{{threadType}}",
+              "customer": {
+                "id": "{{customerId}}",
+                "email": "{{customerEmail}}"
+              },
+              "text": "{{text}}"
+            }
+          ],
+          "tags": "{{tags}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "conversations.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Conversation",
+      "description": "Patch a Help Scout conversation with one JSON Patch operation (subject, status, assignTo, mailboxId, or primary customer).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Conversation ID."
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "add",
+              "move",
+              "remove",
+              "replace"
+            ],
+            "description": "JSON Patch op."
+          },
+          "path": {
+            "type": "string",
+            "enum": [
+              "/assignTo",
+              "/draft",
+              "/mailboxId",
+              "/primaryCustomer.id",
+              "/status",
+              "/subject"
+            ],
+            "description": "JSON Patch path."
+          },
+          "value": {
+            "description": "Patch value. String for subject/status, number for assignTo and mailboxId."
+          }
+        },
+        "required": [
+          "conversationId",
+          "op",
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Updated conversation ID."
+          }
+        },
+        "required": [
+          "conversationId"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "PATCH",
+        "path": "/conversations/{{conversationId}}",
+        "success": [
+          204
+        ],
+        "result": {
+          "conversationId": "{{input.conversationId}}"
+        },
+        "body": {
+          "op": "{{op}}",
+          "path": "{{path}}",
+          "value": "{{value}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "threads.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Reply Thread",
+      "description": "Add a published or draft reply thread on a Help Scout conversation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Conversation ID."
+          },
+          "text": {
+            "type": "string",
+            "description": "Reply body."
+          },
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Customer being replied to."
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "True to create a draft reply."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "closed",
+              "inbox_predefined",
+              "open",
+              "pending",
+              "spam"
+            ],
+            "description": "Optional conversation status after the reply."
+          },
+          "userId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "User adding the thread. Defaults to the token owner."
+          },
+          "assignTo": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "User or team assigned after publish."
+          },
+          "cc": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "CC email addresses."
+          },
+          "bcc": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "BCC email addresses."
+          }
+        },
+        "required": [
+          "conversationId",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Created thread ID from Resource-ID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/conversations/{{conversationId}}/reply",
+        "success": [
+          201
+        ],
+        "result": {
+          "id": "{{headers.resource-id}}"
+        },
+        "body": {
+          "text": "{{text}}",
+          "customer": {
+            "id": "{{customerId}}"
+          },
+          "draft": "{{draft}}",
+          "status": "{{status}}",
+          "user": "{{userId}}",
+          "assignTo": "{{assignTo}}",
+          "cc": "{{cc}}",
+          "bcc": "{{bcc}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "threads.notes.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Note Thread",
+      "description": "Add an internal note thread on a Help Scout conversation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Conversation ID."
+          },
+          "text": {
+            "type": "string",
+            "description": "Note body."
+          },
+          "userId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "User adding the note. Defaults to the token owner."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "closed",
+              "inbox_predefined",
+              "open",
+              "pending",
+              "spam"
+            ],
+            "description": "Optional conversation status after the note."
+          },
+          "imported": {
+            "type": "boolean",
+            "description": "True to import without notifications."
+          }
+        },
+        "required": [
+          "conversationId",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Created thread ID from Resource-ID."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "enforceOutputSchema": true,
+      "request": {
+        "method": "POST",
+        "path": "/conversations/{{conversationId}}/notes",
+        "success": [
+          201
+        ],
+        "result": {
+          "id": "{{headers.resource-id}}"
+        },
+        "body": {
+          "text": "{{text}}",
+          "user": "{{userId}}",
+          "status": "{{status}}",
+          "imported": "{{imported}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     }
   },
   "provenance": {
@@ -76,7 +1355,11 @@
     }
   },
   "evidence": {
-    "fixture": { "status": "supplied" },
-    "live": { "status": "unverified" }
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
   }
 }
