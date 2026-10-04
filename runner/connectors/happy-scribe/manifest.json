@@ -1,1 +1,1239 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Happy Scribe API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["productivity"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"Authorization","value":"Bearer {{apiKey}}"},"baseUrl":"https://www.happyscribe.com/api/v1","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["error","message","detail","errors.0"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"happy-scribe","models":["organization","transcription","order"],"name":"Happy Scribe","network":{"allowedHosts":["www.happyscribe.com"]},"operations":{"healthcheck":{"description":"Validate the Happy Scribe API key with GET /organizations.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/organizations","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"orders.get":{"description":"Get the current state of a Happy Scribe order.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"orderId":{"minLength":1,"type":"string"}},"required":["orderId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/orders/{{orderId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get order","validationMode":"strict-generated"},"organizations.list":{"description":"List Happy Scribe organizations available to the API key.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/organizations","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List organizations","validationMode":"strict-generated"},"transcriptions.get":{"description":"Get one Happy Scribe transcription by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"transcriptionId":{"minLength":1,"type":"string"}},"required":["transcriptionId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/transcriptions/{{transcriptionId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get transcription","validationMode":"strict-generated"},"transcriptions.list":{"description":"List Happy Scribe transcriptions in an organization.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"folderId":{"minimum":1,"type":"integer"},"organizationId":{"minimum":1,"type":"integer"},"page":{"minimum":0,"type":"integer"},"perPage":{"maximum":100,"minimum":1,"type":"integer"}},"required":["organizationId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/transcriptions","query":{"folder_id":"{{folderId}}","organization_id":"{{organizationId}}","page":"{{page}}","per_page":"{{perPage}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List transcriptions","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "happy-scribe",
+  "name": "Happy Scribe",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Happy Scribe API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "www.happyscribe.com"
+    ]
+  },
+  "models": [
+    "organization",
+    "transcription",
+    "order",
+    "export",
+    "meeting",
+    "folder"
+  ],
+  "http": {
+    "baseUrl": "https://www.happyscribe.com/api/v1",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "value": "Bearer {{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "error",
+        "message",
+        "detail",
+        "errors.0"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Happy Scribe API key with GET /organizations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "organizations.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List organizations",
+      "description": "List Happy Scribe organizations available to the API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcriptions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List transcriptions",
+      "description": "List Happy Scribe transcriptions in an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "folderId": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "organizationId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcriptions",
+        "query": {
+          "organization_id": "{{organizationId}}",
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "folder_id": "{{folderId}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcriptions.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get transcription",
+      "description": "Get one Happy Scribe transcription by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptionId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "transcriptionId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcriptions/{{transcriptionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get order",
+      "description": "Get the current state of a Happy Scribe order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "orderId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/orders/{{orderId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcriptions.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create transcription",
+      "description": "Create a Happy Scribe transcription from a publicly reachable media URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transcription name."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "BCP-47 language code."
+          },
+          "tmp_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public media URL."
+          },
+          "organization_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Organization ID."
+          },
+          "is_subtitle": {
+            "type": "boolean",
+            "description": "Treat the file as subtitles."
+          },
+          "folder_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination folder ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "language",
+          "tmp_url",
+          "organization_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/transcriptions",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "transcription": {
+            "name": "{{name}}",
+            "language": "{{language}}",
+            "tmp_url": "{{tmp_url}}",
+            "organization_id": "{{organization_id}}",
+            "is_subtitle": "{{is_subtitle}}",
+            "folder_id": "{{folder_id}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcriptions.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update transcription",
+      "description": "Rename a Happy Scribe transcription, move it, or toggle link sharing.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transcription ID."
+          },
+          "organization_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Organization ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New name."
+          },
+          "sharing_enabled": {
+            "type": "boolean",
+            "description": "Enable public link sharing."
+          },
+          "folder_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Destination folder ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptionId",
+          "organization_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/transcriptions/{{transcriptionId}}",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "transcription": {
+            "organization_id": "{{organization_id}}",
+            "name": "{{name}}",
+            "sharing_enabled": "{{sharing_enabled}}",
+            "folder_id": "{{folder_id}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcriptions.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete transcription",
+      "description": "Delete a Happy Scribe transcription. Unfinished jobs are cancelled when the pipeline allows it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transcription ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "transcriptionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deleted",
+          "transcriptionId"
+        ],
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/transcriptions/{{transcriptionId}}",
+        "success": [
+          204,
+          200
+        ],
+        "query": {
+          "permanent": "{{permanent}}"
+        },
+        "result": {
+          "deleted": true,
+          "transcriptionId": "{{input.transcriptionId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "transcriptions.summary": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get meeting summary",
+      "description": "Get the AI meeting summary for a Happy Scribe notetaker transcription.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transcriptionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transcription ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "transcriptionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/transcriptions/{{transcriptionId}}/summary",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create order",
+      "description": "Create a Happy Scribe transcription or subtitling order from a media URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public media URL."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Language code."
+          },
+          "organization_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Organization ID."
+          },
+          "service": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "pro"
+            ],
+            "description": "Machine or human service."
+          },
+          "confirm": {
+            "type": "boolean",
+            "description": "Submit the order immediately."
+          },
+          "name": {
+            "type": "string",
+            "description": "Resulting transcription name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "language",
+          "organization_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/orders",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "order": {
+            "url": "{{url}}",
+            "language": "{{language}}",
+            "organization_id": "{{organization_id}}",
+            "service": "{{service}}",
+            "confirm": "{{confirm}}",
+            "name": "{{name}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.confirm": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Confirm order",
+      "description": "Submit a previously created Happy Scribe order that is still incomplete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "orderId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/orders/{{orderId}}/confirm",
+        "success": [
+          200,
+          201,
+          202
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.createTranslation": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create translation order",
+      "description": "Create a Happy Scribe translation order from an existing transcription.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source_transcription_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source transcription ID."
+          },
+          "target_language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target language code."
+          },
+          "service": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "pro"
+            ],
+            "description": "Machine or human service."
+          },
+          "confirm": {
+            "type": "boolean",
+            "description": "Submit the order immediately."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "source_transcription_id",
+          "target_language"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/orders/translation",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "order": {
+            "source_transcription_id": "{{source_transcription_id}}",
+            "target_languages": [
+              "{{target_language}}"
+            ],
+            "service": "{{service}}",
+            "confirm": "{{confirm}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exports.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create export",
+      "description": "Create a Happy Scribe export in a format such as txt, srt, vtt, or json.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Export format such as txt or srt."
+          },
+          "transcriptionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Transcription ID to export."
+          },
+          "show_timestamps": {
+            "type": "boolean",
+            "description": "Include timestamps when the format supports them."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "format",
+          "transcriptionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/exports",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "export": {
+            "format": "{{format}}",
+            "transcription_ids": [
+              "{{transcriptionId}}"
+            ],
+            "show_timestamps": "{{show_timestamps}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "exports.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get export",
+      "description": "Get a Happy Scribe export, including the download link when it is ready.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "exportId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Export ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "exportId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/exports/{{exportId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "uploads.new": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get signed upload URL",
+      "description": "Get a signed URL for uploading media into Happy Scribe storage.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Upload filename."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "filename"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/uploads/new",
+        "success": [
+          200
+        ],
+        "query": {
+          "filename": "{{filename}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetings.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create meeting",
+      "description": "Dispatch a Happy Scribe notetaker bot to a Zoom, Meet, or Teams URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Organization ID."
+          },
+          "meeting_url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Join URL."
+          },
+          "language": {
+            "type": "string",
+            "description": "Transcription language."
+          },
+          "join_at": {
+            "type": "string",
+            "description": "Optional ISO-8601 join time."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "organization_id",
+          "meeting_url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/meetings",
+        "success": [
+          200,
+          201,
+          202
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "organization_id": "{{organization_id}}",
+          "meeting_url": "{{meeting_url}}",
+          "language": "{{language}}",
+          "join_at": "{{join_at}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "meetings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get meeting",
+      "description": "Get a Happy Scribe meeting, including transcript and summary when ready.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "meetingId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meeting ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "meetingId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/meetings/{{meetingId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List folders",
+      "description": "List Happy Scribe folders in an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Organization ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "organization_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/folders",
+        "success": [
+          200
+        ],
+        "query": {
+          "organization_id": "{{organization_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "glossaries.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List glossaries",
+      "description": "List Happy Scribe glossaries available in an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Organization ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "organization_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/glossaries",
+        "success": [
+          200
+        ],
+        "query": {
+          "organization_id": "{{organization_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "styleGuides.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List style guides",
+      "description": "List Happy Scribe style guides available in an organization.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Organization ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "organization_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/style_guides",
+        "success": [
+          200
+        ],
+        "query": {
+          "organization_id": "{{organization_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.order_completed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Order completed",
+      "description": "Happy Scribe order webhook. Fires when an order changes state, including fulfilled and failed."
+    },
+    "webhook.transcript_ready": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Transcript ready",
+      "description": "Happy Scribe meeting webhook. Fires when type is meeting.transcript_ready."
+    },
+    "webhook.summary_ready": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Summary ready",
+      "description": "Happy Scribe meeting webhook. Fires when type is meeting.summary_ready."
+    },
+    "webhook.meeting_failed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Meeting failed",
+      "description": "Happy Scribe meeting webhook. Fires when type is meeting.failed."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
