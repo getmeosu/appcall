@@ -11,7 +11,7 @@ it("declares OAuth2 with manually collected credentials and bounded action schem
     expect(op.inputSchema.type).toBe("object");expect(op.outputSchema.type).toBe("object");
     expect(op.kind).toBe("action");expect(op.timeoutMs).toBeGreaterThan(0);
     expect(op.maxResponseBytes).toBeLessThanOrEqual(5242880);
-    expect(op.sideEffect).toBe(/create|move|delete/.test(key)?"write":"read");
+    expect(op.sideEffect).toBe(/create|move|delete|copy|restore|saveUrl|createSharedLink|revoke|shareFolder/.test(key)?"write":"read");
   }
   expect(manifest.network?.allowedHosts).toEqual([new URL(manifest.http.baseUrl).hostname]);
 });

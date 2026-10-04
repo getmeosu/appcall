@@ -7,7 +7,7 @@
   },
   "key": "sentry",
   "name": "Sentry",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "evidence": {
@@ -25,8 +25,15 @@
     "type": "api_key",
     "scopes": [
       "org:read",
+      "org:write",
       "project:read",
-      "event:read"
+      "project:write",
+      "event:read",
+      "event:write",
+      "event:admin",
+      "member:read",
+      "team:read",
+      "team:write"
     ],
     "setup": {
       "mode": "api_key",
@@ -55,7 +62,11 @@
     "organization",
     "project",
     "issue",
-    "integration"
+    "integration",
+    "event",
+    "release",
+    "team",
+    "member"
   ],
   "http": {
     "baseUrl": "https://sentry.io/api/0",
@@ -246,6 +257,811 @@
         "path": "/organizations/{{organizationIdOrSlug}}/issues/",
         "query": {
           "query": "{{query}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project",
+      "description": "Read one Sentry project by organization and project slug.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug",
+          "projectIdOrSlug"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "projectIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id or slug."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{organizationIdOrSlug}}/{{projectIdOrSlug}}/"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create project",
+      "description": "Create a Sentry project on a team.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug",
+          "teamIdOrSlug",
+          "name"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "teamIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team slug that will own the project."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name for the new project."
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional URL slug. Sentry generates one when omitted."
+          },
+          "platform": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional platform id such as python or javascript."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/teams/{{organizationIdOrSlug}}/{{teamIdOrSlug}}/projects/",
+        "body": {
+          "name": "{{name}}",
+          "slug": "{{slug}}",
+          "platform": "{{platform}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "issues.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get issue",
+      "description": "Read one Sentry issue, including status and assigned owner.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug",
+          "issueId"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "issueId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Issue id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationIdOrSlug}}/issues/{{issueId}}/"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "issues.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update issue",
+      "description": "Update a Sentry issue status, assignment, or bookmark flags.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug",
+          "issueId"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "issueId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Issue id."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Issue status such as resolved, unresolved, or ignored."
+          },
+          "assignedTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Assignee as user:id or team:slug."
+          },
+          "hasSeen": {
+            "type": "boolean",
+            "description": "Mark the issue seen by the current user."
+          },
+          "isBookmarked": {
+            "type": "boolean",
+            "description": "Bookmark or unbookmark the issue."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/organizations/{{organizationIdOrSlug}}/issues/{{issueId}}/",
+        "body": {
+          "status": "{{status}}",
+          "assignedTo": "{{assignedTo}}",
+          "hasSeen": "{{hasSeen}}",
+          "isBookmarked": "{{isBookmarked}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "issues.delete": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete issue",
+      "description": "Delete a Sentry issue. The provider accepts the request asynchronously.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug",
+          "issueId"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "issueId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Issue id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/organizations/{{organizationIdOrSlug}}/issues/{{issueId}}/",
+        "success": [
+          202
+        ],
+        "result": {
+          "ok": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List events",
+      "description": "List events for a Sentry project. Continue with cursor while the provider returns one.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug",
+          "projectIdOrSlug"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "projectIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id or slug."
+          },
+          "query": {
+            "type": "string",
+            "description": "Sentry search query, such as is:unresolved."
+          },
+          "full": {
+            "type": "boolean",
+            "description": "When true, include the full event payload."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous events.list result."
+          },
+          "statsPeriod": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional stats window such as 24h or 14d."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{organizationIdOrSlug}}/{{projectIdOrSlug}}/events/",
+        "query": {
+          "query": "{{query}}",
+          "full": "{{full}}",
+          "cursor": "{{cursor}}",
+          "statsPeriod": "{{statsPeriod}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get event",
+      "description": "Read one Sentry event by project and event id.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug",
+          "projectIdOrSlug",
+          "eventId"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "projectIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project id or slug."
+          },
+          "eventId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Event id."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/projects/{{organizationIdOrSlug}}/{{projectIdOrSlug}}/events/{{eventId}}/"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "releases.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List releases",
+      "description": "List Sentry releases for an organization.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "query": {
+            "type": "string",
+            "description": "Optional release version substring filter."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous releases.list result."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationIdOrSlug}}/releases/",
+        "query": {
+          "query": "{{query}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "releases.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create release",
+      "description": "Create a Sentry release for one or more projects.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug",
+          "version",
+          "projects"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Release version, unique per project."
+          },
+          "projects": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Project slugs included in this release."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional URL associated with the release."
+          },
+          "dateReleased": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional ISO-8601 timestamp when the release shipped."
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional commit SHA or ref for the release."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/organizations/{{organizationIdOrSlug}}/releases/",
+        "body": {
+          "version": "{{version}}",
+          "projects": "{{projects}}",
+          "url": "{{url}}",
+          "dateReleased": "{{dateReleased}}",
+          "ref": "{{ref}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "releases.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get release",
+      "description": "Read one Sentry release by organization and version.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug",
+          "version"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Release version."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationIdOrSlug}}/releases/{{version}}/"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "organizations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List organizations",
+      "description": "List Sentry organizations the token can access.",
+      "inputSchema": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "owner": {
+            "type": "boolean",
+            "description": "When true, only return organizations the user owns."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous organizations.list result."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/",
+        "query": {
+          "owner": "{{owner}}",
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "organizations.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get organization",
+      "description": "Read one Sentry organization by id or slug.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationIdOrSlug}}/"
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List teams",
+      "description": "List teams in a Sentry organization.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous teams.list result."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationIdOrSlug}}/teams/",
+        "query": {
+          "cursor": "{{cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List members",
+      "description": "List members of a Sentry organization.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "organizationIdOrSlug"
+        ],
+        "properties": {
+          "organizationIdOrSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organization id or slug."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination cursor from a previous members.list result."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/organizations/{{organizationIdOrSlug}}/members/",
+        "query": {
           "cursor": "{{cursor}}"
         }
       },
