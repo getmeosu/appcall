@@ -42244,10 +42244,49 @@
     "public": true
   },
   {
-    "digest": "d5f77f409ad098ff7d115ea34c54cb033fe0ea018374ba448549537531eef49f",
+    "digest": "7e647ba8796ef0886c942f0ea5aa399883dff9b40bba5c7282a2067cc068060b",
     "egress": true,
     "key": "dropbox",
     "operations": [
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "fromPath": {
+              "description": "Existing source path or id: reference.",
+              "type": "string"
+            },
+            "toPath": {
+              "description": "Destination path beginning with /.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "fromPath",
+            "toPath"
+          ],
+          "type": "object"
+        },
+        "key": "files.copy",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "metadata": {
+              "description": "Provider metadata; fields depend on the resource subtype and granted permissions.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "metadata"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 10000,
+        "tool": true
+      },
       {
         "destructive": false,
         "inputSchema": {
@@ -42320,6 +42359,96 @@
         "destructive": false,
         "inputSchema": {
           "properties": {
+            "path": {
+              "description": "Nonempty Dropbox path beginning with /, or a supported id: reference.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "key": "files.getTemporaryLink",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "link": {
+              "description": "Temporary HTTPS URL for the file contents.",
+              "type": "string"
+            },
+            "metadata": {
+              "description": "Provider metadata; fields depend on the resource subtype and granted permissions.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "metadata",
+            "link"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "limit": {
+              "description": "Requested page size from 1 to 100, enforced by Dropbox.",
+              "type": "integer"
+            },
+            "path": {
+              "description": "Nonempty Dropbox path beginning with /, or a supported id: reference.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "key": "files.listRevisions",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "entries": {
+              "description": "Revision metadata, newest first.",
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "isDeleted": {
+              "description": "True when the path currently points at a deleted file.",
+              "type": "boolean"
+            },
+            "serverReset": {
+              "description": "True when the caller should discard local revision state.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "isDeleted",
+            "entries",
+            "serverReset"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
             "fromPath": {
               "description": "Existing source path or id: reference.",
               "type": "string"
@@ -42352,6 +42481,143 @@
           "type": "object"
         },
         "read": false,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "Nonempty Dropbox path beginning with /, or a supported id: reference.",
+              "type": "string"
+            },
+            "rev": {
+              "description": "Revision identifier from files.listRevisions.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "rev"
+          ],
+          "type": "object"
+        },
+        "key": "files.restore",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "metadata": {
+              "description": "Provider metadata; fields depend on the resource subtype and granted permissions.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "metadata"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "Destination path beginning with /, such as /Reports/notes.txt.",
+              "type": "string"
+            },
+            "url": {
+              "description": "Public HTTPS URL whose contents should be saved.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "url"
+          ],
+          "type": "object"
+        },
+        "key": "files.saveUrl",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "result": {
+              "description": "Completed file metadata or an async job identifier.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "filenameOnly": {
+              "description": "Match file names only when true; omitted searches names and content.",
+              "type": "boolean"
+            },
+            "maxResults": {
+              "description": "Requested page size from 1 to 1000, enforced by Dropbox.",
+              "type": "integer"
+            },
+            "path": {
+              "description": "Optional folder to restrict the search. Omit to search the whole accessible namespace.",
+              "type": "string"
+            },
+            "query": {
+              "description": "Search string matched against file names and content the token can read.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "key": "files.search",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "cursor": {
+              "description": "Opaque cursor for a later search continue call.",
+              "type": "string"
+            },
+            "hasMore": {
+              "description": "Continue immediately while true; false means this result set is drained.",
+              "type": "boolean"
+            },
+            "matches": {
+              "description": "Search hits with provider file or folder metadata.",
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "matches",
+            "cursor",
+            "hasMore"
+          ],
+          "type": "object"
+        },
+        "read": true,
         "timeoutMs": 10000,
         "tool": true
       },
@@ -42571,6 +42837,297 @@
             "entries",
             "cursor",
             "hasMore"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "Nonempty Dropbox path beginning with /, or a supported id: reference.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "key": "sharing.createSharedLink",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "link": {
+              "description": "Created shared link, including its public URL.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "link"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "Optional path relative to a shared folder link.",
+              "type": "string"
+            },
+            "url": {
+              "description": "Shared link URL returned by sharing.createSharedLink or sharing.listSharedLinks.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "type": "object"
+        },
+        "key": "sharing.getSharedLinkMetadata",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "metadata": {
+              "description": "Provider metadata; fields depend on the resource subtype and granted permissions.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "metadata"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "limit": {
+              "description": "Requested page size from 1 to 1000, enforced by Dropbox.",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        },
+        "key": "sharing.listFolders",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "cursor": {
+              "description": "Opaque cursor for a later page.",
+              "type": "string"
+            },
+            "entries": {
+              "description": "Shared folder metadata the token can see.",
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "entries",
+            "cursor"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "cursor": {
+              "description": "Opaque cursor from a previous sharing.listSharedLinks result.",
+              "type": "string"
+            },
+            "directOnly": {
+              "description": "When true, return only links whose path matches exactly.",
+              "type": "boolean"
+            },
+            "path": {
+              "description": "Optional path or id: reference. Omit to list links across the account.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "key": "sharing.listSharedLinks",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "cursor": {
+              "description": "Opaque cursor for a later page.",
+              "type": "string"
+            },
+            "hasMore": {
+              "description": "Continue immediately while true.",
+              "type": "boolean"
+            },
+            "links": {
+              "description": "Shared links the token can see.",
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "links",
+            "cursor",
+            "hasMore"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "url": {
+              "description": "Shared link URL to revoke.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "type": "object"
+        },
+        "key": "sharing.revokeSharedLink",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "ok": {
+              "description": "True when Dropbox accepted the revoke.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "ok"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "Existing folder path beginning with /, such as /Reports.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "key": "sharing.shareFolder",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "folder": {
+              "description": "Completed shared-folder metadata or an async job identifier.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "folder"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {
+            "accountId": {
+              "description": "Dropbox account_id such as dbid:...",
+              "type": "string"
+            }
+          },
+          "required": [
+            "accountId"
+          ],
+          "type": "object"
+        },
+        "key": "users.getAccount",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "account": {
+              "description": "Provider account profile for the requested id.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "account"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 10000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "properties": {},
+          "type": "object"
+        },
+        "key": "users.getSpaceUsage",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "properties": {
+            "usage": {
+              "description": "Used bytes plus the individual or team allocation.",
+              "type": "object"
+            }
+          },
+          "required": [
+            "usage"
           ],
           "type": "object"
         },
@@ -120638,10 +121195,118 @@
     "public": true
   },
   {
-    "digest": "e120983dec4f0f701db25ceae2b6a60ad0b68144bfc97c9a41db2a1a072e4bbd",
+    "digest": "332d4c30583577ab11c4453b741d78a0e60418196414e89f7793741c48cf410c",
     "egress": true,
     "key": "sentry",
     "operations": [
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "eventId": {
+              "description": "Event id.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "projectIdOrSlug": {
+              "description": "Project id or slug.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug",
+            "projectIdOrSlug",
+            "eventId"
+          ],
+          "type": "object"
+        },
+        "key": "events.get",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "description": "Pagination cursor from a previous events.list result.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "full": {
+              "description": "When true, include the full event payload.",
+              "type": "boolean"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "projectIdOrSlug": {
+              "description": "Project id or slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "query": {
+              "description": "Sentry search query, such as is:unresolved.",
+              "type": "string"
+            },
+            "statsPeriod": {
+              "description": "Optional stats window such as 24h or 14d.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug",
+            "projectIdOrSlug"
+          ],
+          "type": "object"
+        },
+        "key": "events.list",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
       {
         "destructive": false,
         "inputSchema": {
@@ -120709,6 +121374,90 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
+            "issueId": {
+              "description": "Issue id.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug",
+            "issueId"
+          ],
+          "type": "object"
+        },
+        "key": "issues.delete",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "ok"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "issueId": {
+              "description": "Issue id.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug",
+            "issueId"
+          ],
+          "type": "object"
+        },
+        "key": "issues.get",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
             "cursor": {
               "minLength": 1,
               "type": "string"
@@ -120751,6 +121500,281 @@
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
+            "assignedTo": {
+              "description": "Assignee as user:id or team:slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "hasSeen": {
+              "description": "Mark the issue seen by the current user.",
+              "type": "boolean"
+            },
+            "isBookmarked": {
+              "description": "Bookmark or unbookmark the issue.",
+              "type": "boolean"
+            },
+            "issueId": {
+              "description": "Issue id.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "status": {
+              "description": "Issue status such as resolved, unresolved, or ignored.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug",
+            "issueId"
+          ],
+          "type": "object"
+        },
+        "key": "issues.update",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "description": "Pagination cursor from a previous members.list result.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug"
+          ],
+          "type": "object"
+        },
+        "key": "members.list",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug"
+          ],
+          "type": "object"
+        },
+        "key": "organizations.get",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "description": "Pagination cursor from a previous organizations.list result.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "owner": {
+              "description": "When true, only return organizations the user owns.",
+              "type": "boolean"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "key": "organizations.list",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "description": "Display name for the new project.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "platform": {
+              "description": "Optional platform id such as python or javascript.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "slug": {
+              "description": "Optional URL slug. Sentry generates one when omitted.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "teamIdOrSlug": {
+              "description": "Team slug that will own the project.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug",
+            "teamIdOrSlug",
+            "name"
+          ],
+          "type": "object"
+        },
+        "key": "projects.create",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "projectIdOrSlug": {
+              "description": "Project id or slug.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug",
+            "projectIdOrSlug"
+          ],
+          "type": "object"
+        },
+        "key": "projects.get",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
             "cursor": {
               "minLength": 1,
               "type": "string"
@@ -120766,6 +121790,201 @@
           "type": "object"
         },
         "key": "projects.list",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "dateReleased": {
+              "description": "Optional ISO-8601 timestamp when the release shipped.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "projects": {
+              "description": "Project slugs included in this release.",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "ref": {
+              "description": "Optional commit SHA or ref for the release.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "url": {
+              "description": "Optional URL associated with the release.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "version": {
+              "description": "Release version, unique per project.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug",
+            "version",
+            "projects"
+          ],
+          "type": "object"
+        },
+        "key": "releases.create",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": false,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "version": {
+              "description": "Release version.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug",
+            "version"
+          ],
+          "type": "object"
+        },
+        "key": "releases.get",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "description": "Pagination cursor from a previous releases.list result.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "query": {
+              "description": "Optional release version substring filter.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug"
+          ],
+          "type": "object"
+        },
+        "key": "releases.list",
+        "kind": "action",
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "outputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "required": [
+            "data"
+          ],
+          "type": "object"
+        },
+        "read": true,
+        "timeoutMs": 15000,
+        "tool": true
+      },
+      {
+        "destructive": false,
+        "inputSchema": {
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "description": "Pagination cursor from a previous teams.list result.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "organizationIdOrSlug": {
+              "description": "Organization id or slug.",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "organizationIdOrSlug"
+          ],
+          "type": "object"
+        },
+        "key": "teams.list",
         "kind": "action",
         "maxInputBytes": 65536,
         "maxResponseBytes": 5242880,

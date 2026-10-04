@@ -1,7 +1,7 @@
 {
   "key": "dropbox",
   "name": "Dropbox",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "description": "Dropbox JSON metadata operations using a manually supplied OAuth2 access token.",
   "categories": [
@@ -12,7 +12,11 @@
     "scopes": [
       "account_info.read",
       "files.metadata.read",
-      "files.content.write"
+      "files.metadata.write",
+      "files.content.read",
+      "files.content.write",
+      "sharing.read",
+      "sharing.write"
     ],
     "setup": {
       "mode": "api_key",
@@ -512,11 +516,795 @@
           "Content-Type": "application/json"
         }
       }
+    },
+    "files.copy": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Copy a file or folder to a new path",
+      "description": "Copy a file or folder to a new path, including folder contents. Conflicts fail; automatic renaming is disabled.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromPath": {
+            "type": "string",
+            "description": "Existing source path or id: reference."
+          },
+          "toPath": {
+            "type": "string",
+            "description": "Destination path beginning with /."
+          }
+        },
+        "required": [
+          "fromPath",
+          "toPath"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "metadata"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/copy_v2",
+        "success": [
+          200
+        ],
+        "result": {
+          "metadata": "{{response.metadata}}"
+        },
+        "body": {
+          "from_path": "{{fromPath}}",
+          "to_path": "{{toPath}}",
+          "autorename": false
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.search": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search files and folders by name or content",
+      "description": "Search files and folders by name or content. Continue with the returned cursor while hasMore is true.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search string matched against file names and content the token can read."
+          },
+          "path": {
+            "type": "string",
+            "description": "Optional folder to restrict the search. Omit to search the whole accessible namespace."
+          },
+          "maxResults": {
+            "type": "integer",
+            "description": "Requested page size from 1 to 1000, enforced by Dropbox."
+          },
+          "filenameOnly": {
+            "type": "boolean",
+            "description": "Match file names only when true; omitted searches names and content."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "matches": {
+            "type": "array",
+            "description": "Search hits with provider file or folder metadata.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor for a later search continue call."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Continue immediately while true; false means this result set is drained."
+          }
+        },
+        "required": [
+          "matches",
+          "cursor",
+          "hasMore"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/search_v2",
+        "success": [
+          200
+        ],
+        "result": {
+          "matches": "{{response.matches}}",
+          "cursor": "{{response.cursor}}",
+          "hasMore": "{{response.has_more}}"
+        },
+        "body": {
+          "query": "{{query}}",
+          "options": {
+            "path": "{{path}}",
+            "max_results": "{{maxResults}}",
+            "filename_only": "{{filenameOnly}}"
+          }
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.getTemporaryLink": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create a temporary download link for a file",
+      "description": "Create a temporary HTTPS link for a file. The link expires after a few hours and does not require Dropbox authentication to fetch.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Nonempty Dropbox path beginning with /, or a supported id: reference."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          },
+          "link": {
+            "type": "string",
+            "description": "Temporary HTTPS URL for the file contents."
+          }
+        },
+        "required": [
+          "metadata",
+          "link"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/get_temporary_link",
+        "success": [
+          200
+        ],
+        "result": {
+          "metadata": "{{response.metadata}}",
+          "link": "{{response.link}}"
+        },
+        "body": {
+          "path": "{{path}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.saveUrl": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Save a file into Dropbox from a public URL",
+      "description": "Save a file into Dropbox from a public HTTPS URL. The provider may finish immediately or return an async job id.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Destination path beginning with /, such as /Reports/notes.txt."
+          },
+          "url": {
+            "type": "string",
+            "description": "Public HTTPS URL whose contents should be saved."
+          }
+        },
+        "required": [
+          "path",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object",
+            "description": "Completed file metadata or an async job identifier."
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/save_url",
+        "success": [
+          200
+        ],
+        "result": {
+          "result": "{{response}}"
+        },
+        "body": {
+          "path": "{{path}}",
+          "url": "{{url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.listRevisions": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List revisions for a Dropbox file",
+      "description": "List revisions for a Dropbox file. Entries are newest first.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Nonempty Dropbox path beginning with /, or a supported id: reference."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size from 1 to 100, enforced by Dropbox."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "isDeleted": {
+            "type": "boolean",
+            "description": "True when the path currently points at a deleted file."
+          },
+          "entries": {
+            "type": "array",
+            "description": "Revision metadata, newest first.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "serverReset": {
+            "type": "boolean",
+            "description": "True when the caller should discard local revision state."
+          }
+        },
+        "required": [
+          "isDeleted",
+          "entries",
+          "serverReset"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/list_revisions",
+        "success": [
+          200
+        ],
+        "result": {
+          "isDeleted": "{{response.is_deleted}}",
+          "entries": "{{response.entries}}",
+          "serverReset": "{{response.server_reset}}"
+        },
+        "body": {
+          "path": "{{path}}",
+          "limit": "{{limit}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "files.restore": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Restore a file to a previous revision",
+      "description": "Restore a file to a previous revision identified by its rev. The current contents are replaced.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Nonempty Dropbox path beginning with /, or a supported id: reference."
+          },
+          "rev": {
+            "type": "string",
+            "description": "Revision identifier from files.listRevisions."
+          }
+        },
+        "required": [
+          "path",
+          "rev"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "metadata"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/files/restore",
+        "success": [
+          200
+        ],
+        "result": {
+          "metadata": "{{response}}"
+        },
+        "body": {
+          "path": "{{path}}",
+          "rev": "{{rev}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "sharing.createSharedLink": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create a shared link for a file or folder",
+      "description": "Create a shared link for a file or folder. Existing links for the same path cause a conflict.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Nonempty Dropbox path beginning with /, or a supported id: reference."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": "object",
+            "description": "Created shared link, including its public URL."
+          }
+        },
+        "required": [
+          "link"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sharing/create_shared_link_with_settings",
+        "success": [
+          200
+        ],
+        "result": {
+          "link": "{{response}}"
+        },
+        "body": {
+          "path": "{{path}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "sharing.listSharedLinks": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List shared links for a file, folder, or the account",
+      "description": "List shared links for a file, folder, or the whole account. Continue with the cursor while hasMore is true.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Optional path or id: reference. Omit to list links across the account."
+          },
+          "directOnly": {
+            "type": "boolean",
+            "description": "When true, return only links whose path matches exactly."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor from a previous sharing.listSharedLinks result."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "links": {
+            "type": "array",
+            "description": "Shared links the token can see.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor for a later page."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Continue immediately while true."
+          }
+        },
+        "required": [
+          "links",
+          "cursor",
+          "hasMore"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sharing/list_shared_links",
+        "success": [
+          200
+        ],
+        "result": {
+          "links": "{{response.links}}",
+          "cursor": "{{response.cursor}}",
+          "hasMore": "{{response.has_more}}"
+        },
+        "body": {
+          "path": "{{path}}",
+          "direct_only": "{{directOnly}}",
+          "cursor": "{{cursor}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "sharing.getSharedLinkMetadata": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read metadata for a shared link",
+      "description": "Read metadata for a shared link without downloading its contents.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Shared link URL returned by sharing.createSharedLink or sharing.listSharedLinks."
+          },
+          "path": {
+            "type": "string",
+            "description": "Optional path relative to a shared folder link."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "description": "Provider metadata; fields depend on the resource subtype and granted permissions."
+          }
+        },
+        "required": [
+          "metadata"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sharing/get_shared_link_metadata",
+        "success": [
+          200
+        ],
+        "result": {
+          "metadata": "{{response}}"
+        },
+        "body": {
+          "url": "{{url}}",
+          "path": "{{path}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "sharing.revokeSharedLink": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Revoke a shared link",
+      "description": "Revoke a shared link so the URL no longer resolves. Already-revoked links fail.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Shared link URL to revoke."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "True when Dropbox accepted the revoke."
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sharing/revoke_shared_link",
+        "success": [
+          200
+        ],
+        "result": {
+          "ok": true
+        },
+        "body": {
+          "url": "{{url}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "users.getSpaceUsage": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read used and allocated Dropbox space",
+      "description": "Read used and allocated Dropbox space for the authenticated account.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "usage": {
+            "type": "object",
+            "description": "Used bytes plus the individual or team allocation."
+          }
+        },
+        "required": [
+          "usage"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/get_space_usage",
+        "success": [
+          200
+        ],
+        "result": {
+          "usage": "{{response}}"
+        }
+      }
+    },
+    "users.getAccount": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Read a Dropbox user account by account id",
+      "description": "Read a Dropbox user account by account id. The caller must be permitted to view that account.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "description": "Dropbox account_id such as dbid:..."
+          }
+        },
+        "required": [
+          "accountId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "object",
+            "description": "Provider account profile for the requested id."
+          }
+        },
+        "required": [
+          "account"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/users/get_account",
+        "success": [
+          200
+        ],
+        "result": {
+          "account": "{{response}}"
+        },
+        "body": {
+          "account_id": "{{accountId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "sharing.listFolders": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List shared folders the account can access",
+      "description": "List shared folders the account can access. Retain the cursor for sharing.listFolders continue calls.",
+      "sideEffect": "read",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Requested page size from 1 to 1000, enforced by Dropbox."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "description": "Shared folder metadata the token can see.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor for a later page."
+          }
+        },
+        "required": [
+          "entries",
+          "cursor"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sharing/list_folders",
+        "success": [
+          200
+        ],
+        "result": {
+          "entries": "{{response.entries}}",
+          "cursor": "{{response.cursor}}"
+        },
+        "body": {
+          "limit": "{{limit}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
+    },
+    "sharing.shareFolder": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Share an existing Dropbox folder",
+      "description": "Share an existing Dropbox folder. The folder becomes a shared folder; members can be added later.",
+      "sideEffect": "write",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Existing folder path beginning with /, such as /Reports."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "object",
+            "description": "Completed shared-folder metadata or an async job identifier."
+          }
+        },
+        "required": [
+          "folder"
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "path": "/sharing/share_folder",
+        "success": [
+          200
+        ],
+        "result": {
+          "folder": "{{response}}"
+        },
+        "body": {
+          "path": "{{path}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      }
     }
   },
   "models": [
     "file",
     "folder",
-    "account"
+    "account",
+    "sharedLink",
+    "revision"
   ]
 }

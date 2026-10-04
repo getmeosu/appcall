@@ -57,3 +57,16 @@ it("rejects an empty required folder path before dispatch", async()=>{
   await expect(actions["folders.list"]!({path:"",accessToken:"fixture-token",fetch:async()=>{called=true;return new Response('{}');}})).rejects.toMatchObject({code:"INVALID_ACTION_INPUT"});
   expect(called).toBe(false);
 });
+it("rejects missing copy identifiers before dispatch", async()=>{
+  expect(actions["files.copy"]).toBeFunction();
+  let called=false;
+  await expect(actions["files.copy"]!({accessToken:"fixture-token",fetch:async()=>{called=true;return new Response('{}');}})).rejects.toMatchObject({code:"INVALID_ACTION_INPUT"});
+  expect(called).toBe(false);
+});
+it("omits unset shared-link settings", async () => {
+  const result = await actions["sharing.createSharedLink"]!({path:"/notes.txt",accessToken:"fixture-token",fetch:async(_url:unknown,init?:RequestInit)=>{
+    expect(JSON.parse(String(init?.body))).toEqual({path:"/notes.txt"});
+    return new Response(JSON.stringify({"url":"https://www.dropbox.com/s/abc/notes.txt","name":"notes.txt","path_lower":"/notes.txt",".tag":"file"}));
+  }});
+  expect(result).toMatchObject({link:{url:"https://www.dropbox.com/s/abc/notes.txt"}});
+});
