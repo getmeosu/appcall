@@ -1,7 +1,17 @@
 {
+  "key": "survey-monkey",
+  "name": "SurveyMonkey",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "forms"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,31 +19,41 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "forms"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.surveymonkey.com"
+    ]
+  },
+  "models": [
+    "user",
+    "survey",
+    "collector",
+    "contact-list",
+    "page",
+    "question",
+    "response",
+    "webhook",
+    "folder"
+  ],
   "http": {
+    "baseUrl": "https://api.surveymonkey.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.surveymonkey.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "error.message",
@@ -41,159 +61,34 @@
         "errmsg",
         "message",
         "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
   },
-  "key": "survey-monkey",
-  "models": [
-    "user",
-    "survey",
-    "collector",
-    "contact-list"
-  ],
-  "name": "SurveyMonkey",
-  "network": {
-    "allowedHosts": [
-      "api.surveymonkey.com"
-    ]
-  },
   "operations": {
-    "collectors.list": {
-      "description": "List collectors and distribution URLs for a SurveyMonkey survey.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "perPage": {
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "surveyId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "surveyId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v3/surveys/{{surveyId}}/collectors",
-        "query": {
-          "page": "{{page}}",
-          "per_page": "{{perPage}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List collectors",
-      "validationMode": "strict-generated"
-    },
-    "contact-lists.list": {
-      "description": "List contact lists in the connected SurveyMonkey account.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "perPage": {
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v3/contact_lists",
-        "query": {
-          "page": "{{page}}",
-          "per_page": "{{perPage}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List contact lists",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate the SurveyMonkey access token with GET /v3/users/me.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the SurveyMonkey access token with GET /v3/users/me.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -202,42 +97,129 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "surveys.get": {
-      "description": "Get a survey with its pages, questions, and answer choices.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "surveyId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "surveyId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List surveys",
+      "description": "List surveys available to the connected SurveyMonkey account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "folderId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "title",
+              "date_modified",
+              "num_responses"
+            ]
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "ASC",
+              "DESC"
+            ]
+          },
+          "startModifiedAt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "endModifiedAt": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/surveys",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}",
+          "title": "{{title}}",
+          "folder_id": "{{folderId}}",
+          "sort_by": "{{sortBy}}",
+          "sort_order": "{{sortOrder}}",
+          "start_modified_at": "{{startModifiedAt}}",
+          "end_modified_at": "{{endModifiedAt}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get survey details",
+      "description": "Get a survey with its pages, questions, and answer choices.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "surveyId"
+        ],
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -246,107 +228,986 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get survey details",
-      "validationMode": "strict-generated"
-    },
-    "surveys.list": {
-      "description": "List surveys available to the connected SurveyMonkey account.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "endModifiedAt": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "folderId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "perPage": {
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "sortBy": {
-            "enum": [
-              "title",
-              "date_modified",
-              "num_responses"
-            ],
-            "type": "string"
-          },
-          "sortOrder": {
-            "enum": [
-              "ASC",
-              "DESC"
-            ],
-            "type": "string"
-          },
-          "startModifiedAt": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "title": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collectors.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List collectors",
+      "description": "List collectors and distribution URLs for a SurveyMonkey survey.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "surveyId"
+        ],
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v3/surveys",
+        "path": "/v3/surveys/{{surveyId}}/collectors",
+        "success": [
+          200
+        ],
         "query": {
-          "end_modified_at": "{{endModifiedAt}}",
-          "folder_id": "{{folderId}}",
           "page": "{{page}}",
-          "per_page": "{{perPage}}",
-          "sort_by": "{{sortBy}}",
-          "sort_order": "{{sortOrder}}",
-          "start_modified_at": "{{startModifiedAt}}",
-          "title": "{{title}}"
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contact-lists.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List contact lists",
+      "description": "List contact lists in the connected SurveyMonkey account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
         },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/contact_lists",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create survey",
+      "description": "Create a SurveyMonkey survey with a title.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey title."
+          },
+          "nickname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional survey nickname."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/surveys",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "title": "{{title}}",
+          "nickname": "{{nickname}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update survey",
+      "description": "Update a SurveyMonkey survey title, nickname, or language.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey title."
+          },
+          "nickname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey nickname."
+          },
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 639-1 survey language."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/v3/surveys/{{surveyId}}",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "title": "{{title}}",
+          "nickname": "{{nickname}}",
+          "language": "{{language}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete survey",
+      "description": "Delete a SurveyMonkey survey by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v3/surveys/{{surveyId}}",
+        "success": [
+          200,
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.summary.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get survey summary",
+      "description": "Get SurveyMonkey survey metadata without expanding pages and questions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/surveys/{{surveyId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List surveys",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List pages",
+      "description": "List pages in a SurveyMonkey survey.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page.",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/surveys/{{surveyId}}/pages",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get page",
+      "description": "Get one SurveyMonkey survey page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          },
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId",
+          "pageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/surveys/{{surveyId}}/pages/{{pageId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create page",
+      "description": "Create a page on a SurveyMonkey survey.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page title."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId",
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/surveys/{{surveyId}}/pages",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "title": "{{title}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "questions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List questions",
+      "description": "List questions on a SurveyMonkey survey page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          },
+          "pageId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Page ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId",
+          "pageId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/surveys/{{surveyId}}/pages/{{pageId}}/questions",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collectors.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get collector",
+      "description": "Get one SurveyMonkey collector by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "collectorId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collector ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "collectorId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/collectors/{{collectorId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "collectors.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create collector",
+      "description": "Create a SurveyMonkey collector for a survey.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collector type.",
+            "enum": [
+              "weblink",
+              "email",
+              "sms",
+              "popup"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Collector name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/surveys/{{surveyId}}/collectors",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "type": "{{type}}",
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List responses",
+      "description": "List SurveyMonkey responses for a survey.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/surveys/{{surveyId}}/responses",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.bulk.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List bulk responses",
+      "description": "List SurveyMonkey responses with answer details for a survey.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey ID."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/surveys/{{surveyId}}/responses/bulk",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "contact-lists.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create contact list",
+      "description": "Create a SurveyMonkey contact list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contact list name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v3/contact_lists",
+        "success": [
+          200,
+          201
+        ],
+        "body": {
+          "name": "{{name}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List webhooks",
+      "description": "List SurveyMonkey webhook subscriptions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page.",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/webhooks",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "folders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List folders",
+      "description": "List SurveyMonkey survey folders.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "perPage": {
+            "type": "integer",
+            "description": "Results per page.",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v3/survey_folders",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "per_page": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.response_completed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Response completed",
+      "description": "SurveyMonkey webhook. Fires when a survey response is completed."
+    },
+    "webhook.response_updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Response updated",
+      "description": "SurveyMonkey webhook. Fires when a survey response is updated."
+    },
+    "webhook.survey_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Survey created",
+      "description": "SurveyMonkey webhook. Fires when a survey is created."
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
