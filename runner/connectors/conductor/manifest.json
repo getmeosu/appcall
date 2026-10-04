@@ -1,7 +1,17 @@
 {
+  "key": "conductor",
+  "name": "Conductor",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "ads"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,187 +19,157 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "ads"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.cm.conductor.com"
+    ]
+  },
+  "models": [
+    "website",
+    "segment",
+    "statistics",
+    "issue",
+    "page",
+    "alert"
+  ],
   "http": {
+    "baseUrl": "https://api.cm.conductor.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "token {{apiKey}}"
     },
-    "baseUrl": "https://api.cm.conductor.com",
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 60,
       "messagePaths": [
         "message",
         "error",
         "code",
         "errors.0"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
+      ]
     },
     "headers": {
       "Accept": "application/json",
       "Content-Type": "application/json"
     }
   },
-  "key": "conductor",
-  "models": [
-    "website",
-    "segment",
-    "statistics",
-    "issue"
-  ],
-  "name": "Conductor",
-  "network": {
-    "allowedHosts": [
-      "api.cm.conductor.com"
-    ]
-  },
   "operations": {
     "healthcheck": {
-      "description": "Validate the Conductor Monitoring Reporting API token by listing websites.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Conductor Monitoring Reporting API token by listing websites.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v2/entities/websites",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      }
     },
-    "issues.list": {
-      "description": "List Conductor Monitoring issues for a website or segment scope.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "captured_at": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "scope": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "website_id": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "website_id",
-          "scope"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
+    "websites.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List websites",
+      "description": "List websites available in the connected Conductor Monitoring account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
-        "path": "/v2/data/issues",
-        "query": {
-          "captured_at": "{{captured_at}}",
-          "scope": "{{scope}}",
-          "website_id": "{{website_id}}"
-        },
+        "path": "/v2/entities/websites",
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List issues",
-      "validationMode": "strict-generated"
+      }
     },
     "segments.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List segments",
       "description": "List Conductor Monitoring segments for one website.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "website_id": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
           "website_id"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v2/entities/segments",
@@ -199,115 +179,836 @@
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List segments",
-      "validationMode": "strict-generated"
+      }
     },
     "statistics.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get statistics",
       "description": "Retrieve Conductor Monitoring statistics for a website or segment scope.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
-          "captured_at": {
-            "minLength": 1,
-            "type": "string"
+          "website_id": {
+            "type": "string",
+            "minLength": 1
           },
           "scope": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
-          "website_id": {
-            "minLength": 1,
-            "type": "string"
+          "captured_at": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
           "website_id",
           "scope"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
       "request": {
         "method": "GET",
         "path": "/v2/data/statistics",
         "query": {
-          "captured_at": "{{captured_at}}",
+          "website_id": "{{website_id}}",
           "scope": "{{scope}}",
-          "website_id": "{{website_id}}"
+          "captured_at": "{{captured_at}}"
         },
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
+      }
+    },
+    "statistics.getSnapshot": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get statistics",
-      "validationMode": "strict-generated"
-    },
-    "websites.list": {
-      "description": "List websites available in the connected Conductor Monitoring account.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
+      "title": "Get statistics snapshot",
+      "description": "Get Conductor Monitoring statistics for a captured_at snapshot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1,
+            "description": "website, segment:{id}, or segment_label:{label}."
+          },
+          "captured_at": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO-8601 snapshot timestamp."
+          }
+        },
         "additionalProperties": false,
+        "required": [
+          "website_id",
+          "scope",
+          "captured_at"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/v2/entities/websites",
+        "path": "/v2/data/statistics",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "scope": "{{scope}}",
+          "captured_at": "{{captured_at}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "issues.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List issues",
+      "description": "List Conductor Monitoring issues for a website or segment scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "captured_at": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "website_id",
+          "scope"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/v2/data/issues",
+        "query": {
+          "website_id": "{{website_id}}",
+          "scope": "{{scope}}",
+          "captured_at": "{{captured_at}}"
+        },
         "success": [
           200
         ]
-      },
-      "responseFormat": "json",
+      }
+    },
+    "issues.affectedPages": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List websites",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List affected pages",
+      "description": "List pages affected by one Conductor Monitoring issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "issue": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Issue identifier from GET /v2/data/issues."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result page number."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Results per request, 1-1000."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id",
+          "issue",
+          "page",
+          "per_page"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data/affected_pages",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "issue": "{{issue}}",
+          "page": "{{page}}",
+          "per_page": "{{per_page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List pages",
+      "description": "List tracked pages for a Conductor Monitoring website.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Results per request, 1-1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result page number."
+          },
+          "page_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from next_page_cursor."
+          },
+          "sort": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort field, for example url."
+          },
+          "direction": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort direction, asc or desc."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id",
+          "per_page"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data/pages",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "per_page": "{{per_page}}",
+          "page": "{{page}}",
+          "page_cursor": "{{page_cursor}}",
+          "sort": "{{sort}}",
+          "direction": "{{direction}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get page",
+      "description": "Get Conductor Monitoring data for one page URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absolute page URL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data/page",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "url": "{{url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.logFileAnalysis": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get log file analysis",
+      "description": "Get log-file analysis data for one page URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absolute page URL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data/page_lfa",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "url": "{{url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.issues": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get page issues",
+      "description": "Get issue details for one page URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absolute page URL."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data/page/issues",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "url": "{{url}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.brokenLinks": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get page broken links",
+      "description": "List broken links on one page URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absolute page URL."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Results per request, 1-1000."
+          },
+          "page_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from next_page_cursor."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data/page/issues/broken_links",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "url": "{{url}}",
+          "per_page": "{{per_page}}",
+          "page_cursor": "{{page_cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.redirectedLinks": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get page redirected links",
+      "description": "List redirected links on one page URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absolute page URL."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Results per request, 1-1000."
+          },
+          "page_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from next_page_cursor."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data/page/redirected_links",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "url": "{{url}}",
+          "per_page": "{{per_page}}",
+          "page_cursor": "{{page_cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pages.canonicalizedLinks": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get page canonicalized links",
+      "description": "List canonicalized links on one page URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absolute page URL."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Results per request, 1-1000."
+          },
+          "page_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Cursor from next_page_cursor."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/data/page/issues/canonicalized_links",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "url": "{{url}}",
+          "per_page": "{{per_page}}",
+          "page_cursor": "{{page_cursor}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "alerts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List alerts",
+      "description": "List Conductor Monitoring alerts for a website.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/alerts",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "alerts.pages": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List alert pages",
+      "description": "List pages for one Conductor Monitoring alert.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "website_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Website ID from GET /v2/entities/websites."
+          },
+          "alert": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alert identifier."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Result page number."
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Results per request, 1-1000."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "website_id",
+          "alert",
+          "page",
+          "per_page"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/alerts/alert_pages",
+        "success": [
+          200
+        ],
+        "query": {
+          "website_id": "{{website_id}}",
+          "alert": "{{alert}}",
+          "page": "{{page}}",
+          "per_page": "{{per_page}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
