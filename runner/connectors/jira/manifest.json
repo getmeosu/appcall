@@ -1,7 +1,7 @@
 {
   "key": "jira",
   "name": "Jira Cloud",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["dev-tools"],
   "auth": {
@@ -497,6 +497,175 @@
           }
         }
       }
+    },
+    "issues.changelog.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "Get Issue Changelog",
+      "description": "Retrieve the changelog for a Jira Cloud issue via GET /rest/api/3/issue/{issueIdOrKey}/changelog.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": { "type": "string", "description": "The issue key (e.g. \"PROJ-123\") or numeric ID." },
+          "startAt": { "type": "number", "description": "Index of the first changelog item to return. Defaults to 0." },
+          "maxResults": { "type": "number", "description": "Maximum number of changelog items to return. Defaults to 50." }
+        },
+        "required": ["issueKey"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "values": { "type": "array", "items": { "type": "object" }, "description": "Changelog entries." },
+          "total": { "type": "number" }
+        }
+      }
+    },
+    "issues.watchers.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Add Issue Watcher",
+      "description": "Add a watcher to a Jira Cloud issue via POST /rest/api/3/issue/{issueIdOrKey}/watchers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": { "type": "string", "description": "The issue key (e.g. \"PROJ-123\") or numeric ID." },
+          "accountId": { "type": "string", "description": "Atlassian account ID of the user to add as a watcher." }
+        },
+        "required": ["issueKey", "accountId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "added": { "type": "boolean", "description": "True if the watcher was added." }
+        }
+      }
+    },
+    "issues.links.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Create Issue Link",
+      "description": "Create a link between two Jira Cloud issues via POST /rest/api/3/issueLink.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "inwardIssueKey": { "type": "string", "description": "Issue key that is the inward side of the link (e.g. is blocked by)." },
+          "outwardIssueKey": { "type": "string", "description": "Issue key that is the outward side of the link (e.g. blocks)." },
+          "type": { "type": "string", "description": "Link type name, e.g. \"Blocks\", \"Relates\", \"Duplicate\"." },
+          "comment": { "type": "string", "description": "Optional plain-text comment to attach to the link." }
+        },
+        "required": ["inwardIssueKey", "outwardIssueKey", "type"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "created": { "type": "boolean" }
+        }
+      }
+    },
+    "worklogs.add": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Add Worklog",
+      "description": "Add a worklog to a Jira Cloud issue via POST /rest/api/3/issue/{issueIdOrKey}/worklog.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "issueKey": { "type": "string", "description": "The issue key (e.g. \"PROJ-123\") or numeric ID." },
+          "timeSpent": { "type": "string", "description": "Time spent, e.g. \"1h 30m\" or \"2d\"." },
+          "started": { "type": "string", "description": "When the work started, in Jira datetime format." },
+          "comment": { "type": "string", "description": "Optional plain-text worklog comment." }
+        },
+        "required": ["issueKey", "timeSpent"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "worklog": { "type": "object", "description": "The created worklog." }
+        }
+      }
+    },
+    "myself.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Current User",
+      "description": "Retrieve the currently authenticated Jira Cloud user via GET /rest/api/3/myself.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "user": { "type": "object", "description": "The current Jira user, normalized." }
+        }
+      }
+    },
+    "fields.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "title": "List Fields",
+      "description": "List all system and custom fields in the Jira Cloud site via GET /rest/api/3/field.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "fields": { "type": "array", "items": { "type": "object" }, "description": "Jira field definitions." }
+        }
+      }
+    },
+    "webhook.jira.issue_created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
+    },
+    "webhook.jira.issue_updated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
+    },
+    "webhook.comment_created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
     },
     "healthcheck": {
       "kind": "action",

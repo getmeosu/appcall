@@ -4,6 +4,7 @@ import {
   isRecord,
   mapNotionCreatePageError,
   mapNotionPageError,
+  mapNotionPagePropertyError,
   mapNotionSearchError,
   mapNotionUpdatePageError,
   notionVersion,
@@ -33,6 +34,13 @@ export type DocumentsTrashInput = {
   pageId: string;
 };
 
+export type PagePropertyGetInput = {
+  pageId: string;
+  propertyId: string;
+  cursor?: string;
+  pageSize?: number;
+};
+
 export type DocumentsSearchResult =
   | { ok: true; items: NormalizedDocument[]; cursor: string | null }
   | { ok: false; error: Record<string, unknown> };
@@ -47,6 +55,10 @@ export type DocumentsCreateResult =
 
 export type DocumentsTrashResult =
   | { ok: true; document: NormalizedDocument }
+  | { ok: false; error: Record<string, unknown> };
+
+export type PagePropertyGetResult =
+  | { ok: true; property: Record<string, unknown>; cursor: string | null }
   | { ok: false; error: Record<string, unknown> };
 
 export function validateDocumentsSearchInput(input: unknown): DocumentsSearchInput {
@@ -65,6 +77,17 @@ export function validateDocumentsGetInput(input: unknown): DocumentsGetInput {
   }
   const pageId = requireNonEmptyString(input.pageId, "pageId");
   return { pageId };
+}
+
+export function validatePagePropertyGetInput(input: unknown): PagePropertyGetInput {
+  if (!isRecord(input)) {
+    throw new Error("page property get input must be an object");
+  }
+  const pageId = requireNonEmptyString(input.pageId, "pageId");
+  const propertyId = requireNonEmptyString(input.propertyId, "propertyId");
+  const cursor = typeof input.cursor === "string" && input.cursor.trim().length > 0 ? input.cursor.trim() : undefined;
+  const pageSize = input.pageSize === undefined ? undefined : readPageSize(input.pageSize);
+  return { pageId, propertyId, cursor, pageSize };
 }
 
 export function validateDocumentsCreateInput(input: unknown): DocumentsCreateInput {
@@ -136,6 +159,36 @@ export async function getNotionDocument(
   return {
     ok: true,
     document: normalizeDocument(body as NotionPage),
+  };
+}
+
+export async function getNotionPageProperty(
+  httpClient: ConnectorHttpClient,
+  notionToken: string,
+  input: PagePropertyGetInput,
+): Promise<PagePropertyGetResult> {
+  const url = new URL(`https://api.notion.com/v1/pages/${encodeURIComponent(input.pageId)}/properties/${encodeURIComponent(input.propertyId)}`);
+  if (typeof input.cursor === "string") {
+    url.searchParams.set("start_cursor", input.cursor);
+  }
+  if (typeof input.pageSize === "number") {
+    url.searchParams.set("page_size", String(input.pageSize));
+  }
+  const response = await httpClient.fetchText(url.toString(), {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${notionToken}`,
+      "Notion-Version": notionVersion,
+    },
+  });
+  const body = readJsonObject(response.body);
+  if (response.status < 200 || response.status >= 300) {
+    return { ok: false, error: mapNotionPagePropertyError(response.status, response.headers, body) };
+  }
+  return {
+    ok: true,
+    property: body,
+    cursor: parseNextCursor(body),
   };
 }
 

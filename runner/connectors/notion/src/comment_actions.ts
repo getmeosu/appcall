@@ -2,6 +2,7 @@ import { type ConnectorHttpClient } from "../../../bun/src/http";
 import { normalizeComment, parseNextCursor as parseCommentsNextCursor, type NormalizedComment, type NotionComment } from "./comments";
 import {
   isRecord,
+  mapNotionCommentRetrieveError,
   mapNotionCommentsCreateError,
   mapNotionCommentsError,
   notionVersion,
@@ -22,12 +23,20 @@ export type CommentsCreateInput = {
   text: string;
 };
 
+export type CommentsRetrieveInput = {
+  commentId: string;
+};
+
 export type CommentsListResult =
   | { ok: true; comments: NormalizedComment[]; cursor: string | null }
   | { ok: false; error: Record<string, unknown> };
 
 export type CommentsCreateResult =
   | { ok: true; commentId: string; comment: NormalizedComment | null; limited: boolean }
+  | { ok: false; error: Record<string, unknown> };
+
+export type CommentsRetrieveResult =
+  | { ok: true; comment: NormalizedComment }
   | { ok: false; error: Record<string, unknown> };
 
 export function validateCommentsListInput(input: unknown): CommentsListInput {
@@ -38,6 +47,13 @@ export function validateCommentsListInput(input: unknown): CommentsListInput {
   const cursor = typeof input.cursor === "string" && input.cursor.trim().length > 0 ? input.cursor.trim() : undefined;
   const pageSize = input.pageSize === undefined ? undefined : readPageSize(input.pageSize);
   return { blockId, cursor, pageSize };
+}
+
+export function validateCommentsRetrieveInput(input: unknown): CommentsRetrieveInput {
+  if (!isRecord(input)) {
+    throw new Error("comments retrieve input must be an object");
+  }
+  return { commentId: requireNonEmptyString(input.commentId, "commentId") };
 }
 
 export function validateCommentsCreateInput(input: unknown): CommentsCreateInput {
@@ -109,6 +125,25 @@ export async function createNotionComment(
     comment: normalizeComment(body as NotionComment),
     limited: false,
   };
+}
+
+export async function retrieveNotionComment(
+  httpClient: ConnectorHttpClient,
+  notionToken: string,
+  input: CommentsRetrieveInput,
+): Promise<CommentsRetrieveResult> {
+  const response = await httpClient.fetchText(`https://api.notion.com/v1/comments/${encodeURIComponent(input.commentId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${notionToken}`,
+      "Notion-Version": notionVersion,
+    },
+  });
+  const body = readJsonObject(response.body);
+  if (response.status < 200 || response.status >= 300) {
+    return { ok: false, error: mapNotionCommentRetrieveError(response.status, response.headers, body) };
+  }
+  return { ok: true, comment: normalizeComment(body as NotionComment) };
 }
 
 function buildCommentsURL(input: CommentsListInput): string {

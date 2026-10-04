@@ -117,6 +117,46 @@ export function mapNotionCommentsCreateError(status: number, headers: Record<str
   });
 }
 
+export function mapNotionUserError(status: number, headers: Record<string, string>, body: Record<string, unknown>): Record<string, unknown> {
+  return mapNotionError(status, headers, body, {
+    forbidden: "Notion credentials do not have access to retrieve users.",
+    notFound: "Notion user was not found or is not shared with the integration.",
+    upstream: "Notion rejected the user retrieval request.",
+  });
+}
+
+export function mapNotionCommentRetrieveError(status: number, headers: Record<string, string>, body: Record<string, unknown>): Record<string, unknown> {
+  return mapNotionError(status, headers, body, {
+    forbidden: "Notion credentials do not have read comments capability.",
+    notFound: "Notion comment was not found or is not shared with the integration.",
+    upstream: "Notion rejected the comment retrieve request.",
+  });
+}
+
+export function mapNotionDeleteBlockError(status: number, headers: Record<string, string>, body: Record<string, unknown>): Record<string, unknown> {
+  return mapNotionError(status, headers, body, {
+    forbidden: "Notion credentials do not have access to delete blocks.",
+    notFound: "Notion block was not found or is not shared with the integration.",
+    upstream: "Notion rejected the block delete request.",
+  });
+}
+
+export function mapNotionPagePropertyError(status: number, headers: Record<string, string>, body: Record<string, unknown>): Record<string, unknown> {
+  return mapNotionError(status, headers, body, {
+    forbidden: "Notion credentials do not have access to retrieve page properties.",
+    notFound: "Notion page or property was not found or is not shared with the integration.",
+    upstream: "Notion rejected the page property retrieval request.",
+  });
+}
+
+export function mapNotionCreateDatabaseError(status: number, headers: Record<string, string>, body: Record<string, unknown>): Record<string, unknown> {
+  return mapNotionError(status, headers, body, {
+    forbidden: "Notion credentials do not have access to create databases.",
+    notFound: "Notion parent page was not found or is not shared with the integration.",
+    upstream: "Notion rejected the database create request.",
+  });
+}
+
 function mapNotionError(
   status: number,
   headers: Record<string, string>,

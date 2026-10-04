@@ -1,7 +1,7 @@
 {
   "key": "notion",
   "name": "Notion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["productivity"],
   "auth": {
@@ -764,6 +764,165 @@
       "timeoutMs": 10000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880
+    },
+    "users.me": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Current User",
+      "description": "Retrieve the Notion bot or person associated with the current integration token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": { "type": "object", "description": "The current Notion user." }
+        }
+      }
+    },
+    "users.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get User",
+      "description": "Retrieve a Notion user by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "description": "ID of the Notion user to retrieve." }
+        },
+        "required": ["userId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "user": { "type": "object", "description": "The retrieved Notion user." }
+        }
+      }
+    },
+    "databases.create": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Create Database",
+      "description": "Create a Notion database as a child of a page. POST /v1/databases remains supported for this API version.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parentPageId": { "type": "string", "description": "ID of the parent page that will contain the database." },
+          "title": { "type": "string", "description": "Title of the new database." },
+          "properties": {
+            "type": "object",
+            "description": "Map of property name to { type }. A title property is added automatically when omitted.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string", "description": "Notion property type, e.g. title, select, rich_text." }
+              },
+              "required": ["type"]
+            }
+          }
+        },
+        "required": ["parentPageId", "title"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "database": { "type": "object" },
+          "summary": { "type": "object" }
+        }
+      }
+    },
+    "comments.retrieve": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Retrieve Comment",
+      "description": "Retrieve a single Notion comment by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commentId": { "type": "string", "description": "ID of the comment to retrieve." }
+        },
+        "required": ["commentId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "comment": { "type": "object", "description": "The retrieved comment." }
+        }
+      }
+    },
+    "blocks.delete": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "destructive",
+      "title": "Delete Block",
+      "description": "Delete (archive) a Notion block by ID. This cannot be undone from the API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blockId": { "type": "string", "description": "ID of the block to delete." }
+        },
+        "required": ["blockId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "block": { "type": "object", "description": "The deleted block." },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "pages.properties.get": {
+      "kind": "action",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Get Page Property",
+      "description": "Retrieve a single property item from a Notion page, including paginated multi-item properties.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageId": { "type": "string", "description": "ID of the page." },
+          "propertyId": { "type": "string", "description": "ID of the property to retrieve." },
+          "cursor": { "type": "string", "description": "Pagination cursor returned by a prior call." },
+          "pageSize": { "type": "integer", "description": "Number of property items to return, between 1 and 100." }
+        },
+        "required": ["pageId", "propertyId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "property": { "type": "object", "description": "The property item or paginated property list." },
+          "cursor": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "webhook.page.updated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
+    },
+    "webhook.database.updated": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576
     }
   },
   "models": [
