@@ -22,10 +22,20 @@ import {
   parseOpportunitiesResponse,
   parseOpportunityGetResponse,
   parseInterviewsResponse,
+  parseInterviewGetResponse,
   parseFeedbackResponse,
+  parseFeedbackGetResponse,
   parseArchiveReasonsResponse,
   parseStagesResponse,
   parseUsersResponse,
+  parseUserGetResponse,
+  parseCandidateGetResponse,
+  parseOffersResponse,
+  parseOfferGetResponse,
+  parsePostingsResponse,
+  parsePostingGetResponse,
+  parseNotesResponse,
+  parseRequisitionsResponse,
   type NormalizedJob,
   type NormalizedOpportunity,
   type NormalizedInterview,
@@ -33,6 +43,11 @@ import {
   type NormalizedArchiveReason,
   type NormalizedStage,
   type NormalizedUser,
+  type NormalizedCandidate,
+  type NormalizedOffer,
+  type NormalizedPosting,
+  type NormalizedNote,
+  type NormalizedRequisition,
 } from "./objects";
 
 export interface ExecuteJobsListSyncInput {
@@ -424,4 +439,338 @@ export async function executeArchiveReasonsListSync(
     });
   const raw = await client.getJSON(path);
   return parseArchiveReasonsResponse(raw);
+}
+
+export interface ExecuteOpportunitiesUpdateSyncInput extends LeverAuthInput {
+  id: string;
+  name?: string;
+  headline?: string;
+  location?: string;
+  emails?: string[];
+  tags?: string[];
+  performAs?: string;
+}
+
+export async function executeOpportunitiesUpdateSync(
+  input: ExecuteOpportunitiesUpdateSyncInput,
+): Promise<ExecuteOpportunitiesMutateSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "opportunities.update",
+  });
+  const path =
+    `/opportunities/${id}` +
+    buildQuery({
+      perform_as: input.performAs,
+    });
+  await client.putJSON(
+    path,
+    compactBody({
+      name: input.name,
+      headline: input.headline,
+      location: input.location,
+      emails: input.emails,
+      tags: input.tags,
+    }),
+  );
+  return { opportunity: null };
+}
+
+export interface ExecuteCandidatesGetSyncInput extends LeverAuthInput {
+  id: string;
+}
+
+export interface ExecuteCandidatesGetSyncOutput {
+  candidate: NormalizedCandidate | null;
+}
+
+export async function executeCandidatesGetSync(
+  input: ExecuteCandidatesGetSyncInput,
+): Promise<ExecuteCandidatesGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "candidates.get",
+  });
+  const raw = await client.getJSON(`/opportunities/${id}`);
+  return parseCandidateGetResponse(raw);
+}
+
+export interface ExecuteInterviewsListSyncInput extends LeverAuthInput {
+  opportunityId: string;
+  limit?: number;
+  offset?: string;
+}
+
+export interface ExecuteInterviewsListSyncOutput {
+  interviews: NormalizedInterview[];
+  next: string | null;
+  hasNext: boolean;
+}
+
+export async function executeInterviewsListSync(
+  input: ExecuteInterviewsListSyncInput,
+): Promise<ExecuteInterviewsListSyncOutput> {
+  const opportunityId = assertSafePathSegment(input.opportunityId, "opportunityId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "interviews.list",
+  });
+  const path =
+    `/opportunities/${opportunityId}/interviews` +
+    buildQuery({
+      limit: input.limit != null ? String(input.limit) : undefined,
+      offset: input.offset,
+    });
+  const raw = await client.getJSON(path);
+  return parseInterviewsResponse(raw, opportunityId);
+}
+
+export interface ExecuteInterviewsGetSyncInput extends LeverAuthInput {
+  opportunityId: string;
+  interviewId: string;
+}
+
+export interface ExecuteInterviewsGetSyncOutput {
+  interview: NormalizedInterview | null;
+}
+
+export async function executeInterviewsGetSync(
+  input: ExecuteInterviewsGetSyncInput,
+): Promise<ExecuteInterviewsGetSyncOutput> {
+  const opportunityId = assertSafePathSegment(input.opportunityId, "opportunityId");
+  const interviewId = assertSafePathSegment(input.interviewId, "interviewId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "interviews.get",
+  });
+  const raw = await client.getJSON(`/opportunities/${opportunityId}/interviews/${interviewId}`);
+  return parseInterviewGetResponse(raw, opportunityId);
+}
+
+export interface ExecuteOffersListSyncInput extends LeverAuthInput {
+  opportunityId: string;
+  limit?: number;
+  offset?: string;
+}
+
+export interface ExecuteOffersListSyncOutput {
+  offers: NormalizedOffer[];
+  next: string | null;
+  hasNext: boolean;
+}
+
+export async function executeOffersListSync(
+  input: ExecuteOffersListSyncInput,
+): Promise<ExecuteOffersListSyncOutput> {
+  const opportunityId = assertSafePathSegment(input.opportunityId, "opportunityId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "offers.list",
+  });
+  const path =
+    `/opportunities/${opportunityId}/offers` +
+    buildQuery({
+      limit: input.limit != null ? String(input.limit) : undefined,
+      offset: input.offset,
+    });
+  const raw = await client.getJSON(path);
+  return parseOffersResponse(raw);
+}
+
+export interface ExecuteOffersGetSyncInput extends LeverAuthInput {
+  opportunityId: string;
+  offerId: string;
+}
+
+export interface ExecuteOffersGetSyncOutput {
+  offer: NormalizedOffer | null;
+}
+
+export async function executeOffersGetSync(
+  input: ExecuteOffersGetSyncInput,
+): Promise<ExecuteOffersGetSyncOutput> {
+  const opportunityId = assertSafePathSegment(input.opportunityId, "opportunityId");
+  const offerId = assertSafePathSegment(input.offerId, "offerId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "offers.get",
+  });
+  const raw = await client.getJSON(`/opportunities/${opportunityId}/offers/${offerId}`);
+  return parseOfferGetResponse(raw);
+}
+
+export interface ExecutePostingsListSyncInput extends LeverAuthInput {
+  state?: string;
+  limit?: number;
+  offset?: string;
+}
+
+export interface ExecutePostingsListSyncOutput {
+  postings: NormalizedPosting[];
+  next: string | null;
+  hasNext: boolean;
+}
+
+export async function executePostingsListSync(
+  input: ExecutePostingsListSyncInput,
+): Promise<ExecutePostingsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "postings.list",
+  });
+  const path =
+    "/postings" +
+    buildQuery({
+      state: input.state,
+      limit: input.limit != null ? String(input.limit) : undefined,
+      offset: input.offset,
+    });
+  const raw = await client.getJSON(path);
+  return parsePostingsResponse(raw);
+}
+
+export interface ExecutePostingsGetSyncInput extends LeverAuthInput {
+  id: string;
+}
+
+export interface ExecutePostingsGetSyncOutput {
+  posting: NormalizedPosting | null;
+}
+
+export async function executePostingsGetSync(
+  input: ExecutePostingsGetSyncInput,
+): Promise<ExecutePostingsGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "postings.get",
+  });
+  const raw = await client.getJSON(`/postings/${id}`);
+  return parsePostingGetResponse(raw);
+}
+
+export interface ExecuteNotesListSyncInput extends LeverAuthInput {
+  opportunityId: string;
+  limit?: number;
+  offset?: string;
+}
+
+export interface ExecuteNotesListSyncOutput {
+  notes: NormalizedNote[];
+  next: string | null;
+  hasNext: boolean;
+}
+
+export async function executeNotesListSync(
+  input: ExecuteNotesListSyncInput,
+): Promise<ExecuteNotesListSyncOutput> {
+  const opportunityId = assertSafePathSegment(input.opportunityId, "opportunityId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "notes.list",
+  });
+  const path =
+    `/opportunities/${opportunityId}/notes` +
+    buildQuery({
+      limit: input.limit != null ? String(input.limit) : undefined,
+      offset: input.offset,
+    });
+  const raw = await client.getJSON(path);
+  return parseNotesResponse(raw);
+}
+
+export interface ExecuteUsersGetSyncInput extends LeverAuthInput {
+  id: string;
+}
+
+export interface ExecuteUsersGetSyncOutput {
+  user: NormalizedUser | null;
+}
+
+export async function executeUsersGetSync(
+  input: ExecuteUsersGetSyncInput,
+): Promise<ExecuteUsersGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "users.get",
+  });
+  const raw = await client.getJSON(`/users/${id}`);
+  return parseUserGetResponse(raw);
+}
+
+export interface ExecuteRequisitionsListSyncInput extends LeverAuthInput {
+  limit?: number;
+  offset?: string;
+}
+
+export interface ExecuteRequisitionsListSyncOutput {
+  requisitions: NormalizedRequisition[];
+  next: string | null;
+  hasNext: boolean;
+}
+
+export async function executeRequisitionsListSync(
+  input: ExecuteRequisitionsListSyncInput,
+): Promise<ExecuteRequisitionsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "requisitions.list",
+  });
+  const path =
+    "/requisitions" +
+    buildQuery({
+      limit: input.limit != null ? String(input.limit) : undefined,
+      offset: input.offset,
+    });
+  const raw = await client.getJSON(path);
+  return parseRequisitionsResponse(raw);
+}
+
+export interface ExecuteFeedbackGetSyncInput extends LeverAuthInput {
+  opportunityId: string;
+  feedbackId: string;
+}
+
+export interface ExecuteFeedbackGetSyncOutput {
+  feedback: NormalizedFeedback | null;
+}
+
+export async function executeFeedbackGetSync(
+  input: ExecuteFeedbackGetSyncInput,
+): Promise<ExecuteFeedbackGetSyncOutput> {
+  const opportunityId = assertSafePathSegment(input.opportunityId, "opportunityId");
+  const feedbackId = assertSafePathSegment(input.feedbackId, "feedbackId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    region: input.region,
+    fetch: input.fetch,
+    operation: "feedback.get",
+  });
+  const raw = await client.getJSON(`/opportunities/${opportunityId}/feedback/${feedbackId}`);
+  return parseFeedbackGetResponse(raw);
 }

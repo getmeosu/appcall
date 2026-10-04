@@ -43,6 +43,11 @@ export type GreenhouseAuthClient = {
    * (returns `undefined` when the body is empty).
    */
   postJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
+  /**
+   * PATCH `path` with a JSON body. Accepts 2xx including 204 No Content
+   * (returns `undefined` when the body is empty).
+   */
+  patchJSON(path: string, body?: Record<string, unknown>): Promise<unknown>;
 };
 
 type OperationBounds = { maxResponseBytes: number; timeoutMs: number };
@@ -92,6 +97,38 @@ export function createAuthClient(config: GreenhouseAuthClientConfig): Greenhouse
   });
   const authHeader = basicAuthHeader(config.apiKey);
 
+  async function writeJSON(
+    method: "POST" | "PATCH",
+    path: string,
+    body: Record<string, unknown>,
+  ): Promise<unknown> {
+    const response = await http.fetchText(`${HARVEST_BASE}${path}`, {
+      method,
+      headers: {
+        Authorization: authHeader,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (response.status < 200 || response.status >= 300) {
+      throw upstreamErrorFor("Greenhouse", response.status, response.headers, response.body);
+    }
+    // Move/reject and similar writes return 204 No Content.
+    if (response.status === 204 || response.body.length === 0) {
+      return undefined;
+    }
+    try {
+      return JSON.parse(response.body);
+    } catch {
+      throw {
+        ok: false,
+        code: "CONNECTOR_UPSTREAM_ERROR",
+        message: "Greenhouse returned a non-JSON body.",
+      } satisfies ConnectorUpstreamError;
+    }
+  }
+
   return {
     async getJSON(path: string): Promise<unknown> {
       const response = await http.fetchText(`${HARVEST_BASE}${path}`, {
@@ -116,31 +153,11 @@ export function createAuthClient(config: GreenhouseAuthClientConfig): Greenhouse
     },
 
     async postJSON(path: string, body: Record<string, unknown> = {}): Promise<unknown> {
-      const response = await http.fetchText(`${HARVEST_BASE}${path}`, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      if (response.status < 200 || response.status >= 300) {
-        throw upstreamErrorFor("Greenhouse", response.status, response.headers, response.body);
-      }
-      // Move and similar writes return 204 No Content.
-      if (response.status === 204 || response.body.length === 0) {
-        return undefined;
-      }
-      try {
-        return JSON.parse(response.body);
-      } catch {
-        throw {
-          ok: false,
-          code: "CONNECTOR_UPSTREAM_ERROR",
-          message: "Greenhouse returned a non-JSON body.",
-        } satisfies ConnectorUpstreamError;
-      }
+      return writeJSON("POST", path, body);
+    },
+
+    async patchJSON(path: string, body: Record<string, unknown> = {}): Promise<unknown> {
+      return writeJSON("PATCH", path, body);
     },
   };
 }

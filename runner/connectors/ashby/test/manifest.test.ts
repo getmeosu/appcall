@@ -6,8 +6,8 @@ describe("Ashby manifest", () => {
     expect(manifest.key).toBe("ashby");
   });
 
-  it("has version 0.5.0", () => {
-    expect(manifest.version).toBe("0.5.0");
+  it("has version 0.6.0", () => {
+    expect(manifest.version).toBe("0.6.0");
   });
 
   it("uses bun runtime", () => {
@@ -41,15 +41,31 @@ describe("Ashby manifest", () => {
       "applications.list",
       "applications.move",
       "applications.reject",
+      "archive_reasons.list",
       "candidates.create",
       "candidates.get",
       "candidates.list",
       "candidates.search",
+      "candidates.update",
+      "departments.list",
       "healthcheck",
+      "interview_schedules.get",
+      "interview_schedules.list",
+      "interview_stages.list",
       "interviews.cancel",
       "interviews.list",
       "interviews.schedule",
+      "jobs.get",
       "jobs.list",
+      "offers.get",
+      "offers.list",
+      "openings.list",
+      "sources.list",
+      "users.list",
+      "webhook.application_submitted",
+      "webhook.candidate_updated",
+      "webhook.interview_scheduled",
+      "webhook.offer_created",
     ]);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
     expect(manifest.operations["candidates.list"].kind).toBe("sync");
@@ -116,6 +132,37 @@ describe("Ashby manifest", () => {
       "application",
       "interview",
       "interview_schedule",
+      "offer",
+      "department",
+      "user",
+      "source",
+      "archive_reason",
+      "interview_stage",
+      "opening",
     ]);
+  });
+
+  it("wires candidates.update EffectPolicy Reconcile to candidates.get", () => {
+    const update = manifest.operations["candidates.update"] as {
+      kind: string;
+      sideEffect: string;
+      effectPolicy: string;
+      reconcile: string;
+    };
+    expect(update.kind).toBe("action");
+    expect(update.sideEffect).toBe("write");
+    expect(update.effectPolicy).toBe("Reconcile");
+    expect(update.reconcile).toBe("candidates.get");
+  });
+
+  it("declares EventOnly Ashby webhooks", () => {
+    for (const key of [
+      "webhook.application_submitted",
+      "webhook.candidate_updated",
+      "webhook.interview_scheduled",
+      "webhook.offer_created",
+    ] as const) {
+      expect(manifest.operations[key].kind).toBe("webhook");
+    }
   });
 });

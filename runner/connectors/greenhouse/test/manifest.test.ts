@@ -6,8 +6,8 @@ describe("Greenhouse manifest", () => {
     expect(manifest.key).toBe("greenhouse");
   });
 
-  it("has version 0.5.0", () => {
-    expect(manifest.version).toBe("0.5.0");
+  it("has version 0.6.0", () => {
+    expect(manifest.version).toBe("0.6.0");
   });
 
   it("uses bun runtime", () => {
@@ -71,8 +71,19 @@ describe("Greenhouse manifest", () => {
     expect(create.reconcile).toBe("applications.get");
   });
 
-  it("does not declare scorecards.list", () => {
-    expect((manifest.operations as Record<string, unknown>)["scorecards.list"]).toBeUndefined();
+  it("declares scorecards, offers, and candidate write ops", () => {
+    expect(manifest.operations["scorecards.list"]).toBeTruthy();
+    expect(manifest.operations["scorecards.get"]).toBeTruthy();
+    expect(manifest.operations["offers.list"]).toBeTruthy();
+    expect(manifest.operations["offers.get"]).toBeTruthy();
+    expect(manifest.operations["candidates.create"]).toBeTruthy();
+    expect(manifest.operations["candidates.update"]).toBeTruthy();
+    expect(manifest.operations["applications.reject"]).toBeTruthy();
+    expect(manifest.operations["departments.list"]).toBeTruthy();
+    expect(manifest.operations["offices.list"]).toBeTruthy();
+    expect(manifest.operations["sources.list"]).toBeTruthy();
+    expect(manifest.operations["close_reasons.list"]).toBeTruthy();
+    expect(manifest.operations["users.get"]).toBeTruthy();
   });
 
   it("declares authenticated healthcheck request", () => {
@@ -88,6 +99,12 @@ describe("Greenhouse manifest", () => {
       "user",
       "interview",
       "job_interview_stage",
+      "offer",
+      "scorecard",
+      "department",
+      "office",
+      "source",
+      "close_reason",
     ]);
   });
 });

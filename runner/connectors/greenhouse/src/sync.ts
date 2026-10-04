@@ -26,14 +26,29 @@ import {
   parseApplicationsResponse,
   parseApplicationGetResponse,
   parseUsersResponse,
+  parseUserGetResponse,
   parseInterviewsResponse,
   parseJobInterviewStagesResponse,
+  parseOffersResponse,
+  parseOfferGetResponse,
+  parseScorecardsResponse,
+  parseScorecardGetResponse,
+  parseDepartmentsResponse,
+  parseOfficesResponse,
+  parseSourcesResponse,
+  parseCloseReasonsResponse,
   type NormalizedJob,
   type NormalizedCandidate,
   type NormalizedApplication,
   type NormalizedUser,
   type NormalizedInterview,
   type NormalizedJobInterviewStage,
+  type NormalizedOffer,
+  type NormalizedScorecard,
+  type NormalizedDepartment,
+  type NormalizedOffice,
+  type NormalizedSource,
+  type NormalizedCloseReason,
 } from "./objects";
 
 export interface ExecuteJobsListSyncInput {
@@ -471,4 +486,336 @@ export async function executeJobInterviewStagesListSync(
     });
   const raw = await client.getJSON(path);
   return parseJobInterviewStagesResponse(raw);
+}
+
+function requireNonEmptyString(value: unknown, field: string): string {
+  if (typeof value === "string" && value.length > 0) return value;
+  throw new Error(`${field} is required`);
+}
+
+export interface ExecuteCandidatesCreateSyncInput extends GreenhouseAuthInput {
+  firstName: string;
+  lastName: string;
+  company?: string;
+  title?: string;
+  email?: string;
+  phone?: string;
+  jobId?: string | number;
+}
+
+export interface ExecuteCandidatesCreateSyncOutput {
+  id?: number | string;
+  [key: string]: unknown;
+}
+
+export async function executeCandidatesCreateSync(
+  input: ExecuteCandidatesCreateSyncInput,
+): Promise<ExecuteCandidatesCreateSyncOutput> {
+  const firstName = requireNonEmptyString(input.firstName, "firstName");
+  const lastName = requireNonEmptyString(input.lastName, "lastName");
+  const body: Record<string, unknown> = {
+    first_name: firstName,
+    last_name: lastName,
+  };
+  if (typeof input.company === "string" && input.company.length > 0) body.company = input.company;
+  if (typeof input.title === "string" && input.title.length > 0) body.title = input.title;
+  if (typeof input.email === "string" && input.email.length > 0) {
+    body.email_addresses = [{ value: input.email, type: "personal" }];
+  }
+  if (typeof input.phone === "string" && input.phone.length > 0) {
+    body.phone_numbers = [{ value: input.phone, type: "mobile" }];
+  }
+  const jobId = optionalStageId(input.jobId);
+  if (jobId != null) body.applications = [{ job_id: jobId }];
+
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "candidates.create",
+  });
+  return (await client.postJSON("/candidates", body)) as ExecuteCandidatesCreateSyncOutput;
+}
+
+export interface ExecuteCandidatesUpdateSyncInput extends GreenhouseAuthInput {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
+  title?: string;
+}
+
+export interface ExecuteCandidatesUpdateSyncOutput {
+  candidate: null;
+}
+
+export async function executeCandidatesUpdateSync(
+  input: ExecuteCandidatesUpdateSyncInput,
+): Promise<ExecuteCandidatesUpdateSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const body: Record<string, unknown> = {};
+  if (typeof input.firstName === "string" && input.firstName.length > 0) body.first_name = input.firstName;
+  if (typeof input.lastName === "string" && input.lastName.length > 0) body.last_name = input.lastName;
+  if (typeof input.company === "string" && input.company.length > 0) body.company = input.company;
+  if (typeof input.title === "string" && input.title.length > 0) body.title = input.title;
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "candidates.update",
+  });
+  await client.patchJSON(`/candidates/${id}`, body);
+  return { candidate: null };
+}
+
+export interface ExecuteOffersListSyncInput extends GreenhouseAuthInput {
+  perPage?: number;
+  page?: number;
+  jobId?: string | number;
+  applicationId?: string | number;
+  status?: string;
+}
+
+export interface ExecuteOffersListSyncOutput {
+  offers: NormalizedOffer[];
+}
+
+export async function executeOffersListSync(
+  input: ExecuteOffersListSyncInput,
+): Promise<ExecuteOffersListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "offers.list",
+  });
+  const path =
+    "/offers" +
+    buildQuery({
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+      page: input.page != null ? String(input.page) : undefined,
+      job_id: input.jobId != null ? String(input.jobId) : undefined,
+      application_id: input.applicationId != null ? String(input.applicationId) : undefined,
+      status: input.status,
+    });
+  const raw = await client.getJSON(path);
+  return parseOffersResponse(raw);
+}
+
+export interface ExecuteOffersGetSyncInput extends GreenhouseAuthInput {
+  id: string;
+}
+
+export interface ExecuteOffersGetSyncOutput {
+  offer: NormalizedOffer | null;
+}
+
+export async function executeOffersGetSync(
+  input: ExecuteOffersGetSyncInput,
+): Promise<ExecuteOffersGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "offers.get",
+  });
+  const raw = await client.getJSON(`/offers/${id}`);
+  return parseOfferGetResponse(raw);
+}
+
+export interface ExecuteScorecardsListSyncInput extends GreenhouseAuthInput {
+  perPage?: number;
+  page?: number;
+  applicationId?: string | number;
+  jobId?: string | number;
+}
+
+export interface ExecuteScorecardsListSyncOutput {
+  scorecards: NormalizedScorecard[];
+}
+
+export async function executeScorecardsListSync(
+  input: ExecuteScorecardsListSyncInput,
+): Promise<ExecuteScorecardsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "scorecards.list",
+  });
+  const path =
+    "/scorecards" +
+    buildQuery({
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+      page: input.page != null ? String(input.page) : undefined,
+      application_id: input.applicationId != null ? String(input.applicationId) : undefined,
+      job_id: input.jobId != null ? String(input.jobId) : undefined,
+    });
+  const raw = await client.getJSON(path);
+  return parseScorecardsResponse(raw);
+}
+
+export interface ExecuteScorecardsGetSyncInput extends GreenhouseAuthInput {
+  id: string;
+}
+
+export interface ExecuteScorecardsGetSyncOutput {
+  scorecard: NormalizedScorecard | null;
+}
+
+export async function executeScorecardsGetSync(
+  input: ExecuteScorecardsGetSyncInput,
+): Promise<ExecuteScorecardsGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "scorecards.get",
+  });
+  const raw = await client.getJSON(`/scorecards/${id}`);
+  return parseScorecardGetResponse(raw);
+}
+
+export interface ExecuteDepartmentsListSyncInput extends GreenhouseAuthInput {
+  perPage?: number;
+}
+
+export interface ExecuteDepartmentsListSyncOutput {
+  departments: NormalizedDepartment[];
+}
+
+export async function executeDepartmentsListSync(
+  input: ExecuteDepartmentsListSyncInput,
+): Promise<ExecuteDepartmentsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "departments.list",
+  });
+  const path =
+    "/departments" +
+    buildQuery({
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+    });
+  const raw = await client.getJSON(path);
+  return parseDepartmentsResponse(raw);
+}
+
+export interface ExecuteOfficesListSyncInput extends GreenhouseAuthInput {
+  perPage?: number;
+}
+
+export interface ExecuteOfficesListSyncOutput {
+  offices: NormalizedOffice[];
+}
+
+export async function executeOfficesListSync(
+  input: ExecuteOfficesListSyncInput,
+): Promise<ExecuteOfficesListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "offices.list",
+  });
+  const path =
+    "/offices" +
+    buildQuery({
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+    });
+  const raw = await client.getJSON(path);
+  return parseOfficesResponse(raw);
+}
+
+export interface ExecuteSourcesListSyncInput extends GreenhouseAuthInput {
+  perPage?: number;
+}
+
+export interface ExecuteSourcesListSyncOutput {
+  sources: NormalizedSource[];
+}
+
+export async function executeSourcesListSync(
+  input: ExecuteSourcesListSyncInput,
+): Promise<ExecuteSourcesListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "sources.list",
+  });
+  const path =
+    "/sources" +
+    buildQuery({
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+    });
+  const raw = await client.getJSON(path);
+  return parseSourcesResponse(raw);
+}
+
+export interface ExecuteCloseReasonsListSyncInput extends GreenhouseAuthInput {
+  perPage?: number;
+}
+
+export interface ExecuteCloseReasonsListSyncOutput {
+  closeReasons: NormalizedCloseReason[];
+}
+
+export async function executeCloseReasonsListSync(
+  input: ExecuteCloseReasonsListSyncInput,
+): Promise<ExecuteCloseReasonsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "close_reasons.list",
+  });
+  const path =
+    "/close_reasons" +
+    buildQuery({
+      per_page: input.perPage != null ? String(input.perPage) : undefined,
+    });
+  const raw = await client.getJSON(path);
+  return parseCloseReasonsResponse(raw);
+}
+
+export interface ExecuteUsersGetSyncInput extends GreenhouseAuthInput {
+  id: string;
+}
+
+export interface ExecuteUsersGetSyncOutput {
+  user: NormalizedUser | null;
+}
+
+export async function executeUsersGetSync(
+  input: ExecuteUsersGetSyncInput,
+): Promise<ExecuteUsersGetSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "users.get",
+  });
+  const raw = await client.getJSON(`/users/${id}`);
+  return parseUserGetResponse(raw);
+}
+
+export interface ExecuteApplicationsRejectSyncInput extends GreenhouseAuthInput {
+  id: string;
+  rejectionReasonId?: string | number;
+  notes?: string;
+}
+
+export interface ExecuteApplicationsRejectSyncOutput {
+  application: null;
+}
+
+export async function executeApplicationsRejectSync(
+  input: ExecuteApplicationsRejectSyncInput,
+): Promise<ExecuteApplicationsRejectSyncOutput> {
+  const id = assertSafePathSegment(input.id, "id");
+  const body: Record<string, unknown> = {};
+  const rejectionReasonId = optionalStageId(input.rejectionReasonId);
+  if (rejectionReasonId != null) body.rejection_reason_id = rejectionReasonId;
+  if (typeof input.notes === "string" && input.notes.length > 0) body.notes = input.notes;
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "applications.reject",
+  });
+  await client.postJSON(`/applications/${id}/reject`, body);
+  return { application: null };
 }

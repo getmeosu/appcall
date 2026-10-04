@@ -409,3 +409,358 @@ export function parseInterviewScheduleInfoResponse(raw: unknown): {
   }
   return { interviewSchedule: normalizeInterviewSchedule(result as AshbyInterviewSchedule) };
 }
+
+export function parseJobInfoResponse(raw: unknown): { job: NormalizedJob | null } {
+  const data = raw as AshbyListEnvelope;
+  const result = data.results;
+  if (result == null || typeof result !== "object" || Array.isArray(result)) {
+    return { job: null };
+  }
+  return { job: normalizeJob(result as AshbyJob) };
+}
+
+export function parseInterviewSchedulesResponse(raw: unknown): {
+  interviewSchedules: NormalizedInterviewSchedule[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const items = Array.isArray(data.results) ? (data.results as AshbyInterviewSchedule[]) : [];
+  return {
+    interviewSchedules: items.map(normalizeInterviewSchedule),
+    moreDataAvailable: data.moreDataAvailable === true,
+    nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
+  };
+}
+
+export interface NormalizedOffer {
+  id: string;
+  provider: string;
+  applicationId: string | null;
+  acceptanceStatus: string | null;
+  offerStatus: string | null;
+  decidedAt: string | null;
+  latestVersionId: string | null;
+  startDate: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface AshbyOffer {
+  id: string;
+  applicationId?: string | null;
+  acceptanceStatus?: string | null;
+  offerStatus?: string | null;
+  decidedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  latestVersion?: { id?: string | null; startDate?: string | null } | null;
+}
+
+export function normalizeOffer(offer: AshbyOffer): NormalizedOffer {
+  const id = asStringId(offer.id) ?? "";
+  return {
+    id: `ash-offer:${id}`,
+    provider: "ashby",
+    applicationId: asStringId(offer.applicationId ?? null),
+    acceptanceStatus: offer.acceptanceStatus ?? null,
+    offerStatus: offer.offerStatus ?? null,
+    decidedAt: asIso(offer.decidedAt),
+    latestVersionId: asStringId(offer.latestVersion?.id ?? null),
+    startDate: asIso(offer.latestVersion?.startDate),
+    createdAt: asIso(offer.createdAt),
+    updatedAt: asIso(offer.updatedAt),
+  };
+}
+
+export function parseOffersResponse(raw: unknown): {
+  offers: NormalizedOffer[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const items = Array.isArray(data.results) ? (data.results as AshbyOffer[]) : [];
+  return {
+    offers: items.map(normalizeOffer),
+    moreDataAvailable: data.moreDataAvailable === true,
+    nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
+  };
+}
+
+export function parseOfferInfoResponse(raw: unknown): { offer: NormalizedOffer | null } {
+  const data = raw as AshbyListEnvelope;
+  const result = data.results;
+  if (result == null || typeof result !== "object" || Array.isArray(result)) {
+    return { offer: null };
+  }
+  return { offer: normalizeOffer(result as AshbyOffer) };
+}
+
+export interface NormalizedDepartment {
+  id: string;
+  provider: string;
+  name: string;
+  isArchived: boolean;
+}
+
+interface AshbyDepartment {
+  id: string;
+  name?: string | null;
+  isArchived?: boolean | null;
+}
+
+export function normalizeDepartment(department: AshbyDepartment): NormalizedDepartment {
+  return {
+    id: `ash-department:${asStringId(department.id) ?? ""}`,
+    provider: "ashby",
+    name: department.name ?? "",
+    isArchived: department.isArchived === true,
+  };
+}
+
+export function parseDepartmentsResponse(raw: unknown): {
+  departments: NormalizedDepartment[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const items = Array.isArray(data.results) ? (data.results as AshbyDepartment[]) : [];
+  return {
+    departments: items.map(normalizeDepartment),
+    moreDataAvailable: data.moreDataAvailable === true,
+    nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
+  };
+}
+
+export interface NormalizedUser {
+  id: string;
+  provider: string;
+  name: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  globalRole: string | null;
+  isEnabled: boolean;
+}
+
+interface AshbyUser {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  globalRole?: string | null;
+  isEnabled?: boolean | null;
+}
+
+export function normalizeUser(user: AshbyUser): NormalizedUser {
+  const firstName = user.firstName ?? null;
+  const lastName = user.lastName ?? null;
+  const nameParts = [firstName, lastName].filter(
+    (p): p is string => typeof p === "string" && p.length > 0,
+  );
+  return {
+    id: `ash-user:${asStringId(user.id) ?? ""}`,
+    provider: "ashby",
+    name: nameParts.join(" "),
+    firstName,
+    lastName,
+    email: user.email ?? null,
+    globalRole: user.globalRole ?? null,
+    isEnabled: user.isEnabled !== false,
+  };
+}
+
+export function parseUsersResponse(raw: unknown): {
+  users: NormalizedUser[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const items = Array.isArray(data.results) ? (data.results as AshbyUser[]) : [];
+  return {
+    users: items.map(normalizeUser),
+    moreDataAvailable: data.moreDataAvailable === true,
+    nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
+  };
+}
+
+export interface NormalizedSource {
+  id: string;
+  provider: string;
+  title: string;
+  isArchived: boolean;
+}
+
+interface AshbySource {
+  id: string;
+  title?: string | null;
+  isArchived?: boolean | null;
+}
+
+export function normalizeSource(source: AshbySource): NormalizedSource {
+  return {
+    id: `ash-source:${asStringId(source.id) ?? ""}`,
+    provider: "ashby",
+    title: source.title ?? "",
+    isArchived: source.isArchived === true,
+  };
+}
+
+export function parseSourcesResponse(raw: unknown): {
+  sources: NormalizedSource[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const items = Array.isArray(data.results) ? (data.results as AshbySource[]) : [];
+  return {
+    sources: items.map(normalizeSource),
+    moreDataAvailable: data.moreDataAvailable === true,
+    nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
+  };
+}
+
+export interface NormalizedArchiveReason {
+  id: string;
+  provider: string;
+  text: string;
+  reasonType: string | null;
+  isArchived: boolean;
+}
+
+interface AshbyArchiveReason {
+  id: string;
+  text?: string | null;
+  reasonType?: string | null;
+  isArchived?: boolean | null;
+}
+
+export function normalizeArchiveReason(reason: AshbyArchiveReason): NormalizedArchiveReason {
+  return {
+    id: `ash-archive-reason:${asStringId(reason.id) ?? ""}`,
+    provider: "ashby",
+    text: reason.text ?? "",
+    reasonType: reason.reasonType ?? null,
+    isArchived: reason.isArchived === true,
+  };
+}
+
+export function parseArchiveReasonsResponse(raw: unknown): {
+  archiveReasons: NormalizedArchiveReason[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const items = Array.isArray(data.results) ? (data.results as AshbyArchiveReason[]) : [];
+  return {
+    archiveReasons: items.map(normalizeArchiveReason),
+    moreDataAvailable: data.moreDataAvailable === true,
+    nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
+  };
+}
+
+export interface NormalizedInterviewStage {
+  id: string;
+  provider: string;
+  title: string;
+  type: string | null;
+  orderInInterviewPlan: number | null;
+  interviewPlanId: string | null;
+}
+
+interface AshbyInterviewStage {
+  id: string;
+  title?: string | null;
+  type?: string | null;
+  orderInInterviewPlan?: number | null;
+  interviewPlanId?: string | null;
+}
+
+export function normalizeInterviewStage(stage: AshbyInterviewStage): NormalizedInterviewStage {
+  return {
+    id: `ash-interview-stage:${asStringId(stage.id) ?? ""}`,
+    provider: "ashby",
+    title: stage.title ?? "",
+    type: stage.type ?? null,
+    orderInInterviewPlan:
+      typeof stage.orderInInterviewPlan === "number" && Number.isFinite(stage.orderInInterviewPlan)
+        ? stage.orderInInterviewPlan
+        : null,
+    interviewPlanId: asStringId(stage.interviewPlanId ?? null),
+  };
+}
+
+export function parseInterviewStagesResponse(raw: unknown): {
+  interviewStages: NormalizedInterviewStage[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const items = Array.isArray(data.results) ? (data.results as AshbyInterviewStage[]) : [];
+  return {
+    interviewStages: items.map(normalizeInterviewStage),
+    moreDataAvailable: data.moreDataAvailable === true,
+    nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
+  };
+}
+
+export interface NormalizedOpening {
+  id: string;
+  provider: string;
+  jobId: string | null;
+  isOpen: boolean;
+  openedAt: string | null;
+  closedAt: string | null;
+  identifier: string | null;
+}
+
+interface AshbyOpening {
+  id: string;
+  jobId?: string | null;
+  isOpen?: boolean | null;
+  openedAt?: string | null;
+  closedAt?: string | null;
+  identifier?: string | null;
+}
+
+export function normalizeOpening(opening: AshbyOpening): NormalizedOpening {
+  return {
+    id: `ash-opening:${asStringId(opening.id) ?? ""}`,
+    provider: "ashby",
+    jobId: asStringId(opening.jobId ?? null),
+    isOpen: opening.isOpen === true,
+    openedAt: asIso(opening.openedAt),
+    closedAt: asIso(opening.closedAt),
+    identifier: opening.identifier ?? null,
+  };
+}
+
+export function parseOpeningsResponse(raw: unknown): {
+  openings: NormalizedOpening[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+} {
+  const data = raw as AshbyListEnvelope;
+  const items = Array.isArray(data.results) ? (data.results as AshbyOpening[]) : [];
+  return {
+    openings: items.map(normalizeOpening),
+    moreDataAvailable: data.moreDataAvailable === true,
+    nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null,
+    syncToken: typeof data.syncToken === "string" ? data.syncToken : null,
+  };
+}

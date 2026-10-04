@@ -25,17 +25,34 @@
 import { createClient, createAuthClient } from "./http";
 import {
   parseJobsResponse,
+  parseJobInfoResponse,
   parseCandidatesResponse,
   parseCandidateInfoResponse,
   parseApplicationsResponse,
   parseApplicationInfoResponse,
   parseInterviewsResponse,
   parseInterviewScheduleInfoResponse,
+  parseInterviewSchedulesResponse,
+  parseOffersResponse,
+  parseOfferInfoResponse,
+  parseDepartmentsResponse,
+  parseUsersResponse,
+  parseSourcesResponse,
+  parseArchiveReasonsResponse,
+  parseInterviewStagesResponse,
+  parseOpeningsResponse,
   type NormalizedJob,
   type NormalizedCandidate,
   type NormalizedApplication,
   type NormalizedInterview,
   type NormalizedInterviewSchedule,
+  type NormalizedOffer,
+  type NormalizedDepartment,
+  type NormalizedUser,
+  type NormalizedSource,
+  type NormalizedArchiveReason,
+  type NormalizedInterviewStage,
+  type NormalizedOpening,
 } from "./objects";
 
 export interface ExecuteJobsListSyncInput {
@@ -619,4 +636,324 @@ export async function executeInterviewsCancelSync(
     }),
   );
   return parseInterviewScheduleInfoResponse(raw);
+}
+
+function listBody(input: { limit?: number; cursor?: string; syncToken?: string }): Record<string, unknown> {
+  return compactBody({
+    limit: input.limit,
+    cursor: input.cursor,
+    syncToken: input.syncToken,
+  });
+}
+
+export interface ExecuteJobsGetSyncInput extends AshbyAuthInput {
+  id: string;
+}
+
+export interface ExecuteJobsGetSyncOutput {
+  job: NormalizedJob | null;
+}
+
+export async function executeJobsGetSync(
+  input: ExecuteJobsGetSyncInput,
+): Promise<ExecuteJobsGetSyncOutput> {
+  const id = requireNonEmptyString(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "jobs.get",
+  });
+  const raw = await client.postJSON("/job.info", { id });
+  return parseJobInfoResponse(raw);
+}
+
+export interface ExecuteCandidatesUpdateSyncInput extends AshbyAuthInput {
+  id: string;
+  name?: string;
+  email?: string;
+  phoneNumber?: string;
+  linkedInUrl?: string;
+  githubUrl?: string;
+  websiteUrl?: string;
+  sourceId?: string;
+  creditedToUserId?: string;
+}
+
+export interface ExecuteCandidatesUpdateSyncOutput {
+  candidate: null;
+}
+
+export async function executeCandidatesUpdateSync(
+  input: ExecuteCandidatesUpdateSyncInput,
+): Promise<ExecuteCandidatesUpdateSyncOutput> {
+  const id = requireNonEmptyString(input.id, "id");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "candidates.update",
+  });
+  await client.postJSON(
+    "/candidate.update",
+    compactBody({
+      id,
+      name: input.name,
+      email: input.email,
+      phoneNumber: input.phoneNumber,
+      linkedInUrl: input.linkedInUrl,
+      githubUrl: input.githubUrl,
+      website: input.websiteUrl,
+      sourceId: input.sourceId,
+      creditedToUserId: input.creditedToUserId,
+    }),
+  );
+  return { candidate: null };
+}
+
+export interface ExecuteOffersListSyncInput extends AshbyAuthInput {
+  limit?: number;
+  cursor?: string;
+  syncToken?: string;
+  applicationId?: string;
+}
+
+export interface ExecuteOffersListSyncOutput {
+  offers: NormalizedOffer[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeOffersListSync(
+  input: ExecuteOffersListSyncInput,
+): Promise<ExecuteOffersListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "offers.list",
+  });
+  const raw = await client.postJSON(
+    "/offer.list",
+    compactBody({
+      ...listBody(input),
+      applicationId: input.applicationId,
+    }),
+  );
+  return parseOffersResponse(raw);
+}
+
+export interface ExecuteOffersGetSyncInput extends AshbyAuthInput {
+  offerId: string;
+}
+
+export interface ExecuteOffersGetSyncOutput {
+  offer: NormalizedOffer | null;
+}
+
+export async function executeOffersGetSync(
+  input: ExecuteOffersGetSyncInput,
+): Promise<ExecuteOffersGetSyncOutput> {
+  const offerId = requireNonEmptyString(input.offerId, "offerId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "offers.get",
+  });
+  const raw = await client.postJSON("/offer.info", { offerId });
+  return parseOfferInfoResponse(raw);
+}
+
+export interface ExecuteDepartmentsListSyncInput extends AshbyAuthInput {
+  limit?: number;
+  cursor?: string;
+  syncToken?: string;
+}
+
+export interface ExecuteDepartmentsListSyncOutput {
+  departments: NormalizedDepartment[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeDepartmentsListSync(
+  input: ExecuteDepartmentsListSyncInput,
+): Promise<ExecuteDepartmentsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "departments.list",
+  });
+  const raw = await client.postJSON("/department.list", listBody(input));
+  return parseDepartmentsResponse(raw);
+}
+
+export interface ExecuteUsersListSyncInput extends AshbyAuthInput {
+  limit?: number;
+  cursor?: string;
+  syncToken?: string;
+}
+
+export interface ExecuteUsersListSyncOutput {
+  users: NormalizedUser[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeUsersListSync(
+  input: ExecuteUsersListSyncInput,
+): Promise<ExecuteUsersListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "users.list",
+  });
+  const raw = await client.postJSON("/user.list", listBody(input));
+  return parseUsersResponse(raw);
+}
+
+export interface ExecuteSourcesListSyncInput extends AshbyAuthInput {
+  limit?: number;
+  cursor?: string;
+  syncToken?: string;
+}
+
+export interface ExecuteSourcesListSyncOutput {
+  sources: NormalizedSource[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeSourcesListSync(
+  input: ExecuteSourcesListSyncInput,
+): Promise<ExecuteSourcesListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "sources.list",
+  });
+  const raw = await client.postJSON("/source.list", listBody(input));
+  return parseSourcesResponse(raw);
+}
+
+export interface ExecuteArchiveReasonsListSyncInput extends AshbyAuthInput {
+  limit?: number;
+  cursor?: string;
+  syncToken?: string;
+}
+
+export interface ExecuteArchiveReasonsListSyncOutput {
+  archiveReasons: NormalizedArchiveReason[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeArchiveReasonsListSync(
+  input: ExecuteArchiveReasonsListSyncInput,
+): Promise<ExecuteArchiveReasonsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "archive_reasons.list",
+  });
+  const raw = await client.postJSON("/archiveReason.list", listBody(input));
+  return parseArchiveReasonsResponse(raw);
+}
+
+export interface ExecuteInterviewSchedulesListSyncInput extends AshbyAuthInput {
+  limit?: number;
+  cursor?: string;
+  syncToken?: string;
+}
+
+export interface ExecuteInterviewSchedulesListSyncOutput {
+  interviewSchedules: NormalizedInterviewSchedule[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeInterviewSchedulesListSync(
+  input: ExecuteInterviewSchedulesListSyncInput,
+): Promise<ExecuteInterviewSchedulesListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "interview_schedules.list",
+  });
+  const raw = await client.postJSON("/interviewSchedule.list", listBody(input));
+  return parseInterviewSchedulesResponse(raw);
+}
+
+export interface ExecuteInterviewSchedulesGetSyncInput extends AshbyAuthInput {
+  interviewScheduleId: string;
+}
+
+export interface ExecuteInterviewSchedulesGetSyncOutput {
+  interviewSchedule: NormalizedInterviewSchedule | null;
+}
+
+export async function executeInterviewSchedulesGetSync(
+  input: ExecuteInterviewSchedulesGetSyncInput,
+): Promise<ExecuteInterviewSchedulesGetSyncOutput> {
+  const interviewScheduleId = requireNonEmptyString(input.interviewScheduleId, "interviewScheduleId");
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "interview_schedules.get",
+  });
+  const raw = await client.postJSON("/interviewSchedule.info", { id: interviewScheduleId });
+  return parseInterviewScheduleInfoResponse(raw);
+}
+
+export interface ExecuteInterviewStagesListSyncInput extends AshbyAuthInput {
+  limit?: number;
+  cursor?: string;
+  syncToken?: string;
+}
+
+export interface ExecuteInterviewStagesListSyncOutput {
+  interviewStages: NormalizedInterviewStage[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeInterviewStagesListSync(
+  input: ExecuteInterviewStagesListSyncInput,
+): Promise<ExecuteInterviewStagesListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "interview_stages.list",
+  });
+  const raw = await client.postJSON("/interviewStage.list", listBody(input));
+  return parseInterviewStagesResponse(raw);
+}
+
+export interface ExecuteOpeningsListSyncInput extends AshbyAuthInput {
+  limit?: number;
+  cursor?: string;
+  syncToken?: string;
+}
+
+export interface ExecuteOpeningsListSyncOutput {
+  openings: NormalizedOpening[];
+  moreDataAvailable: boolean;
+  nextCursor: string | null;
+  syncToken: string | null;
+}
+
+export async function executeOpeningsListSync(
+  input: ExecuteOpeningsListSyncInput,
+): Promise<ExecuteOpeningsListSyncOutput> {
+  const client = createAuthClient({
+    apiKey: input.apiKey,
+    fetch: input.fetch,
+    operation: "openings.list",
+  });
+  const raw = await client.postJSON("/opening.list", listBody(input));
+  return parseOpeningsResponse(raw);
 }

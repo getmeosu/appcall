@@ -6,8 +6,8 @@ describe("Lever manifest", () => {
     expect(manifest.key).toBe("lever");
   });
 
-  it("has version 0.4.0", () => {
-    expect(manifest.version).toBe("0.4.0");
+  it("has version 0.5.0", () => {
+    expect(manifest.version).toBe("0.5.0");
   });
 
   it("uses bun runtime", () => {
@@ -38,15 +38,27 @@ describe("Lever manifest", () => {
   it("declares list/get/write depth ops", () => {
     expect(Object.keys(manifest.operations).sort()).toEqual([
       "archive_reasons.list",
+      "candidates.get",
+      "feedback.get",
       "healthcheck",
+      "interviews.get",
+      "interviews.list",
       "jobs.list",
+      "notes.list",
+      "offers.get",
+      "offers.list",
       "opportunities.archive",
       "opportunities.feedback.list",
       "opportunities.get",
       "opportunities.interviews.list",
       "opportunities.list",
+      "opportunities.update",
       "opportunities.update_stage",
+      "postings.get",
+      "postings.list",
+      "requisitions.list",
       "stages.list",
+      "users.get",
       "users.list",
     ]);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
@@ -102,6 +114,24 @@ describe("Lever manifest", () => {
       "interview",
       "feedback",
       "archive_reason",
+      "candidate",
+      "offer",
+      "posting",
+      "note",
+      "requisition",
     ]);
+  });
+
+  it("wires opportunities.update EffectPolicy Reconcile to opportunities.get", () => {
+    const op = manifest.operations["opportunities.update"] as {
+      kind: string;
+      sideEffect: string;
+      effectPolicy: string;
+      reconcile: string;
+    };
+    expect(op.kind).toBe("action");
+    expect(op.sideEffect).toBe("write");
+    expect(op.effectPolicy).toBe("Reconcile");
+    expect(op.reconcile).toBe("opportunities.get");
   });
 });
