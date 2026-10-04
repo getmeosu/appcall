@@ -28,7 +28,16 @@ function positivePaginationValue(value: unknown): number | undefined {
   const parsed = typeof value === "number"
     ? value
     : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function optPositiveInteger(value: unknown, field: string): number | undefined {
+  const parsed = optNumber(value);
+  if (parsed === undefined) return undefined;
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`${field} must be a positive integer`);
+  }
+  return parsed;
 }
 
 function isValidTotalEntries(value: unknown): value is number {
@@ -97,8 +106,8 @@ export function validatePeopleSearchInput(input: unknown): PeopleSearchInput {
     person_locations: optStringArray(input.person_locations),
     organization_domains: optStringArray(input.organization_domains),
     organization_num_employees_ranges: optStringArray(input.organization_num_employees_ranges),
-    page: optNumber(input.page),
-    per_page: optNumber(input.per_page),
+    page: optPositiveInteger(input.page, "page"),
+    per_page: optPositiveInteger(input.per_page, "per_page"),
   };
 }
 

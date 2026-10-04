@@ -70,7 +70,7 @@ function finiteNumericValue(value: unknown): number | undefined {
 
 function positivePaginationValue(value: unknown): number | undefined {
   const parsed = finiteNumericValue(value);
-  return parsed !== undefined && parsed > 0 ? parsed : undefined;
+  return parsed !== undefined && Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function nonnegativeTotal(value: unknown): number | undefined {

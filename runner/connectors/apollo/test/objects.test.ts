@@ -118,6 +118,23 @@ describe("parsePeopleSearchResponse", () => {
     expect(result.pagination).toEqual({ page: 3, perPage: 10 });
   });
 
+  test("uses request context when response pagination is fractional and accepts legacy integer strings", () => {
+    const fractional = parsePeopleSearchResponse({
+      people: [],
+      pagination: { page: 1.5, per_page: "2.5" },
+    }, { page: 3, perPage: 10 });
+    expect(fractional.pagination).toEqual({ page: 3, perPage: 10 });
+
+    const legacyStrings = parsePeopleSearchResponse({
+      people: [],
+      pagination: { page: "2", per_page: "20" },
+    }, { page: 3, perPage: 10 });
+    expect(legacyStrings.pagination).toEqual({ page: 2, perPage: 20 });
+
+    const fractionalContext = parsePeopleSearchResponse({ people: [] }, { page: 1.5, perPage: 20.5 });
+    expect(fractionalContext.pagination).toEqual({ page: 1, perPage: 25 });
+  });
+
   test("ignores non-finite or negative total entries", () => {
     const result = parsePeopleSearchResponse({
       people: [],

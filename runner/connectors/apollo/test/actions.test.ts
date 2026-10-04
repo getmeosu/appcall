@@ -63,6 +63,55 @@ describe("searchPeople", () => {
     expect((result.validated as { q_keywords?: string }).q_keywords).toBe("VP Sales");
   });
 
+  test("rejects invalid numeric pagination before making a request and ignores non-number values", async () => {
+    const invalidValues: unknown[] = [
+      1.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      0,
+      -1,
+      Number.MAX_SAFE_INTEGER + 1,
+    ];
+    let fetchCalls = 0;
+
+    for (const field of ["page", "per_page"] as const) {
+      for (const value of invalidValues) {
+        await expect(searchPeople({
+          apiKey: "test_key",
+          [field]: value,
+          fetch: async () => {
+            fetchCalls += 1;
+            return new Response(JSON.stringify({ people: [] }), { status: 200 });
+          },
+        })).rejects.toMatchObject({ message: `${field} must be a positive integer` });
+        expect(fetchCalls).toBe(0);
+      }
+    }
+
+    const ignored = validatePeopleSearchInput({ page: "2", per_page: null });
+    expect(ignored.page).toBeUndefined();
+    expect(ignored.per_page).toBeUndefined();
+  });
+
+  test("forwards valid safe integer pagination unchanged", async () => {
+    const requests: Request[] = [];
+    const page = Number.MAX_SAFE_INTEGER;
+    const perPage = Number.MAX_SAFE_INTEGER;
+    await searchPeople({
+      apiKey: "test_key",
+      page,
+      per_page: perPage,
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return new Response(JSON.stringify({ people: [], total_entries: 0 }), { status: 200 });
+      },
+    });
+
+    const body = await requests[0].json() as Record<string, unknown>;
+    expect(body.page).toBe(page);
+    expect(body.per_page).toBe(perPage);
+  });
+
   test("calls POST /api/v1/mixed_people/api_search with X-Api-Key header", async () => {
     const requests: Request[] = [];
     const result = await searchPeople({
