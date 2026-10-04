@@ -1,7 +1,17 @@
 {
+  "key": "alpaca",
+  "name": "Alpaca",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "banking-data"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -21,181 +31,84 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "banking-data"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
-  "http": {
-    "auth": {
-      "field": "apiKey",
-      "in": "header",
-      "name": "APCA-API-SECRET-KEY",
-      "value": "{{apiKey}}"
-    },
-    "baseUrl": "https://{{tradingHost}}.alpaca.markets",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "message",
-        "error",
-        "code"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "APCA-API-KEY-ID": "{{apiKeyId}}",
-      "Accept": "application/json"
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "key": "alpaca",
-  "models": [
-    "account",
-    "asset",
-    "position",
-    "clock",
-    "watchlist"
-  ],
-  "name": "Alpaca",
   "network": {
     "allowedHosts": [
       "paper-api.alpaca.markets",
       "api.alpaca.markets"
     ]
   },
+  "models": [
+    "account",
+    "asset",
+    "position",
+    "clock",
+    "watchlist",
+    "order",
+    "calendar",
+    "activity",
+    "configuration",
+    "portfolio",
+    "option-contract"
+  ],
+  "http": {
+    "baseUrl": "https://{{tradingHost}}.alpaca.markets",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "APCA-API-SECRET-KEY",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json",
+      "APCA-API-KEY-ID": "{{apiKeyId}}"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error",
+        "code"
+      ]
+    }
+  },
   "operations": {
-    "assets.list": {
-      "description": "List Alpaca assets with optional status and asset-class filters.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "assetClass": {
-            "enum": [
-              "us_equity",
-              "us_option",
-              "crypto",
-              "ipo"
-            ],
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "active",
-              "inactive"
-            ],
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "type": "object"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/assets",
-        "query": {
-          "asset_class": "{{assetClass}}",
-          "status": "{{status}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List assets",
-      "validationMode": "strict-generated"
-    },
-    "clock.get": {
-      "description": "Get Alpaca US market clock information.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v2/clock",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get market clock",
-      "validationMode": "strict-generated"
-    },
     "healthcheck": {
-      "description": "Validate Alpaca credentials with GET /v2/account.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate Alpaca credentials with GET /v2/account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -204,37 +117,97 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "positions.list": {
-      "description": "List open positions for the connected Alpaca trading account.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "assets.list": {
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
+      "title": "List assets",
+      "description": "List Alpaca assets with optional status and asset-class filters.",
+      "inputSchema": {
+        "type": "object",
         "properties": {
-          "data": {
-            "items": {
-              "type": "object"
-            },
-            "type": "array"
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "assetClass": {
+            "type": "string",
+            "enum": [
+              "us_equity",
+              "us_option",
+              "crypto",
+              "ipo"
+            ]
           }
         },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/assets",
+        "query": {
+          "status": "{{status}}",
+          "asset_class": "{{assetClass}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "positions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List positions",
+      "description": "List open positions for the connected Alpaca trading account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -243,37 +216,73 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "clock.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List positions",
-      "validationMode": "strict-generated"
-    },
-    "watchlists.list": {
-      "description": "List watchlists for the connected Alpaca trading account.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "Get market clock",
+      "description": "Get Alpaca US market clock information.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "type": "object"
-            },
-            "type": "array"
-          }
-        },
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/clock",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "watchlists.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List watchlists",
+      "description": "List watchlists for the connected Alpaca trading account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -282,20 +291,1011 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "assets.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List watchlists",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get asset",
+      "description": "Get one Alpaca asset by symbol or asset ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbolOrAssetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Asset symbol or asset ID."
+          }
+        },
+        "required": [
+          "symbolOrAssetId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/assets/{{symbolOrAssetId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "positions.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get position",
+      "description": "Get one open Alpaca position by symbol or asset ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbolOrAssetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Position symbol or asset ID."
+          }
+        },
+        "required": [
+          "symbolOrAssetId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/positions/{{symbolOrAssetId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "positions.close": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Close position",
+      "description": "Close an open Alpaca position by symbol or asset ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbolOrAssetId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Position symbol or asset ID."
+          },
+          "qty": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional quantity to close. Omit to close the full position."
+          },
+          "percentage": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional percentage of the position to close."
+          }
+        },
+        "required": [
+          "symbolOrAssetId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/positions/{{symbolOrAssetId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "qty": "{{qty}}",
+          "percentage": "{{percentage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List orders",
+      "description": "List Alpaca orders for the connected account with optional filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order status filter.",
+            "enum": [
+              "open",
+              "closed",
+              "all"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of orders to return.",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return orders submitted after this timestamp."
+          },
+          "until": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return orders submitted until this timestamp."
+          },
+          "direction": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort direction.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "nested": {
+            "type": "boolean",
+            "description": "Whether nested multi-leg orders should be rolled up."
+          },
+          "symbols": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated list of symbols to filter."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/orders",
+        "success": [
+          200
+        ],
+        "query": {
+          "status": "{{status}}",
+          "limit": "{{limit}}",
+          "after": "{{after}}",
+          "until": "{{until}}",
+          "direction": "{{direction}}",
+          "nested": "{{nested}}",
+          "symbols": "{{symbols}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get order",
+      "description": "Get one Alpaca order by order ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alpaca order ID."
+          }
+        },
+        "required": [
+          "orderId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/orders/{{orderId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Create order",
+      "description": "Place an Alpaca order for the connected paper or live account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Symbol, asset ID, or currency pair to trade."
+          },
+          "qty": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Number of shares or contracts to trade."
+          },
+          "notional": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Dollar amount to trade. Cannot be combined with qty."
+          },
+          "side": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Buy or sell.",
+            "enum": [
+              "buy",
+              "sell"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Order type.",
+            "enum": [
+              "market",
+              "limit",
+              "stop",
+              "stop_limit",
+              "trailing_stop"
+            ]
+          },
+          "timeInForce": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time in force.",
+            "enum": [
+              "day",
+              "gtc",
+              "opg",
+              "cls",
+              "ioc",
+              "fok"
+            ]
+          },
+          "limitPrice": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Limit price. Required for limit and stop_limit orders."
+          },
+          "stopPrice": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stop price. Required for stop and stop_limit orders."
+          },
+          "clientOrderId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional client-assigned order ID."
+          },
+          "extendedHours": {
+            "type": "boolean",
+            "description": "Whether the order is eligible for extended hours."
+          }
+        },
+        "required": [
+          "symbol",
+          "side",
+          "type",
+          "timeInForce"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/orders",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "symbol": "{{symbol}}",
+          "qty": "{{qty}}",
+          "notional": "{{notional}}",
+          "side": "{{side}}",
+          "type": "{{type}}",
+          "time_in_force": "{{timeInForce}}",
+          "limit_price": "{{limitPrice}}",
+          "stop_price": "{{stopPrice}}",
+          "client_order_id": "{{clientOrderId}}",
+          "extended_hours": "{{extendedHours}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "orders.cancel": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Cancel order",
+      "description": "Cancel an open Alpaca order by order ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alpaca order ID."
+          }
+        },
+        "required": [
+          "orderId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/v2/orders/{{orderId}}",
+        "success": [
+          204
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "watchlists.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get watchlist",
+      "description": "Get one Alpaca watchlist by watchlist ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "watchlistId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alpaca watchlist ID."
+          }
+        },
+        "required": [
+          "watchlistId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/watchlists/{{watchlistId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "watchlists.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create watchlist",
+      "description": "Create an Alpaca watchlist with an optional initial symbol set.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Watchlist name."
+          },
+          "symbols": {
+            "type": "array",
+            "description": "Optional initial symbols.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v2/watchlists",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "symbols": "{{symbols}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "calendar.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List market calendar",
+      "description": "Get Alpaca US market calendar days.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive calendar start date (YYYY-MM-DD)."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive calendar end date (YYYY-MM-DD)."
+          },
+          "dateType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Meaning of the start and end dates.",
+            "enum": [
+              "TRADING",
+              "SETTLEMENT"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/calendar",
+        "success": [
+          200
+        ],
+        "query": {
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "date_type": "{{dateType}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "account.activities.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List account activities",
+      "description": "List Alpaca account activities with optional type, date, and pagination filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "activityTypes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated activity type codes such as FILL, DIV, or FEE."
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Activity category filter.",
+            "enum": [
+              "trade_activity",
+              "non_trade_activity"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Restrict results to this date."
+          },
+          "until": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return activities until this timestamp."
+          },
+          "after": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Return activities after this timestamp."
+          },
+          "direction": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Sort direction.",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Maximum number of activities to return.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/account/activities",
+        "success": [
+          200
+        ],
+        "query": {
+          "activity_types": "{{activityTypes}}",
+          "category": "{{category}}",
+          "date": "{{date}}",
+          "until": "{{until}}",
+          "after": "{{after}}",
+          "direction": "{{direction}}",
+          "page_size": "{{pageSize}}",
+          "page_token": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "account.config.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get account configuration",
+      "description": "Get Alpaca account configuration values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/account/configurations",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "account.portfolio.history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get portfolio history",
+      "description": "Get Alpaca account equity and profit/loss time series.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Duration such as 1D, 1W, 1M, or 1A."
+          },
+          "timeframe": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Time window size such as 1Min, 5Min, 15Min, 1H, or 1D."
+          },
+          "intradayReporting": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Intraday reporting mode.",
+            "enum": [
+              "market_hours",
+              "extended_hours",
+              "continuous"
+            ]
+          },
+          "start": {
+            "type": "string",
+            "minLength": 1,
+            "description": "History window start."
+          },
+          "end": {
+            "type": "string",
+            "minLength": 1,
+            "description": "History window end."
+          },
+          "pnlReset": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Profit and loss reset mode.",
+            "enum": [
+              "no_reset",
+              "per_day"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/account/portfolio/history",
+        "success": [
+          200
+        ],
+        "query": {
+          "period": "{{period}}",
+          "timeframe": "{{timeframe}}",
+          "intraday_reporting": "{{intradayReporting}}",
+          "start": "{{start}}",
+          "end": "{{end}}",
+          "pnl_reset": "{{pnlReset}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "option_contracts.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List option contracts",
+      "description": "List Alpaca option contracts with optional underlying and contract filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "underlyingSymbols": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Comma-separated underlying symbols."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Contract status filter.",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "expirationDate": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact expiration date (YYYY-MM-DD)."
+          },
+          "rootSymbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Root symbol filter."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Call or put.",
+            "enum": [
+              "call",
+              "put"
+            ]
+          },
+          "style": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exercise style.",
+            "enum": [
+              "american",
+              "european"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of contracts to return.",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "pageToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/options/contracts",
+        "success": [
+          200
+        ],
+        "query": {
+          "underlying_symbols": "{{underlyingSymbols}}",
+          "status": "{{status}}",
+          "expiration_date": "{{expirationDate}}",
+          "root_symbol": "{{rootSymbol}}",
+          "type": "{{type}}",
+          "style": "{{style}}",
+          "limit": "{{limit}}",
+          "page_token": "{{pageToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "option_contracts.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get option contract",
+      "description": "Get one Alpaca option contract by contract symbol or ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbolOrId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Option contract symbol or ID."
+          }
+        },
+        "required": [
+          "symbolOrId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v2/options/contracts/{{symbolOrId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
