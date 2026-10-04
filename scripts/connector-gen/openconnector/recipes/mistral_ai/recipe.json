@@ -88,7 +88,21 @@
       "models.list",
       "models.get",
       "files.list",
-      "agents.list"
+      "agents.list",
+      "chat.complete",
+      "embeddings.create",
+      "fim.complete",
+      "files.get",
+      "files.delete",
+      "agents.get",
+      "agents.create",
+      "agents.delete",
+      "conversations.list",
+      "conversations.get",
+      "conversations.start",
+      "moderations.create",
+      "batch.jobs.list",
+      "libraries.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -115,7 +129,7 @@
       "kind": "other",
       "authority": "User waiver dated 2026-09-13",
       "adoption": "Historical incidents for non-China companies may proceed when contained and remediated; current unresolved issues remain held.",
-      "usefulness": "Mistral read operations provide model inventory, file listing, and agent listing for integration workflows without billable completions.",
+      "usefulness": "Mistral operations cover model inventory, files, agents, conversations, chat completions, embeddings, FIM, moderation, batch jobs, and libraries.",
       "incident": "12 May 2026 Mini Shai-Hulud third-party supply-chain attack temporarily compromised a Mistral codebase management system and poisoned some SDK packages. TeamPCP advertised ~5 GB of non-core repositories. Mistral reported hosted services, managed user data, and research/testing environments were not compromised.",
       "remediation": "Mistral neutralized the attack, pulled affected SDK versions, published incident MAI-2026-002 / Trust Center advisory, and closed the investigation. Official statement: attackers accessed only certain non-core code repositories.",
       "residualRisk": "Historical SDK supply-chain risk for callers who did not upgrade poisoned package versions. Live authentication and current security posture are unverified.",
@@ -124,7 +138,21 @@
         "models.list",
         "models.get",
         "files.list",
-        "agents.list"
+        "agents.list",
+        "chat.complete",
+        "embeddings.create",
+        "fim.complete",
+        "files.get",
+        "files.delete",
+        "agents.get",
+        "agents.create",
+        "agents.delete",
+        "conversations.list",
+        "conversations.get",
+        "conversations.start",
+        "moderations.create",
+        "batch.jobs.list",
+        "libraries.list"
       ],
       "productIds": [
         "mistral_ai"
@@ -257,12 +285,222 @@
       "adaptations": [
         "Optional page and page_size are sent as query parameters. The pinned GET handler would also serialize leftover filters (deployment_chat, sources, name, search, id, metadata) as query; those are omitted because native templates cannot express leftover-input query fanout without unused or unstructured inputs."
       ]
+    },
+    "chat.complete": {
+      "upstreamActionId": "create_chat_completion",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/chat"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v1/chat/completions. Streaming is omitted. Returns raw Mistral JSON under data."
+      ]
+    },
+    "embeddings.create": {
+      "upstreamActionId": "create_embeddings",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/embeddings"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v1/embeddings. input may be a string or an array of strings."
+      ]
+    },
+    "fim.complete": {
+      "upstreamActionId": "create_fim_completion",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/fim"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v1/fim/completions. Streaming is omitted."
+      ]
+    },
+    "files.get": {
+      "upstreamActionId": "retrieve_file",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/files"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/files/{file_id}. Multipart upload and binary download remain omitted."
+      ]
+    },
+    "files.delete": {
+      "upstreamActionId": "delete_file",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/files"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official DELETE /v1/files/{file_id}."
+      ]
+    },
+    "agents.get": {
+      "upstreamActionId": "get_agent",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/agents"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/agents/{agent_id}. Optional agent_version is omitted."
+      ]
+    },
+    "agents.create": {
+      "upstreamActionId": "create_agent",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/agents"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v1/agents. tools, completion_args, and guardrails objects are omitted from the first-pass native schema."
+      ]
+    },
+    "agents.delete": {
+      "upstreamActionId": "delete_agent",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/agents"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official DELETE /v1/agents/{agent_id}."
+      ]
+    },
+    "conversations.list": {
+      "upstreamActionId": "list_conversations",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/conversations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/conversations. metadata filter object is omitted."
+      ]
+    },
+    "conversations.get": {
+      "upstreamActionId": "get_conversation",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/conversations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/conversations/{conversation_id}."
+      ]
+    },
+    "conversations.start": {
+      "upstreamActionId": "start_conversation",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/conversations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v1/conversations. Streaming is omitted. inputs may be a string or structured array."
+      ]
+    },
+    "moderations.create": {
+      "upstreamActionId": "create_moderation",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/moderations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v1/moderations. Chat-moderation and OCR remain omitted."
+      ]
+    },
+    "batch.jobs.list": {
+      "upstreamActionId": "list_batch_jobs",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/batch"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/batch/jobs. Multipart batch file upload is omitted."
+      ]
+    },
+    "libraries.list": {
+      "upstreamActionId": "list_libraries",
+      "sourceRefs": [
+        "execute-json",
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.mistral.ai/api/endpoint/libraries"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/libraries. Document upload remains omitted as multipart."
+      ]
     }
   },
   "manifest": {
     "key": "mistral-ai",
     "name": "Mistral AI",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -297,7 +535,13 @@
     "models": [
       "model",
       "file",
-      "agent"
+      "agent",
+      "conversation",
+      "completion",
+      "embedding",
+      "moderation",
+      "library",
+      "batch-job"
     ],
     "http": {
       "baseUrl": "https://api.mistral.ai",
@@ -520,6 +764,876 @@
           "success": [
             200
           ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "chat.complete": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 60000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "title": "Create chat completion",
+        "description": "Create a Mistral chat completion for the given model and messages.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Model ID such as mistral-small-latest."
+            },
+            "messages": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Chat messages in role/content form.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "temperature": {
+              "type": "number",
+              "description": "Sampling temperature.",
+              "minimum": 0,
+              "maximum": 1.5
+            },
+            "topP": {
+              "type": "number",
+              "description": "Nucleus sampling threshold.",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "maxTokens": {
+              "type": "integer",
+              "description": "Maximum generated tokens.",
+              "minimum": 0
+            },
+            "stop": {
+              "description": "Stop sequence or list of stop sequences.",
+              "type": [
+                "string",
+                "array"
+              ]
+            },
+            "randomSeed": {
+              "type": "integer",
+              "description": "Random seed.",
+              "minimum": 0
+            },
+            "safePrompt": {
+              "type": "boolean",
+              "description": "Whether to inject the safety prompt."
+            }
+          },
+          "required": [
+            "model",
+            "messages"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/chat/completions",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "{{model}}",
+            "messages": "{{messages}}",
+            "temperature": "{{temperature}}",
+            "top_p": "{{topP}}",
+            "max_tokens": "{{maxTokens}}",
+            "stop": "{{stop}}",
+            "random_seed": "{{randomSeed}}",
+            "safe_prompt": "{{safePrompt}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "embeddings.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "title": "Create embeddings",
+        "description": "Generate Mistral embeddings for the given input text.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Embedding model ID."
+            },
+            "input": {
+              "type": [
+                "string",
+                "array"
+              ],
+              "description": "Text or list of texts to embed."
+            },
+            "outputDimension": {
+              "type": "integer",
+              "description": "Output vector dimensions.",
+              "minimum": 1
+            },
+            "encodingFormat": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Vector encoding format.",
+              "enum": [
+                "float",
+                "base64"
+              ]
+            }
+          },
+          "required": [
+            "model",
+            "input"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/embeddings",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "{{model}}",
+            "input": "{{input}}",
+            "output_dimension": "{{outputDimension}}",
+            "encoding_format": "{{encodingFormat}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "fim.complete": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 60000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "title": "Create FIM completion",
+        "description": "Create a Mistral fill-in-the-middle completion.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "description": "FIM model ID such as codestral-latest."
+            },
+            "prompt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Prefix content to complete."
+            },
+            "suffix": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional suffix context."
+            },
+            "temperature": {
+              "type": "number",
+              "description": "Sampling temperature.",
+              "minimum": 0,
+              "maximum": 1.5
+            },
+            "maxTokens": {
+              "type": "integer",
+              "description": "Maximum generated tokens.",
+              "minimum": 0
+            },
+            "stop": {
+              "description": "Stop sequence or list of stop sequences.",
+              "type": [
+                "string",
+                "array"
+              ]
+            }
+          },
+          "required": [
+            "model",
+            "prompt"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/fim/completions",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "{{model}}",
+            "prompt": "{{prompt}}",
+            "suffix": "{{suffix}}",
+            "temperature": "{{temperature}}",
+            "max_tokens": "{{maxTokens}}",
+            "stop": "{{stop}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "files.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get file",
+        "description": "Get Mistral file metadata by file ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "File ID."
+            }
+          },
+          "required": [
+            "file_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/files/{{file_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "files.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete file",
+        "description": "Delete a Mistral file by file ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "File ID."
+            }
+          },
+          "required": [
+            "file_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/files/{{file_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "agents.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get agent",
+        "description": "Get one Mistral agent by agent ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "agent_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent ID."
+            }
+          },
+          "required": [
+            "agent_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/agents/{{agent_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "agents.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "title": "Create agent",
+        "description": "Create a Mistral agent.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Default model used by the agent."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent name."
+            },
+            "instructions": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent instructions."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent description."
+            }
+          },
+          "required": [
+            "model",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/agents",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "{{model}}",
+            "name": "{{name}}",
+            "instructions": "{{instructions}}",
+            "description": "{{description}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "agents.delete": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Delete agent",
+        "description": "Delete a Mistral agent by agent ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "agent_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent ID."
+            }
+          },
+          "required": [
+            "agent_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/v1/agents/{{agent_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "conversations.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List conversations",
+        "description": "List Mistral conversations with optional page pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "Page number, starting from 0.",
+              "minimum": 0
+            },
+            "page_size": {
+              "type": "integer",
+              "description": "Items per page.",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/conversations",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "conversations.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get conversation",
+        "description": "Get metadata for one Mistral conversation.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "conversation_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Conversation ID."
+            }
+          },
+          "required": [
+            "conversation_id"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/conversations/{{conversation_id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "conversations.start": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 60000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "title": "Start conversation",
+        "description": "Create a Mistral conversation with initial input.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inputs": {
+              "type": [
+                "string",
+                "array"
+              ],
+              "description": "Initial conversation input as text or structured entries."
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Direct model identifier when not using an agent."
+            },
+            "agent_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent ID to start the conversation with."
+            },
+            "instructions": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Conversation-level instructions."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Conversation name."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Conversation description."
+            },
+            "store": {
+              "type": "boolean",
+              "description": "Whether to persist the conversation."
+            }
+          },
+          "required": [
+            "inputs"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/conversations",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "inputs": "{{inputs}}",
+            "model": "{{model}}",
+            "agent_id": "{{agent_id}}",
+            "instructions": "{{instructions}}",
+            "name": "{{name}}",
+            "description": "{{description}}",
+            "store": "{{store}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "moderations.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 5242880,
+        "title": "Create moderation",
+        "description": "Classify text with the Mistral moderation API.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Moderation model ID."
+            },
+            "input": {
+              "type": [
+                "string",
+                "array"
+              ],
+              "description": "Text or list of texts to moderate."
+            }
+          },
+          "required": [
+            "model",
+            "input"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "POST",
+          "path": "/v1/moderations",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "{{model}}",
+            "input": "{{input}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "batch.jobs.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List batch jobs",
+        "description": "List Mistral batch jobs with optional page pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "Page number, starting from 0.",
+              "minimum": 0
+            },
+            "page_size": {
+              "type": "integer",
+              "description": "Items per page.",
+              "minimum": 1
+            },
+            "model": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by model."
+            },
+            "status": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Filter by job status."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/batch/jobs",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}",
+            "page_size": "{{page_size}}",
+            "model": "{{model}}",
+            "status": "{{status}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "libraries.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List libraries",
+        "description": "List Mistral knowledge-base libraries.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of libraries.",
+              "minimum": 1
+            },
+            "page_token": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Pagination token."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          }
+        },
+        "request": {
+          "method": "GET",
+          "path": "/v1/libraries",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "page_token": "{{page_token}}"
+          }
         },
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
