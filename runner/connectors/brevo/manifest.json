@@ -1,7 +1,7 @@
 {
   "key": "brevo",
   "name": "Brevo",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["email-marketing"],
   "auth": {
@@ -638,8 +638,292 @@
         }
       }
     },
+    "lists.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Update List",
+      "description": "Rename an existing Brevo contact list by its numeric list ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "number", "description": "Numeric ID of the list to rename." },
+          "name": { "type": "string", "description": "New list name." }
+        },
+        "required": ["listId", "name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "updated": { "type": "boolean" },
+          "listId": { "type": "number" },
+          "name": { "type": "string" }
+        }
+      }
+    },
+    "lists.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete List",
+      "description": "Permanently delete a Brevo contact list by its numeric list ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "number", "description": "Numeric ID of the list to delete." }
+        },
+        "required": ["listId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "lists.getContacts": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get List Contacts",
+      "description": "List contacts that belong to a Brevo contact list, with optional limit and offset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "listId": { "type": "number", "description": "Numeric ID of the list." },
+          "limit": { "type": "number", "description": "Maximum number of contacts to return." },
+          "offset": { "type": "number", "description": "Number of contacts to skip." }
+        },
+        "required": ["listId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "contacts": { "type": "array" },
+          "count": { "type": "number" }
+        }
+      }
+    },
+    "folders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Folders",
+      "description": "List Brevo contact list folders in the connected account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "folders": { "type": "array" }
+        }
+      }
+    },
+    "folders.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Create Folder",
+      "description": "Create a Brevo folder that can hold contact lists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Name of the new folder." }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "folder": { "type": "object" }
+        }
+      }
+    },
+    "emailCampaigns.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 5242880,
+      "maxResponseBytes": 65536,
+      "title": "Update Email Campaign",
+      "description": "Update a draft Brevo email campaign's name, subject, HTML, or schedule.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "number", "description": "Numeric ID of the campaign to update." },
+          "name": { "type": "string", "description": "Replacement internal campaign name." },
+          "subject": { "type": "string", "description": "Replacement subject line." },
+          "htmlContent": { "type": "string", "description": "Replacement HTML body." },
+          "htmlUrl": { "type": "string", "description": "URL of HTML to use as the body." },
+          "scheduledAt": { "type": "string", "description": "ISO 8601 datetime to schedule the send." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "updated": { "type": "boolean" }
+        }
+      }
+    },
+    "emailCampaigns.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Delete Email Campaign",
+      "description": "Permanently delete a Brevo email campaign by its numeric ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "number", "description": "Numeric ID of the campaign to delete." }
+        },
+        "required": ["campaignId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "deleted": { "type": "boolean" }
+        }
+      }
+    },
+    "emailCampaigns.sendTest": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 30000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 65536,
+      "title": "Send Test Email Campaign",
+      "description": "Send a test of a Brevo email campaign to one or more addresses without sending to the full list.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "number", "description": "Numeric ID of the campaign to test." },
+          "emailTo": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Email addresses that should receive the test send."
+          }
+        },
+        "required": ["campaignId", "emailTo"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "sent": { "type": "boolean" }
+        }
+      }
+    },
+    "smtp.templates.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Transactional Templates",
+      "description": "List Brevo transactional email templates in the connected account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "templates": { "type": "array" },
+          "count": { "type": "number" }
+        }
+      }
+    },
+    "smtp.templates.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Transactional Template",
+      "description": "Retrieve a Brevo transactional email template by its numeric template ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "templateId": { "type": "number", "description": "Numeric ID of the transactional template." }
+        },
+        "required": ["templateId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "template": { "type": "object" }
+        }
+      }
+    },
+    "senders.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Senders",
+      "description": "List verified Brevo senders that can be used for transactional and campaign email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "connector": { "type": "string" },
+          "action": { "type": "string" },
+          "source": { "type": "string" },
+          "senders": { "type": "array" }
+        }
+      }
+    },
     "healthcheck": {
       "kind": "action",
+      "sideEffect": "read",
       "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
@@ -659,11 +943,187 @@
           }
         }
       }
+    },
+    "webhook.email.delivered": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Email Delivered",
+      "description": "Catalog trigger for a Brevo delivered email event (transactional or marketing). Webhook subscription setup is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "description": "Recipient email address." },
+          "event": { "type": "string", "description": "Brevo event name, typically delivered." },
+          "messageId": { "type": "string", "description": "Brevo message identifier when present." },
+          "campaignId": { "type": "number", "description": "Campaign ID for marketing events." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "event": { "type": "string" },
+          "messageId": { "type": "string" }
+        }
+      }
+    },
+    "webhook.email.opened": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Email Opened",
+      "description": "Catalog trigger for a Brevo opened or uniqueOpened email event. Webhook subscription setup is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "description": "Recipient email address." },
+          "event": { "type": "string", "description": "Brevo event name, typically opened." },
+          "messageId": { "type": "string", "description": "Brevo message identifier when present." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "event": { "type": "string" }
+        }
+      }
+    },
+    "webhook.email.clicked": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Email Clicked",
+      "description": "Catalog trigger for a Brevo click email event. Webhook subscription setup is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "description": "Recipient email address." },
+          "event": { "type": "string", "description": "Brevo event name, typically click." },
+          "link": { "type": "string", "description": "Clicked URL when present." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "event": { "type": "string" },
+          "link": { "type": "string" }
+        }
+      }
+    },
+    "webhook.email.hard_bounce": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Email Hard Bounce",
+      "description": "Catalog trigger for a Brevo hardBounce email event. Webhook subscription setup is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "description": "Recipient email address." },
+          "event": { "type": "string", "description": "Brevo event name, typically hardBounce." },
+          "reason": { "type": "string", "description": "Bounce reason when present." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "event": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "webhook.email.unsubscribed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Email Unsubscribed",
+      "description": "Catalog trigger for a Brevo unsubscribed email event. Webhook subscription setup is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "description": "Recipient email address." },
+          "event": { "type": "string", "description": "Brevo event name, typically unsubscribed." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "event": { "type": "string" }
+        }
+      }
+    },
+    "webhook.contact.updated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Contact Updated",
+      "description": "Catalog trigger for a Brevo contactUpdated marketing webhook. Webhook subscription setup is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "description": "Contact email address." },
+          "id": { "type": "number", "description": "Brevo contact ID when present." },
+          "event": { "type": "string", "description": "Brevo event name, typically contactUpdated." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "id": { "type": "number" },
+          "event": { "type": "string" }
+        }
+      }
+    },
+    "webhook.list.addition": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "List Addition",
+      "description": "Catalog trigger for a Brevo listAddition marketing webhook. Webhook subscription setup is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "description": "Contact email address added to a list." },
+          "listId": { "type": "number", "description": "List ID the contact was added to." },
+          "event": { "type": "string", "description": "Brevo event name, typically listAddition." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "listId": { "type": "number" },
+          "event": { "type": "string" }
+        }
+      }
     }
   },
   "models": [
     "contact",
     "list",
-    "campaign"
+    "campaign",
+    "folder",
+    "template",
+    "sender"
   ]
 }

@@ -17,13 +17,21 @@ import {
   validateGetListInput,
   validateAddContactsToListInput,
   validateRemoveContactsFromListInput,
+  validateUpdateListInput,
+  validateDeleteListInput,
+  validateGetListContactsInput,
+  validateCreateFolderInput,
 } from "./lists_ops";
 import {
   createCampaignsOpsClient,
   validateCreateEmailCampaignInput,
   validateSendEmailCampaignInput,
   validateGetEmailCampaignInput,
+  validateUpdateEmailCampaignInput,
+  validateDeleteEmailCampaignInput,
+  validateSendTestEmailCampaignInput,
 } from "./campaigns_ops";
+import { validateGetTemplateInput } from "./smtp";
 
 // ─── Existing: contacts.create ────────────────────────────────────────────────
 
@@ -216,6 +224,142 @@ export function getEmailCampaign(input: unknown): Record<string, unknown> | Prom
       });
   }
   return { connector: "brevo", action: "emailCampaigns.get", source: "connector", validated: validateGetEmailCampaignInput(input) };
+}
+
+function throwIfFailed<T extends { ok: true } | { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } }>(result: T): asserts result is T & { ok: true } {
+  if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+}
+
+export function updateList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createListsOpsClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .updateList(input)
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "lists.update", source: "connector", updated: result.updated, listId: result.listId, name: result.name };
+      });
+  }
+  return { connector: "brevo", action: "lists.update", source: "connector", validated: validateUpdateListInput(input) };
+}
+
+export function deleteList(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createListsOpsClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .deleteList(input)
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "lists.delete", source: "connector", deleted: result.deleted };
+      });
+  }
+  return { connector: "brevo", action: "lists.delete", source: "connector", validated: validateDeleteListInput(input) };
+}
+
+export function getListContacts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createListsOpsClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .getListContacts(input)
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "lists.getContacts", source: "connector", contacts: result.contacts, count: result.count };
+      });
+  }
+  return { connector: "brevo", action: "lists.getContacts", source: "connector", validated: validateGetListContactsInput(input) };
+}
+
+export function listFolders(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createListsOpsClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .listFolders(input)
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "folders.list", source: "connector", folders: result.folders };
+      });
+  }
+  return { connector: "brevo", action: "folders.list", source: "connector", validated: {} };
+}
+
+export function createFolder(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createListsOpsClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .createFolder(input)
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "folders.create", source: "connector", folder: result.folder };
+      });
+  }
+  return { connector: "brevo", action: "folders.create", source: "connector", validated: validateCreateFolderInput(input) };
+}
+
+export function updateEmailCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createCampaignsOpsClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .updateCampaign(input)
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "emailCampaigns.update", source: "connector", updated: result.updated };
+      });
+  }
+  return { connector: "brevo", action: "emailCampaigns.update", source: "connector", validated: validateUpdateEmailCampaignInput(input) };
+}
+
+export function deleteEmailCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createCampaignsOpsClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .deleteCampaign(input)
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "emailCampaigns.delete", source: "connector", deleted: result.deleted };
+      });
+  }
+  return { connector: "brevo", action: "emailCampaigns.delete", source: "connector", validated: validateDeleteEmailCampaignInput(input) };
+}
+
+export function sendTestEmailCampaign(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createCampaignsOpsClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .sendTestCampaign(input)
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "emailCampaigns.sendTest", source: "connector", sent: result.sent };
+      });
+  }
+  return { connector: "brevo", action: "emailCampaigns.sendTest", source: "connector", validated: validateSendTestEmailCampaignInput(input) };
+}
+
+export function listTemplates(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createSmtpClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .listTemplates()
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "smtp.templates.list", source: "connector", templates: result.templates, count: result.count };
+      });
+  }
+  return { connector: "brevo", action: "smtp.templates.list", source: "connector", validated: {} };
+}
+
+export function getTemplate(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createSmtpClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .getTemplate(input)
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "smtp.templates.get", source: "connector", template: result.template };
+      });
+  }
+  return { connector: "brevo", action: "smtp.templates.get", source: "connector", validated: validateGetTemplateInput(input) };
+}
+
+export function listSenders(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.apiKey === "string") {
+    return createSmtpClient({ apiKey: input.apiKey, fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined })
+      .listSenders()
+      .then((result) => {
+        throwIfFailed(result);
+        return { connector: "brevo", action: "senders.list", source: "connector", senders: result.senders };
+      });
+  }
+  return { connector: "brevo", action: "senders.list", source: "connector", validated: {} };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { createBrevoClient, brevoErrorDetail, parseBrevoRateLimit, prop, isRecord, type BrevoClient } from "./http";
+import { normalizeTemplate, parseSendersResponse, parseTemplatesResponse } from "./objects";
 
 // ─── smtp.email.send ──────────────────────────────────────────────────────────
 
@@ -81,6 +82,12 @@ export function normalizeSentEmail(body: Record<string, unknown>): NormalizedSen
   };
 }
 
+export type GetTemplateInput = { templateId: number };
+export function validateGetTemplateInput(input: unknown): GetTemplateInput {
+  if (!isRecord(input)) throw new Error("input must be an object");
+  return { templateId: requireNumber(input.templateId, "templateId") };
+}
+
 export function createSmtpClient(options: { apiKey: string; fetch?: typeof fetch }) {
   const client = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "smtp.email.send" });
 
@@ -112,6 +119,42 @@ export function createSmtpClient(options: { apiKey: string; fetch?: typeof fetch
       if (rl.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED" as const, message: "Brevo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
       return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: brevoErrorDetail(result.body, "Brevo rejected the send email request.") } };
     },
+
+    async listTemplates() {
+      const clientForOp = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "smtp.templates.list" });
+      const result = await clientForOp.fetchJSON("/smtp/templates");
+      if (result.status === 200) {
+        const parsed = parseTemplatesResponse(result.body);
+        return { ok: true as const, templates: parsed.templates, count: parsed.count };
+      }
+      const rl = parseBrevoRateLimit(result.status, result.headers);
+      if (rl.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED" as const, message: "Brevo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: brevoErrorDetail(result.body, "Brevo rejected the list templates request.") } };
+    },
+
+    async getTemplate(input: unknown) {
+      const payload = validateGetTemplateInput(input);
+      const clientForOp = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "smtp.templates.get" });
+      const result = await clientForOp.fetchJSON(`/smtp/templates/${payload.templateId}`);
+      if (result.status === 200) {
+        return { ok: true as const, template: normalizeTemplate(isRecord(result.body) ? result.body : {}) };
+      }
+      const rl = parseBrevoRateLimit(result.status, result.headers);
+      if (rl.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED" as const, message: "Brevo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      if (result.status === 404) return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: "Template not found." } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: brevoErrorDetail(result.body, "Brevo rejected the get template request.") } };
+    },
+
+    async listSenders() {
+      const clientForOp = createBrevoClient({ apiKey: options.apiKey, fetch: options.fetch, operation: "senders.list" });
+      const result = await clientForOp.fetchJSON("/senders");
+      if (result.status === 200) {
+        return { ok: true as const, senders: parseSendersResponse(result.body).senders };
+      }
+      const rl = parseBrevoRateLimit(result.status, result.headers);
+      if (rl.limited) return { ok: false as const, error: { code: "CONNECTOR_RATE_LIMITED" as const, message: "Brevo rate limit exceeded.", retryAfterSeconds: rl.retryAfterSeconds } };
+      return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR" as const, message: brevoErrorDetail(result.body, "Brevo rejected the list senders request.") } };
+    },
   };
 }
 
@@ -119,5 +162,10 @@ export function createSmtpClient(options: { apiKey: string; fetch?: typeof fetch
 
 function requireString(v: unknown, f: string): string {
   if (typeof v !== "string" || !v.length) throw new Error(`${f} is required`);
+  return v;
+}
+
+function requireNumber(v: unknown, f: string): number {
+  if (typeof v !== "number") throw new Error(`${f} must be a number`);
   return v;
 }

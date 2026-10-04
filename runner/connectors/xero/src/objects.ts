@@ -39,6 +39,43 @@ export type XeroBankTransaction = {
   [key: string]: unknown;
 };
 
+export type XeroAccount = {
+  AccountID: string;
+  Code?: string;
+  Name?: string;
+  Type?: string;
+  Status?: string;
+  TaxType?: string;
+  Description?: string;
+  BankAccountNumber?: string;
+  CurrencyCode?: string;
+  [key: string]: unknown;
+};
+
+export type XeroPayment = {
+  PaymentID: string;
+  Date?: string;
+  Amount?: number;
+  CurrencyRate?: number;
+  Status?: string;
+  PaymentType?: string;
+  Reference?: string;
+  Invoice?: { InvoiceID?: string; InvoiceNumber?: string };
+  Account?: { AccountID?: string; Code?: string };
+  [key: string]: unknown;
+};
+
+export type XeroItem = {
+  ItemID: string;
+  Code?: string;
+  Name?: string;
+  Description?: string;
+  PurchaseDescription?: string;
+  IsSold?: boolean;
+  IsPurchased?: boolean;
+  [key: string]: unknown;
+};
+
 // ─── Normalized types ──────────────────────────────────────────────
 
 export type NormalizedInvoice = {
@@ -84,6 +121,48 @@ export type NormalizedBankTransaction = {
   status: string;
   modelVersion: "2026-05-17";
   raw: XeroBankTransaction;
+};
+
+export type NormalizedAccount = {
+  id: string;
+  provider: "xero";
+  accountId: string;
+  code: string;
+  name: string;
+  type: string;
+  status: string;
+  taxType: string;
+  description: string;
+  modelVersion: "2026-05-17";
+  raw: XeroAccount;
+};
+
+export type NormalizedPayment = {
+  id: string;
+  provider: "xero";
+  paymentId: string;
+  date: string;
+  amount: number;
+  status: string;
+  paymentType: string;
+  reference: string;
+  invoiceId: string;
+  accountId: string;
+  modelVersion: "2026-05-17";
+  raw: XeroPayment;
+};
+
+export type NormalizedItem = {
+  id: string;
+  provider: "xero";
+  itemId: string;
+  code: string;
+  name: string;
+  description: string;
+  isSold: boolean;
+  isPurchased: boolean;
+  modelVersion: "2026-05-17";
+  raw: XeroItem;
 };
 
 // ─── Normalize functions ───────────────────────────────────────────
@@ -139,6 +218,54 @@ export function normalizeBankTransaction(txn: XeroBankTransaction): NormalizedBa
   };
 }
 
+export function normalizeAccount(account: XeroAccount): NormalizedAccount {
+  return {
+    id: `xero-account:${account.AccountID}`,
+    provider: "xero",
+    accountId: account.AccountID,
+    code: account.Code ?? "",
+    name: account.Name ?? "",
+    type: account.Type ?? "",
+    status: account.Status ?? "",
+    taxType: account.TaxType ?? "",
+    description: account.Description ?? "",
+    modelVersion: "2026-05-17",
+    raw: account,
+  };
+}
+
+export function normalizePayment(payment: XeroPayment): NormalizedPayment {
+  return {
+    id: `xero-payment:${payment.PaymentID}`,
+    provider: "xero",
+    paymentId: payment.PaymentID,
+    date: payment.Date ?? "",
+    amount: typeof payment.Amount === "number" ? payment.Amount : 0,
+    status: payment.Status ?? "",
+    paymentType: payment.PaymentType ?? "",
+    reference: payment.Reference ?? "",
+    invoiceId: payment.Invoice?.InvoiceID ?? "",
+    accountId: payment.Account?.AccountID ?? "",
+    modelVersion: "2026-05-17",
+    raw: payment,
+  };
+}
+
+export function normalizeItem(item: XeroItem): NormalizedItem {
+  return {
+    id: `xero-item:${item.ItemID}`,
+    provider: "xero",
+    itemId: item.ItemID,
+    code: item.Code ?? "",
+    name: item.Name ?? "",
+    description: item.Description ?? "",
+    isSold: item.IsSold === true,
+    isPurchased: item.IsPurchased === true,
+    modelVersion: "2026-05-17",
+    raw: item,
+  };
+}
+
 // ─── Parse response functions ──────────────────────────────────────
 
 export type XeroListResult<T> = {
@@ -164,6 +291,34 @@ export function parseBankTransactionsResponse(response: unknown): XeroListResult
   const transactions = response.BankTransactions;
   if (!Array.isArray(transactions)) return { items: [] };
   return { items: transactions.filter(isRecord).map((txn) => parseXeroBankTransaction(txn)) };
+}
+
+export function parseAccountsResponse(response: unknown): XeroListResult<XeroAccount> {
+  if (!isRecord(response)) return { items: [] };
+  const accounts = response.Accounts;
+  if (!Array.isArray(accounts)) return { items: [] };
+  return { items: accounts.filter(isRecord).map((account) => parseXeroAccount(account)) };
+}
+
+export function parsePaymentsResponse(response: unknown): XeroListResult<XeroPayment> {
+  if (!isRecord(response)) return { items: [] };
+  const payments = response.Payments;
+  if (!Array.isArray(payments)) return { items: [] };
+  return { items: payments.filter(isRecord).map((payment) => parseXeroPayment(payment)) };
+}
+
+export function parseItemsResponse(response: unknown): XeroListResult<XeroItem> {
+  if (!isRecord(response)) return { items: [] };
+  const items = response.Items;
+  if (!Array.isArray(items)) return { items: [] };
+  return { items: items.filter(isRecord).map((item) => parseXeroItem(item)) };
+}
+
+export function firstNamedRecord(response: unknown, key: string): Record<string, unknown> {
+  if (!isRecord(response)) return {};
+  const value = response[key];
+  if (Array.isArray(value) && value.length > 0 && isRecord(value[0])) return value[0];
+  return response;
 }
 
 // ─── Internal parse helpers ────────────────────────────────────────
@@ -226,6 +381,56 @@ function parseXeroBankTransaction(r: Record<string, unknown>): XeroBankTransacti
         }))
       : undefined,
     Status: typeof r.Status === "string" ? r.Status : undefined,
+  };
+}
+
+function parseXeroAccount(r: Record<string, unknown>): XeroAccount {
+  return {
+    AccountID: requireString(r.AccountID, "AccountID"),
+    Code: typeof r.Code === "string" ? r.Code : undefined,
+    Name: typeof r.Name === "string" ? r.Name : undefined,
+    Type: typeof r.Type === "string" ? r.Type : undefined,
+    Status: typeof r.Status === "string" ? r.Status : undefined,
+    TaxType: typeof r.TaxType === "string" ? r.TaxType : undefined,
+    Description: typeof r.Description === "string" ? r.Description : undefined,
+    BankAccountNumber: typeof r.BankAccountNumber === "string" ? r.BankAccountNumber : undefined,
+    CurrencyCode: typeof r.CurrencyCode === "string" ? r.CurrencyCode : undefined,
+  };
+}
+
+function parseXeroPayment(r: Record<string, unknown>): XeroPayment {
+  return {
+    PaymentID: requireString(r.PaymentID, "PaymentID"),
+    Date: typeof r.Date === "string" ? r.Date : undefined,
+    Amount: typeof r.Amount === "number" ? r.Amount : undefined,
+    CurrencyRate: typeof r.CurrencyRate === "number" ? r.CurrencyRate : undefined,
+    Status: typeof r.Status === "string" ? r.Status : undefined,
+    PaymentType: typeof r.PaymentType === "string" ? r.PaymentType : undefined,
+    Reference: typeof r.Reference === "string" ? r.Reference : undefined,
+    Invoice: isRecord(r.Invoice)
+      ? {
+          InvoiceID: typeof r.Invoice.InvoiceID === "string" ? r.Invoice.InvoiceID : undefined,
+          InvoiceNumber: typeof r.Invoice.InvoiceNumber === "string" ? r.Invoice.InvoiceNumber : undefined,
+        }
+      : undefined,
+    Account: isRecord(r.Account)
+      ? {
+          AccountID: typeof r.Account.AccountID === "string" ? r.Account.AccountID : undefined,
+          Code: typeof r.Account.Code === "string" ? r.Account.Code : undefined,
+        }
+      : undefined,
+  };
+}
+
+function parseXeroItem(r: Record<string, unknown>): XeroItem {
+  return {
+    ItemID: requireString(r.ItemID, "ItemID"),
+    Code: typeof r.Code === "string" ? r.Code : undefined,
+    Name: typeof r.Name === "string" ? r.Name : undefined,
+    Description: typeof r.Description === "string" ? r.Description : undefined,
+    PurchaseDescription: typeof r.PurchaseDescription === "string" ? r.PurchaseDescription : undefined,
+    IsSold: r.IsSold === true,
+    IsPurchased: r.IsPurchased === true,
   };
 }
 

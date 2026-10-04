@@ -57,3 +57,34 @@ export function createXeroClient(options: XeroClientOptions) {
 }
 
 export type XeroClient = ReturnType<typeof createXeroClient>;
+
+export function xeroErrorDetail(body: unknown, fallback: string): string {
+  if (typeof body === "object" && body !== null && !Array.isArray(body)) {
+    const record = body as Record<string, unknown>;
+    if (typeof record.Message === "string" && record.Message.length > 0) return record.Message;
+    if (typeof record.Detail === "string" && record.Detail.length > 0) return record.Detail;
+  }
+  return fallback;
+}
+
+export function throwXeroHttpError(
+  status: number,
+  headers: Record<string, string>,
+  body: unknown,
+  fallback: string,
+): never {
+  const rl = parseXeroRateLimit(status, headers);
+  if (rl.limited) {
+    throw {
+      ok: false,
+      code: "CONNECTOR_RATE_LIMITED",
+      message: "Xero rate limit exceeded.",
+      retryAfterSeconds: rl.retryAfterSeconds,
+    };
+  }
+  throw {
+    ok: false,
+    code: "CONNECTOR_UPSTREAM_ERROR",
+    message: xeroErrorDetail(body, fallback),
+  };
+}
