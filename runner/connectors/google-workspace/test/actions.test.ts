@@ -10,23 +10,43 @@ import {
   getMessage,
   modifyMessage,
   trashMessage,
+  untrashMessage,
+  deleteMessage,
+  getAttachment,
+  listThreads,
+  getThread,
   createDraft,
+  sendDraft,
+  deleteDraft,
   listLabels,
+  createLabel,
+  getLabel,
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
   getCalendarEvent,
+  listEventInstances,
+  getCalendar,
+  listAcl,
+  moveCalendarEvent,
   listCalendars,
   getDriveFile,
   createDriveFile,
   deleteDriveFile,
+  copyDriveFile,
+  updateDriveFile,
   createDrivePermission,
+  listDrivePermissions,
+  deleteDrivePermission,
   updateSheetValues,
   clearSheetValues,
   createSpreadsheet,
+  getSpreadsheet,
   batchUpdateSpreadsheet,
+  batchUpdateSheetValues,
   getDocument,
   createDocument,
+  updateDocument,
 } from "../src/actions";
 
 describe("google-workspace connector actions", () => {
@@ -297,5 +317,111 @@ describe("google-workspace connector actions", () => {
     const result = createDocument({ title: "My Doc" });
     expect(result.source).toBe("connector");
     expect(result.action).toBe("docs.create");
+  });
+
+  test("untrashMessage returns validated without accessToken", () => {
+    const result = untrashMessage({ messageId: "abc" });
+    expect(result.action).toBe("messages.untrash");
+  });
+
+  test("deleteMessage returns validated without accessToken", () => {
+    const result = deleteMessage({ messageId: "abc" });
+    expect(result.action).toBe("messages.delete");
+  });
+
+  test("getAttachment returns validated without accessToken", () => {
+    const result = getAttachment({ messageId: "abc", attachmentId: "att" });
+    expect(result.action).toBe("messages.attachments.get");
+  });
+
+  test("listThreads returns validated without accessToken", () => {
+    const result = listThreads({ q: "is:unread" });
+    expect(result.action).toBe("threads.list");
+  });
+
+  test("getThread returns validated without accessToken", () => {
+    const result = getThread({ threadId: "t1" });
+    expect(result.action).toBe("threads.get");
+  });
+
+  test("sendDraft returns validated without accessToken", () => {
+    const result = sendDraft({ draftId: "r-1" });
+    expect(result.action).toBe("drafts.send");
+  });
+
+  test("deleteDraft returns validated without accessToken", () => {
+    const result = deleteDraft({ draftId: "r-1" });
+    expect(result.action).toBe("drafts.delete");
+  });
+
+  test("createLabel returns validated without accessToken", () => {
+    const result = createLabel({ name: "Follow Up" });
+    expect(result.action).toBe("labels.create");
+  });
+
+  test("getLabel returns validated without accessToken", () => {
+    const result = getLabel({ labelId: "Label_1234" });
+    expect(result.action).toBe("labels.get");
+  });
+
+  test("listEventInstances returns validated without accessToken", () => {
+    const result = listEventInstances({ calendarId: "primary", eventId: "abc" });
+    expect(result.action).toBe("calendar.events.instances");
+  });
+
+  test("getCalendar returns validated without accessToken", () => {
+    const result = getCalendar({ calendarId: "primary" });
+    expect(result.action).toBe("calendar.calendars.get");
+  });
+
+  test("listAcl returns validated without accessToken", () => {
+    const result = listAcl({ calendarId: "primary" });
+    expect(result.action).toBe("calendar.acl.list");
+  });
+
+  test("moveCalendarEvent returns validated without accessToken", () => {
+    const result = moveCalendarEvent({ calendarId: "primary", eventId: "abc", destination: "other" });
+    expect(result.action).toBe("calendar.events.move");
+  });
+
+  test("copyDriveFile returns validated without accessToken", () => {
+    const result = copyDriveFile({ fileId: "abc", name: "Copy" });
+    expect(result.action).toBe("drive.files.copy");
+  });
+
+  test("updateDriveFile returns validated without accessToken", () => {
+    const result = updateDriveFile({ fileId: "abc", name: "Renamed" });
+    expect(result.action).toBe("drive.files.update");
+  });
+
+  test("listDrivePermissions returns validated without accessToken", () => {
+    const result = listDrivePermissions({ fileId: "abc" });
+    expect(result.action).toBe("drive.permissions.list");
+  });
+
+  test("deleteDrivePermission returns validated without accessToken", () => {
+    const result = deleteDrivePermission({ fileId: "abc", permissionId: "perm123" });
+    expect(result.action).toBe("drive.permissions.delete");
+  });
+
+  test("getSpreadsheet returns validated without accessToken", () => {
+    const result = getSpreadsheet({ spreadsheetId: "s" });
+    expect(result.action).toBe("sheets.spreadsheets.get");
+  });
+
+  test("batchUpdateSheetValues returns validated without accessToken", () => {
+    const result = batchUpdateSheetValues({
+      spreadsheetId: "s",
+      data: [{ range: "A1", values: [["a"]] }],
+    });
+    expect(result.action).toBe("sheets.values.batchUpdate");
+  });
+
+  test("updateDocument returns validated without accessToken", () => {
+    const result = updateDocument({
+      documentId: "d",
+      requests: [{ insertText: { index: 1, text: "Hello" } }],
+    });
+    expect(result.action).toBe("docs.update");
   });
 });

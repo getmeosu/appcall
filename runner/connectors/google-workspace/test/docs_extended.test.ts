@@ -1,12 +1,20 @@
 import { describe, expect, test } from "bun:test";
 import docCreateFixture from "../fixtures/doc_create.json";
+import docsUpdateFixture from "../fixtures/docs_update.json";
 import rateLimitedFixture from "../fixtures/rate_limited.json";
-import { createDocsClient, validateCreateDocumentInput } from "../src/docs";
+import { createDocsClient, validateCreateDocumentInput, validateUpdateDocumentInput } from "../src/docs";
 import { parseGoogleRateLimitMetadata, parseGoogleRetryAfter } from "../src/http";
 
 const docsOperations: Array<{ name: string; invoke: (client: ReturnType<typeof createDocsClient>) => Promise<unknown> }> = [
   { name: "docs.get", invoke: (client) => client.getDocument({ documentId: "doc-id" }) },
   { name: "docs.create", invoke: (client) => client.createDocument({ title: "Test" }) },
+  {
+    name: "docs.update",
+    invoke: (client) => client.updateDocument({
+      documentId: "doc-id",
+      requests: [{ insertText: { index: 1, text: "Hello" } }],
+    }),
+  },
 ];
 
 describe("google-workspace Docs extended actions", () => {
@@ -198,5 +206,57 @@ describe("google-workspace Docs extended actions", () => {
 
   test("createDocument with empty title throws validation error", () => {
     expect(() => validateCreateDocumentInput({ title: "" })).toThrow();
+  });
+
+  // ─── docs.update ────────────────────────────────────────────────────────
+
+  test("validateUpdateDocumentInput accepts bounded insertText requests", () => {
+    const r = validateUpdateDocumentInput({
+      documentId: "docId123",
+      requests: [{ insertText: { index: 1, text: "Hello" } }],
+    });
+    expect(r.documentId).toBe("docId123");
+    expect(r.requests).toHaveLength(1);
+  });
+
+  test("validateUpdateDocumentInput rejects empty, oversized, or unsupported requests", () => {
+    expect(() => validateUpdateDocumentInput({ documentId: "d", requests: [] })).toThrow();
+    expect(() => validateUpdateDocumentInput({
+      documentId: "d",
+      requests: Array.from({ length: 51 }, () => ({ insertText: { index: 1, text: "x" } })),
+    })).toThrow();
+    expect(() => validateUpdateDocumentInput({
+      documentId: "d",
+      requests: [{ deleteDocumentStyle: {} }],
+    })).toThrow();
+  });
+
+  test("updateDocument posts to documents.batchUpdate", async () => {
+    const requests: Request[] = [];
+    const client = createDocsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(docsUpdateFixture);
+      },
+    });
+
+    const result = await client.updateDocument({
+      documentId: "docId123",
+      requests: [
+        { insertText: { index: 1, text: "Hello" } },
+        { replaceAllText: { find: "foo", replace: "bar" } },
+      ],
+    });
+
+    expect(requests[0].url).toBe("https://docs.googleapis.com/v1/documents/docId123:batchUpdate");
+    expect(requests[0].method).toBe("POST");
+    const body = await requests[0].json() as { requests: Array<Record<string, unknown>> };
+    expect(body.requests[0]).toEqual({ insertText: { location: { index: 1 }, text: "Hello" } });
+    expect(body.requests[1]).toEqual({
+      replaceAllText: { containsText: { text: "foo", matchCase: false }, replaceText: "bar" },
+    });
+    expect(result.documentId).toBe("docId123");
+    expect(result.replies).toHaveLength(1);
   });
 });

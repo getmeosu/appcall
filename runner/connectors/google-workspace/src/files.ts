@@ -92,6 +92,10 @@ export type GetFileInput = { fileId: string; fields?: string };
 export type CreateDriveFileInput = { name: string; mimeType: string; parents?: string[]; description?: string };
 export type DeleteFileInput = { fileId: string };
 export type CreatePermissionInput = { fileId: string; role: string; type: string; emailAddress?: string; sendNotificationEmail?: boolean };
+export type CopyFileInput = { fileId: string; name?: string; parents?: string[] };
+export type UpdateFileInput = { fileId: string; name?: string; description?: string; mimeType?: string };
+export type ListPermissionsInput = { fileId: string };
+export type DeletePermissionInput = { fileId: string; permissionId: string };
 
 export type DriveFileActionResult =
   | { ok: true; file: { id: string; name: string; mimeType: string; webViewLink?: string; parents?: string[]; createdTime?: string; modifiedTime?: string; size?: string } }
@@ -103,6 +107,14 @@ export type DeleteFileResult =
 
 export type CreatePermissionResult =
   | { ok: true; permission: { permissionId: string; role: string; type: string; emailAddress?: string } }
+  | { ok: false; error: ConnectorError };
+
+export type ListPermissionsResult =
+  | { ok: true; permissions: Array<{ permissionId: string; role: string; type: string; emailAddress?: string }> }
+  | { ok: false; error: ConnectorError };
+
+export type DeletePermissionResult =
+  | { ok: true; deleted: boolean; permissionId: string; fileId: string }
   | { ok: false; error: ConnectorError };
 
 export function validateGetFileInput(input: unknown): GetFileInput {
@@ -139,6 +151,38 @@ export function validateCreatePermissionInput(input: unknown): CreatePermissionI
   };
 }
 
+export function validateCopyFileInput(input: unknown): CopyFileInput {
+  if (!isRecord(input)) throw new Error("copy file input must be an object");
+  return {
+    fileId: requireString(input.fileId, "fileId"),
+    name: typeof input.name === "string" ? input.name : undefined,
+    parents: Array.isArray(input.parents) ? input.parents.filter((p): p is string => typeof p === "string") : undefined,
+  };
+}
+
+export function validateUpdateFileInput(input: unknown): UpdateFileInput {
+  if (!isRecord(input)) throw new Error("update file input must be an object");
+  return {
+    fileId: requireString(input.fileId, "fileId"),
+    name: typeof input.name === "string" ? input.name : undefined,
+    description: typeof input.description === "string" ? input.description : undefined,
+    mimeType: typeof input.mimeType === "string" ? input.mimeType : undefined,
+  };
+}
+
+export function validateListPermissionsInput(input: unknown): ListPermissionsInput {
+  if (!isRecord(input)) throw new Error("list permissions input must be an object");
+  return { fileId: requireString(input.fileId, "fileId") };
+}
+
+export function validateDeletePermissionInput(input: unknown): DeletePermissionInput {
+  if (!isRecord(input)) throw new Error("delete permission input must be an object");
+  return {
+    fileId: requireString(input.fileId, "fileId"),
+    permissionId: requireString(input.permissionId, "permissionId"),
+  };
+}
+
 async function handleDriveResponse(response: { status: number; headers: Record<string, string>; body: string }): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; error: ConnectorError }> {
   const rateLimit = parseGoogleRateLimitMetadata(response.status, response.headers);
   if (rateLimit.limited) {
@@ -161,6 +205,10 @@ export type DriveActionsClient = {
   createFile(input: unknown): Promise<DriveFileActionResult>;
   deleteFile(input: unknown): Promise<DeleteFileResult>;
   createPermission(input: unknown): Promise<CreatePermissionResult>;
+  copyFile(input: unknown): Promise<DriveFileActionResult>;
+  updateFile(input: unknown): Promise<DriveFileActionResult>;
+  listPermissions(input: unknown): Promise<ListPermissionsResult>;
+  deletePermission(input: unknown): Promise<DeletePermissionResult>;
 };
 
 export function createDriveActionsClient(options: { accessToken: string; fetch?: typeof fetch; httpClient?: ConnectorHttpClient }): DriveActionsClient {
@@ -168,6 +216,10 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
   const createClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.files.create" });
   const deleteClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.files.delete" });
   const permissionClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.permissions.create" });
+  const copyClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.files.copy" });
+  const updateClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.files.update" });
+  const listPermissionsClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.permissions.list" });
+  const deletePermissionClient = createGoogleClient({ accessToken: options.accessToken, fetch: options.fetch, httpClient: options.httpClient, operation: "drive.permissions.delete" });
   const authHeaders = { Authorization: `Bearer ${options.accessToken}` };
   const jsonHeaders = { ...authHeaders, "Content-Type": "application/json" };
 
@@ -257,6 +309,76 @@ export function createDriveActionsClient(options: { accessToken: string; fetch?:
           emailAddress: typeof b.emailAddress === "string" ? b.emailAddress : undefined,
         },
       };
+    },
+
+    async copyFile(input: unknown): Promise<DriveFileActionResult> {
+      const p = validateCopyFileInput(input);
+      const body: Record<string, unknown> = {};
+      if (p.name) body.name = p.name;
+      if (p.parents) body.parents = p.parents;
+      const params = new URLSearchParams({ fields: DEFAULT_FILE_FIELDS });
+      const response = await copyClient.fetchText(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}/copy?${params}`,
+        { method: "POST", headers: jsonHeaders, body: JSON.stringify(body) },
+      );
+      const res = await handleDriveResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return { ok: true, file: normalizeFile(res.body) };
+    },
+
+    async updateFile(input: unknown): Promise<DriveFileActionResult> {
+      const p = validateUpdateFileInput(input);
+      const body: Record<string, unknown> = {};
+      if (p.name !== undefined) body.name = p.name;
+      if (p.description !== undefined) body.description = p.description;
+      if (p.mimeType !== undefined) body.mimeType = p.mimeType;
+      const params = new URLSearchParams({ fields: DEFAULT_FILE_FIELDS });
+      const response = await updateClient.fetchText(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}?${params}`,
+        { method: "PATCH", headers: jsonHeaders, body: JSON.stringify(body) },
+      );
+      const res = await handleDriveResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return { ok: true, file: normalizeFile(res.body) };
+    },
+
+    async listPermissions(input: unknown): Promise<ListPermissionsResult> {
+      const p = validateListPermissionsInput(input);
+      const params = new URLSearchParams({ fields: "permissions(id,role,type,emailAddress)" });
+      const response = await listPermissionsClient.fetchText(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}/permissions?${params}`,
+        { headers: authHeaders },
+      );
+      const res = await handleDriveResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      const permissions = Array.isArray(res.body.permissions) ? res.body.permissions.filter(isRecord) : [];
+      return {
+        ok: true,
+        permissions: permissions.map((perm) => ({
+          permissionId: typeof perm.id === "string" ? perm.id : "",
+          role: typeof perm.role === "string" ? perm.role : "",
+          type: typeof perm.type === "string" ? perm.type : "",
+          emailAddress: typeof perm.emailAddress === "string" ? perm.emailAddress : undefined,
+        })),
+      };
+    },
+
+    async deletePermission(input: unknown): Promise<DeletePermissionResult> {
+      const p = validateDeletePermissionInput(input);
+      const response = await deletePermissionClient.fetchText(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(p.fileId)}/permissions/${encodeURIComponent(p.permissionId)}`,
+        { method: "DELETE", headers: authHeaders },
+      );
+      const rateLimit = parseGoogleRateLimitMetadata(response.status, response.headers);
+      if (rateLimit.limited) {
+        return { ok: false, error: { code: "CONNECTOR_RATE_LIMITED", message: "Drive rate limit exceeded.", retryAfterSeconds: rateLimit.retryAfterSeconds } };
+      }
+      if (response.status === 204 || response.status === 200) {
+        return { ok: true, deleted: true, permissionId: p.permissionId, fileId: p.fileId };
+      }
+      const res = await handleDriveResponse(response);
+      if (!res.ok) return { ok: false, error: res.error };
+      return { ok: true, deleted: true, permissionId: p.permissionId, fileId: p.fileId };
     },
   };
 }

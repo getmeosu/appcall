@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import calendarEventFixture from "../fixtures/calendar_event.json";
 import calendarListFixture from "../fixtures/calendar_list.json";
+import calendarInstancesFixture from "../fixtures/calendar_instances.json";
+import calendarGetFixture from "../fixtures/calendar_get.json";
+import calendarAclFixture from "../fixtures/calendar_acl.json";
 import rateLimitedFixture from "../fixtures/rate_limited.json";
 import {
   createCalendarActionsClient,
@@ -8,6 +11,10 @@ import {
   validateUpdateEventInput,
   validateDeleteEventInput,
   validateGetEventInput,
+  validateListEventInstancesInput,
+  validateGetCalendarInput,
+  validateListAclInput,
+  validateMoveEventInput,
 } from "../src/events";
 
 describe("google-workspace Calendar actions", () => {
@@ -316,5 +323,145 @@ describe("google-workspace Calendar actions", () => {
       fetch: async () => new Response("", { status: 204 }),
     });
     await expect(client.listCalendars({})).resolves.toEqual({ ok: true, calendars: [] });
+  });
+
+  // ─── calendar.events.instances ──────────────────────────────────────────
+
+  test("validateListEventInstancesInput requires calendarId and eventId", () => {
+    const r = validateListEventInstancesInput({ calendarId: "primary", eventId: "abc123eventid" });
+    expect(r.calendarId).toBe("primary");
+    expect(r.eventId).toBe("abc123eventid");
+    expect(() => validateListEventInstancesInput({ calendarId: "primary" })).toThrow();
+  });
+
+  test("listEventInstances fetches the instances collection", async () => {
+    const requests: Request[] = [];
+    const client = createCalendarActionsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(calendarInstancesFixture);
+      },
+    });
+
+    const result = await client.listEventInstances({
+      calendarId: "primary",
+      eventId: "abc123eventid",
+      maxResults: 10,
+    });
+
+    expect(requests[0].url).toBe("https://www.googleapis.com/calendar/v3/calendars/primary/events/abc123eventid/instances?maxResults=10");
+    expect(requests[0].method).toBe("GET");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.instances).toHaveLength(2);
+      expect(result.instances[0].eventId).toBe("abc123eventid_20240115T160000Z");
+      expect(result.nextPageToken).toBe("instances_page_1");
+    }
+  });
+
+  test("listEventInstances maps 429 to CONNECTOR_RATE_LIMITED", async () => {
+    const client = createCalendarActionsClient({
+      accessToken: "token",
+      fetch: async () => new Response(JSON.stringify(rateLimitedFixture), {
+        status: 429,
+        headers: { "Retry-After": "15" },
+      }),
+    });
+    const result = await client.listEventInstances({ calendarId: "primary", eventId: "abc" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe("CONNECTOR_RATE_LIMITED");
+  });
+
+  // ─── calendar.calendars.get ─────────────────────────────────────────────
+
+  test("validateGetCalendarInput requires calendarId", () => {
+    expect(validateGetCalendarInput({ calendarId: "primary" }).calendarId).toBe("primary");
+    expect(() => validateGetCalendarInput({})).toThrow();
+  });
+
+  test("getCalendar fetches a calendar by id", async () => {
+    const requests: Request[] = [];
+    const client = createCalendarActionsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(calendarGetFixture);
+      },
+    });
+
+    const result = await client.getCalendar({ calendarId: "primary" });
+
+    expect(requests[0].url).toBe("https://www.googleapis.com/calendar/v3/calendars/primary");
+    expect(requests[0].method).toBe("GET");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.calendar.id).toBe("primary");
+      expect(result.calendar.summary).toBe("My Calendar");
+      expect(result.calendar.timeZone).toBe("America/Denver");
+    }
+  });
+
+  // ─── calendar.acl.list ──────────────────────────────────────────────────
+
+  test("validateListAclInput requires calendarId", () => {
+    expect(validateListAclInput({ calendarId: "primary" }).calendarId).toBe("primary");
+    expect(() => validateListAclInput({})).toThrow();
+  });
+
+  test("listAcl fetches calendar ACL rules", async () => {
+    const requests: Request[] = [];
+    const client = createCalendarActionsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(calendarAclFixture);
+      },
+    });
+
+    const result = await client.listAcl({ calendarId: "primary" });
+
+    expect(requests[0].url).toBe("https://www.googleapis.com/calendar/v3/calendars/primary/acl");
+    expect(requests[0].method).toBe("GET");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.rules).toHaveLength(2);
+      expect(result.rules[0].role).toBe("owner");
+      expect(result.rules[1].scopeValue).toBe("reader@example.com");
+    }
+  });
+
+  // ─── calendar.events.move ───────────────────────────────────────────────
+
+  test("validateMoveEventInput requires calendarId, eventId, and destination", () => {
+    const r = validateMoveEventInput({
+      calendarId: "primary",
+      eventId: "abc123eventid",
+      destination: "team@example.com",
+    });
+    expect(r.destination).toBe("team@example.com");
+    expect(() => validateMoveEventInput({ calendarId: "primary", eventId: "abc" })).toThrow();
+  });
+
+  test("moveEvent posts to the move endpoint", async () => {
+    const requests: Request[] = [];
+    const client = createCalendarActionsClient({
+      accessToken: "ya29.test-token",
+      fetch: async (input, init) => {
+        requests.push(new Request(input, init));
+        return Response.json(calendarEventFixture);
+      },
+    });
+
+    const result = await client.moveEvent({
+      calendarId: "primary",
+      eventId: "abc123eventid",
+      destination: "team@example.com",
+    });
+
+    expect(requests[0].url).toBe("https://www.googleapis.com/calendar/v3/calendars/primary/events/abc123eventid/move?destination=team%40example.com");
+    expect(requests[0].method).toBe("POST");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.event.eventId).toBe("abc123eventid");
   });
 });

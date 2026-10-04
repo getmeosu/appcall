@@ -1,7 +1,7 @@
 {
   "key": "google-workspace",
   "name": "Google Workspace",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "categories": ["productivity"],
   "auth": {
@@ -1153,6 +1153,608 @@
             "type": "string",
             "description": "Token to retrieve the next page of results."
           }
+        }
+      }
+    },
+    "messages.untrash": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Untrash Gmail Message",
+      "description": "Restore a Gmail message from the trash to the inbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": { "type": "string", "description": "The Gmail message ID to untrash." }
+        },
+        "required": ["messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "threadId": { "type": "string" },
+          "labelIds": { "type": "array" }
+        }
+      }
+    },
+    "messages.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Permanently Delete Gmail Message",
+      "description": "Permanently delete a Gmail message. This cannot be undone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": { "type": "string", "description": "The Gmail message ID to permanently delete." }
+        },
+        "required": ["messageId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": { "type": "boolean" },
+          "messageId": { "type": "string" }
+        }
+      }
+    },
+    "messages.attachments.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Gmail Attachment",
+      "description": "Fetch a Gmail message attachment by message ID and attachment ID. Returns base64url-encoded data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": { "type": "string", "description": "The Gmail message ID that owns the attachment." },
+          "attachmentId": { "type": "string", "description": "The Gmail attachment ID from the message payload." }
+        },
+        "required": ["messageId", "attachmentId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "size": { "type": "number" },
+          "data": { "type": "string", "description": "Base64url-encoded attachment body." }
+        }
+      }
+    },
+    "threads.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Gmail Threads",
+      "description": "List Gmail threads for the authenticated user, optionally filtered by query, labels, and page token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "q": { "type": "string", "description": "Gmail search query (same syntax as the Gmail UI)." },
+          "maxResults": { "type": "number", "description": "Maximum number of threads to return." },
+          "pageToken": { "type": "string", "description": "Page token from a previous list response." },
+          "labelIds": { "type": "array", "items": { "type": "string" }, "description": "Only return threads with these label IDs." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "threads": { "type": "array", "items": { "type": "object" } },
+          "nextPageToken": { "type": "string" },
+          "resultSizeEstimate": { "type": "number" }
+        }
+      }
+    },
+    "threads.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Gmail Thread",
+      "description": "Fetch a Gmail thread and its messages by thread ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "threadId": { "type": "string", "description": "The Gmail thread ID to fetch." },
+          "format": { "type": "string", "description": "Format of messages in the thread: 'full', 'metadata', 'minimal', or 'raw'." }
+        },
+        "required": ["threadId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "historyId": { "type": "string" },
+          "messages": { "type": "array" }
+        }
+      }
+    },
+    "drafts.send": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Send Gmail Draft",
+      "description": "Send an existing Gmail draft by its draft ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "draftId": { "type": "string", "description": "The Gmail draft ID to send." }
+        },
+        "required": ["draftId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "messageId": { "type": "string" },
+          "threadId": { "type": "string" }
+        }
+      }
+    },
+    "drafts.delete": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Gmail Draft",
+      "description": "Delete a Gmail draft by its draft ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "draftId": { "type": "string", "description": "The Gmail draft ID to delete." }
+        },
+        "required": ["draftId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": { "type": "boolean" },
+          "draftId": { "type": "string" }
+        }
+      }
+    },
+    "labels.create": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create Gmail Label",
+      "description": "Create a user label in the authenticated Gmail mailbox.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Display name of the label." },
+          "labelListVisibility": { "type": "string", "description": "Visibility in the label list: 'labelShow', 'labelShowIfUnread', or 'labelHide'." },
+          "messageListVisibility": { "type": "string", "description": "Visibility in the message list: 'show' or 'hide'." }
+        },
+        "required": ["name"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "type": "string" }
+        }
+      }
+    },
+    "labels.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Gmail Label",
+      "description": "Fetch a Gmail label by ID, including message and thread counts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "labelId": { "type": "string", "description": "The Gmail label ID to fetch." }
+        },
+        "required": ["labelId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "messagesTotal": { "type": "number" },
+          "messagesUnread": { "type": "number" },
+          "threadsTotal": { "type": "number" },
+          "threadsUnread": { "type": "number" }
+        }
+      }
+    },
+    "calendar.events.instances": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Calendar Event Instances",
+      "description": "List instances of a recurring Google Calendar event.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": { "type": "string", "description": "Calendar ID (use 'primary' for the user's primary calendar)." },
+          "eventId": { "type": "string", "description": "The recurring event ID whose instances should be listed." },
+          "maxResults": { "type": "number", "description": "Maximum number of instances to return." },
+          "pageToken": { "type": "string", "description": "Page token from a previous instances response." },
+          "timeMin": { "type": "string", "description": "Lower bound (exclusive) for an instance's end time in RFC3339." },
+          "timeMax": { "type": "string", "description": "Upper bound (exclusive) for an instance's start time in RFC3339." }
+        },
+        "required": ["calendarId", "eventId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "instances": { "type": "array", "items": { "type": "object" } },
+          "nextPageToken": { "type": "string" }
+        }
+      }
+    },
+    "calendar.calendars.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get Calendar",
+      "description": "Fetch metadata for a Google Calendar by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": { "type": "string", "description": "Calendar ID (use 'primary' for the user's primary calendar)." }
+        },
+        "required": ["calendarId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "summary": { "type": "string" },
+          "description": { "type": "string" },
+          "timeZone": { "type": "string" }
+        }
+      }
+    },
+    "calendar.acl.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Calendar ACL",
+      "description": "List access control rules for a Google Calendar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": { "type": "string", "description": "Calendar ID (use 'primary' for the user's primary calendar)." }
+        },
+        "required": ["calendarId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "role": { "type": "string" },
+                "scopeType": { "type": "string" },
+                "scopeValue": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "calendar.events.move": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Move Calendar Event",
+      "description": "Move a Google Calendar event to another calendar.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": { "type": "string", "description": "Source calendar ID." },
+          "eventId": { "type": "string", "description": "The event ID to move." },
+          "destination": { "type": "string", "description": "Destination calendar ID." }
+        },
+        "required": ["calendarId", "eventId", "destination"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "eventId": { "type": "string" },
+          "htmlLink": { "type": "string" },
+          "summary": { "type": "string" },
+          "status": { "type": "string" },
+          "startDateTime": { "type": "string" },
+          "endDateTime": { "type": "string" }
+        }
+      }
+    },
+    "drive.files.copy": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Copy Drive File",
+      "description": "Copy a Google Drive file, optionally renaming it or placing the copy in specific folders.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": { "type": "string", "description": "The Google Drive file ID to copy." },
+          "name": { "type": "string", "description": "Optional name for the copied file." },
+          "parents": { "type": "array", "items": { "type": "string" }, "description": "Optional parent folder IDs for the copy." }
+        },
+        "required": ["fileId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "webViewLink": { "type": "string" }
+        }
+      }
+    },
+    "drive.files.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update Drive File",
+      "description": "Update Google Drive file metadata such as name, description, or MIME type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": { "type": "string", "description": "The Google Drive file ID to update." },
+          "name": { "type": "string", "description": "New file name." },
+          "description": { "type": "string", "description": "New file description." },
+          "mimeType": { "type": "string", "description": "New MIME type." }
+        },
+        "required": ["fileId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "webViewLink": { "type": "string" }
+        }
+      }
+    },
+    "drive.permissions.list": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List Drive Permissions",
+      "description": "List sharing permissions on a Google Drive file.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": { "type": "string", "description": "The Google Drive file ID whose permissions should be listed." }
+        },
+        "required": ["fileId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "permissionId": { "type": "string" },
+                "role": { "type": "string" },
+                "type": { "type": "string" },
+                "emailAddress": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "drive.permissions.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete Drive Permission",
+      "description": "Remove a sharing permission from a Google Drive file.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": { "type": "string", "description": "The Google Drive file ID." },
+          "permissionId": { "type": "string", "description": "The permission ID to delete." }
+        },
+        "required": ["fileId", "permissionId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "deleted": { "type": "boolean" },
+          "permissionId": { "type": "string" },
+          "fileId": { "type": "string" }
+        }
+      }
+    },
+    "sheets.spreadsheets.get": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 10485760,
+      "title": "Get Spreadsheet",
+      "description": "Fetch a Google Sheets spreadsheet, including properties and worksheet metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string", "description": "ID of the spreadsheet to fetch." },
+          "includeGridData": { "type": "boolean", "description": "When true, include cell grid data. Defaults to false." }
+        },
+        "required": ["spreadsheetId"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string" },
+          "spreadsheetUrl": { "type": "string" },
+          "title": { "type": "string" },
+          "sheets": { "type": "array" }
+        }
+      }
+    },
+    "sheets.values.batchUpdate": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Batch Update Sheet Values",
+      "description": "Write values to one or more ranges in a Google Sheets spreadsheet in a single request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string", "description": "ID of the spreadsheet to update." },
+          "data": {
+            "type": "array",
+            "description": "Value ranges to write. At most 50 ranges.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "range": { "type": "string" },
+                "values": { "type": "array", "items": { "type": "array" } },
+                "majorDimension": { "type": "string" }
+              }
+            }
+          },
+          "valueInputOption": { "type": "string", "description": "How input data is interpreted: 'USER_ENTERED' (default) or 'RAW'." }
+        },
+        "required": ["spreadsheetId", "data"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "spreadsheetId": { "type": "string" },
+          "totalUpdatedRows": { "type": "number" },
+          "totalUpdatedColumns": { "type": "number" },
+          "totalUpdatedCells": { "type": "number" },
+          "totalUpdatedSheets": { "type": "number" },
+          "responses": { "type": "array" }
+        }
+      }
+    },
+    "docs.update": {
+      "kind": "action",
+      "timeoutMs": 15000,
+      "maxInputBytes": 262144,
+      "maxResponseBytes": 1048576,
+      "title": "Update Google Doc",
+      "description": "Apply bounded batchUpdate requests to a Google Docs document: insertText, deleteContentRange, and replaceAllText.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": { "type": "string", "description": "ID of the Google Docs document to update." },
+          "requests": {
+            "type": "array",
+            "description": "List of safe document update requests. At most 50 requests.",
+            "items": {
+              "type": "object",
+              "description": "Exactly one supported operation: insertText, deleteContentRange, or replaceAllText."
+            }
+          }
+        },
+        "required": ["documentId", "requests"]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "documentId": { "type": "string" },
+          "replies": { "type": "array" }
+        }
+      }
+    },
+    "webhook.gmail.message": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Gmail Message Received",
+      "description": "Catalog trigger for a new or changed Gmail message. Gmail push via Pub/Sub is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "emailAddress": { "type": "string", "description": "Mailbox address from the Gmail push notification." },
+          "historyId": { "type": "string", "description": "Gmail history ID from the push notification." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "emailAddress": { "type": "string" },
+          "historyId": { "type": "string" }
+        }
+      }
+    },
+    "webhook.calendar.event": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Calendar Event Changed",
+      "description": "Catalog trigger for a Google Calendar event create, update, or delete. Channel watch setup is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": { "type": "string", "description": "Calendar ID from the watch notification." },
+          "eventId": { "type": "string", "description": "Event ID when the notification includes a resource ID." },
+          "resourceState": { "type": "string", "description": "Notification resource state, e.g. 'exists' or 'sync'." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "calendarId": { "type": "string" },
+          "eventId": { "type": "string" },
+          "resourceState": { "type": "string" }
+        }
+      }
+    },
+    "webhook.drive.change": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Drive File Changed",
+      "description": "Catalog trigger for a Google Drive file change. Channel watch setup is later; this operation documents the inbound payload contract.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": { "type": "string", "description": "Drive file ID from the change notification." },
+          "resourceState": { "type": "string", "description": "Notification resource state, e.g. 'exists' or 'sync'." },
+          "changeType": { "type": "string", "description": "Optional Drive change type when present." }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "fileId": { "type": "string" },
+          "resourceState": { "type": "string" },
+          "changeType": { "type": "string" }
         }
       }
     },
