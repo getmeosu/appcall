@@ -1,19 +1,24 @@
 # ActiveTrail
 
-Read-only international ActiveTrail / MyMarketing API recipe. Create an access token in the ActiveTrail web app under Settings → API Apps and store it in the `apiKey` setup field. The runner sends that token as the raw `Authorization` header value with **no Bearer prefix**. Host is `webapi.mymarketing.co.il`.
+International ActiveTrail / MyMarketing API recipe. Create an access token in the ActiveTrail web app under Settings → API Apps and store it in the `apiKey` setup field. The runner sends that token as the raw `Authorization` header value with **no Bearer prefix**. Host is `webapi.mymarketing.co.il`.
 
 ## Operations
 
-- `healthcheck` — cheapest authenticated read: `GET /account/balance`. Expected body is account email/SMS/coupon credit balances, not a contacts page. No pagination query is sent.
-- `contacts.list` — `GET /contacts` with optional `customer_state`, `search_term`, `from_date`, `to_date`, `page` (0-based), and `limit` (1–100). Wire query names are PascalCase (`CustomerStates`, `SearchTerm`, `FromDate`, `ToDate`, `Page`, `Limit`). Unset optionals are omitted.
-- `groups.list` — `GET /groups` with optional `search_term`, `page`, and `limit`. Same PascalCase query mapping.
+- `healthcheck` — `GET /account/balance`
+- Contacts: list, get, create, delete
+- Groups: list, get, create, update, delete, list members, add member
+- Email campaigns: list, get, list sent
+- Templates: list, get
+- Account sending profiles (email and SMS)
+- Automations list
+- SMS campaigns list
 
-Writes, group-member fanout, and contact/group mutation endpoints are not exposed. Responses keep the raw provider JSON under `data` (list endpoints return a JSON array).
+Page is 0-based per official Guides. Query wire names are PascalCase. Unset optionals are omitted. Responses keep raw provider JSON under `data` (list endpoints often return a JSON array). ActiveTrail does not publish a documented inbound webhook event catalog on this API, so no EventOnly webhook operations are declared.
 
 ## Adaptations
 
-- Auth is `Authorization: <token>`, matching official Guides (`$headr[] = 'Authorization: ' . $authId;`) and pinned `executors.ts`. Do not send `Bearer`.
-- Official Guides document 0-based `Page` (default 0). The swagger Page range starts at 1; this recipe follows Guides + pinned source (`minimum: 0`).
+- Auth is `Authorization: <token>`, matching official Guides and pinned `executors.ts`. Do not send `Bearer`.
+- Official Guides document 0-based `Page` (default 0).
 - Upstream input `customer_state` (singular) maps to query `CustomerStates`. The documented `SPAM_COMPLIENT` spelling is preserved.
 
 ## License / attribution
