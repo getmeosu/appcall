@@ -1,7 +1,17 @@
 {
+  "key": "benzinga",
+  "name": "Benzinga",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "banking-data"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -9,34 +19,56 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "banking-data"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.benzinga.com"
+    ]
+  },
+  "models": [
+    "channel",
+    "earning",
+    "rating",
+    "consensus-rating",
+    "news",
+    "dividend",
+    "conference-call",
+    "guidance",
+    "ipo",
+    "split",
+    "economy",
+    "merger",
+    "offering",
+    "event",
+    "fda",
+    "analyst",
+    "firm",
+    "bulls-bears"
+  ],
   "http": {
+    "baseUrl": "https://api.benzinga.com",
     "auth": {
       "field": "apiKey",
       "in": "query",
       "name": "token",
       "value": "{{apiKey}}"
     },
-    "baseUrl": "https://api.benzinga.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
-      "bodyErrorPaths": [
-        "errors"
+      "rateLimitStatuses": [
+        429
       ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "errors",
@@ -44,59 +76,254 @@
         "error",
         "text"
       ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      "bodyErrorPaths": [
+        "errors"
+      ]
     }
   },
-  "key": "benzinga",
-  "models": [
-    "channel",
-    "earning",
-    "rating",
-    "consensus-rating"
-  ],
-  "name": "Benzinga",
-  "network": {
-    "allowedHosts": [
-      "api.benzinga.com"
-    ]
-  },
   "operations": {
-    "consensus.ratings.get": {
-      "description": "Get Benzinga consensus analyst ratings for one ticker.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "symbol": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "symbol"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate the Benzinga token by listing news channels.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/news/channels",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "news.channels.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List news channels",
+      "description": "List Benzinga news channels used to filter news feeds.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/news/channels",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "earnings.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List earnings calendar",
+      "description": "List Benzinga earnings calendar events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          },
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/earnings",
+        "query": {
+          "parameters[tickers]": "{{symbol}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "page": "{{page}}",
+          "pagesize": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ratings.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List analyst ratings",
+      "description": "List Benzinga analyst rating calendar events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          },
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/ratings",
+        "query": {
+          "parameters[tickers]": "{{symbol}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "page": "{{page}}",
+          "pagesize": "{{limit}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "consensus.ratings.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get consensus ratings",
+      "description": "Get Benzinga consensus analyst ratings for one ticker.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "symbol"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -108,230 +335,1004 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get consensus ratings",
-      "validationMode": "strict-generated"
-    },
-    "earnings.list": {
-      "description": "List Benzinga earnings calendar events with optional ticker and date filters.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "dateFrom": {
-            "description": "Inclusive start date YYYY-MM-DD.",
-            "minLength": 1,
-            "type": "string"
-          },
-          "dateTo": {
-            "description": "Inclusive end date YYYY-MM-DD.",
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "description": "pagesize, max 1000.",
-            "maximum": 1000,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "page": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "symbol": {
-            "description": "Ticker filter, sent as parameters[tickers].",
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "news.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List news",
+      "description": "List Benzinga news items with optional ticker, date, and page filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as tickers."
+          },
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000,
+            "description": "Page offset, 0-100000."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "pageSize, max 100."
+          },
+          "displayOutput": {
+            "type": "string",
+            "enum": [
+              "full",
+              "abstract",
+              "headline"
+            ],
+            "description": "How much article text to return."
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/api/v2.1/calendar/earnings",
+        "path": "/api/v2/news",
+        "success": [
+          200
+        ],
+        "query": {
+          "tickers": "{{symbol}}",
+          "dateFrom": "{{dateFrom}}",
+          "dateTo": "{{dateTo}}",
+          "page": "{{page}}",
+          "pageSize": "{{limit}}",
+          "displayOutput": "{{displayOutput}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "news.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get news item",
+      "description": "Retrieve one Benzinga news item by node ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "newsId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Benzinga news node ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "newsId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2/news/{{newsId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dividends.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List dividends",
+      "description": "List Benzinga dividend calendar events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.2/calendar/dividends",
+        "success": [
+          200
+        ],
         "query": {
           "page": "{{page}}",
           "pagesize": "{{limit}}",
           "parameters[date_from]": "{{dateFrom}}",
           "parameters[date_to]": "{{dateTo}}",
           "parameters[tickers]": "{{symbol}}"
-        },
-        "success": [
-          200
-        ]
+        }
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "conferenceCalls.list": {
       "timeoutMs": 15000,
-      "title": "List earnings calendar",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Benzinga token by listing news channels.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v2.1/news/channels",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "news.channels.list": {
-      "description": "List Benzinga news channels used to filter news feeds.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/api/v2.1/news/channels",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List news channels",
-      "validationMode": "strict-generated"
-    },
-    "ratings.list": {
-      "description": "List Benzinga analyst rating calendar events with optional ticker and date filters.",
-      "enforceOutputSchema": true,
+      "title": "List conference calls",
+      "description": "List Benzinga conference-call calendar events with optional ticker and date filters.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
           "dateFrom": {
-            "description": "Inclusive start date YYYY-MM-DD.",
+            "type": "string",
             "minLength": 1,
-            "type": "string"
+            "description": "Inclusive start date YYYY-MM-DD."
           },
           "dateTo": {
-            "description": "Inclusive end date YYYY-MM-DD.",
+            "type": "string",
             "minLength": 1,
-            "type": "string"
+            "description": "Inclusive end date YYYY-MM-DD."
           },
           "limit": {
-            "description": "pagesize, max 1000.",
-            "maximum": 1000,
+            "type": "integer",
             "minimum": 1,
-            "type": "integer"
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
           },
           "page": {
-            "minimum": 0,
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0
           },
           "symbol": {
-            "description": "Ticker filter, sent as parameters[tickers].",
+            "type": "string",
             "minLength": 1,
-            "type": "string"
+            "description": "Ticker filter, sent as parameters[tickers]."
           }
         },
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/api/v2.1/calendar/ratings",
+        "path": "/api/v2.1/calendar/conference-calls",
+        "success": [
+          200
+        ],
         "query": {
           "page": "{{page}}",
           "pagesize": "{{limit}}",
           "parameters[date_from]": "{{dateFrom}}",
           "parameters[date_to]": "{{dateTo}}",
           "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "guidance.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List guidance",
+      "description": "List Benzinga company guidance calendar events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          }
         },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/guidance",
         "success": [
           200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ipos.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List IPOs",
+      "description": "List Benzinga IPO calendar events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/ipos",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "splits.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List splits",
+      "description": "List Benzinga stock-split calendar events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/splits",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "economics.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List economics",
+      "description": "List Benzinga economic-calendar events with optional date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/economics",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ma.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List mergers and acquisitions",
+      "description": "List Benzinga M&A calendar events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/ma",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "offerings.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List offerings",
+      "description": "List Benzinga secondary-offering calendar events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/offerings",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "events.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List events",
+      "description": "List Benzinga corporate events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/events",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "fda.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List FDA events",
+      "description": "List Benzinga FDA calendar events with optional ticker and date filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive start date YYYY-MM-DD."
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Inclusive end date YYYY-MM-DD."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker filter, sent as parameters[tickers]."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/fda",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}",
+          "parameters[date_from]": "{{dateFrom}}",
+          "parameters[date_to]": "{{dateTo}}",
+          "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ratings.analysts.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List ratings analysts",
+      "description": "List analysts that contribute Benzinga ratings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/ratings/analysts",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ratings.firms.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List ratings firms",
+      "description": "List firms that contribute Benzinga analyst ratings.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "pagesize, max 1000."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v2.1/calendar/ratings/firms",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "pagesize": "{{limit}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bullsBears.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get bulls vs bears",
+      "description": "Get the latest bull and bear investment cases for one ticker.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticker symbol."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "symbol"
         ]
       },
-      "responseFormat": "json",
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/bulls_bears_say",
+        "success": [
+          200
+        ],
+        "query": {
+          "parameters[tickers]": "{{symbol}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.news": {
+      "kind": "webhook",
       "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List analyst ratings",
-      "validationMode": "strict-generated"
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "News",
+      "description": "Benzinga webhook when a news item is published or updated."
+    },
+    "webhook.earnings": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Earnings",
+      "description": "Benzinga webhook when an earnings calendar event is published or updated."
+    },
+    "webhook.ratings": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ratings",
+      "description": "Benzinga webhook when an analyst rating is published or updated."
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
