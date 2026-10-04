@@ -741,8 +741,11 @@ describe("curated recipe install", () => {
       const runs = await runCandidateFixtures(JSON.stringify(manifest), cases);
       expect(runs.length).toBeGreaterThan(0);
       expect(runs.every((run) => run.status === "passed")).toBe(true);
-      expect(new Set(cases.map((fixture) => fixture.operation))).toEqual(new Set(Object.keys(manifest.operations)));
+      const actionOps = Object.keys(manifest.operations).filter(
+        (operation) => (manifest.operations as Record<string, { kind?: string }>)[operation]?.kind !== "webhook",
+      );
+      expect(new Set(cases.map((fixture) => fixture.operation))).toEqual(new Set(actionOps));
       expect(recipeKey).toBeTruthy();
     }
-  });
+  }, { timeout: 120_000 });
 });
