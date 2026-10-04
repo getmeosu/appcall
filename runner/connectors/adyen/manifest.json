@@ -1,7 +1,17 @@
 {
+  "key": "adyen",
+  "name": "Adyen",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "payments"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,137 +25,128 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "payments"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
-  "http": {
-    "auth": {
-      "field": "apiKey",
-      "in": "header",
-      "name": "X-API-Key",
-      "value": "{{apiKey}}"
-    },
-    "baseUrl": "https://management-{{environment}}.adyen.com/v3",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "detail",
-        "title",
-        "message",
-        "errorCode"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "key": "adyen",
-  "models": [
-    "credential",
-    "company",
-    "merchant"
-  ],
-  "name": "Adyen",
   "network": {
     "allowedHosts": [
       "management-test.adyen.com",
       "management-live.adyen.com"
     ]
   },
+  "models": [
+    "credential",
+    "company",
+    "merchant",
+    "store",
+    "webhook",
+    "api-credential",
+    "allowed-origin",
+    "payment-method",
+    "user"
+  ],
+  "http": {
+    "baseUrl": "https://management-{{environment}}.adyen.com/v3",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-API-Key",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "title",
+        "message",
+        "errorCode"
+      ]
+    }
+  },
   "operations": {
-    "companies.get": {
-      "description": "Retrieve one Adyen company account by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "companyId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "companyId"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
       "kind": "action",
-      "maxInputBytes": 65536,
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 4096,
       "maxResponseBytes": 1048576,
+      "title": "Healthcheck",
+      "description": "Validate the Adyen Management API key with GET /me.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/companies/{{companyId}}",
+        "path": "/me",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get company",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "companies.list": {
-      "description": "List Adyen company accounts accessible to the API credential.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "pageNumber": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "pageSize": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List companies",
+      "description": "List Adyen company accounts accessible to the API credential.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -158,124 +159,88 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "companies.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List companies",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Adyen Management API key with GET /me.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/me",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 10000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "merchants.get": {
-      "description": "Retrieve one Adyen merchant account by ID.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "merchantId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "merchantId"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
       "maxInputBytes": 65536,
       "maxResponseBytes": 1048576,
+      "title": "Get company",
+      "description": "Retrieve one Adyen company account by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "companyId"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/merchants/{{merchantId}}",
+        "path": "/companies/{{companyId}}",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get merchant",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "merchants.list": {
-      "description": "List Adyen merchant accounts accessible to the API credential.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "pageNumber": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "pageSize": {
-            "maximum": 100,
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "title": "List merchants",
+      "description": "List Adyen merchant accounts accessible to the API credential.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pageNumber": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -288,20 +253,1009 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "merchants.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List merchants",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get merchant",
+      "description": "Retrieve one Adyen merchant account by ID.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "merchantId"
+        ],
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/merchants/{{merchantId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "merchants.listByCompany": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List company merchants",
+      "description": "List merchant accounts that belong to one Adyen company.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company account ID."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "companyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/companies/{{companyId}}/merchants",
+        "success": [
+          200
+        ],
+        "query": {
+          "pageNumber": "{{pageNumber}}",
+          "pageSize": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stores.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List stores",
+      "description": "List stores for an Adyen merchant account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/merchants/{{merchantId}}/stores",
+        "success": [
+          200
+        ],
+        "query": {
+          "pageNumber": "{{pageNumber}}",
+          "pageSize": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stores.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get store",
+      "description": "Retrieve one Adyen store by merchant and store ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "storeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Store ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId",
+          "storeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/merchants/{{merchantId}}/stores/{{storeId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stores.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create store",
+      "description": "Create a store under an Adyen merchant account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Store description."
+          },
+          "shopperStatement": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name shown on shopper statements."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Store phone number in E.164 format."
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ISO 3166-1 alpha-2 country code."
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "description": "City."
+          },
+          "line1": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Street address."
+          },
+          "postalCode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Postal code."
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Store reference / store code."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId",
+          "description",
+          "shopperStatement",
+          "phoneNumber",
+          "country"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/merchants/{{merchantId}}/stores",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "description": "{{description}}",
+          "shopperStatement": "{{shopperStatement}}",
+          "phoneNumber": "{{phoneNumber}}",
+          "reference": "{{reference}}",
+          "address": {
+            "country": "{{country}}",
+            "city": "{{city}}",
+            "line1": "{{line1}}",
+            "postalCode": "{{postalCode}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stores.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update store",
+      "description": "Update an Adyen store's description or shopper statement.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "storeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Store ID."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Store description."
+          },
+          "shopperStatement": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name shown on shopper statements."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId",
+          "storeId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/merchants/{{merchantId}}/stores/{{storeId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "description": "{{description}}",
+          "shopperStatement": "{{shopperStatement}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List merchant webhooks",
+      "description": "List webhook configurations for an Adyen merchant account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/merchants/{{merchantId}}/webhooks",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get merchant webhook",
+      "description": "Retrieve one Adyen merchant webhook configuration.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook configuration ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId",
+          "webhookId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/merchants/{{merchantId}}/webhooks/{{webhookId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create merchant webhook",
+      "description": "Subscribe an HTTPS endpoint to Adyen merchant webhook notifications.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook type, such as standard."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Public HTTPS URL that receives notifications."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the webhook is active."
+          },
+          "communicationFormat": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Payload format.",
+            "enum": [
+              "json",
+              "http",
+              "soap"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId",
+          "type",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/merchants/{{merchantId}}/webhooks",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "{{type}}",
+          "url": "{{url}}",
+          "active": "{{active}}",
+          "communicationFormat": "{{communicationFormat}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhooks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete merchant webhook",
+      "description": "Delete an Adyen merchant webhook configuration.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "webhookId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Webhook configuration ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId",
+          "webhookId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/merchants/{{merchantId}}/webhooks/{{webhookId}}",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "api-credentials.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List API credentials",
+      "description": "List API credentials for an Adyen merchant account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/merchants/{{merchantId}}/apiCredentials",
+        "success": [
+          200
+        ],
+        "query": {
+          "pageNumber": "{{pageNumber}}",
+          "pageSize": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "api-credentials.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get API credential",
+      "description": "Retrieve one Adyen merchant API credential.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "apiCredentialId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "API credential ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId",
+          "apiCredentialId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/merchants/{{merchantId}}/apiCredentials/{{apiCredentialId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowed-origins.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List allowed origins",
+      "description": "List allowed origins on the authenticated Management API credential.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/me/allowedOrigins",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "allowed-origins.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create allowed origin",
+      "description": "Add an allowed origin to the authenticated Management API credential.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Allowed origin domain, including scheme."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "domain"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/me/allowedOrigins",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "domain": "{{domain}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "payment-methods.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List payment methods",
+      "description": "List payment method settings for an Adyen merchant account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/merchants/{{merchantId}}/paymentMethodSettings",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List merchant users",
+      "description": "List users that can access an Adyen merchant account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Merchant account ID."
+          },
+          "pageNumber": {
+            "type": "integer",
+            "description": "Page number, starting at 1.",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Page size.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "merchantId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/merchants/{{merchantId}}/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "pageNumber": "{{pageNumber}}",
+          "pageSize": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.authorisation": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Authorisation",
+      "description": "Adyen standard notification when a payment is authorised. Maps eventCode=AUTHORISATION.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.capture": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Capture",
+      "description": "Adyen standard notification when a payment is captured. Maps eventCode=CAPTURE.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.refund": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Refund",
+      "description": "Adyen standard notification when a payment is refunded. Maps eventCode=REFUND.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.cancellation": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Cancellation",
+      "description": "Adyen standard notification when a payment is cancelled. Maps eventCode=CANCELLATION.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.chargeback": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Chargeback",
+      "description": "Adyen standard notification when a chargeback is processed. Maps eventCode=CHARGEBACK.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }

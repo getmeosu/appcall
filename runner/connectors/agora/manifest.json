@@ -1,7 +1,17 @@
 {
+  "key": "agora",
+  "name": "Agora",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "messaging"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,82 +25,78 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "messaging"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
-  "http": {
-    "auth": {
-      "basic": {
-        "password": "{{apiKey}}",
-        "username": "{{customerId}}"
-      },
-      "field": "apiKey",
-      "in": "header",
-      "name": "Authorization"
-    },
-    "baseUrl": "https://api.agora.io",
-    "errors": {
-      "defaultRetryAfterSeconds": 30,
-      "messagePaths": [
-        "message",
-        "error"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "key": "agora",
-  "models": [
-    "project",
-    "usage"
-  ],
-  "name": "Agora",
   "network": {
     "allowedHosts": [
       "api.agora.io"
     ]
   },
+  "models": [
+    "project",
+    "usage",
+    "kicking-rule",
+    "channel",
+    "recording"
+  ],
+  "http": {
+    "baseUrl": "https://api.agora.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "Authorization",
+      "basic": {
+        "username": "{{customerId}}",
+        "password": "{{apiKey}}"
+      }
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "message",
+        "error"
+      ]
+    }
+  },
   "operations": {
     "healthcheck": {
-      "description": "Validate Agora Customer ID and Customer Secret by listing Console projects.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
       "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate Agora Customer ID and Customer Secret by listing Console projects.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -100,47 +106,84 @@
           201
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.list": {
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List projects",
+      "description": "List Agora Console projects for the connected account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dev/v1/projects",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "projects.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project",
       "description": "Retrieve one Agora Console project by project ID and name.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
-          "name": {
-            "minLength": 1,
-            "type": "string"
-          },
           "projectId": {
-            "minLength": 1,
-            "type": "string"
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
           "projectId",
           "name"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -154,76 +197,42 @@
           201
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get project",
-      "validationMode": "strict-generated"
-    },
-    "projects.list": {
-      "description": "List Agora Console projects for the connected account.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/dev/v1/projects",
-        "success": [
-          200,
-          201
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List projects",
-      "validationMode": "strict-generated"
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "usage.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get project usage",
       "description": "Retrieve Agora Console usage for one project and business type.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fromDate": {
+            "type": "string",
+            "minLength": 1
+          },
+          "toDate": {
+            "type": "string",
+            "minLength": 1
+          },
           "business": {
+            "type": "string",
             "enum": [
               "default",
               "transcodeDuration",
               "recording",
               "cloudRecording",
               "miniapp"
-            ],
-            "type": "string"
-          },
-          "fromDate": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "projectId": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "toDate": {
-            "minLength": 1,
-            "type": "string"
+            ]
           }
         },
         "required": [
@@ -232,51 +241,1035 @@
           "toDate",
           "business"
         ],
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
         "path": "/dev/v3/usage",
         "query": {
-          "business": "{{business}}",
-          "from_date": "{{fromDate}}",
           "project_id": "{{projectId}}",
-          "to_date": "{{toDate}}"
+          "from_date": "{{fromDate}}",
+          "to_date": "{{toDate}}",
+          "business": "{{business}}"
         },
         "success": [
           200,
           201
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create project",
+      "description": "Create an Agora Console project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project name, 1 to 255 characters."
+          },
+          "enableSignKey": {
+            "type": "boolean",
+            "description": "Whether to enable the primary app certificate."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "enableSignKey"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/dev/v1/project",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "enable_sign_key": "{{enableSignKey}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "projects.setStatus": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Set project status",
+      "description": "Enable or disable an Agora Console project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID."
+          },
+          "status": {
+            "type": "integer",
+            "description": "0 disables the project; 1 enables it.",
+            "enum": [
+              0,
+              1
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/dev/v1/project_status",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{id}}",
+          "status": "{{status}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "signkey.set": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Set primary app certificate",
+      "description": "Enable or disable the primary app certificate for an Agora project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID."
+          },
+          "enable": {
+            "type": "boolean",
+            "description": "Whether to enable the primary app certificate."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "enable"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/dev/v1/signkey",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{id}}",
+          "enable": "{{enable}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "signkey.reset": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Reset primary app certificate",
+      "description": "Reset the primary app certificate for an Agora project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Project ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/dev/v1/reset_signkey",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": "{{id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "kicking-rules.list": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get project usage",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List kicking rules",
+      "description": "List privilege banning rules for an Agora project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID (vendor_key)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dev/v1/kicking-rule",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "appid": "{{appId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "kicking-rules.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create kicking rule",
+      "description": "Create a privilege banning rule for a channel, user, or IP.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID (vendor_key)."
+          },
+          "cname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Channel name."
+          },
+          "uid": {
+            "type": "integer",
+            "description": "User ID to ban. Do not use 0."
+          },
+          "ip": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User IP address to ban."
+          },
+          "time": {
+            "type": "integer",
+            "description": "Ban duration in minutes.",
+            "minimum": 1,
+            "maximum": 1440
+          },
+          "privileges": {
+            "type": "array",
+            "description": "Privileges to ban.",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "time",
+          "privileges"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/dev/v1/kicking-rule",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "appid": "{{appId}}",
+          "cname": "{{cname}}",
+          "uid": "{{uid}}",
+          "ip": "{{ip}}",
+          "time": "{{time}}",
+          "privileges": "{{privileges}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "kicking-rules.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update kicking rule",
+      "description": "Update the remaining duration of a privilege banning rule.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID (vendor_key)."
+          },
+          "id": {
+            "type": "integer",
+            "description": "Kicking rule ID."
+          },
+          "time": {
+            "type": "integer",
+            "description": "New ban duration in minutes.",
+            "minimum": 1,
+            "maximum": 1440
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "id",
+          "time"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/dev/v1/kicking-rule",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "appid": "{{appId}}",
+          "id": "{{id}}",
+          "time": "{{time}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "kicking-rules.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete kicking rule",
+      "description": "Delete a privilege banning rule.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID (vendor_key)."
+          },
+          "id": {
+            "type": "integer",
+            "description": "Kicking rule ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/dev/v1/kicking-rule",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "appid": "{{appId}}",
+          "id": "{{id}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List channels",
+      "description": "List live channels under an Agora project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID (vendor_key)."
+          },
+          "pageNo": {
+            "type": "integer",
+            "description": "Page number, starting at 0.",
+            "minimum": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Channels per page.",
+            "minimum": 1,
+            "maximum": 500
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dev/v1/channel/{{appId}}",
+        "success": [
+          200,
+          201
+        ],
+        "query": {
+          "page_no": "{{pageNo}}",
+          "page_size": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.users": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List channel users",
+      "description": "List users currently in an Agora channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID (vendor_key)."
+          },
+          "channelName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Channel name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "channelName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dev/v1/channel/user/{{appId}}/{{channelName}}",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "channels.userStatus": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get channel user status",
+      "description": "Check whether a user is in a channel and return their role.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID (vendor_key)."
+          },
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "User ID."
+          },
+          "channelName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Channel name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "uid",
+          "channelName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dev/v1/channel/user/property/{{appId}}/{{uid}}/{{channelName}}",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recording.acquire": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Acquire cloud recording resource",
+      "description": "Acquire a cloud recording resource ID for a channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID."
+          },
+          "cname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Channel name."
+          },
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording user ID as a string."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "cname",
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/apps/{{appId}}/cloud_recording/acquire",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "cname": "{{cname}}",
+          "uid": "{{uid}}",
+          "clientRequest": {}
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recording.query": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Query cloud recording",
+      "description": "Query the status of an active Agora cloud recording session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID."
+          },
+          "resourceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource ID from acquire."
+          },
+          "sid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording SID from start."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording mode.",
+            "enum": [
+              "individual",
+              "mix",
+              "web"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "resourceId",
+          "sid",
+          "mode"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/apps/{{appId}}/cloud_recording/resourceid/{{resourceId}}/sid/{{sid}}/mode/{{mode}}/query",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "recording.stop": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Stop cloud recording",
+      "description": "Stop an active Agora cloud recording session.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Agora App ID."
+          },
+          "resourceId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Resource ID from acquire."
+          },
+          "sid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording SID from start."
+          },
+          "mode": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording mode.",
+            "enum": [
+              "individual",
+              "mix",
+              "web"
+            ]
+          },
+          "cname": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Channel name."
+          },
+          "uid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recording user ID as a string."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "appId",
+          "resourceId",
+          "sid",
+          "mode",
+          "cname",
+          "uid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/v1/apps/{{appId}}/cloud_recording/resourceid/{{resourceId}}/sid/{{sid}}/mode/{{mode}}/stop",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "cname": "{{cname}}",
+          "uid": "{{uid}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "ncs.ip": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List notification service IPs",
+      "description": "Retrieve Agora message notification service IP addresses for firewall allowlists.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/ncs/ip",
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.channelCreated": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Channel created",
+      "description": "Agora Notifications event when a channel is created.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.channelDestroyed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Channel destroyed",
+      "description": "Agora Notifications event when a channel is destroyed.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.broadcasterJoined": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Broadcaster joined",
+      "description": "Agora Notifications event when a broadcaster joins a channel.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.broadcasterLeft": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Broadcaster left",
+      "description": "Agora Notifications event when a broadcaster leaves a channel.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "webhook.recordingStatus": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Recording status",
+      "description": "Agora Notifications event for cloud recording status changes.",
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
     }
   },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
     }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
