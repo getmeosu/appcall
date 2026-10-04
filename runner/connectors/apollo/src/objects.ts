@@ -46,7 +46,7 @@ export function normalizePerson(p: Record<string, unknown>): NormalizedPerson {
   };
 }
 
-export type ApolloPagination = { page: number; perPage: number; totalEntries: number; totalPages: number };
+export type ApolloPagination = { page: number; perPage: number; totalEntries?: number; totalPages?: number };
 
 export function parsePagination(b: Record<string, unknown>): ApolloPagination {
   return {
@@ -57,11 +57,52 @@ export function parsePagination(b: Record<string, unknown>): ApolloPagination {
   };
 }
 
-export function parsePeopleSearchResponse(response: unknown): { people: NormalizedPerson[]; pagination: ApolloPagination } {
+export type PeopleSearchPaginationContext = { page?: number; perPage?: number };
+
+function finiteNumericValue(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function positivePaginationValue(value: unknown): number | undefined {
+  const parsed = finiteNumericValue(value);
+  return parsed !== undefined && parsed > 0 ? parsed : undefined;
+}
+
+function nonnegativeTotal(value: unknown): number | undefined {
+  const parsed = finiteNumericValue(value);
+  return parsed !== undefined && parsed >= 0 ? parsed : undefined;
+}
+
+export function parsePeopleSearchResponse(
+  response: unknown,
+  requestPagination: PeopleSearchPaginationContext = { page: 1, perPage: 25 },
+): { people: NormalizedPerson[]; pagination: ApolloPagination } {
   const empty: ApolloPagination = { page: 1, perPage: 25, totalEntries: 0, totalPages: 0 };
   if (!isRecord(response)) return { people: [], pagination: empty };
   const people = Array.isArray(response.people) ? response.people.filter(isRecord).map(normalizePerson) : [];
-  const pagination = isRecord(response.pagination) ? parsePagination(response.pagination as Record<string, unknown>) : empty;
+
+  const nestedPagination = isRecord(response.pagination) ? response.pagination : {};
+  const page = positivePaginationValue(nestedPagination.page)
+    ?? positivePaginationValue(requestPagination.page)
+    ?? 1;
+  const perPage = positivePaginationValue(nestedPagination.per_page)
+    ?? positivePaginationValue(requestPagination.perPage)
+    ?? 25;
+  const topLevelTotal = typeof response.total_entries === "number" && Number.isFinite(response.total_entries) && response.total_entries >= 0
+    ? response.total_entries
+    : undefined;
+  const totalEntries = topLevelTotal ?? nonnegativeTotal(nestedPagination.total_entries);
+  const pagination: ApolloPagination = { page, perPage };
+  if (totalEntries !== undefined) {
+    pagination.totalEntries = totalEntries;
+    pagination.totalPages = Math.ceil(totalEntries / perPage);
+  }
+
   return { people, pagination };
 }
 

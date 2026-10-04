@@ -24,6 +24,24 @@ function optStringArray(value: unknown): string[] | undefined {
   return value.filter((v): v is string => typeof v === "string");
 }
 
+function positivePaginationValue(value: unknown): number | undefined {
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function isValidTotalEntries(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function nonnegativeNestedTotal(value: unknown): number | undefined {
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
 type ConnectorError = { ok: false; error: { code: string; message: string; retryAfterSeconds?: number } };
 
 // apolloErrorDetail pulls a human-readable reason out of Apollo's error response
@@ -94,7 +112,7 @@ export function createPeopleClient(options: { apiKey: string; fetch?: typeof fet
       if (payload.person_titles) body.person_titles = payload.person_titles;
       if (payload.person_seniorities) body.person_seniorities = payload.person_seniorities;
       if (payload.person_locations) body.person_locations = payload.person_locations;
-      if (payload.organization_domains) body.organization_domains = payload.organization_domains;
+      if (payload.organization_domains) body.q_organization_domains_list = payload.organization_domains;
       if (payload.organization_num_employees_ranges) body.organization_num_employees_ranges = payload.organization_num_employees_ranges;
       if (payload.page !== undefined) body.page = payload.page;
       if (payload.per_page !== undefined) body.per_page = payload.per_page;
@@ -103,9 +121,38 @@ export function createPeopleClient(options: { apiKey: string; fetch?: typeof fet
       // https://docs.apollo.io/reference/people-api-search
       const response = await client.fetchJSON("/api/v1/mixed_people/api_search", { method: "POST", body: JSON.stringify(body) });
       if (response.status === 200) {
-        const b = response.body as Record<string, unknown>;
-        const people = Array.isArray(b.people) ? b.people : [];
-        return { ok: true as const, people, pagination: isRecord(b.pagination) ? b.pagination : {} };
+        if (!isRecord(response.body) || !Array.isArray(response.body.people) || !response.body.people.every(isRecord)) {
+          return {
+            ok: false as const,
+            error: {
+              code: "CONNECTOR_UPSTREAM_ERROR",
+              message: "Apollo returned an invalid people.search response.",
+            },
+          };
+        }
+
+        const b = response.body;
+        const nestedPagination = isRecord(b.pagination) ? b.pagination : {};
+        const page = positivePaginationValue(nestedPagination.page) ?? positivePaginationValue(payload.page) ?? 1;
+        const perPage = positivePaginationValue(nestedPagination.per_page) ?? positivePaginationValue(payload.per_page) ?? 25;
+        const topLevelTotalEntries = isValidTotalEntries(b.total_entries) ? b.total_entries : undefined;
+        const totalEntries = topLevelTotalEntries
+          ?? nonnegativeNestedTotal(nestedPagination.total_entries);
+        const pagination: Record<string, unknown> = { ...nestedPagination, page, per_page: perPage };
+        if (totalEntries !== undefined) {
+          pagination.total_entries = totalEntries;
+          pagination.total_pages = Math.ceil(totalEntries / perPage);
+        } else {
+          delete pagination.total_entries;
+          delete pagination.total_pages;
+        }
+
+        return {
+          ok: true as const,
+          people: b.people,
+          pagination,
+          ...(topLevelTotalEntries !== undefined ? { total_entries: topLevelTotalEntries } : {}),
+        };
       }
       return handleError(response.status, response.headers, response.body, "Apollo rejected the people.search request.");
     },
@@ -119,7 +166,14 @@ export function searchPeople(input: unknown): Record<string, unknown> | Promise<
       fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
     }).search(input).then((result) => {
       if (!result.ok) throwIfError(result);
-      return { connector: "apollo", action: "people.search", source: "connector", people: result.people, pagination: result.pagination };
+      return {
+        connector: "apollo",
+        action: "people.search",
+        source: "connector",
+        people: result.people,
+        pagination: result.pagination,
+        ...("total_entries" in result ? { total_entries: result.total_entries } : {}),
+      };
     });
   }
   return { connector: "apollo", action: "people.search", source: "connector", validated: validatePeopleSearchInput(input) };
