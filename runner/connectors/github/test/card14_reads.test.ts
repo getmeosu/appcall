@@ -41,10 +41,10 @@ const gitignoreBody = {
 };
 
 describe("github card14 zen license and gitignore reads", () => {
-  test("version stays 0.43.0 and the three reads omit effect fields", () => {
-    expect(manifest.version).toBe("0.43.0");
+  test("version stays 0.44.0 and the three reads omit effect fields", () => {
+    expect(manifest.version).toBe("0.44.0");
     expect(READS).toHaveLength(3);
-    expect(Object.keys(manifest.operations)).toHaveLength(424);
+    expect(Object.keys(manifest.operations)).toHaveLength(436);
     for (const key of READS) {
       const op = manifest.operations[key] as Record<string, unknown>;
       expect(op.kind).toBe("action");
@@ -57,8 +57,8 @@ describe("github card14 zen license and gitignore reads", () => {
     expect(manifest.operations["licenses.get"].description).toContain("GET /licenses/{license}");
     expect(manifest.operations["gitignore.templates.get"].description).toContain("GET /gitignore/templates/{name}");
     expect(manifest.operations["repos.license.get"]).toBeDefined();
-    expect(manifest.operations["licenses.list"]).toBeUndefined();
-    expect(manifest.operations["gitignore.templates.list"]).toBeUndefined();
+    expect(manifest.operations["licenses.list"]).toBeDefined();
+    expect(manifest.operations["gitignore.templates.list"]).toBeDefined();
   });
 
   test("reads the documented paths with the bearer token", async () => {
