@@ -21,7 +21,13 @@ function mockFetch(body: unknown, status = 200, headers: Record<string, string> 
 
 describe("airtable manifest compiles to handlers", () => {
   it("exposes one handler per declared action operation", () => {
-    expect(Object.keys(actions).sort()).toEqual([
+    const actionKeys = Object.entries(manifest.operations)
+      .filter(([, operation]) => (operation as { kind?: string }).kind === "action")
+      .map(([key]) => key)
+      .sort();
+    expect(Object.keys(actions).sort()).toEqual(actionKeys);
+    expect(actionKeys).toEqual([
+      "bases.get",
       "bases.list",
       "comments.create",
       "comments.list",
@@ -33,6 +39,19 @@ describe("airtable manifest compiles to handlers", () => {
       "records.update",
       "tables.list",
     ]);
+  });
+
+  it("does not compile EventOnly webhook operations into HTTP handlers", () => {
+    for (const key of [
+      "webhook.record_created",
+      "webhook.record_updated",
+      "webhook.record_deleted",
+      "webhook.table_created",
+      "webhook.base_created",
+      "webhook.comment_created",
+    ]) {
+      expect(actions[key]).toBeUndefined();
+    }
   });
 });
 
@@ -218,6 +237,18 @@ describe("schema discovery", () => {
     const result = await actions["tables.list"]!({ apiKey: "patTEST", baseId: "appX", fetch: fetchFn }) as Record<string, unknown>;
     expect(calls[0]!.url).toBe("https://api.airtable.com/v0/meta/bases/appX/tables");
     expect(result.tables).toHaveLength(1);
+  });
+
+  it("bases.get fetches one base schema by ID", async () => {
+    const { calls, fetchFn } = mockFetch({ tables: [{ id: "tblX", name: "Contacts", fields: [] }] });
+    const result = await actions["bases.get"]!({ apiKey: "patTEST", baseId: "appX", fetch: fetchFn }) as Record<string, unknown>;
+    expect(calls[0]!.url).toBe("https://api.airtable.com/v0/meta/bases/appX/tables");
+    expect(calls[0]!.init?.method).toBe("GET");
+    expect(result.tables).toEqual([{ id: "tblX", name: "Contacts", fields: [] }]);
+  });
+
+  it("bases.get requires baseId", () => {
+    expect(() => actions["bases.get"]!({})).toThrow("baseId is required");
   });
 });
 
