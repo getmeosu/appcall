@@ -70,6 +70,56 @@
         "path": "src/providers/chargebee/executors.ts",
         "startLine": 252,
         "endLine": 267
+      },
+      "action-create-customer": {
+        "path": "src/providers/chargebee/actions.ts",
+        "startLine": 61,
+        "endLine": 67
+      },
+      "action-get-subscription": {
+        "path": "src/providers/chargebee/actions.ts",
+        "startLine": 75,
+        "endLine": 84
+      },
+      "action-get-invoice": {
+        "path": "src/providers/chargebee/actions.ts",
+        "startLine": 92,
+        "endLine": 98
+      },
+      "action-list-item-prices": {
+        "path": "src/providers/chargebee/actions.ts",
+        "startLine": 99,
+        "endLine": 105
+      },
+      "action-get-item-price": {
+        "path": "src/providers/chargebee/actions.ts",
+        "startLine": 106,
+        "endLine": 114
+      },
+      "handler-create-customer": {
+        "path": "src/providers/chargebee/executors.ts",
+        "startLine": 49,
+        "endLine": 56
+      },
+      "handler-get-subscription": {
+        "path": "src/providers/chargebee/executors.ts",
+        "startLine": 60,
+        "endLine": 70
+      },
+      "handler-get-invoice": {
+        "path": "src/providers/chargebee/executors.ts",
+        "startLine": 74,
+        "endLine": 84
+      },
+      "handler-list-item-prices": {
+        "path": "src/providers/chargebee/executors.ts",
+        "startLine": 85,
+        "endLine": 87
+      },
+      "handler-get-item-price": {
+        "path": "src/providers/chargebee/executors.ts",
+        "startLine": 88,
+        "endLine": 98
       }
     }
   },
@@ -83,7 +133,28 @@
       "customers.list",
       "customers.get",
       "subscriptions.list",
-      "invoices.list"
+      "invoices.list",
+      "customers.create",
+      "customers.update",
+      "customers.delete",
+      "subscriptions.get",
+      "subscriptions.cancel",
+      "invoices.get",
+      "invoices.void",
+      "items.list",
+      "itemPrices.list",
+      "itemPrices.get",
+      "events.list",
+      "events.get",
+      "coupons.list",
+      "creditNotes.list",
+      "transactions.list",
+      "webhook.customer_created",
+      "webhook.subscription_created",
+      "webhook.subscription_cancelled",
+      "webhook.invoice_generated",
+      "webhook.payment_succeeded",
+      "webhook.payment_failed"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -224,12 +295,301 @@
       "adaptations": [
         "Maps to official GET /api/v2/invoices. Optional limit and offset. Create-customer writes are omitted. Returns raw Chargebee JSON under data."
       ]
+    },
+    "customers.create": {
+      "upstreamActionId": "create_customer",
+      "sourceRefs": [
+        "action-create-customer",
+        "handler-create-customer",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/customers/create-a-customer"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/v2/customers with form-encoded scalar fields. Nested billing_address and metadata maps are omitted."
+      ]
+    },
+    "customers.update": {
+      "upstreamActionId": "create_customer",
+      "sourceRefs": [
+        "handler-create-customer",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/customers/update-a-customer"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/v2/customers/{customer-id}. Pinned source only exposes create; update uses the same form encoding."
+      ]
+    },
+    "customers.delete": {
+      "upstreamActionId": "get_customer",
+      "sourceRefs": [
+        "handler-get-customer",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/customers/delete-a-customer"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/v2/customers/{customer-id}/delete. No request body."
+      ]
+    },
+    "subscriptions.get": {
+      "upstreamActionId": "get_subscription",
+      "sourceRefs": [
+        "action-get-subscription",
+        "handler-get-subscription",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/subscriptions/retrieve-a-subscription"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "subscriptionId is a URL-encoded path segment on official GET /api/v2/subscriptions/{subscription-id}."
+      ]
+    },
+    "subscriptions.cancel": {
+      "upstreamActionId": "get_subscription",
+      "sourceRefs": [
+        "handler-get-subscription",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/subscriptions/cancel-a-subscription"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/v2/subscriptions/{subscription-id}/cancel with optional end_of_term."
+      ]
+    },
+    "invoices.get": {
+      "upstreamActionId": "get_invoice",
+      "sourceRefs": [
+        "action-get-invoice",
+        "handler-get-invoice",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/invoices/retrieve-an-invoice"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "invoiceId is a URL-encoded path segment on official GET /api/v2/invoices/{invoice-id}."
+      ]
+    },
+    "invoices.void": {
+      "upstreamActionId": "get_invoice",
+      "sourceRefs": [
+        "handler-get-invoice",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/invoices/void-an-invoice"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official POST /api/v2/invoices/{invoice-id}/void. No request body."
+      ]
+    },
+    "items.list": {
+      "upstreamActionId": "list_item_prices",
+      "sourceRefs": [
+        "action-list-item-prices",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/items/list-items"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v2/items with optional limit and offset. Product Catalog 2.0."
+      ]
+    },
+    "itemPrices.list": {
+      "upstreamActionId": "list_item_prices",
+      "sourceRefs": [
+        "action-list-item-prices",
+        "handler-list-item-prices",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/item_prices/list-item-prices"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v2/item_prices. Optional limit and offset. Returns raw Chargebee JSON under data."
+      ]
+    },
+    "itemPrices.get": {
+      "upstreamActionId": "get_item_price",
+      "sourceRefs": [
+        "action-get-item-price",
+        "handler-get-item-price",
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/item_prices/retrieve-an-item-price"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "itemPriceId is a URL-encoded path segment on official GET /api/v2/item_prices/{item-price-id}."
+      ]
+    },
+    "events.list": {
+      "upstreamActionId": "list_customers",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/events/list-events"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v2/events. Optional limit and offset. Pinned source does not wrap events."
+      ]
+    },
+    "events.get": {
+      "upstreamActionId": "get_customer",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/events/retrieve-an-event"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v2/events/{event-id}."
+      ]
+    },
+    "coupons.list": {
+      "upstreamActionId": "list_customers",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/coupons/list-coupons"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v2/coupons. Optional limit and offset."
+      ]
+    },
+    "creditNotes.list": {
+      "upstreamActionId": "list_invoices",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/credit_notes/list-credit-notes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v2/credit_notes. Optional limit and offset."
+      ]
+    },
+    "transactions.list": {
+      "upstreamActionId": "list_invoices",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/transactions/list-transactions"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Maps to official GET /api/v2/transactions. Optional limit and offset."
+      ]
+    },
+    "webhook.customer_created": {
+      "upstreamActionId": "list_customers",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/events/event-types",
+        "https://apidocs.chargebee.com/docs/api/getting-started"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook. No HTTP request. sideEffect is read."
+      ]
+    },
+    "webhook.subscription_created": {
+      "upstreamActionId": "list_subscriptions",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/events/event-types"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for subscription_created. No HTTP request."
+      ]
+    },
+    "webhook.subscription_cancelled": {
+      "upstreamActionId": "list_subscriptions",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/events/event-types"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for subscription_cancelled. No HTTP request."
+      ]
+    },
+    "webhook.invoice_generated": {
+      "upstreamActionId": "list_invoices",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/events/event-types"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for invoice_generated. No HTTP request."
+      ]
+    },
+    "webhook.payment_succeeded": {
+      "upstreamActionId": "list_invoices",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/events/event-types"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for payment_succeeded. No HTTP request."
+      ]
+    },
+    "webhook.payment_failed": {
+      "upstreamActionId": "list_invoices",
+      "sourceRefs": [
+        "request-auth"
+      ],
+      "documentationUrls": [
+        "https://apidocs.chargebee.com/docs/api/events/event-types"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "EventOnly vendor webhook for payment_failed. No HTTP request."
+      ]
     }
   },
   "manifest": {
     "key": "chargebee",
     "name": "Chargebee",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -264,7 +624,13 @@
     "models": [
       "customer",
       "subscription",
-      "invoice"
+      "invoice",
+      "item",
+      "item_price",
+      "event",
+      "coupon",
+      "credit_note",
+      "transaction"
     ],
     "http": {
       "baseUrl": "https://{{site}}.chargebee.com/api/v2",
@@ -526,6 +892,841 @@
         "enforceOutputSchema": true,
         "validationMode": "strict-generated",
         "responseFormat": "json"
+      },
+      "customers.create": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Create customer",
+        "description": "Create a Chargebee customer with JSON-friendly form fields.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "email"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional Chargebee customer id."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer email."
+            },
+            "first_name": {
+              "type": "string",
+              "description": "Customer first name."
+            },
+            "last_name": {
+              "type": "string",
+              "description": "Customer last name."
+            },
+            "company": {
+              "type": "string",
+              "description": "Company name."
+            },
+            "phone": {
+              "type": "string",
+              "description": "Phone number."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/customers",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "body": {
+            "id": "{{id}}",
+            "email": "{{email}}",
+            "first_name": "{{first_name}}",
+            "last_name": "{{last_name}}",
+            "company": "{{company}}",
+            "phone": "{{phone}}"
+          },
+          "bodyEncoding": "form"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "customers.update": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Update customer",
+        "description": "Update a Chargebee customer by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "customerId"
+          ],
+          "properties": {
+            "customerId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargebee customer id."
+            },
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Customer email."
+            },
+            "first_name": {
+              "type": "string",
+              "description": "Customer first name."
+            },
+            "last_name": {
+              "type": "string",
+              "description": "Customer last name."
+            },
+            "company": {
+              "type": "string",
+              "description": "Company name."
+            },
+            "phone": {
+              "type": "string",
+              "description": "Phone number."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/customers/{{customerId}}",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "body": {
+            "email": "{{email}}",
+            "first_name": "{{first_name}}",
+            "last_name": "{{last_name}}",
+            "company": "{{company}}",
+            "phone": "{{phone}}"
+          },
+          "bodyEncoding": "form"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "customers.delete": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "destructive",
+        "title": "Delete customer",
+        "description": "Delete a Chargebee customer by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "customerId"
+          ],
+          "properties": {
+            "customerId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargebee customer id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/customers/{{customerId}}/delete",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "subscriptions.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get subscription",
+        "description": "Retrieve one Chargebee subscription by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "subscriptionId"
+          ],
+          "properties": {
+            "subscriptionId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargebee subscription id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/subscriptions/{{subscriptionId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "subscriptions.cancel": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Cancel subscription",
+        "description": "Cancel a Chargebee subscription immediately or at term end.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "subscriptionId"
+          ],
+          "properties": {
+            "subscriptionId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargebee subscription id."
+            },
+            "end_of_term": {
+              "type": "boolean",
+              "description": "Cancel at the end of the current term."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/subscriptions/{{subscriptionId}}/cancel",
+          "success": [
+            200
+          ],
+          "headers": {
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          "body": {
+            "end_of_term": "{{end_of_term}}"
+          },
+          "bodyEncoding": "form"
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "invoices.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get invoice",
+        "description": "Retrieve one Chargebee invoice by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "invoiceId"
+          ],
+          "properties": {
+            "invoiceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargebee invoice id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/invoices/{{invoiceId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "invoices.void": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "write",
+        "title": "Void invoice",
+        "description": "Void a Chargebee invoice by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "invoiceId"
+          ],
+          "properties": {
+            "invoiceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargebee invoice id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/invoices/{{invoiceId}}/void",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "items.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List items",
+        "description": "List Chargebee catalog items with optional limit and offset pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/items",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "itemPrices.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List item prices",
+        "description": "List Chargebee item prices with optional limit and offset pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/item_prices",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "itemPrices.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get item price",
+        "description": "Retrieve one Chargebee item price by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "itemPriceId"
+          ],
+          "properties": {
+            "itemPriceId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargebee item price id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/item_prices/{{itemPriceId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "events.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List events",
+        "description": "List Chargebee events with optional limit and offset pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/events",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "events.get": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 1048576,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "Get event",
+        "description": "Retrieve one Chargebee event by ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "eventId"
+          ],
+          "properties": {
+            "eventId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Chargebee event id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/events/{{eventId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "coupons.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List coupons",
+        "description": "List Chargebee coupons with optional limit and offset pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/coupons",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "creditNotes.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List credit notes",
+        "description": "List Chargebee credit notes with optional limit and offset pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/credit_notes",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "transactions.list": {
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "kind": "action",
+        "sideEffect": "read",
+        "title": "List transactions",
+        "description": "List Chargebee transactions with optional limit and offset pagination.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "offset": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/transactions",
+          "success": [
+            200
+          ],
+          "query": {
+            "limit": "{{limit}}",
+            "offset": "{{offset}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "webhook.customer_created": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Customer created",
+        "description": "Chargebee EventOnly webhook for customer_created."
+      },
+      "webhook.subscription_created": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Subscription created",
+        "description": "Chargebee EventOnly webhook for subscription_created."
+      },
+      "webhook.subscription_cancelled": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Subscription cancelled",
+        "description": "Chargebee EventOnly webhook for subscription_cancelled."
+      },
+      "webhook.invoice_generated": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Invoice generated",
+        "description": "Chargebee EventOnly webhook for invoice_generated."
+      },
+      "webhook.payment_succeeded": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Payment succeeded",
+        "description": "Chargebee EventOnly webhook for payment_succeeded."
+      },
+      "webhook.payment_failed": {
+        "kind": "webhook",
+        "timeoutMs": 30000,
+        "maxInputBytes": 1048576,
+        "maxResponseBytes": 1048576,
+        "sideEffect": "read",
+        "title": "Payment failed",
+        "description": "Chargebee EventOnly webhook for payment_failed."
       }
     },
     "provenance": {
