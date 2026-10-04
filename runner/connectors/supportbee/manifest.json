@@ -1,7 +1,17 @@
 {
+  "key": "supportbee",
+  "name": "SupportBee",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "productivity"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,82 +25,72 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "productivity"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "*.supportbee.com"
+    ]
+  },
+  "models": [
+    "user",
+    "ticket",
+    "label",
+    "team",
+    "reply",
+    "comment",
+    "snippet"
+  ],
   "http": {
+    "baseUrl": "https://{{company}}.supportbee.com",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://{{company}}.supportbee.com",
+    "headers": {
+      "Accept": "application/json"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "errors"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
+      ]
     }
-  },
-  "key": "supportbee",
-  "models": [
-    "user",
-    "ticket",
-    "label",
-    "team"
-  ],
-  "name": "SupportBee",
-  "network": {
-    "allowedHosts": [
-      "*.supportbee.com"
-    ]
   },
   "operations": {
     "healthcheck": {
-      "description": "Validate the SupportBee API token with GET /users.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "timeoutMs": 5000,
       "maxInputBytes": 4096,
       "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the SupportBee API token with GET /users.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -99,128 +99,155 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "labels.list": {
-      "description": "List custom SupportBee labels for the connected desk.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/labels",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
+      "kind": "action",
       "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List labels",
-      "validationMode": "strict-generated"
-    },
-    "teams.list": {
-      "description": "List SupportBee teams with optional user expansion filters.",
-      "enforceOutputSchema": true,
+      "title": "List tickets",
+      "description": "List SupportBee tickets with optional official ticket filters.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
-          "user": {
-            "enum": [
-              "me"
-            ],
-            "type": "string"
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 99
           },
-          "with_users": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "archived": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false",
+              "any"
+            ]
+          },
+          "spam": {
+            "type": "boolean"
+          },
+          "trash": {
+            "type": "boolean"
+          },
+          "replies": {
+            "type": "boolean"
+          },
+          "max_replies": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "assigned_user": {
+            "type": "string",
+            "minLength": 1
+          },
+          "assigned_team": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "since": {
+            "type": "string",
+            "minLength": 1
+          },
+          "until": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sort_by": {
+            "type": "string",
+            "enum": [
+              "last_activity",
+              "creation_time"
+            ]
+          },
+          "total_only": {
             "type": "boolean"
           }
         },
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/teams",
-        "query": {
-          "user": "{{user}}",
-          "with_users": "{{with_users}}"
-        },
+        "path": "/tickets",
         "success": [
           200
-        ]
+        ],
+        "query": {
+          "per_page": "{{per_page}}",
+          "page": "{{page}}",
+          "archived": "{{archived}}",
+          "spam": "{{spam}}",
+          "trash": "{{trash}}",
+          "replies": "{{replies}}",
+          "max_replies": "{{max_replies}}",
+          "assigned_user": "{{assigned_user}}",
+          "assigned_team": "{{assigned_team}}",
+          "label": "{{label}}",
+          "since": "{{since}}",
+          "until": "{{until}}",
+          "sort_by": "{{sort_by}}",
+          "total_only": "{{total_only}}"
+        }
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List teams",
-      "validationMode": "strict-generated"
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     },
     "tickets.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get ticket",
       "description": "Retrieve a SupportBee ticket by ID.",
-      "enforceOutputSchema": true,
       "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "minimum": 1,
-            "type": "integer"
-          }
-        },
+        "type": "object",
         "required": [
           "id"
         ],
-        "type": "object"
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 5242880,
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -229,133 +256,1186 @@
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Get ticket",
-      "validationMode": "strict-generated"
-    },
-    "tickets.list": {
-      "description": "List SupportBee tickets with optional official ticket filters.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "archived": {
-            "enum": [
-              "true",
-              "false",
-              "any"
-            ],
-            "type": "string"
-          },
-          "assigned_team": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "assigned_user": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "label": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "max_replies": {
-            "minimum": 0,
-            "type": "integer"
-          },
-          "page": {
-            "minimum": 1,
-            "type": "integer"
-          },
-          "per_page": {
-            "maximum": 99,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "replies": {
-            "type": "boolean"
-          },
-          "since": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "sort_by": {
-            "enum": [
-              "last_activity",
-              "creation_time"
-            ],
-            "type": "string"
-          },
-          "spam": {
-            "type": "boolean"
-          },
-          "total_only": {
-            "type": "boolean"
-          },
-          "trash": {
-            "type": "boolean"
-          },
-          "until": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "kind": "action",
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "labels.list": {
+      "timeoutMs": 15000,
       "maxInputBytes": 65536,
       "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List labels",
+      "description": "List custom SupportBee labels for the connected desk.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": "object"
           }
         },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/tickets",
-        "query": {
-          "archived": "{{archived}}",
-          "assigned_team": "{{assigned_team}}",
-          "assigned_user": "{{assigned_user}}",
-          "label": "{{label}}",
-          "max_replies": "{{max_replies}}",
-          "page": "{{page}}",
-          "per_page": "{{per_page}}",
-          "replies": "{{replies}}",
-          "since": "{{since}}",
-          "sort_by": "{{sort_by}}",
-          "spam": "{{spam}}",
-          "total_only": "{{total_only}}",
-          "trash": "{{trash}}",
-          "until": "{{until}}"
-        },
+        "path": "/labels",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teams.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List teams",
+      "description": "List SupportBee teams with optional user expansion filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "with_users": {
+            "type": "boolean"
+          },
+          "user": {
+            "type": "string",
+            "enum": [
+              "me"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/teams",
+        "success": [
+          200
+        ],
+        "query": {
+          "with_users": "{{with_users}}",
+          "user": "{{user}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create ticket",
+      "description": "Create a SupportBee ticket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Ticket subject."
+          },
+          "requester_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Requester display name."
+          },
+          "requester_email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Requester email address."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plain-text ticket body."
+          },
+          "html": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML ticket body."
+          },
+          "notify_requester": {
+            "type": "boolean",
+            "description": "Email the requester when the ticket is created."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "subject",
+          "requester_name",
+          "requester_email",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "ticket": {
+            "subject": "{{subject}}",
+            "requester_name": "{{requester_name}}",
+            "requester_email": "{{requester_email}}",
+            "notify_requester": "{{notify_requester}}",
+            "content": {
+              "text": "{{text}}",
+              "html": "{{html}}"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.search": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List tickets",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search tickets",
+      "description": "Search SupportBee tickets by query string.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Search query."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number.",
+            "minimum": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "description": "Results per page.",
+            "minimum": 1,
+            "maximum": 99
+          },
+          "spam": {
+            "type": "boolean",
+            "description": "Include spam tickets."
+          },
+          "trash": {
+            "type": "boolean",
+            "description": "Include trashed tickets."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tickets/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "query": "{{query}}",
+          "page": "{{page}}",
+          "per_page": "{{per_page}}",
+          "spam": "{{spam}}",
+          "trash": "{{trash}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.archive": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Archive ticket",
+      "description": "Archive a SupportBee ticket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets/{{id}}/archive",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.unarchive": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Unarchive ticket",
+      "description": "Unarchive a SupportBee ticket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/tickets/{{id}}/archive",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.spam": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Mark ticket as spam",
+      "description": "Mark a SupportBee ticket as spam.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets/{{id}}/spam",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.unspam": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Unmark ticket as spam",
+      "description": "Remove the spam flag from a SupportBee ticket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/tickets/{{id}}/spam",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.trash": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Trash ticket",
+      "description": "Move a SupportBee ticket to trash.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets/{{id}}/trash",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.untrash": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Untrash ticket",
+      "description": "Restore a SupportBee ticket from trash.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/tickets/{{id}}/trash",
+        "success": [
+          200,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.assign": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Assign ticket to user",
+      "description": "Assign a SupportBee ticket to an agent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          },
+          "user_id": {
+            "type": "integer",
+            "description": "Agent user id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "user_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets/{{id}}/user_assignment",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "user_assignment": {
+            "user_id": "{{user_id}}"
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "tickets.labels.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add label to ticket",
+      "description": "Add an existing SupportBee label to a ticket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Label name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets/{{id}}/labels/{{label}}",
+        "success": [
+          200,
+          201,
+          204
+        ],
+        "headers": {
+          "Accept": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "replies.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List ticket replies",
+      "description": "List public replies on a SupportBee ticket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tickets/{{id}}/replies",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "replies.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create ticket reply",
+      "description": "Reply to a SupportBee ticket. The reply is emailed to the customer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plain-text reply body."
+          },
+          "html": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML reply body."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets/{{id}}/replies",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "reply": {
+            "content": {
+              "text": "{{text}}",
+              "html": "{{html}}"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List ticket comments",
+      "description": "List internal comments on a SupportBee ticket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/tickets/{{id}}/comments",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "comments.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create ticket comment",
+      "description": "Add an internal comment on a SupportBee ticket.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee ticket id.",
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plain-text comment body."
+          },
+          "html": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTML comment body."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "text"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/tickets/{{id}}/comments",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "comment": {
+            "content": {
+              "text": "{{text}}",
+              "html": "{{html}}"
+            }
+          }
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List users",
+      "description": "List SupportBee users and optional invited agents.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "with_invited": {
+            "type": "boolean",
+            "description": "Include invited unconfirmed agents."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by user type."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users",
+        "success": [
+          200
+        ],
+        "query": {
+          "with_invited": "{{with_invited}}",
+          "type": "{{type}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "users.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get user",
+      "description": "Get one SupportBee user by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "SupportBee user id.",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "snippets.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List snippets",
+      "description": "List SupportBee canned-response snippets.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/snippets",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.ticket-created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Created",
+      "description": "SupportBee webhook Ticket Created. Fires when a new ticket is created."
+    },
+    "webhook.customer-reply-created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Customer Reply Created",
+      "description": "SupportBee webhook Customer Reply Created. Fires when a customer replies to a ticket."
+    },
+    "webhook.agent-reply-created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Agent Reply Created",
+      "description": "SupportBee webhook Agent Reply Created. Fires when an agent replies to a ticket."
+    },
+    "webhook.comment-created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Comment Created",
+      "description": "SupportBee webhook Comment Created. Fires when an internal comment is added."
+    },
+    "webhook.ticket-assigned-user": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Assigned to User",
+      "description": "SupportBee webhook Ticket Assigned to User. Fires when a ticket is assigned to an agent."
+    },
+    "webhook.ticket-unassigned-user": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Unassigned from User",
+      "description": "SupportBee webhook Ticket Unassigned from User. Fires when a ticket is unassigned from an agent."
+    },
+    "webhook.ticket-assigned-team": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Assigned to Team",
+      "description": "SupportBee webhook Ticket Assigned to Team. Fires when a ticket is assigned to a team."
+    },
+    "webhook.ticket-unassigned-team": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Unassigned from Team",
+      "description": "SupportBee webhook Ticket Unassigned from Team. Fires when a ticket is unassigned from a team."
+    },
+    "webhook.ticket-answered": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Answered",
+      "description": "SupportBee webhook Ticket Answered. Fires when a ticket is marked answered."
+    },
+    "webhook.ticket-unanswered": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Unanswered",
+      "description": "SupportBee webhook Ticket Unanswered. Fires when a ticket is marked unanswered."
+    },
+    "webhook.ticket-spammed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Spammed",
+      "description": "SupportBee webhook Ticket Spammed. Fires when a ticket is marked spam."
+    },
+    "webhook.ticket-unspammed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Unspammed",
+      "description": "SupportBee webhook Ticket Unspammed. Fires when a ticket is unmarked spam."
+    },
+    "webhook.ticket-trashed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Trashed",
+      "description": "SupportBee webhook Ticket Trashed. Fires when a ticket is moved to trash."
+    },
+    "webhook.ticket-untrashed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Untrashed",
+      "description": "SupportBee webhook Ticket Untrashed. Fires when a ticket is restored from trash."
+    },
+    "webhook.ticket-archived": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Archived",
+      "description": "SupportBee webhook Ticket Archived. Fires when a ticket is archived."
+    },
+    "webhook.ticket-unarchived": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Ticket Unarchived",
+      "description": "SupportBee webhook Ticket Unarchived. Fires when a ticket is unarchived."
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }
