@@ -30,4 +30,67 @@ describe("axiom declarative connector", () => {
     expect(called).toBe(false);
     await expect(actions["datasets.list"]!({ apiKey: "token", fetch: async () => response({ message: "slow" }, 429, { "retry-after": "17" }) })).rejects.toMatchObject({ code: "CONNECTOR_RATE_LIMITED", retryAfterSeconds: 17 });
   });
+
+  test("keeps the connector key and compiles 16 HTTP actions at 0.2.0", () => {
+    expect(manifest.key).toBe("axiom");
+    expect(manifest.version).toBe("0.2.0");
+    const ops = Object.entries(manifest.operations as Record<string, { kind?: string }>);
+    expect(ops.filter(([, spec]) => spec.kind === "action")).toHaveLength(16);
+    expect(ops.filter(([, spec]) => spec.kind === "webhook")).toHaveLength(2);
+    expect(actions["webhook.monitor_triggered"]).toBeUndefined();
+  });
+
+  test("lists monitors and runs an APL query on the management host", async () => {
+    let monitor: Request | undefined;
+    const listed = await actions["monitors.list"]!({
+      apiKey: "token",
+      fetch: async (url: string, init?: RequestInit) => {
+        monitor = new Request(url, init);
+        return response([{ id: "mon1", name: "errors" }]);
+      },
+    });
+    expect(monitor?.url).toBe("https://api.axiom.co/v2/monitors");
+    expect(monitor?.headers.get("authorization")).toBe("Bearer token");
+    expect(listed).toMatchObject({ monitors: [{ id: "mon1", name: "errors" }] });
+
+    let query: Request | undefined;
+    const ran = await actions["query.run"]!({
+      apiKey: "token",
+      apl: "['events'] | take 1",
+      fetch: async (url: string, init?: RequestInit) => {
+        query = new Request(url, init);
+        return response({ tables: [] });
+      },
+    });
+    expect(query?.url).toBe("https://api.axiom.co/v1/datasets/_apl?format=tabular");
+    expect(query?.method).toBe("POST");
+    expect(await query!.clone().json()).toEqual({ apl: "['events'] | take 1" });
+    expect(ran).toMatchObject({ result: { tables: [] } });
+  });
+
+  test("creates a dataset and an annotation", async () => {
+    let created: Request | undefined;
+    const dataset = await actions["datasets.create"]!({
+      apiKey: "token",
+      name: "events",
+      description: "app events",
+      fetch: async (url: string, init?: RequestInit) => {
+        created = new Request(url, init);
+        return response({ id: "ds_123", name: "events" }, 201);
+      },
+    });
+    expect(created?.url).toBe("https://api.axiom.co/v2/datasets");
+    expect(created?.headers.get("content-type")).toBe("application/json");
+    expect(dataset).toMatchObject({ dataset: { id: "ds_123", name: "events" } });
+
+    const annotation = await actions["annotations.create"]!({
+      apiKey: "token",
+      datasets: ["events"],
+      type: "deploy",
+      title: "release",
+      fetch: async () => response({ id: "ann1", type: "deploy" }, 201),
+    });
+    expect(annotation).toMatchObject({ annotation: { id: "ann1", type: "deploy" } });
+  });
 });
+
