@@ -5,7 +5,7 @@ describe("cal-com connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("cal-com");
     expect(manifest.name).toBe("Cal.com");
-    expect(manifest.version).toBe("0.1.0");
+    expect(manifest.version).toBe("0.2.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -14,6 +14,10 @@ describe("cal-com connector manifest", () => {
     expect(manifest.auth.setup.mode).toBe("external_bearer");
     expect(manifest.auth.setup.fields).toHaveLength(0);
     expect(manifest.auth.scopes).toContain("BOOKING_WRITE");
+    expect(manifest.auth.scopes).toContain("EVENT_TYPE_WRITE");
+    expect(manifest.auth.scopes).toContain("SCHEDULE_WRITE");
+    expect(manifest.auth.scopes).toContain("WEBHOOK_READ");
+    expect(manifest.auth.scopes).toContain("WEBHOOK_WRITE");
   });
 
   test("network allows api.cal.com", () => {
@@ -28,6 +32,7 @@ describe("cal-com connector manifest", () => {
     expect(manifest.models).toContain("booking");
     expect(manifest.models).toContain("event-type");
     expect(manifest.models).toContain("schedule");
+    expect(manifest.models).toContain("webhook");
   });
 
   test("healthcheck operation is defined as action kind", () => {
@@ -53,6 +58,18 @@ describe("cal-com connector manifest", () => {
       "bookings.decline",
       "slots.available",
       "schedules.list",
+      "event_types.create",
+      "event_types.update",
+      "event_types.delete",
+      "schedules.get",
+      "schedules.create",
+      "schedules.update",
+      "schedules.delete",
+      "availability.get",
+      "webhooks.list",
+      "webhooks.create",
+      "webhooks.get",
+      "webhooks.delete",
     ];
     for (const key of actionKeys) {
       expect(ops[key]).toBeDefined();

@@ -12,6 +12,17 @@ function requireNumber(value: unknown, field: string): number {
   return value;
 }
 
+function requireStringArray(value: unknown, field: string): string[] {
+  if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== "string" || item.length === 0)) {
+    throw new Error(`${field} is required`);
+  }
+  return value as string[];
+}
+
+function isSuccessStatus(status: number): boolean {
+  return status === 200 || status === 201 || status === 204;
+}
+
 function handleError(
   status: number,
   headers: Record<string, string>,
@@ -105,11 +116,113 @@ export function createEventTypesClient(options: { token: string; fetch?: typeof 
       }
       return handleError(response.status, response.headers, "Cal.com rejected the event_types.get request.");
     },
+
+    async create(input: unknown) {
+      const payload = validateEventTypesCreateInput(input);
+      const body: Record<string, unknown> = {
+        title: payload.title,
+        slug: payload.slug,
+        lengthInMinutes: payload.lengthInMinutes,
+      };
+      if (payload.description !== undefined) body.description = payload.description;
+      if (payload.hidden !== undefined) body.hidden = payload.hidden;
+      if (payload.scheduleId !== undefined) body.scheduleId = payload.scheduleId;
+      if (payload.locations !== undefined) body.locations = payload.locations;
+      const response = await client.fetchJSON("/event-types", { method: "POST", body: JSON.stringify(body) }, "2024-06-14");
+      if (isSuccessStatus(response.status)) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, eventType: data };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the event_types.create request.");
+    },
+
+    async update(input: unknown) {
+      const payload = validateEventTypesUpdateInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.title !== undefined) body.title = payload.title;
+      if (payload.slug !== undefined) body.slug = payload.slug;
+      if (payload.lengthInMinutes !== undefined) body.lengthInMinutes = payload.lengthInMinutes;
+      if (payload.description !== undefined) body.description = payload.description;
+      if (payload.hidden !== undefined) body.hidden = payload.hidden;
+      if (payload.scheduleId !== undefined) body.scheduleId = payload.scheduleId;
+      const response = await client.fetchJSON(`/event-types/${payload.id}`, { method: "PATCH", body: JSON.stringify(body) }, "2024-06-14");
+      if (isSuccessStatus(response.status)) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, eventType: data };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Event type not found." } };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the event_types.update request.");
+    },
+
+    async delete(id: number) {
+      const response = await client.fetchJSON(`/event-types/${id}`, { method: "DELETE" }, "2024-06-14");
+      if (isSuccessStatus(response.status)) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, eventType: data };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Event type not found." } };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the event_types.delete request.");
+    },
   };
 }
 
 export function validateEventTypesGetInput(input: unknown): { id: number } {
   if (!isRecord(input)) throw new Error("event_types.get input must be an object");
+  return { id: requireNumber(input.id, "id") };
+}
+
+export type EventTypesCreateInput = {
+  title: string;
+  slug: string;
+  lengthInMinutes: number;
+  description?: string;
+  hidden?: boolean;
+  scheduleId?: number;
+  locations?: unknown[];
+};
+
+export function validateEventTypesCreateInput(input: unknown): EventTypesCreateInput {
+  if (!isRecord(input)) throw new Error("event_types.create input must be an object");
+  const payload: EventTypesCreateInput = {
+    title: requireString(input.title, "title"),
+    slug: requireString(input.slug, "slug"),
+    lengthInMinutes: requireNumber(input.lengthInMinutes, "lengthInMinutes"),
+  };
+  if (typeof input.description === "string") payload.description = input.description;
+  if (typeof input.hidden === "boolean") payload.hidden = input.hidden;
+  if (typeof input.scheduleId === "number") payload.scheduleId = input.scheduleId;
+  if (Array.isArray(input.locations)) payload.locations = input.locations;
+  return payload;
+}
+
+export type EventTypesUpdateInput = {
+  id: number;
+  title?: string;
+  slug?: string;
+  lengthInMinutes?: number;
+  description?: string;
+  hidden?: boolean;
+  scheduleId?: number;
+};
+
+export function validateEventTypesUpdateInput(input: unknown): EventTypesUpdateInput {
+  if (!isRecord(input)) throw new Error("event_types.update input must be an object");
+  const payload: EventTypesUpdateInput = { id: requireNumber(input.id, "id") };
+  if (typeof input.title === "string") payload.title = input.title;
+  if (typeof input.slug === "string") payload.slug = input.slug;
+  if (typeof input.lengthInMinutes === "number") payload.lengthInMinutes = input.lengthInMinutes;
+  if (typeof input.description === "string") payload.description = input.description;
+  if (typeof input.hidden === "boolean") payload.hidden = input.hidden;
+  if (typeof input.scheduleId === "number") payload.scheduleId = input.scheduleId;
+  return payload;
+}
+
+export function validateEventTypesDeleteInput(input: unknown): { id: number } {
+  if (!isRecord(input)) throw new Error("event_types.delete input must be an object");
   return { id: requireNumber(input.id, "id") };
 }
 
@@ -138,6 +251,46 @@ export function getEventType(input: unknown): Record<string, unknown> | Promise<
     });
   }
   return { connector: "cal-com", action: "event_types.get", source: "connector", validated: validateEventTypesGetInput(input) };
+}
+
+export function createEventType(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createEventTypesClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).create(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "event_types.create", source: "connector", eventType: result.eventType };
+    });
+  }
+  return { connector: "cal-com", action: "event_types.create", source: "connector", validated: validateEventTypesCreateInput(input) };
+}
+
+export function updateEventType(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createEventTypesClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).update(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "event_types.update", source: "connector", eventType: result.eventType };
+    });
+  }
+  return { connector: "cal-com", action: "event_types.update", source: "connector", validated: validateEventTypesUpdateInput(input) };
+}
+
+export function deleteEventType(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const payload = validateEventTypesDeleteInput(input);
+    return createEventTypesClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).delete(payload.id).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "event_types.delete", source: "connector", eventType: result.eventType };
+    });
+  }
+  return { connector: "cal-com", action: "event_types.delete", source: "connector", validated: validateEventTypesDeleteInput(input) };
 }
 
 // ─── bookings.list ────────────────────────────────────────────────────────────
@@ -513,6 +666,61 @@ export function createSchedulesClient(options: { token: string; fetch?: typeof f
       }
       return handleError(response.status, response.headers, "Cal.com rejected the schedules.list request.");
     },
+
+    async get(id: number) {
+      const response = await client.fetchJSON(`/schedules/${id}`, {}, "2024-06-11");
+      if (response.status === 200) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, schedule: data };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Schedule not found." } };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the schedules.get request.");
+    },
+
+    async create(input: unknown) {
+      const payload = validateSchedulesCreateInput(input);
+      const body: Record<string, unknown> = { name: payload.name, timeZone: payload.timeZone };
+      if (payload.isDefault !== undefined) body.isDefault = payload.isDefault;
+      if (payload.availability !== undefined) body.availability = payload.availability;
+      const response = await client.fetchJSON("/schedules", { method: "POST", body: JSON.stringify(body) }, "2024-06-11");
+      if (isSuccessStatus(response.status)) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, schedule: data };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the schedules.create request.");
+    },
+
+    async update(input: unknown) {
+      const payload = validateSchedulesUpdateInput(input);
+      const body: Record<string, unknown> = {};
+      if (payload.name !== undefined) body.name = payload.name;
+      if (payload.timeZone !== undefined) body.timeZone = payload.timeZone;
+      if (payload.isDefault !== undefined) body.isDefault = payload.isDefault;
+      if (payload.availability !== undefined) body.availability = payload.availability;
+      const response = await client.fetchJSON(`/schedules/${payload.id}`, { method: "PATCH", body: JSON.stringify(body) }, "2024-06-11");
+      if (isSuccessStatus(response.status)) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, schedule: data };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Schedule not found." } };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the schedules.update request.");
+    },
+
+    async delete(id: number) {
+      const response = await client.fetchJSON(`/schedules/${id}`, { method: "DELETE" }, "2024-06-11");
+      if (isSuccessStatus(response.status)) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, schedule: data };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Schedule not found." } };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the schedules.delete request.");
+    },
   };
 }
 
@@ -527,4 +735,305 @@ export function listSchedules(input: unknown): Record<string, unknown> | Promise
     });
   }
   return { connector: "cal-com", action: "schedules.list", source: "connector", validated: validateSchedulesListInput(input) };
+}
+
+export function validateSchedulesGetInput(input: unknown): { id: number } {
+  if (!isRecord(input)) throw new Error("schedules.get input must be an object");
+  return { id: requireNumber(input.id, "id") };
+}
+
+export type SchedulesCreateInput = {
+  name: string;
+  timeZone: string;
+  isDefault?: boolean;
+  availability?: unknown[];
+};
+
+export function validateSchedulesCreateInput(input: unknown): SchedulesCreateInput {
+  if (!isRecord(input)) throw new Error("schedules.create input must be an object");
+  const payload: SchedulesCreateInput = {
+    name: requireString(input.name, "name"),
+    timeZone: requireString(input.timeZone, "timeZone"),
+  };
+  if (typeof input.isDefault === "boolean") payload.isDefault = input.isDefault;
+  if (Array.isArray(input.availability)) payload.availability = input.availability;
+  return payload;
+}
+
+export type SchedulesUpdateInput = {
+  id: number;
+  name?: string;
+  timeZone?: string;
+  isDefault?: boolean;
+  availability?: unknown[];
+};
+
+export function validateSchedulesUpdateInput(input: unknown): SchedulesUpdateInput {
+  if (!isRecord(input)) throw new Error("schedules.update input must be an object");
+  const payload: SchedulesUpdateInput = { id: requireNumber(input.id, "id") };
+  if (typeof input.name === "string") payload.name = input.name;
+  if (typeof input.timeZone === "string") payload.timeZone = input.timeZone;
+  if (typeof input.isDefault === "boolean") payload.isDefault = input.isDefault;
+  if (Array.isArray(input.availability)) payload.availability = input.availability;
+  return payload;
+}
+
+export function validateSchedulesDeleteInput(input: unknown): { id: number } {
+  if (!isRecord(input)) throw new Error("schedules.delete input must be an object");
+  return { id: requireNumber(input.id, "id") };
+}
+
+export function getSchedule(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const payload = validateSchedulesGetInput(input);
+    return createSchedulesClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(payload.id).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "schedules.get", source: "connector", schedule: result.schedule };
+    });
+  }
+  return { connector: "cal-com", action: "schedules.get", source: "connector", validated: validateSchedulesGetInput(input) };
+}
+
+export function createSchedule(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createSchedulesClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).create(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "schedules.create", source: "connector", schedule: result.schedule };
+    });
+  }
+  return { connector: "cal-com", action: "schedules.create", source: "connector", validated: validateSchedulesCreateInput(input) };
+}
+
+export function updateSchedule(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createSchedulesClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).update(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "schedules.update", source: "connector", schedule: result.schedule };
+    });
+  }
+  return { connector: "cal-com", action: "schedules.update", source: "connector", validated: validateSchedulesUpdateInput(input) };
+}
+
+export function deleteSchedule(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const payload = validateSchedulesDeleteInput(input);
+    return createSchedulesClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).delete(payload.id).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "schedules.delete", source: "connector", schedule: result.schedule };
+    });
+  }
+  return { connector: "cal-com", action: "schedules.delete", source: "connector", validated: validateSchedulesDeleteInput(input) };
+}
+
+// ─── availability.get ─────────────────────────────────────────────────────────
+
+export type AvailabilityGetInput = { dateFrom: string; dateTo: string; timeZone?: string };
+
+export function validateAvailabilityGetInput(input: unknown): AvailabilityGetInput {
+  if (!isRecord(input)) throw new Error("availability.get input must be an object");
+  return {
+    dateFrom: requireString(input.dateFrom, "dateFrom"),
+    dateTo: requireString(input.dateTo, "dateTo"),
+    timeZone: typeof input.timeZone === "string" ? input.timeZone : undefined,
+  };
+}
+
+export function createAvailabilityClient(options: { token: string; fetch?: typeof fetch }) {
+  const client = createCalComClient({ token: options.token, fetch: options.fetch, operation: "availability.get" });
+  return {
+    async get(input: unknown) {
+      const payload = validateAvailabilityGetInput(input);
+      const params = new URLSearchParams({ dateFrom: payload.dateFrom, dateTo: payload.dateTo });
+      if (payload.timeZone) params.set("timeZone", payload.timeZone);
+      const response = await client.fetchJSON(`/calendars/busy-times?${params.toString()}`);
+      if (response.status === 200) {
+        const data = unwrapEnvelope(response.body);
+        const busyTimes = Array.isArray(data) ? data : [];
+        return { ok: true as const, busyTimes };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the availability.get request.");
+    },
+  };
+}
+
+export function getAvailability(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createAvailabilityClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "availability.get", source: "connector", busyTimes: result.busyTimes };
+    });
+  }
+  return { connector: "cal-com", action: "availability.get", source: "connector", validated: validateAvailabilityGetInput(input) };
+}
+
+// ─── webhooks ─────────────────────────────────────────────────────────────────
+
+export type WebhooksListInput = { take?: number; skip?: number };
+
+export function validateWebhooksListInput(input: unknown): WebhooksListInput {
+  if (!isRecord(input)) throw new Error("webhooks.list input must be an object");
+  const payload: WebhooksListInput = {};
+  if (typeof input.take === "number") payload.take = input.take;
+  if (typeof input.skip === "number") payload.skip = input.skip;
+  return payload;
+}
+
+export type WebhooksCreateInput = {
+  subscriberUrl: string;
+  triggers: string[];
+  active?: boolean;
+  secret?: string;
+  payloadTemplate?: string;
+};
+
+export function validateWebhooksCreateInput(input: unknown): WebhooksCreateInput {
+  if (!isRecord(input)) throw new Error("webhooks.create input must be an object");
+  const payload: WebhooksCreateInput = {
+    subscriberUrl: requireString(input.subscriberUrl, "subscriberUrl"),
+    triggers: requireStringArray(input.triggers, "triggers"),
+  };
+  if (typeof input.active === "boolean") payload.active = input.active;
+  if (typeof input.secret === "string") payload.secret = input.secret;
+  if (typeof input.payloadTemplate === "string") payload.payloadTemplate = input.payloadTemplate;
+  return payload;
+}
+
+export function validateWebhooksGetInput(input: unknown): { id: number } {
+  if (!isRecord(input)) throw new Error("webhooks.get input must be an object");
+  return { id: requireNumber(input.id, "id") };
+}
+
+export function validateWebhooksDeleteInput(input: unknown): { id: number } {
+  if (!isRecord(input)) throw new Error("webhooks.delete input must be an object");
+  return { id: requireNumber(input.id, "id") };
+}
+
+export function createWebhooksClient(options: { token: string; fetch?: typeof fetch }) {
+  const client = createCalComClient({ token: options.token, fetch: options.fetch, operation: "webhooks.list" });
+  return {
+    async list(input: unknown) {
+      const payload = validateWebhooksListInput(input);
+      const params = new URLSearchParams();
+      if (payload.take !== undefined) params.set("take", String(payload.take));
+      if (payload.skip !== undefined) params.set("skip", String(payload.skip));
+      const query = params.toString();
+      const response = await client.fetchJSON(`/webhooks${query ? `?${query}` : ""}`);
+      if (response.status === 200) {
+        const data = unwrapEnvelope(response.body);
+        const webhooks = Array.isArray(data) ? data : isRecord(data) && Array.isArray(data.webhooks) ? data.webhooks : [];
+        return { ok: true as const, webhooks };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the webhooks.list request.");
+    },
+
+    async create(input: unknown) {
+      const payload = validateWebhooksCreateInput(input);
+      const body: Record<string, unknown> = {
+        subscriberUrl: payload.subscriberUrl,
+        triggers: payload.triggers,
+        active: payload.active ?? true,
+      };
+      if (payload.secret !== undefined) body.secret = payload.secret;
+      if (payload.payloadTemplate !== undefined) body.payloadTemplate = payload.payloadTemplate;
+      const response = await client.fetchJSON("/webhooks", { method: "POST", body: JSON.stringify(body) });
+      if (isSuccessStatus(response.status)) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, webhook: data };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the webhooks.create request.");
+    },
+
+    async get(id: number) {
+      const response = await client.fetchJSON(`/webhooks/${id}`);
+      if (response.status === 200) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, webhook: data };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Webhook not found." } };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the webhooks.get request.");
+    },
+
+    async delete(id: number) {
+      const response = await client.fetchJSON(`/webhooks/${id}`, { method: "DELETE" });
+      if (isSuccessStatus(response.status)) {
+        const data = unwrapEnvelope(response.body);
+        return { ok: true as const, webhook: data };
+      }
+      if (response.status === 404) {
+        return { ok: false as const, error: { code: "CONNECTOR_UPSTREAM_ERROR", message: "Webhook not found." } };
+      }
+      return handleError(response.status, response.headers, "Cal.com rejected the webhooks.delete request.");
+    },
+  };
+}
+
+export function listWebhooks(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWebhooksClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).list(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "webhooks.list", source: "connector", webhooks: result.webhooks };
+    });
+  }
+  return { connector: "cal-com", action: "webhooks.list", source: "connector", validated: validateWebhooksListInput(input) };
+}
+
+export function createWebhook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return createWebhooksClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).create(input).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "webhooks.create", source: "connector", webhook: result.webhook };
+    });
+  }
+  return { connector: "cal-com", action: "webhooks.create", source: "connector", validated: validateWebhooksCreateInput(input) };
+}
+
+export function getWebhook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const payload = validateWebhooksGetInput(input);
+    return createWebhooksClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).get(payload.id).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "webhooks.get", source: "connector", webhook: result.webhook };
+    });
+  }
+  return { connector: "cal-com", action: "webhooks.get", source: "connector", validated: validateWebhooksGetInput(input) };
+}
+
+export function deleteWebhook(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    const payload = validateWebhooksDeleteInput(input);
+    return createWebhooksClient({
+      token: input.accessToken,
+      fetch: typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined,
+    }).delete(payload.id).then((result) => {
+      if (!result.ok) throwIfError(result);
+      return { connector: "cal-com", action: "webhooks.delete", source: "connector", webhook: result.webhook };
+    });
+  }
+  return { connector: "cal-com", action: "webhooks.delete", source: "connector", validated: validateWebhooksDeleteInput(input) };
 }
