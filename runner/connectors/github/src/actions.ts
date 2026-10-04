@@ -413,6 +413,13 @@ import {
   validateListMetaVersionsInput,
   validateGetOctocatInput,
 } from "./card15_reads";
+import {
+  createCard17ReadsClient,
+  validateGetRateLimitInput,
+  validateListRepoCommentsInput,
+  validateGetRepoKeyInput,
+  validateListRepoKeysInput,
+} from "./card17_reads";
 
 
 
@@ -6277,6 +6284,57 @@ export function getOctocat(input: unknown): Record<string, unknown> | Promise<Re
     });
   }
   return { connector: "github", action: "meta.octocat.get", source: "connector", validated: validateGetOctocatInput(input) };
+}
+
+// ─── card 17: rate limit, repository comments, and repository keys ───────────
+
+function liveCard17Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard17ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getRateLimit(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard17Client(input, "rate_limit.get").getRateLimit(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "rate_limit.get", source: "connector", rateLimit: result.rateLimit };
+    });
+  }
+  return { connector: "github", action: "rate_limit.get", source: "connector", validated: validateGetRateLimitInput(input) };
+}
+
+export function listRepoComments(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard17Client(input, "repos.comments.list").listRepoComments(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.comments.list", source: "connector", comments: result.comments };
+    });
+  }
+  return { connector: "github", action: "repos.comments.list", source: "connector", validated: validateListRepoCommentsInput(input) };
+}
+
+export function getRepoKey(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard17Client(input, "repos.keys.get").getRepoKey(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.keys.get", source: "connector", key: result.key };
+    });
+  }
+  return { connector: "github", action: "repos.keys.get", source: "connector", validated: validateGetRepoKeyInput(input) };
+}
+
+export function listRepoKeys(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard17Client(input, "repos.keys.list").listRepoKeys(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.keys.list", source: "connector", keys: result.keys };
+    });
+  }
+  return { connector: "github", action: "repos.keys.list", source: "connector", validated: validateListRepoKeysInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
