@@ -1,7 +1,17 @@
 {
+  "key": "botpress",
+  "name": "Botpress",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "dev-tools"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,80 +25,66 @@
           "required": true,
           "secret": false
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
-  },
-  "categories": [
-    "dev-tools"
-  ],
-  "evidence": {
-    "fixture": {
-      "status": "supplied"
-    },
-    "live": {
-      "status": "unverified"
+      ]
     }
   },
+  "network": {
+    "allowedHosts": [
+      "api.botpress.cloud"
+    ]
+  },
+  "models": [
+    "workspace",
+    "bot",
+    "account",
+    "member",
+    "integration",
+    "issue"
+  ],
   "http": {
+    "baseUrl": "https://api.botpress.cloud/v1/admin",
     "auth": {
       "field": "apiKey",
       "in": "header",
       "name": "Authorization",
       "value": "Bearer {{apiKey}}"
     },
-    "baseUrl": "https://api.botpress.cloud/v1/admin",
+    "headers": {
+      "Accept": "application/json",
+      "x-workspace-id": "{{workspaceId}}"
+    },
     "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
       "defaultRetryAfterSeconds": 30,
       "messagePaths": [
         "message",
         "error",
         "errors.0.message"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json",
-      "x-workspace-id": "{{workspaceId}}"
+      ]
     }
   },
-  "key": "botpress",
-  "models": [
-    "workspace",
-    "bot"
-  ],
-  "name": "Botpress",
-  "network": {
-    "allowedHosts": [
-      "api.botpress.cloud"
-    ]
-  },
   "operations": {
-    "bots.get": {
-      "description": "Get details for one Botpress bot in the connected workspace.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "botId": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "botId"
-        ],
-        "type": "object"
-      },
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Botpress token and workspace ID by listing bots.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
       "outputSchema": {
-        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data"
+        ],
         "properties": {
           "data": {
             "type": [
@@ -97,10 +93,173 @@
             ]
           }
         },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bots",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workspaces.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List workspaces",
+      "description": "List Botpress workspaces accessible to the connected API token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nextToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "handle": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces",
+        "success": [
+          200
+        ],
+        "query": {
+          "nextToken": "{{nextToken}}",
+          "handle": "{{handle}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bots.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List bots",
+      "description": "List Botpress bots in the connected workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "dev": {
+            "type": "boolean"
+          },
+          "nextToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sortField": {
+            "type": "string",
+            "enum": [
+              "createdAt",
+              "updatedAt"
+            ]
+          },
+          "sortDirection": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bots",
+        "success": [
+          200
+        ],
+        "query": {
+          "dev": "{{dev}}",
+          "nextToken": "{{nextToken}}",
+          "sortField": "{{sortField}}",
+          "sortDirection": "{{sortDirection}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bots.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get bot",
+      "description": "Get details for one Botpress bot in the connected workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "botId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
@@ -109,178 +268,864 @@
           200
         ]
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workspaces.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "Get bot",
-      "validationMode": "strict-generated"
-    },
-    "bots.list": {
-      "description": "List Botpress bots in the connected workspace.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get workspace",
+      "description": "Get one Botpress workspace by identifier.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspaces/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "workspaces.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update workspace",
+      "description": "Update a Botpress workspace name or handle.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace display name."
+          },
+          "handle": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace handle."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/workspaces/{{id}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "handle": "{{handle}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bots.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create bot",
+      "description": "Create a Botpress bot in the connected workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bot display name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional bot description."
+          },
           "dev": {
+            "type": "boolean",
+            "description": "Create as a development bot."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/bots",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}",
+          "dev": "{{dev}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bots.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Update bot",
+      "description": "Update a Botpress bot name or description.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bot identifier."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bot display name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional bot description."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "botId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PUT",
+        "path": "/bots/{{botId}}",
+        "success": [
+          200
+        ],
+        "body": {
+          "name": "{{name}}",
+          "description": "{{description}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "bots.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete bot",
+      "description": "Delete a Botpress bot by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bot identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "botId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
             "type": "boolean"
           },
-          "nextToken": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "sortDirection": {
-            "enum": [
-              "asc",
-              "desc"
-            ],
-            "type": "string"
-          },
-          "sortField": {
-            "enum": [
-              "createdAt",
-              "updatedAt"
-            ],
+          "id": {
             "type": "string"
           }
-        },
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
+        }
       },
       "request": {
-        "method": "GET",
-        "path": "/bots",
-        "query": {
-          "dev": "{{dev}}",
-          "nextToken": "{{nextToken}}",
-          "sortDirection": "{{sortDirection}}",
-          "sortField": "{{sortField}}"
-        },
+        "method": "DELETE",
+        "path": "/bots/{{botId}}",
         "success": [
-          200
-        ]
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.botId}}"
+        }
       },
-      "responseFormat": "json",
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "account.get": {
+      "kind": "action",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List bots",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate the Botpress token and workspace ID by listing bots.",
-      "enforceOutputSchema": true,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get account",
+      "description": "Get the Botpress account authenticating this token.",
       "inputSchema": {
-        "additionalProperties": false,
+        "type": "object",
         "properties": {},
-        "type": "object"
+        "additionalProperties": false
       },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
       "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
+        "type": "object",
         "required": [
           "data"
         ],
-        "type": "object"
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
       },
       "request": {
         "method": "GET",
-        "path": "/bots",
+        "path": "/account/me",
         "success": [
           200
         ]
       },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    },
-    "workspaces.list": {
-      "description": "List Botpress workspaces accessible to the connected API token.",
       "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "handle": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "nextToken": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.list": {
       "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/workspaces",
-        "query": {
-          "handle": "{{handle}}",
-          "nextToken": "{{nextToken}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
       "sideEffect": "read",
       "timeoutMs": 15000,
-      "title": "List workspaces",
-      "validationMode": "strict-generated"
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List members",
+      "description": "List members of the connected Botpress workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nextToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspace-members",
+        "success": [
+          200
+        ],
+        "query": {
+          "nextToken": "{{nextToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get member",
+      "description": "Get one Botpress workspace member by identifier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace member identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "memberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/workspace-members/{{memberId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Create member",
+      "description": "Invite a member to the connected Botpress workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Member email address."
+          },
+          "roleId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace role identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/workspace-members",
+        "success": [
+          200
+        ],
+        "body": {
+          "email": "{{email}}",
+          "roleId": "{{roleId}}"
+        },
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "members.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Delete member",
+      "description": "Remove a member from the connected Botpress workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workspace member identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "memberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deleted",
+          "id"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "request": {
+        "method": "DELETE",
+        "path": "/workspace-members/{{memberId}}",
+        "success": [
+          200,
+          204
+        ],
+        "result": {
+          "deleted": true,
+          "id": "{{input.memberId}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "integrations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List integrations",
+      "description": "List Botpress integrations available to the workspace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nextToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token from a previous response."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Filter by integration name."
+          },
+          "dev": {
+            "type": "boolean",
+            "description": "If true, list only development integrations."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/integrations",
+        "success": [
+          200
+        ],
+        "query": {
+          "nextToken": "{{nextToken}}",
+          "name": "{{name}}",
+          "dev": "{{dev}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "publicIntegrations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List public integrations",
+      "description": "List public Botpress Hub integrations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nextToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/hub/integrations",
+        "success": [
+          200
+        ],
+        "query": {
+          "nextToken": "{{nextToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "issues.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List bot issues",
+      "description": "List runtime issues for one Botpress bot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bot identifier."
+          },
+          "nextToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "botId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bots/{{botId}}/issues",
+        "success": [
+          200
+        ],
+        "query": {
+          "nextToken": "{{nextToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "issues.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get bot issue",
+      "description": "Get one runtime issue for a Botpress bot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bot identifier."
+          },
+          "issueId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Issue identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "botId",
+          "issueId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bots/{{botId}}/issues/{{issueId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "logs.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List bot logs",
+      "description": "Read logs for one Botpress bot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bot identifier."
+          },
+          "nextToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pagination token from a previous response."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "botId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bots/{{botId}}/logs",
+        "success": [
+          200
+        ],
+        "query": {
+          "nextToken": "{{nextToken}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "analytics.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Get bot analytics",
+      "description": "Read analytics for one Botpress bot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "botId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bot identifier."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "botId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/bots/{{botId}}/analytics",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.conversation_started": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Conversation started",
+      "description": "Botpress webhook when a conversation starts on an installed channel.",
+      "sideEffect": "read"
+    },
+    "webhook.message_created": {
+      "kind": "webhook",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Message created",
+      "description": "Botpress webhook when a conversation message is created.",
+      "sideEffect": "read"
     }
   },
   "provenance": {
     "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
     }
   },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
 }

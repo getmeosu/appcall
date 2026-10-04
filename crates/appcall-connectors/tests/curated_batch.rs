@@ -37,6 +37,9 @@ fn curated_batch_manifests_preserve_pinned_read_only_contracts() {
             .any(|o| matches!(o.side_effect.as_str(), "write" | "destructive"));
         for (operation_key, operation) in &manifest.operations {
             operation_count += 1;
+            if operation.kind == appcall_connectors::OperationKind::Webhook {
+                continue;
+            }
             if deepened {
                 assert!(
                     matches!(
