@@ -1,7 +1,7 @@
 {
   "key": "checkly",
   "name": "Checkly",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -36,7 +36,13 @@
   "models": [
     "account",
     "check",
-    "checkStatus"
+    "checkStatus",
+    "checkResult",
+    "checkGroup",
+    "alertChannel",
+    "location",
+    "dashboard",
+    "maintenanceWindow"
   ],
   "http": {
     "baseUrl": "https://api.checklyhq.com/v1",
@@ -256,6 +262,198 @@
       "validationMode": "strict-generated",
       "responseFormat": "json"
     },
+    "checks.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create API check",
+      "description": "Create a Checkly API check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check name."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Request URL."
+          },
+          "method": {
+            "type": "string",
+            "minLength": 1,
+            "description": "HTTP method."
+          },
+          "activated": {
+            "type": "boolean",
+            "description": "Whether the check is activated."
+          },
+          "frequency": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Run frequency in minutes."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "url"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/checks/api",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "activated": "{{activated}}",
+          "frequency": "{{frequency}}",
+          "request": {
+            "method": "{{method}}",
+            "url": "{{url}}"
+          }
+        }
+      }
+    },
+    "checks.update": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Update API check",
+      "description": "Update a Checkly API check by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "checkId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check ID."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check name."
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Request URL."
+          },
+          "activated": {
+            "type": "boolean",
+            "description": "Whether the check is activated."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "checkId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "PUT",
+        "path": "/checks/api/{{checkId}}",
+        "success": [
+          200
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "activated": "{{activated}}",
+          "request": {
+            "url": "{{url}}"
+          }
+        }
+      }
+    },
+    "checks.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete check",
+      "description": "Permanently delete a Checkly check by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "checkId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "checkId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/checks/{{checkId}}",
+        "success": [
+          200
+        ]
+      }
+    },
     "checkStatuses.list": {
       "kind": "action",
       "sideEffect": "read",
@@ -294,6 +492,668 @@
       "enforceOutputSchema": true,
       "validationMode": "strict-generated",
       "responseFormat": "json"
+    },
+    "checkStatuses.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get check status",
+      "description": "Retrieve current status details for one Checkly check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "checkId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "checkId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/check-statuses/{{checkId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "checkResults.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List check results",
+      "description": "List recent Checkly results for one check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "checkId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check ID."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "checkId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/check-results/{{checkId}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "page": "{{page}}"
+        }
+      }
+    },
+    "checkResults.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get check result",
+      "description": "Retrieve one Checkly check result by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "checkId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check ID."
+          },
+          "checkResultId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Result ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "checkId",
+          "checkResultId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/check-results/{{checkId}}/{{checkResultId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "checkGroups.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List check groups",
+      "description": "List Checkly check groups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/check-groups",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "page": "{{page}}"
+        }
+      }
+    },
+    "checkGroups.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get check group",
+      "description": "Retrieve one Checkly check group by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check group ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/check-groups/{{groupId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "checkGroups.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create check group",
+      "description": "Create a Checkly check group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Group name."
+          },
+          "activated": {
+            "type": "boolean",
+            "description": "Whether the group is activated."
+          },
+          "concurrency": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Group concurrency."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/check-groups",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "activated": "{{activated}}",
+          "concurrency": "{{concurrency}}"
+        }
+      }
+    },
+    "checkGroups.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete check group",
+      "description": "Permanently delete a Checkly check group. The group must be empty.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "groupId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Check group ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "groupId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/check-groups/{{groupId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "alertChannels.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List alert channels",
+      "description": "List Checkly alert channels.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/alert-channels",
+        "success": [
+          200
+        ]
+      }
+    },
+    "alertChannels.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get alert channel",
+      "description": "Retrieve one Checkly alert channel by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "alertChannelId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alert channel ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "alertChannelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/alert-channels/{{alertChannelId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "alertChannels.create": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Create alert channel",
+      "description": "Create a Checkly email alert channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Channel type such as EMAIL or WEBHOOK."
+          },
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address for EMAIL channels."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "address"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "POST",
+        "path": "/alert-channels",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "type": "{{type}}",
+          "config": {
+            "address": "{{address}}"
+          }
+        }
+      }
+    },
+    "alertChannels.delete": {
+      "kind": "action",
+      "sideEffect": "destructive",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Delete alert channel",
+      "description": "Permanently delete a Checkly alert channel.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "alertChannelId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Alert channel ID."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "alertChannelId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "DELETE",
+        "path": "/alert-channels/{{alertChannelId}}",
+        "success": [
+          200
+        ]
+      }
+    },
+    "locations.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List locations",
+      "description": "List Checkly public monitoring locations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/locations",
+        "success": [
+          200
+        ]
+      }
+    },
+    "dashboards.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List dashboards",
+      "description": "List Checkly dashboards.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "request": {
+        "method": "GET",
+        "path": "/dashboards",
+        "success": [
+          200
+        ]
+      }
+    },
+    "webhook.check_failure": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Check failure",
+      "description": "Checkly webhook alert when a check fails. Maps ALERT_FAILURE."
+    },
+    "webhook.check_recovery": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Check recovery",
+      "description": "Checkly webhook alert when a previously failing check recovers. Maps ALERT_SUCCESS."
+    },
+    "webhook.check_degraded": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Check degraded",
+      "description": "Checkly webhook alert when a check is degraded. Maps ALERT_DEGRADED."
     }
   },
   "evidence": {
