@@ -291,6 +291,183 @@ export function parseAnalyticsResponse(response: unknown): { rows: NormalizedAna
   };
 }
 
+// --- Identities ---
+
+export type NormalizedIdentity = {
+  id: string;
+  provider: "tiktok-ads";
+  identityType: string;
+  displayName: string;
+  profileImage: string;
+  raw: Record<string, unknown>;
+};
+
+export function normalizeIdentity(data: Record<string, unknown>): NormalizedIdentity {
+  return {
+    id: `tt-identity:${coerceId(data.identity_id ?? data.id)}`,
+    provider: "tiktok-ads",
+    identityType: prop(data, "identity_type"),
+    displayName: prop(data, "display_name") || prop(data, "identity_name"),
+    profileImage: prop(data, "profile_image"),
+    raw: data,
+  };
+}
+
+export function parseIdentitiesResponse(response: unknown): {
+  identities: NormalizedIdentity[];
+  nextPage: number | null;
+  totalCount: number;
+} {
+  const wrapper = extractTikTokData(response);
+  if (!wrapper) return { identities: [], nextPage: null, totalCount: 0 };
+  const list = Array.isArray(wrapper.identity_list)
+    ? wrapper.identity_list
+    : Array.isArray(wrapper.list)
+      ? wrapper.list
+      : null;
+  if (!list) return { identities: [], nextPage: null, totalCount: 0 };
+  const identities = list.filter(isRecord).map(normalizeIdentity);
+  const paging = extractPaging(wrapper);
+  return { identities, nextPage: paging.nextPage, totalCount: paging.totalCount || identities.length };
+}
+
+// --- Videos ---
+
+export type NormalizedVideo = {
+  id: string;
+  provider: "tiktok-ads";
+  fileName: string;
+  previewUrl: string;
+  duration: number;
+  width: number;
+  height: number;
+  createdTime: string;
+  raw: Record<string, unknown>;
+};
+
+export function normalizeVideo(data: Record<string, unknown>): NormalizedVideo {
+  return {
+    id: `tt-video:${coerceId(data.video_id ?? data.id)}`,
+    provider: "tiktok-ads",
+    fileName: prop(data, "file_name"),
+    previewUrl: prop(data, "preview_url"),
+    duration: propNum(data, "duration"),
+    width: propNum(data, "width"),
+    height: propNum(data, "height"),
+    createdTime: prop(data, "create_time"),
+    raw: data,
+  };
+}
+
+export function parseVideosResponse(response: unknown): {
+  videos: NormalizedVideo[];
+  nextPage: number | null;
+  totalCount: number;
+} {
+  const wrapper = extractTikTokData(response);
+  if (!wrapper) return { videos: [], nextPage: null, totalCount: 0 };
+  const list = Array.isArray(wrapper.list) ? wrapper.list : null;
+  if (!list) return { videos: [], nextPage: null, totalCount: 0 };
+  const videos = list.filter(isRecord).map(normalizeVideo);
+  const paging = extractPaging(wrapper);
+  return { videos, nextPage: paging.nextPage, totalCount: paging.totalCount || videos.length };
+}
+
+// --- Images ---
+
+export type NormalizedImage = {
+  id: string;
+  provider: "tiktok-ads";
+  fileName: string;
+  previewUrl: string;
+  width: number;
+  height: number;
+  createdTime: string;
+  raw: Record<string, unknown>;
+};
+
+export function normalizeImage(data: Record<string, unknown>): NormalizedImage {
+  return {
+    id: `tt-image:${coerceId(data.image_id ?? data.id)}`,
+    provider: "tiktok-ads",
+    fileName: prop(data, "file_name"),
+    previewUrl: prop(data, "preview_url"),
+    width: propNum(data, "width"),
+    height: propNum(data, "height"),
+    createdTime: prop(data, "create_time"),
+    raw: data,
+  };
+}
+
+export function parseImagesResponse(response: unknown): {
+  images: NormalizedImage[];
+  nextPage: number | null;
+  totalCount: number;
+} {
+  const wrapper = extractTikTokData(response);
+  if (!wrapper) return { images: [], nextPage: null, totalCount: 0 };
+  const list = Array.isArray(wrapper.list) ? wrapper.list : null;
+  if (!list) return { images: [], nextPage: null, totalCount: 0 };
+  const images = list.filter(isRecord).map(normalizeImage);
+  const paging = extractPaging(wrapper);
+  return { images, nextPage: paging.nextPage, totalCount: paging.totalCount || images.length };
+}
+
+// --- Custom audiences ---
+
+export type NormalizedAudience = {
+  id: string;
+  provider: "tiktok-ads";
+  name: string;
+  coverNum: number;
+  status: string;
+  audienceType: string;
+  createdTime: string;
+  raw: Record<string, unknown>;
+};
+
+export function normalizeAudience(data: Record<string, unknown>): NormalizedAudience {
+  return {
+    id: `tt-audience:${coerceId(data.audience_id ?? data.id)}`,
+    provider: "tiktok-ads",
+    name: prop(data, "name"),
+    coverNum: propNum(data, "cover_num"),
+    status: prop(data, "status"),
+    audienceType: prop(data, "audience_type"),
+    createdTime: prop(data, "create_time"),
+    raw: data,
+  };
+}
+
+export function parseCustomAudiencesResponse(response: unknown): {
+  audiences: NormalizedAudience[];
+  nextPage: number | null;
+  totalCount: number;
+} {
+  const wrapper = extractTikTokData(response);
+  if (!wrapper) return { audiences: [], nextPage: null, totalCount: 0 };
+  const list = Array.isArray(wrapper.list) ? wrapper.list : null;
+  if (!list) return { audiences: [], nextPage: null, totalCount: 0 };
+  const audiences = list.filter(isRecord).map(normalizeAudience);
+  const paging = extractPaging(wrapper);
+  return { audiences, nextPage: paging.nextPage, totalCount: paging.totalCount || audiences.length };
+}
+
+export function parseMutateId(response: unknown, field: string): string {
+  const wrapper = extractTikTokData(response);
+  if (!wrapper) return "";
+  return coerceId(wrapper[field]);
+}
+
+export function parseMutateIds(response: unknown, field: string): string[] {
+  const wrapper = extractTikTokData(response);
+  if (!wrapper) return [];
+  const value = wrapper[field];
+  if (Array.isArray(value)) return value.map(coerceId).filter(Boolean);
+  const single = coerceId(value);
+  return single ? [single] : [];
+}
+
 // ---------------------------------------------------------------------------
 // TikTok API response shape: { code: 0, message: "OK", data: { list: [...], page_info: { ... } } }
 // ---------------------------------------------------------------------------
@@ -298,6 +475,7 @@ export function parseAnalyticsResponse(response: unknown): { rows: NormalizedAna
 type TikTokDataWrapper = {
   list?: unknown[];
   pixels?: unknown[];
+  identity_list?: unknown[];
   page_info?: Record<string, unknown>;
   [key: string]: unknown;
 };
