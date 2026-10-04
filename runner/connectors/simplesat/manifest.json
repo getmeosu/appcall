@@ -1,1 +1,1209 @@
-{"auth":{"scopes":[],"setup":{"fields":[{"key":"apiKey","label":"Simplesat API key","required":true,"secret":true}],"mode":"api_key"},"type":"api_key"},"categories":["forms"],"evidence":{"fixture":{"status":"supplied"},"live":{"status":"unverified"}},"http":{"auth":{"field":"apiKey","in":"header","name":"X-Simplesat-Token","value":"{{apiKey}}"},"baseUrl":"https://api.simplesat.io","errors":{"defaultRetryAfterSeconds":30,"messagePaths":["detail","message","error"],"rateLimitStatuses":[429],"retryAfterHeader":"retry-after"},"headers":{"Accept":"application/json"}},"key":"simplesat","models":["survey","question","customer"],"name":"Simplesat","network":{"allowedHosts":["api.simplesat.io"]},"operations":{"customers.get":{"description":"Get a single Simplesat customer by ID.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"customerId":{"minLength":1,"type":"string"}},"required":["customerId"],"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v1/customers/{{customerId}}","success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"Get customer","validationMode":"strict-generated"},"customers.list":{"description":"List Simplesat customers with optional date and subscription filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"createdAfter":{"minLength":1,"type":"string"},"createdBefore":{"minLength":1,"type":"string"},"modifiedAfter":{"minLength":1,"type":"string"},"modifiedBefore":{"minLength":1,"type":"string"},"page":{"minimum":1,"type":"integer"},"pageSize":{"maximum":250,"minimum":1,"type":"integer"},"subscribed":{"type":"boolean"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v1/customers","query":{"created_after":"{{createdAfter}}","created_before":"{{createdBefore}}","modified_after":"{{modifiedAfter}}","modified_before":"{{modifiedBefore}}","page":"{{page}}","page_size":"{{pageSize}}","subscribed":"{{subscribed}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List customers","validationMode":"strict-generated"},"healthcheck":{"description":"Validate the Simplesat API key with GET /api/v1/surveys?page_size=1.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{},"type":"object"},"kind":"action","maxInputBytes":4096,"maxResponseBytes":65536,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v1/surveys","query":{"page_size":"1"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":5000,"title":"Healthcheck","validationMode":"strict-generated"},"questions.list":{"description":"List Simplesat questions with optional survey and metric filters.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"metric":{"minLength":1,"type":"string"},"page":{"minimum":1,"type":"integer"},"pageSize":{"maximum":100,"minimum":1,"type":"integer"},"surveyId":{"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v1/questions","query":{"metric":"{{metric}}","page":"{{page}}","page_size":"{{pageSize}}","survey_id":"{{surveyId}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List questions","validationMode":"strict-generated"},"surveys.list":{"description":"List Simplesat surveys with caller-controlled pagination.","enforceOutputSchema":true,"inputSchema":{"additionalProperties":false,"properties":{"page":{"minimum":1,"type":"integer"},"pageSize":{"maximum":100,"minimum":1,"type":"integer"}},"type":"object"},"kind":"action","maxInputBytes":65536,"maxResponseBytes":5242880,"outputSchema":{"additionalProperties":false,"properties":{"data":{"type":"object"}},"required":["data"],"type":"object"},"request":{"method":"GET","path":"/api/v1/surveys","query":{"page":"{{page}}","page_size":"{{pageSize}}"},"success":[200]},"responseFormat":"json","sideEffect":"read","timeoutMs":15000,"title":"List surveys","validationMode":"strict-generated"}},"provenance":{"source":{"revision":"33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a","url":"https://github.com/oomol-lab/open-connector"}},"runtime":"bun","version":"0.1.0","visibility":"public"}
+{
+  "key": "simplesat",
+  "name": "Simplesat",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "forms"
+  ],
+  "auth": {
+    "type": "api_key",
+    "scopes": [],
+    "setup": {
+      "mode": "api_key",
+      "fields": [
+        {
+          "key": "apiKey",
+          "label": "Simplesat API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "api.simplesat.io"
+    ]
+  },
+  "models": [
+    "survey",
+    "question",
+    "customer",
+    "response",
+    "answer",
+    "teamMember"
+  ],
+  "http": {
+    "baseUrl": "https://api.simplesat.io",
+    "auth": {
+      "field": "apiKey",
+      "in": "header",
+      "name": "X-Simplesat-Token",
+      "value": "{{apiKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 30,
+      "messagePaths": [
+        "detail",
+        "message",
+        "error"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Healthcheck",
+      "description": "Validate the Simplesat API key with GET /api/v1/surveys?page_size=1.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/surveys",
+        "query": {
+          "page_size": "1"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List surveys",
+      "description": "List Simplesat surveys with caller-controlled pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/surveys",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get survey",
+      "description": "Get one Simplesat survey by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Survey id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/surveys/{{surveyId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "surveys.email": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Send survey email",
+      "description": "Send a Simplesat survey by email using the survey token.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Survey token."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recipient email."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Recipient name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyToken",
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/surveys/{{surveyToken}}/email",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "questions.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List questions",
+      "description": "List Simplesat questions with optional survey and metric filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "surveyId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "metric": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/questions",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}",
+          "survey_id": "{{surveyId}}",
+          "metric": "{{metric}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "questions.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get question",
+      "description": "Get one Simplesat question by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Question id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "questionId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/questions/{{questionId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.search": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Search responses",
+      "description": "Search Simplesat responses with optional survey and pagination filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Survey id filter."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/responses/search",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "survey_id": "{{surveyId}}",
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get response",
+      "description": "Get one Simplesat response by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "responseId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Response id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "responseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/responses/{{responseId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create or update response",
+      "description": "Create or update a Simplesat response.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Survey id."
+          },
+          "customerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Customer id."
+          },
+          "metric": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Metric such as csat or nps."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "surveyId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/responses",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "survey_id": "{{surveyId}}",
+          "customer_id": "{{customerId}}",
+          "metric": "{{metric}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "responses.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update response",
+      "description": "Update a Simplesat response by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "responseId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Response id."
+          },
+          "metric": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated metric."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "responseId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/responses/{{responseId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "metric": "{{metric}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "answers.search": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Search answers",
+      "description": "Search Simplesat answers. Prefer this over the deprecated list answers endpoint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "surveyId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Survey id filter."
+          },
+          "questionId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Question id filter."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number."
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Page size."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/answers/search",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "survey_id": "{{surveyId}}",
+          "question_id": "{{questionId}}",
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "answers.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get answer",
+      "description": "Get one Simplesat answer by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "answerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Answer id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "answerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/answers/{{answerId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "answers.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update answer",
+      "description": "Update a Simplesat answer by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "answerId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Answer id."
+          },
+          "comment": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated comment text."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "answerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/answers/{{answerId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "comment": "{{comment}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.list": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "List customers",
+      "description": "List Simplesat customers with optional date and subscription filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 250
+          },
+          "createdAfter": {
+            "type": "string",
+            "minLength": 1
+          },
+          "createdBefore": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modifiedAfter": {
+            "type": "string",
+            "minLength": 1
+          },
+          "modifiedBefore": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subscribed": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/customers",
+        "query": {
+          "page": "{{page}}",
+          "page_size": "{{pageSize}}",
+          "created_after": "{{createdAfter}}",
+          "created_before": "{{createdBefore}}",
+          "modified_after": "{{modifiedAfter}}",
+          "modified_before": "{{modifiedBefore}}",
+          "subscribed": "{{subscribed}}"
+        },
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get customer",
+      "description": "Get a single Simplesat customer by ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "customerId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/customers/{{customerId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create or update customer",
+      "description": "Create or update a Simplesat customer keyed by email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer email."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer name."
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Company name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/customers",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "name": "{{name}}",
+          "company": "{{company}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.update": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Update customer",
+      "description": "Update a Simplesat customer by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Customer id."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated name."
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Updated company."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customerId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/api/v1/customers/{{customerId}}",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "name": "{{name}}",
+          "company": "{{company}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "customers.bulkUpsert": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Bulk upsert customers",
+      "description": "Create or update many Simplesat customers in one request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customers": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Customer records to upsert.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "customers"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/customers/bulk",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "customers": "{{customers}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teamMembers.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get team member",
+      "description": "Get one Simplesat team member by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "teamMemberId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Team member id."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "teamMemberId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/team-members/{{teamMemberId}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "teamMembers.create": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "kind": "action",
+      "sideEffect": "write",
+      "title": "Create or update team member",
+      "description": "Create or update a Simplesat team member.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team member email."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Team member name."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "email"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/team-members",
+        "success": [
+          200,
+          201
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "{{email}}",
+          "name": "{{name}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "webhook.answer_created": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Answer created",
+      "description": "Simplesat webhook for a new survey answer. Maps the Zapier instant New Feedback trigger."
+    },
+    "webhook.feedback_received": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 5242880,
+      "title": "Feedback received",
+      "description": "Simplesat webhook when CSAT or NPS feedback is received."
+    }
+  },
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "evidence": {
+    "fixture": {
+      "status": "supplied"
+    },
+    "live": {
+      "status": "unverified"
+    }
+  }
+}
