@@ -1,7 +1,17 @@
 {
+  "key": "ambient-weather",
+  "name": "Ambient Weather",
+  "version": "0.2.0",
+  "runtime": "bun",
+  "visibility": "public",
+  "categories": [
+    "utility"
+  ],
   "auth": {
+    "type": "api_key",
     "scopes": [],
     "setup": {
+      "mode": "api_key",
       "fields": [
         {
           "key": "apiKey",
@@ -15,14 +25,896 @@
           "required": true,
           "secret": true
         }
-      ],
-      "mode": "api_key"
-    },
-    "type": "api_key"
+      ]
+    }
   },
-  "categories": [
-    "utility"
+  "provenance": {
+    "source": {
+      "url": "https://github.com/oomol-lab/open-connector",
+      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a"
+    }
+  },
+  "network": {
+    "allowedHosts": [
+      "rt.ambientweather.net",
+      "lightning.ambientweather.net"
+    ]
+  },
+  "models": [
+    "device",
+    "observation",
+    "station"
   ],
+  "http": {
+    "baseUrl": "https://rt.ambientweather.net",
+    "auth": {
+      "field": "apiKey",
+      "in": "query",
+      "name": "apiKey",
+      "value": "{{apiKey}}"
+    },
+    "query": {
+      "applicationKey": "{{applicationKey}}"
+    },
+    "headers": {
+      "Accept": "application/json"
+    },
+    "errors": {
+      "rateLimitStatuses": [
+        429
+      ],
+      "retryAfterHeader": "retry-after",
+      "defaultRetryAfterSeconds": 1,
+      "messagePaths": [
+        "message",
+        "error",
+        "description"
+      ]
+    }
+  },
+  "operations": {
+    "healthcheck": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 5000,
+      "maxInputBytes": 4096,
+      "maxResponseBytes": 65536,
+      "title": "Healthcheck",
+      "description": "Validate Ambient Weather keys by listing the caller's devices.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "devices.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "List devices",
+      "description": "List Ambient Weather devices linked to the API key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "devices.latest": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Latest device data",
+      "description": "Fetch the latest observation records for one Ambient Weather device.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "devices.history": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Device history",
+      "description": "Fetch historical observation records for one Ambient Weather device.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 288
+          },
+          "endDate": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": "{{limit}}",
+          "endDate": "{{endDate}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "stations.nearby": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Nearby public stations",
+      "description": "List public Ambient Weather stations inside a geographic bounding box via the dashboard devices API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "westLng": {
+            "type": "number",
+            "description": "Western longitude of the bounding box."
+          },
+          "southLat": {
+            "type": "number",
+            "description": "Southern latitude of the bounding box."
+          },
+          "eastLng": {
+            "type": "number",
+            "description": "Eastern longitude of the bounding box."
+          },
+          "northLat": {
+            "type": "number",
+            "description": "Northern latitude of the bounding box."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum stations to return.",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "westLng",
+          "southLat",
+          "eastLng",
+          "northLat"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/devices",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://lightning.ambientweather.net",
+        "query": {
+          "$publicBox[0][0]": "{{westLng}}",
+          "$publicBox[0][1]": "{{southLat}}",
+          "$publicBox[1][0]": "{{eastLng}}",
+          "$publicBox[1][1]": "{{northLat}}",
+          "$limit": "{{limit}}"
+        }
+      }
+    },
+    "stations.get": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Get public station",
+      "description": "Get one public Ambient Weather station by MAC address from the dashboard devices API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "baseUrl": "https://lightning.ambientweather.net"
+      }
+    },
+    "observations.outdoor": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Outdoor observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes outdoor temperature and humidity.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "observations.indoor": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Indoor observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes indoor temperature and humidity.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "observations.wind": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Wind observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes wind speed, gust, and direction.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "observations.rain": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Rain observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes hourly, daily, and event rainfall.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "observations.barometer": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Barometer observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes relative and absolute pressure.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "observations.solar": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Solar observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes solar radiation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "observations.uv": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "UV observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes UV index.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "observations.lightning": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Lightning observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes lightning count and distance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "observations.aqi": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Air quality observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes PM2.5 and AQI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "observations.battery": {
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "kind": "action",
+      "sideEffect": "read",
+      "title": "Battery observation",
+      "description": "Fetch the latest Ambient Weather observation for one station via GET /v1/devices/{macAddress}?limit=1. The payload includes battery status flags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "macAddress": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Weather station MAC address."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "macAddress"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "enforceOutputSchema": true,
+      "responseFormat": "json",
+      "validationMode": "strict-generated",
+      "request": {
+        "method": "GET",
+        "path": "/v1/devices/{{macAddress}}",
+        "success": [
+          200
+        ],
+        "query": {
+          "limit": 1
+        }
+      }
+    },
+    "webhook.data": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Realtime data",
+      "description": "Ambient Weather realtime Socket.io data event. Fires when a subscribed station publishes a new observation."
+    },
+    "webhook.subscribed": {
+      "kind": "webhook",
+      "sideEffect": "read",
+      "timeoutMs": 30000,
+      "maxInputBytes": 1048576,
+      "maxResponseBytes": 1048576,
+      "title": "Realtime subscribed",
+      "description": "Ambient Weather realtime Socket.io subscribed event. Fires when the client is subscribed to one or more apiKeys."
+    }
+  },
   "evidence": {
     "fixture": {
       "status": "supplied"
@@ -30,242 +922,5 @@
     "live": {
       "status": "unverified"
     }
-  },
-  "http": {
-    "auth": {
-      "field": "apiKey",
-      "in": "query",
-      "name": "apiKey",
-      "value": "{{apiKey}}"
-    },
-    "baseUrl": "https://rt.ambientweather.net",
-    "errors": {
-      "defaultRetryAfterSeconds": 1,
-      "messagePaths": [
-        "message",
-        "error",
-        "description"
-      ],
-      "rateLimitStatuses": [
-        429
-      ],
-      "retryAfterHeader": "retry-after"
-    },
-    "headers": {
-      "Accept": "application/json"
-    },
-    "query": {
-      "applicationKey": "{{applicationKey}}"
-    }
-  },
-  "key": "ambient-weather",
-  "models": [
-    "device",
-    "observation"
-  ],
-  "name": "Ambient Weather",
-  "network": {
-    "allowedHosts": [
-      "rt.ambientweather.net"
-    ]
-  },
-  "operations": {
-    "devices.history": {
-      "description": "Fetch historical observation records for one Ambient Weather device.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "endDate": {
-            "minLength": 1,
-            "type": "string"
-          },
-          "limit": {
-            "maximum": 288,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "macAddress": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "macAddress"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/devices/{{macAddress}}",
-        "query": {
-          "endDate": "{{endDate}}",
-          "limit": "{{limit}}"
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Device history",
-      "validationMode": "strict-generated"
-    },
-    "devices.latest": {
-      "description": "Fetch the latest observation records for one Ambient Weather device.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "macAddress": {
-            "minLength": 1,
-            "type": "string"
-          }
-        },
-        "required": [
-          "macAddress"
-        ],
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/devices/{{macAddress}}",
-        "query": {
-          "limit": 1
-        },
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "Latest device data",
-      "validationMode": "strict-generated"
-    },
-    "devices.list": {
-      "description": "List Ambient Weather devices linked to the API key.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 65536,
-      "maxResponseBytes": 1048576,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/devices",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 15000,
-      "title": "List devices",
-      "validationMode": "strict-generated"
-    },
-    "healthcheck": {
-      "description": "Validate Ambient Weather keys by listing the caller's devices.",
-      "enforceOutputSchema": true,
-      "inputSchema": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "kind": "action",
-      "maxInputBytes": 4096,
-      "maxResponseBytes": 65536,
-      "outputSchema": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "type": [
-              "array",
-              "object"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "request": {
-        "method": "GET",
-        "path": "/v1/devices",
-        "success": [
-          200
-        ]
-      },
-      "responseFormat": "json",
-      "sideEffect": "read",
-      "timeoutMs": 5000,
-      "title": "Healthcheck",
-      "validationMode": "strict-generated"
-    }
-  },
-  "provenance": {
-    "source": {
-      "revision": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
-      "url": "https://github.com/oomol-lab/open-connector"
-    }
-  },
-  "runtime": "bun",
-  "version": "0.1.0",
-  "visibility": "public"
+  }
 }
