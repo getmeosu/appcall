@@ -393,6 +393,15 @@ import {
   validateGetLicenseInput,
   validateGetZenInput,
 } from "./card14_reads";
+import {
+  createGistWritesClient,
+  validateCreateGistCommentInput,
+  validateUpdateGistCommentInput,
+  validateDeleteGistCommentInput,
+  validateForkGistInput,
+  validateStarGistInput,
+  validateUnstarGistInput,
+} from "./card_gist_writes";
 
 
 
@@ -6097,6 +6106,77 @@ export function getGitignoreTemplate(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
+}
+
+// ─── gist comment / fork / star writes ───────────────────────────────────────
+
+function liveGistWritesClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createGistWritesClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function createGistComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGistWritesClient(input, "gists.comments.create").createComment(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.comments.create", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "gists.comments.create", source: "connector", validated: validateCreateGistCommentInput(input) };
+}
+
+export function updateGistComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGistWritesClient(input, "gists.comments.update").updateComment(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.comments.update", source: "connector", comment: result.comment };
+    });
+  }
+  return { connector: "github", action: "gists.comments.update", source: "connector", validated: validateUpdateGistCommentInput(input) };
+}
+
+export function deleteGistComment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGistWritesClient(input, "gists.comments.delete").deleteComment(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.comments.delete", source: "connector", deleted: result.deleted, gistId: result.gistId, commentId: result.commentId };
+    });
+  }
+  return { connector: "github", action: "gists.comments.delete", source: "connector", validated: validateDeleteGistCommentInput(input) };
+}
+
+export function forkGist(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGistWritesClient(input, "gists.fork").fork(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.fork", source: "connector", gist: result.gist };
+    });
+  }
+  return { connector: "github", action: "gists.fork", source: "connector", validated: validateForkGistInput(input) };
+}
+
+export function starGist(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGistWritesClient(input, "gists.star").star(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.star", source: "connector", starred: result.starred, gistId: result.gistId };
+    });
+  }
+  return { connector: "github", action: "gists.star", source: "connector", validated: validateStarGistInput(input) };
+}
+
+export function unstarGist(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveGistWritesClient(input, "gists.unstar").unstar(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "gists.unstar", source: "connector", starred: result.starred, gistId: result.gistId };
+    });
+  }
+  return { connector: "github", action: "gists.unstar", source: "connector", validated: validateUnstarGistInput(input) };
 }
 
 
