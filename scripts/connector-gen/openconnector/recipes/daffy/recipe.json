@@ -89,7 +89,18 @@
       "users.me",
       "users.get",
       "balance.get",
-      "donations.list"
+      "donations.list",
+      "donations.list_for_user",
+      "donations.get",
+      "donations.create",
+      "donations.cancel",
+      "nonprofits.get",
+      "nonprofits.search",
+      "contributions.list",
+      "gifts.list",
+      "gifts.get",
+      "gifts.create",
+      "causes.list"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -238,12 +249,166 @@
         "Optional page maps to the documented page query. Returns raw {items, meta} JSON under data instead of the upstream {meta, donations} wrapper.",
         "Creates and other-user donation fanout are omitted."
       ]
+    },
+    "donations.list_for_user": {
+      "upstreamActionId": "list_donations",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/donations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/users/:user_id/donations."
+      ]
+    },
+    "donations.get": {
+      "upstreamActionId": "list_donations",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/donations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/users/:user_id/donations/:donation_id."
+      ]
+    },
+    "donations.create": {
+      "upstreamActionId": "list_donations",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/donations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v1/donations. Minimum amount is $10 USD."
+      ]
+    },
+    "donations.cancel": {
+      "upstreamActionId": "list_donations",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/donations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official DELETE /v1/donations/:donation_id. Response body is an empty object."
+      ]
+    },
+    "nonprofits.get": {
+      "upstreamActionId": "get_user",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/non_profits"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/non_profits/:ein."
+      ]
+    },
+    "nonprofits.search": {
+      "upstreamActionId": "get_user",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/non_profits"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/non_profits with query and cause_id."
+      ]
+    },
+    "contributions.list": {
+      "upstreamActionId": "get_balance",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/contributions"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/contributions. Contributions are private to the API key owner."
+      ]
+    },
+    "gifts.list": {
+      "upstreamActionId": "list_donations",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/gifts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/gifts."
+      ]
+    },
+    "gifts.get": {
+      "upstreamActionId": "list_donations",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/gifts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/gifts/:code."
+      ]
+    },
+    "gifts.create": {
+      "upstreamActionId": "list_donations",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/gifts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official POST /v1/gifts. Minimum amount is $18."
+      ]
+    },
+    "causes.list": {
+      "upstreamActionId": "get_user",
+      "sourceRefs": [
+        "request-auth",
+        "api-base"
+      ],
+      "documentationUrls": [
+        "https://docs.daffy.org/ref/causes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "Official GET /v1/users/:user_id/causes returns a JSON array."
+      ]
     }
   },
   "manifest": {
     "key": "daffy",
     "name": "Daffy",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -278,7 +443,11 @@
     "models": [
       "user",
       "balance",
-      "donation"
+      "donation",
+      "nonprofit",
+      "gift",
+      "contribution",
+      "cause"
     ],
     "http": {
       "baseUrl": "https://public.daffy.org/v1",
@@ -493,6 +662,573 @@
           "query": {
             "page": "{{page}}"
           },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "donations.list_for_user": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List user donations",
+        "description": "List public donations for a Daffy user.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User ID."
+            },
+            "page": {
+              "type": "integer",
+              "description": "Page number.",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "userId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/users/{{userId}}/donations",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "donations.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get donation",
+        "description": "Get one Daffy donation by user ID and donation ID.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User ID."
+            },
+            "donationId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Donation ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "userId",
+            "donationId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/users/{{userId}}/donations/{{donationId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "donations.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create donation",
+        "description": "Create a Daffy donation of at least $10 USD to a nonprofit EIN.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "amount": {
+              "type": "number",
+              "description": "Donation amount in USD. Minimum 10.",
+              "minimum": 10
+            },
+            "ein": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Nonprofit EIN."
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Public donation note."
+            },
+            "private_memo": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Private memo, not shown publicly."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "amount",
+            "ein"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/donations",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "amount": "{{amount}}",
+            "ein": "{{ein}}",
+            "note": "{{note}}",
+            "private_memo": "{{private_memo}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "donations.cancel": {
+        "kind": "action",
+        "sideEffect": "destructive",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Cancel donation",
+        "description": "Cancel a Daffy donation that has not already been accepted or rejected.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "donationId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Donation ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "donationId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/donations/{{donationId}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "nonprofits.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get nonprofit",
+        "description": "Get a Daffy nonprofit by EIN.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ein": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Nonprofit EIN."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "ein"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/non_profits/{{ein}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "nonprofits.search": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Search nonprofits",
+        "description": "Search Daffy nonprofits by cause and query text.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search text."
+            },
+            "cause_id": {
+              "type": "integer",
+              "description": "Cause ID.",
+              "minimum": 1
+            },
+            "page": {
+              "type": "integer",
+              "description": "Page number.",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/non_profits",
+          "success": [
+            200
+          ],
+          "query": {
+            "query": "{{query}}",
+            "cause_id": "{{cause_id}}",
+            "page": "{{page}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contributions.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List contributions",
+        "description": "List private contributions to the Daffy fund associated with the API key.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "Page number.",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contributions",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "gifts.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List gifts",
+        "description": "List Daffy gifts given by the API key owner.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "description": "Page number.",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/gifts",
+          "success": [
+            200
+          ],
+          "query": {
+            "page": "{{page}}"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "gifts.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get gift",
+        "description": "Get a Daffy gift by code.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Gift code."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "code"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/gifts/{{code}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "gifts.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create gift",
+        "description": "Create a Daffy gift of at least $18 for a beneficiary.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Beneficiary name."
+            },
+            "amount": {
+              "type": "number",
+              "description": "Gift amount in USD. Minimum 18.",
+              "minimum": 18
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional gift message."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "amount"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/gifts",
+          "success": [
+            200,
+            201
+          ],
+          "body": {
+            "name": "{{name}}",
+            "amount": "{{amount}}",
+            "message": "{{message}}"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "causes.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List user causes",
+        "description": "List causes a Daffy user supports.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User ID."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "userId"
+          ]
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "array"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/users/{{userId}}/causes",
           "success": [
             200
           ]
