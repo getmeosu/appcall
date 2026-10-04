@@ -405,6 +405,14 @@ import {
   validateGetLicenseInput,
   validateGetZenInput,
 } from "./card14_reads";
+import {
+  createCard15ReadsClient,
+  validateGetEmojisInput,
+  validateGetFeedsInput,
+  validateGetMetaInput,
+  validateListMetaVersionsInput,
+  validateGetOctocatInput,
+} from "./card15_reads";
 
 
 
@@ -6120,6 +6128,67 @@ export function getGitignoreTemplate(input: unknown): Record<string, unknown> | 
     });
   }
   return { connector: "github", action: "gitignore.templates.get", source: "connector", validated: validateGetGitignoreTemplateInput(input) };
+}
+
+// ─── card15-reads: emojis, feeds, and meta ───────────────────────────────────
+
+function liveCard15ReadsClient(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCard15ReadsClient({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function getEmojis(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard15ReadsClient(input, "emojis.get").getEmojis(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "emojis.get", source: "connector", emojis: result.emojis };
+    });
+  }
+  return { connector: "github", action: "emojis.get", source: "connector", validated: validateGetEmojisInput(input) };
+}
+
+export function getFeeds(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard15ReadsClient(input, "feeds.get").getFeeds(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "feeds.get", source: "connector", feeds: result.feeds };
+    });
+  }
+  return { connector: "github", action: "feeds.get", source: "connector", validated: validateGetFeedsInput(input) };
+}
+
+export function getMeta(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard15ReadsClient(input, "meta.get").getMeta(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "meta.get", source: "connector", meta: result.meta };
+    });
+  }
+  return { connector: "github", action: "meta.get", source: "connector", validated: validateGetMetaInput(input) };
+}
+
+export function listMetaVersions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard15ReadsClient(input, "meta.versions.list").listMetaVersions(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "meta.versions.list", source: "connector", versions: result.versions };
+    });
+  }
+  return { connector: "github", action: "meta.versions.list", source: "connector", validated: validateListMetaVersionsInput(input) };
+}
+
+export function getOctocat(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCard15ReadsClient(input, "meta.octocat.get").getOctocat(input).then((result) => {
+      if (!result.ok) throwVariable(result);
+      return { connector: "github", action: "meta.octocat.get", source: "connector", octocat: result.octocat };
+    });
+  }
+  return { connector: "github", action: "meta.octocat.get", source: "connector", validated: validateGetOctocatInput(input) };
 }
 
 export function getRepoPagesBuild(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
