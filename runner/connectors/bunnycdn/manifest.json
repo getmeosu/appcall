@@ -1,7 +1,7 @@
 {
   "key": "bunnycdn",
   "name": "BunnyCDN",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "runtime": "bun",
   "visibility": "public",
   "categories": [
@@ -29,7 +29,9 @@
   },
   "models": [
     "pullZone",
-    "storageZone"
+    "storageZone",
+    "dnsZone",
+    "videoLibrary"
   ],
   "http": {
     "baseUrl": "https://api.bunny.net",
@@ -316,6 +318,818 @@
       "redactResponseKeys": [
         "Password"
       ]
+    },
+    "storagezones.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Storage Zone",
+      "description": "Retrieve one BunnyCDN storage zone by ID. Password and ReadOnlyPassword are omitted from the result.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storagezone/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "redactResponseKeys": [
+        "Password",
+        "ReadOnlyPassword"
+      ]
+    },
+    "dnszones.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List DNS Zones",
+      "description": "List BunnyCDN DNS zones with bounded pagination.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 100
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dnszone",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "perPage": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dnszones.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get DNS Zone",
+      "description": "Retrieve one BunnyCDN DNS zone by ID.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dnszone/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "statistics.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Statistics",
+      "description": "Retrieve BunnyCDN account statistics for an optional date range.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "dateFrom": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dateTo": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/statistics",
+        "success": [
+          200
+        ],
+        "query": {
+          "dateFrom": "{{dateFrom}}",
+          "dateTo": "{{dateTo}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "purge.url": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Purge URL",
+      "description": "Purge one URL from the BunnyCDN cache via POST /purge?url=. Double-purge is safe (EffectPolicy Idempotent).",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "purged"
+        ],
+        "properties": {
+          "purged": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/purge",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          200,
+          204
+        ],
+        "query": {
+          "url": "{{url}}"
+        },
+        "result": {
+          "purged": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "effectPolicy": "Idempotent"
+    },
+    "countries.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Countries",
+      "description": "List BunnyCDN country codes available for pull-zone geo rules.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/country",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "regions.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Regions",
+      "description": "List BunnyCDN storage regions.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/region",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videolibraries.list": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "List Video Libraries",
+      "description": "List Bunny Stream video libraries with bounded pagination.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "perPage": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 100
+          }
+        },
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/videolibrary",
+        "success": [
+          200
+        ],
+        "query": {
+          "page": "{{page}}",
+          "perPage": "{{perPage}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "videolibraries.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Video Library",
+      "description": "Retrieve one Bunny Stream video library by ID.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/videolibrary/{{id}}",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "storagezones.statistics": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Storage Zone Statistics",
+      "description": "Retrieve bandwidth and storage statistics for one BunnyCDN storage zone.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/storagezone/{{id}}/statistics",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dnszones.statistics": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get DNS Zone Statistics",
+      "description": "Retrieve query statistics for one BunnyCDN DNS zone.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/dnszone/{{id}}/statistics",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "billing.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Billing",
+      "description": "Retrieve BunnyCDN billing summary for the authenticated account.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/billing",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "user.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get User",
+      "description": "Retrieve the authenticated BunnyCDN user profile.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/user",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "search": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Search",
+      "description": "Search BunnyCDN pull zones, storage zones, and DNS zones by name.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "search": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "search"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/search",
+        "success": [
+          200
+        ],
+        "query": {
+          "search": "{{search}}"
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "pullzones.addHostname": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 1048576,
+      "title": "Add Pull Zone Hostname",
+      "description": "Add a custom hostname to a BunnyCDN pull zone via POST /pullzone/{id}/addHostname.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "hostname": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "hostname"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "added"
+        ],
+        "properties": {
+          "added": {
+            "type": "boolean"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "path": "/pullzone/{{id}}/addHostname",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "success": [
+          204
+        ],
+        "body": {
+          "Hostname": "{{hostname}}"
+        },
+        "result": {
+          "added": true
+        }
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json",
+      "effectPolicy": "Idempotent"
+    },
+    "pricing.get": {
+      "kind": "action",
+      "sideEffect": "read",
+      "timeoutMs": 10000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Get Pricing",
+      "description": "Retrieve BunnyCDN public pricing for the authenticated account.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {},
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "GET",
+        "path": "/pricing",
+        "success": [
+          200
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
+    },
+    "dnszones.add": {
+      "kind": "action",
+      "sideEffect": "write",
+      "timeoutMs": 15000,
+      "maxInputBytes": 65536,
+      "maxResponseBytes": 5242880,
+      "title": "Add DNS Zone",
+      "description": "Create a BunnyCDN DNS zone via POST /dnszone.",
+      "inputSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "domain"
+        ],
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "object"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "request": {
+        "method": "POST",
+        "path": "/dnszone",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "Domain": "{{domain}}"
+        },
+        "success": [
+          200,
+          201
+        ]
+      },
+      "enforceOutputSchema": true,
+      "validationMode": "strict-generated",
+      "responseFormat": "json"
     }
   },
   "evidence": {
