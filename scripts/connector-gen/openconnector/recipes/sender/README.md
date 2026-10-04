@@ -1,9 +1,7 @@
 # Sender
 
-International Sender API v2 recipe. Create an API access token in Sender **Account settings → API access tokens** and send it as `Authorization: Bearer <token>`.
+International Sender API v2 recipe at version 0.2.0. Create an API access token in Sender **Account settings → API access tokens** and send it as `Authorization: Bearer <token>`.
 
-Operations are bounded reads: `healthcheck` (`GET /groups?limit=1`), `groups.list`, `groups.get`, `subscribers.list`, and `campaigns.list`. Caller-controlled `page`, `limit`, and campaign `status` are never used to follow provider pagination links. Subscriber, group, field, and campaign writes are omitted.
+HTTP operations cover groups, subscribers, campaigns, fields, segments, and workflows, including list/get/create/update/delete on the primary resources. EventOnly webhooks map subscribers/new, subscribers/updated, subscribers/unsubscribed, groups/new, campaigns/new, and bounces/new. Successful HTTP responses are raw provider JSON under AppCall `data`. Fixtures omit Sender's success `message` string so `bodyErrorPaths: ["message"]` does not invert HTTP 200 writes.
 
-Official help copy asks for `Content-Type: application/json` on GET; native GET reads omit `Content-Type` because the pinned executor only sets it when a body is present. HTTP 200 bodies with a non-empty `message` are treated as errors because native `bodyErrorPaths` cannot invert Sender's `success` boolean.
-
-Pinned source: `oomol-lab/open-connector@33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache-2.0). Fixtures are supplied; live authentication is unverified.
+Pinned source: `oomol-lab/open-connector@33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a` (Apache-2.0). Fixtures use `fixture-api-token` only; live authentication is unverified.
