@@ -9,6 +9,7 @@ describe("github connector manifest", () => {
     expect(manifest.auth.scopes).toContain("repo");
     expect(manifest.auth.scopes).toContain("read:org");
     expect(manifest.auth.scopes).toContain("admin:repo_hook");
+    expect(manifest.auth.scopes).toContain("admin:org_hook");
     expect(manifest.auth.scopes).toContain("notifications");
     expect(manifest.auth.scopes).toContain("admin:org");
   });
