@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, beforeEach } from "bun:test";
 import {
   executeJobsListSync,
   executeJobsGetSync,
@@ -12,6 +12,7 @@ import {
   executeInterviewsListSync,
   executeJobInterviewStagesListSync,
 } from "../src/sync";
+import { clearGreenhouseTokenCache } from "../src/http";
 import candidatesFixture from "../fixtures/candidates_list.json";
 import candidateGetFixture from "../fixtures/candidate_get.json";
 import applicationsFixture from "../fixtures/applications_list.json";
@@ -22,11 +23,30 @@ import jobGetFixture from "../fixtures/job_get.json";
 import interviewsFixture from "../fixtures/interviews_list.json";
 import stagesFixture from "../fixtures/job_interview_stages_list.json";
 
+
+const TEST_ACCESS_TOKEN = "test-access-token";
+const TOKEN_JSON = JSON.stringify({
+  access_token: TEST_ACCESS_TOKEN,
+  token_type: "Bearer",
+  expires_in: 3600,
+});
+
+function isTokenUrl(input: string | URL | Request): boolean {
+  return String(input).includes("auth.greenhouse.io/token");
+}
+
 // Every request is served by an injected fetch. No real network.
+// Authenticated Harvest calls mint a Bearer token first.
 function stubFetch(body: string, init: { status?: number; headers?: Record<string, string> } = {}) {
   const calls: Request[] = [];
   const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
     calls.push(new Request(input as string, requestInit));
+    if (isTokenUrl(input)) {
+      return new Response(TOKEN_JSON, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
     return new Response(body, { status: init.status ?? 200, headers: init.headers });
   }) as unknown as typeof fetch;
   return { calls, impl };
@@ -39,7 +59,13 @@ function stubSequence(
   let i = 0;
   const impl = (async (input: string | URL | Request, requestInit?: RequestInit) => {
     calls.push(new Request(input as string, requestInit));
-    const next = responses[Math.min(i, responses.length - 1)];
+    if (isTokenUrl(input)) {
+      return new Response(TOKEN_JSON, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    const next = responses[Math.min(i, responses.length - 1)]!;
     i += 1;
     return new Response(next.body, {
       status: next.status ?? 200,
@@ -49,7 +75,15 @@ function stubSequence(
   return { calls, impl };
 }
 
-const auth = { apiKey: "fixturekey" };
+function harvestCalls(calls: Request[]): Request[] {
+  return calls.filter((c) => c.url.includes("harvest.greenhouse.io"));
+}
+
+const auth = { clientId: "fixture-client", clientSecret: "fixture-secret" };
+
+beforeEach(() => {
+  clearGreenhouseTokenCache();
+});
 
 describe("Greenhouse jobs.list sync", () => {
   test("requests the documented endpoint on the allowed host", async () => {
@@ -104,43 +138,44 @@ describe("Greenhouse jobs.list sync", () => {
 });
 
 describe("Greenhouse candidates.list sync", () => {
-  test("GETs /v3/candidates with Basic auth on harvest host", async () => {
+  test("GETs /v3/candidates with Bearer auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(candidatesFixture));
 
     const result = await executeCandidatesListSync({ ...auth, fetch: impl });
 
-    expect(calls).toHaveLength(1);
-    const url = new URL(calls[0].url);
+    const harvest = harvestCalls(calls);
+    expect(harvest.length).toBeGreaterThanOrEqual(1);
+    const url = new URL(harvest[0]!.url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
     expect(url.pathname).toBe("/v3/candidates");
-    expect(calls[0].method).toBe("GET");
-    expect(calls[0].headers.get("authorization")).toBe(
-      `Basic ${Buffer.from("fixturekey:", "utf8").toString("base64")}`,
+    expect(harvest[0]!.method).toBe("GET");
+    expect(harvest[0]!.headers.get("authorization")).toBe(
+      `Bearer test-access-token`,
     );
     expect(result.candidates).toHaveLength(2);
     expect(result.candidates[0].id).toBe("gh-candidate:53883394");
     expect(result.candidates[0].name).toBe("John Locke");
   });
 
-  test("forwards perPage/page/jobId/email filters", async () => {
+  test("forwards perPage/cursor/jobId/email filters", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(candidatesFixture));
 
     await executeCandidatesListSync({
       ...auth,
       perPage: 50,
-      page: 2,
+      cursor: "cursor-page-2",
       jobId: 107761,
       email: "test@example.com",
       createdAfter: "2017-01-01T00:00:00.000Z",
       fetch: impl,
     });
 
-    const url = new URL(calls[0].url);
+    const url = new URL(harvestCalls(calls)[0]!.url);
     expect(url.searchParams.get("per_page")).toBe("50");
-    expect(url.searchParams.get("page")).toBe("2");
-    expect(url.searchParams.get("job_id")).toBe("107761");
+    expect(url.searchParams.get("cursor")).toBe("cursor-page-2");
+    expect(url.searchParams.get("job_ids")).toBe("107761");
     expect(url.searchParams.get("email")).toBe("test@example.com");
-    expect(url.searchParams.get("created_after")).toBe("2017-01-01T00:00:00.000Z");
+    expect(url.searchParams.get("created_at")).toBe("gte|2017-01-01T00:00:00.000Z");
   });
 
   test("classifies upstream errors", async () => {
@@ -150,49 +185,50 @@ describe("Greenhouse candidates.list sync", () => {
     });
   });
 
-  test("rejects missing apiKey before fetch", async () => {
+  test("rejects missing clientId before fetch", async () => {
     const { calls, impl } = stubFetch("[]");
-    await expect(executeCandidatesListSync({ apiKey: "", fetch: impl })).rejects.toThrow(/apiKey/);
+    await expect(executeCandidatesListSync({ clientId: "", clientSecret: "x", fetch: impl })).rejects.toThrow(/clientId/);
     expect(calls).toHaveLength(0);
   });
 });
 
 describe("Greenhouse applications.list sync", () => {
-  test("GETs /v3/applications with Basic auth on harvest host", async () => {
+  test("GETs /v3/applications with Bearer auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(applicationsFixture));
 
     const result = await executeApplicationsListSync({ ...auth, fetch: impl });
 
-    expect(calls).toHaveLength(1);
-    const url = new URL(calls[0].url);
+    const harvest = harvestCalls(calls);
+    expect(harvest.length).toBeGreaterThanOrEqual(1);
+    const url = new URL(harvest[0]!.url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
     expect(url.pathname).toBe("/v3/applications");
-    expect(calls[0].method).toBe("GET");
+    expect(harvestCalls(calls)[0]!.method).toBe("GET");
     expect(result.applications).toHaveLength(2);
     expect(result.applications[0].id).toBe("gh-application:69306314");
     expect(result.applications[0].status).toBe("active");
     expect(result.applications[1].prospect).toBe(true);
   });
 
-  test("forwards perPage/page/jobId/status filters", async () => {
+  test("forwards perPage/cursor/jobId/status filters", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(applicationsFixture));
 
     await executeApplicationsListSync({
       ...auth,
       perPage: 25,
-      page: 1,
+      cursor: "cursor-1",
       jobId: 107761,
       status: "active",
       lastActivityAfter: "2017-09-01T00:00:00.000Z",
       fetch: impl,
     });
 
-    const url = new URL(calls[0].url);
+    const url = new URL(harvestCalls(calls)[0]!.url);
     expect(url.searchParams.get("per_page")).toBe("25");
-    expect(url.searchParams.get("page")).toBe("1");
-    expect(url.searchParams.get("job_id")).toBe("107761");
+    expect(url.searchParams.get("cursor")).toBe("cursor-1");
+    expect(url.searchParams.get("job_ids")).toBe("107761");
     expect(url.searchParams.get("status")).toBe("active");
-    expect(url.searchParams.get("last_activity_after")).toBe("2017-09-01T00:00:00.000Z");
+    expect(url.searchParams.get("last_activity_at")).toBe("gte|2017-09-01T00:00:00.000Z");
   });
 
   test("classifies upstream errors", async () => {
@@ -204,16 +240,18 @@ describe("Greenhouse applications.list sync", () => {
 });
 
 describe("Greenhouse applications.get sync", () => {
-  test("GETs /v3/applications/{id} with Basic auth", async () => {
+  test("GETs /v3/applications?ids= with Bearer auth", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(applicationGetFixture));
 
     const result = await executeApplicationsGetSync({ ...auth, id: "69306314", fetch: impl });
 
-    expect(calls).toHaveLength(1);
-    const url = new URL(calls[0].url);
+    const harvest = harvestCalls(calls);
+    expect(harvest.length).toBeGreaterThanOrEqual(1);
+    const url = new URL(harvest[0]!.url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
-    expect(url.pathname).toBe("/v3/applications/69306314");
-    expect(calls[0].method).toBe("GET");
+    expect(url.pathname).toBe("/v3/applications");
+    expect(url.searchParams.get("ids")).toBe("69306314");
+    expect(harvestCalls(calls)[0]!.method).toBe("GET");
     expect(result.application?.id).toBe("gh-application:69306314");
     expect(result.application?.stageName).toBe("Application Review");
   });
@@ -241,12 +279,12 @@ describe("Greenhouse applications.move (write; runner owns Reconcile)", () => {
       fetch: impl,
     });
 
-    expect(calls).toHaveLength(1);
-    const moveUrl = new URL(calls[0].url);
+    expect(harvestCalls(calls).length).toBe(1);
+    const moveUrl = new URL(harvestCalls(calls)[0]!.url);
     expect(moveUrl.pathname).toBe("/v3/applications/69306314/move");
-    expect(calls[0].method).toBe("POST");
-    expect(calls[0].headers.get("content-type")).toBe("application/json");
-    const posted = JSON.parse(await calls[0].clone().text());
+    expect(harvestCalls(calls)[0]!.method).toBe("POST");
+    expect(harvestCalls(calls)[0]!.headers.get("content-type")).toBe("application/json");
+    const posted = JSON.parse(await harvestCalls(calls)[0]!.clone().text());
     expect(posted).toEqual({ from_stage_id: 767358, to_stage_id: 767359 });
     expect(result.application).toBeNull();
   });
@@ -265,7 +303,7 @@ describe("Greenhouse applications.move (write; runner owns Reconcile)", () => {
       fetch: impl,
     });
 
-    const posted = JSON.parse(await calls[0].clone().text());
+    const posted = JSON.parse(await harvestCalls(calls)[0]!.clone().text());
     expect(posted).toEqual({
       from_stage_id: 767358,
       to_job_id: 224587,
@@ -311,12 +349,12 @@ describe("Greenhouse applications.create (POST only; runner owns Idempotent)", (
       fetch: impl,
     });
 
-    expect(calls).toHaveLength(1);
-    const createUrl = new URL(calls[0].url);
+    expect(harvestCalls(calls).length).toBe(1);
+    const createUrl = new URL(harvestCalls(calls)[0]!.url);
     expect(createUrl.pathname).toBe("/v3/applications");
-    expect(calls[0].method).toBe("POST");
-    expect(calls[0].headers.get("content-type")).toBe("application/json");
-    const posted = JSON.parse(await calls[0].clone().text());
+    expect(harvestCalls(calls)[0]!.method).toBe("POST");
+    expect(harvestCalls(calls)[0]!.headers.get("content-type")).toBe("application/json");
+    const posted = JSON.parse(await harvestCalls(calls)[0]!.clone().text());
     expect(posted).toEqual({ candidate_id: 57683957, job_id: 107761 });
 
     expect(result.id).toBe(69306314);
@@ -339,8 +377,8 @@ describe("Greenhouse applications.create (POST only; runner owns Idempotent)", (
       fetch: impl,
     });
 
-    expect(calls).toHaveLength(1);
-    const posted = JSON.parse(await calls[0].clone().text());
+    expect(harvestCalls(calls).length).toBe(1);
+    const posted = JSON.parse(await harvestCalls(calls)[0]!.clone().text());
     expect(posted).toEqual({
       candidate_id: 57683957,
       job_id: 107761,
@@ -392,37 +430,38 @@ describe("Greenhouse applications.create (POST only; runner owns Idempotent)", (
 });
 
 describe("Greenhouse users.list sync", () => {
-  test("GETs /v3/users with Basic auth on harvest host", async () => {
+  test("GETs /v3/users with Bearer auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(usersFixture));
 
     const result = await executeUsersListSync({ ...auth, fetch: impl });
 
-    expect(calls).toHaveLength(1);
-    const url = new URL(calls[0].url);
+    const harvest = harvestCalls(calls);
+    expect(harvest.length).toBeGreaterThanOrEqual(1);
+    const url = new URL(harvest[0]!.url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
     expect(url.pathname).toBe("/v3/users");
-    expect(calls[0].method).toBe("GET");
+    expect(harvestCalls(calls)[0]!.method).toBe("GET");
     expect(result.users).toHaveLength(2);
     expect(result.users[0].id).toBe("gh-user:1049756");
     expect(result.users[0].primaryEmail).toBe("integrationuser@example.com");
     expect(result.users[0].siteAdmin).toBe(true);
   });
 
-  test("forwards perPage/page/email/employeeId filters", async () => {
+  test("forwards perPage/cursor/email/employeeId filters", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(usersFixture));
 
     await executeUsersListSync({
       ...auth,
       perPage: 10,
-      page: 3,
+      cursor: "cursor-3",
       email: "admin@example.com",
       employeeId: "67890",
       fetch: impl,
     });
 
-    const url = new URL(calls[0].url);
+    const url = new URL(harvestCalls(calls)[0]!.url);
     expect(url.searchParams.get("per_page")).toBe("10");
-    expect(url.searchParams.get("page")).toBe("3");
+    expect(url.searchParams.get("cursor")).toBe("cursor-3");
     expect(url.searchParams.get("email")).toBe("admin@example.com");
     expect(url.searchParams.get("employee_id")).toBe("67890");
   });
@@ -436,18 +475,20 @@ describe("Greenhouse users.list sync", () => {
 });
 
 describe("Greenhouse candidates.get sync", () => {
-  test("GETs /v3/candidates/{id} with Basic auth on harvest host", async () => {
+  test("GETs /v3/candidates?ids= with Bearer auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(candidateGetFixture));
 
     const result = await executeCandidatesGetSync({ ...auth, id: "53883394", fetch: impl });
 
-    expect(calls).toHaveLength(1);
-    const url = new URL(calls[0].url);
+    const harvest = harvestCalls(calls);
+    expect(harvest.length).toBeGreaterThanOrEqual(1);
+    const url = new URL(harvest[0]!.url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
-    expect(url.pathname).toBe("/v3/candidates/53883394");
-    expect(calls[0].method).toBe("GET");
-    expect(calls[0].headers.get("authorization")).toBe(
-      `Basic ${Buffer.from("fixturekey:", "utf8").toString("base64")}`,
+    expect(url.pathname).toBe("/v3/candidates");
+    expect(url.searchParams.get("ids")).toBe("53883394");
+    expect(harvest[0]!.method).toBe("GET");
+    expect(harvest[0]!.headers.get("authorization")).toBe(
+      `Bearer test-access-token`,
     );
     expect(result.candidate?.id).toBe("gh-candidate:53883394");
     expect(result.candidate?.name).toBe("John Locke");
@@ -470,16 +511,18 @@ describe("Greenhouse candidates.get sync", () => {
 });
 
 describe("Greenhouse jobs.get sync", () => {
-  test("GETs Harvest /v3/jobs/{id} (not boards)", async () => {
+  test("GETs Harvest /v3/jobs?ids= (not boards)", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(jobGetFixture));
 
     const result = await executeJobsGetSync({ ...auth, id: "224588", fetch: impl });
 
-    expect(calls).toHaveLength(1);
-    const url = new URL(calls[0].url);
+    const harvest = harvestCalls(calls);
+    expect(harvest.length).toBeGreaterThanOrEqual(1);
+    const url = new URL(harvest[0]!.url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
-    expect(url.pathname).toBe("/v3/jobs/224588");
-    expect(calls[0].method).toBe("GET");
+    expect(url.pathname).toBe("/v3/jobs");
+    expect(url.searchParams.get("ids")).toBe("224588");
+    expect(harvestCalls(calls)[0]!.method).toBe("GET");
     expect(result.job?.id).toBe("gh-job:224588");
     expect(result.job?.title).toBe("Product Manager");
     expect(result.job?.department).toBe("Product");
@@ -500,40 +543,41 @@ describe("Greenhouse jobs.get sync", () => {
 });
 
 describe("Greenhouse interviews.list sync", () => {
-  test("GETs /v3/interviews with Basic auth on harvest host", async () => {
+  test("GETs /v3/interviews with Bearer auth on harvest host", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
 
     const result = await executeInterviewsListSync({ ...auth, fetch: impl });
 
-    expect(calls).toHaveLength(1);
-    const url = new URL(calls[0].url);
+    const harvest = harvestCalls(calls);
+    expect(harvest.length).toBeGreaterThanOrEqual(1);
+    const url = new URL(harvest[0]!.url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
     expect(url.pathname).toBe("/v3/interviews");
-    expect(calls[0].method).toBe("GET");
+    expect(harvestCalls(calls)[0]!.method).toBe("GET");
     expect(result.interviews).toHaveLength(2);
     expect(result.interviews[0].id).toBe("gh-interview:997234");
     expect(result.interviews[0].interviewName).toBe("Recruiter Phone Screen");
   });
 
-  test("forwards perPage/page/applicationId/jobId filters", async () => {
+  test("forwards perPage/cursor/applicationId/jobId filters", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(interviewsFixture));
 
     await executeInterviewsListSync({
       ...auth,
       perPage: 25,
-      page: 2,
+      cursor: "cursor-page-2",
       applicationId: 69306314,
       jobId: 107761,
       createdAfter: "2017-01-01T00:00:00.000Z",
       fetch: impl,
     });
 
-    const url = new URL(calls[0].url);
+    const url = new URL(harvestCalls(calls)[0]!.url);
     expect(url.searchParams.get("per_page")).toBe("25");
-    expect(url.searchParams.get("page")).toBe("2");
-    expect(url.searchParams.get("application_id")).toBe("69306314");
-    expect(url.searchParams.get("job_id")).toBe("107761");
-    expect(url.searchParams.get("created_after")).toBe("2017-01-01T00:00:00.000Z");
+    expect(url.searchParams.get("cursor")).toBe("cursor-page-2");
+    expect(url.searchParams.get("application_ids")).toBe("69306314");
+    expect(url.searchParams.get("job_ids")).toBe("107761");
+    expect(url.searchParams.get("created_at")).toBe("gte|2017-01-01T00:00:00.000Z");
   });
 
   test("classifies upstream errors", async () => {
@@ -545,16 +589,17 @@ describe("Greenhouse interviews.list sync", () => {
 });
 
 describe("Greenhouse job_interview_stages.list sync", () => {
-  test("GETs /v3/job_interview_stages with Basic auth", async () => {
+  test("GETs /v3/job_interview_stages with Bearer auth", async () => {
     const { calls, impl } = stubFetch(JSON.stringify(stagesFixture));
 
     const result = await executeJobInterviewStagesListSync({ ...auth, fetch: impl });
 
-    expect(calls).toHaveLength(1);
-    const url = new URL(calls[0].url);
+    const harvest = harvestCalls(calls);
+    expect(harvest.length).toBeGreaterThanOrEqual(1);
+    const url = new URL(harvest[0]!.url);
     expect(url.hostname).toBe("harvest.greenhouse.io");
     expect(url.pathname).toBe("/v3/job_interview_stages");
-    expect(calls[0].method).toBe("GET");
+    expect(harvestCalls(calls)[0]!.method).toBe("GET");
     expect(result.stages).toHaveLength(4);
     expect(result.stages[0].id).toBe("gh-job-interview-stage:767358");
     expect(result.stages[0].name).toBe("Application Review");
@@ -574,7 +619,7 @@ describe("Greenhouse job_interview_stages.list sync", () => {
       fetch: impl,
     });
 
-    const url = new URL(calls[0].url);
+    const url = new URL(harvestCalls(calls)[0]!.url);
     expect(url.searchParams.get("job_ids")).toBe("107761,224588");
     expect(url.searchParams.get("active")).toBe("true");
     expect(url.searchParams.get("per_page")).toBe("50");

@@ -808,6 +808,7 @@ import quickbooksManifest from "../../connectors/quickbooks/manifest.json";
 import { healthcheck as quickbooksHealthcheck } from "../../connectors/quickbooks/src/healthcheck";
 import { executeInvoicesListSync as listQBInvoices, executeCustomersListSync as listQBCustomers, executePaymentsListSync as listQBPayments } from "../../connectors/quickbooks/src/sync";
 import greenhouseManifest from "../../connectors/greenhouse/manifest.json";
+import { healthcheck as greenhouseHealthcheck } from "../../connectors/greenhouse/src/healthcheck";
 import {
   executeJobsListSync as listGreenhouseJobs,
   executeJobsGetSync as getGreenhouseJob,
@@ -1316,6 +1317,7 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
     shopify: shopifyHealthcheck,
     woocommerce: woocommerceHealthcheck,
     quickbooks: quickbooksHealthcheck,
+    greenhouse: greenhouseHealthcheck,
     workable: workableHealthcheck,
     recruitee: recruiteeHealthcheck,
     "zoho-recruit": zohoRecruitHealthcheck,
