@@ -479,6 +479,21 @@ import {
   validateSetRepoSubscriptionInput,
   validateSetRepoInteractionLimitsInput,
 } from "./write_card2";
+import {
+  createWriteCard3Client,
+  validateAddEmailsInput,
+  validateAddSocialAccountsInput,
+  validateBlockUserInput,
+  validateAddCodespaceSecretRepositoryInput,
+  validateUpsertEnvironmentSecretInput,
+  validateUpsertCodespaceSecretInput,
+  validateDeleteSocialAccountsInput,
+  validateUnblockUserInput,
+  validateUnlockUserMigrationRepoInput,
+  validateDeleteCodespaceSecretInput,
+  validateDeleteEnvironmentSecretInput,
+  validateUpdateAuthenticatedUserInput,
+} from "./write_card3";
 
 
 
@@ -6879,6 +6894,137 @@ export function setRepoInteractionLimits(input: unknown): Record<string, unknown
     });
   }
   return { connector: "github", action: "repos.interaction_limits.set", source: "connector", validated: validateSetRepoInteractionLimitsInput(input) };
+}
+
+// ─── write card 3: user writes ───────────────────────────────────────────────
+
+function liveWriteCard3Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard3Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function addUserEmails(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.emails.create").addEmails(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.emails.create", source: "connector", emails: result.emails };
+    });
+  }
+  return { connector: "github", action: "user.emails.create", source: "connector", validated: validateAddEmailsInput(input) };
+}
+
+export function addUserSocialAccounts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.social_accounts.add").addSocialAccounts(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.social_accounts.add", source: "connector", accounts: result.accounts };
+    });
+  }
+  return { connector: "github", action: "user.social_accounts.add", source: "connector", validated: validateAddSocialAccountsInput(input) };
+}
+
+export function blockUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.blocks.block").blockUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.blocks.block", source: "connector", blocked: result.blocked, username: result.username };
+    });
+  }
+  return { connector: "github", action: "user.blocks.block", source: "connector", validated: validateBlockUserInput(input) };
+}
+
+export function addCodespaceSecretRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.codespaces.secrets.repositories.add").addCodespaceSecretRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.codespaces.secrets.repositories.add", source: "connector", added: result.added, secretName: result.secretName, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.secrets.repositories.add", source: "connector", validated: validateAddCodespaceSecretRepositoryInput(input) };
+}
+
+export function upsertEnvironmentSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "repos.environments.secrets.create_or_update").upsertEnvironmentSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.environments.secrets.create_or_update", source: "connector", upserted: result.upserted, created: result.created, status: result.status, owner: result.owner, repo: result.repo, environmentName: result.environmentName, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "repos.environments.secrets.create_or_update", source: "connector", validated: validateUpsertEnvironmentSecretInput(input) };
+}
+
+export function upsertCodespaceSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.codespaces.secrets.create_or_update").upsertCodespaceSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.codespaces.secrets.create_or_update", source: "connector", upserted: result.upserted, created: result.created, status: result.status, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.secrets.create_or_update", source: "connector", validated: validateUpsertCodespaceSecretInput(input) };
+}
+
+export function deleteUserSocialAccounts(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.social_accounts.delete").deleteSocialAccounts(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.social_accounts.delete", source: "connector", deleted: result.deleted };
+    });
+  }
+  return { connector: "github", action: "user.social_accounts.delete", source: "connector", validated: validateDeleteSocialAccountsInput(input) };
+}
+
+export function unblockUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.blocks.unblock").unblockUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.blocks.unblock", source: "connector", unblocked: result.unblocked, username: result.username };
+    });
+  }
+  return { connector: "github", action: "user.blocks.unblock", source: "connector", validated: validateUnblockUserInput(input) };
+}
+
+export function unlockUserMigrationRepo(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.migrations.repos.unlock").unlockUserMigrationRepo(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.migrations.repos.unlock", source: "connector", unlocked: result.unlocked, migrationId: result.migrationId, repoName: result.repoName };
+    });
+  }
+  return { connector: "github", action: "user.migrations.repos.unlock", source: "connector", validated: validateUnlockUserMigrationRepoInput(input) };
+}
+
+export function deleteCodespaceSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.codespaces.secrets.delete").deleteCodespaceSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.codespaces.secrets.delete", source: "connector", deleted: result.deleted, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "user.codespaces.secrets.delete", source: "connector", validated: validateDeleteCodespaceSecretInput(input) };
+}
+
+export function deleteEnvironmentSecret(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "repos.environments.secrets.delete").deleteEnvironmentSecret(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.environments.secrets.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, environmentName: result.environmentName, secretName: result.secretName };
+    });
+  }
+  return { connector: "github", action: "repos.environments.secrets.delete", source: "connector", validated: validateDeleteEnvironmentSecretInput(input) };
+}
+
+export function updateAuthenticatedUser(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard3Client(input, "user.update").updateAuthenticatedUser(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "user.update", source: "connector", user: result.user };
+    });
+  }
+  return { connector: "github", action: "user.update", source: "connector", validated: validateUpdateAuthenticatedUserInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
