@@ -114,10 +114,10 @@ const reqPayload = {
   department: "Engineering",
 };
 
-describe("Lever G2 manifest locks (v0.7.0 / 53)", () => {
+describe("Lever G2 manifest locks (v0.8.0 / 58)", () => {
   test("version and op count", () => {
-    expect(manifest.version).toBe("0.7.0");
-    expect(Object.keys(ops)).toHaveLength(53);
+    expect(manifest.version).toBe("0.8.0");
+    expect(Object.keys(ops)).toHaveLength(58);
     for (const id of G2_OPS) expect(ops[id]).toBeTruthy();
   });
 

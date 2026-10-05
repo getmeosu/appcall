@@ -887,6 +887,11 @@ import {
   executeResumesList as listLeverResumes,
   executeFilesList as listLeverFiles,
   executeFilesGet as getLeverFile,
+  executeFormsList as listLeverForms,
+  executeFormsGet as getLeverForm,
+  executeFormsCreate as createLeverForm,
+  executeFormTemplatesList as listLeverFormTemplates,
+  executeFormTemplatesGet as getLeverFormTemplate,
 } from "../../connectors/lever/src/sync";
 import ashbyManifest from "../../connectors/ashby/manifest.json";
 import {
@@ -2529,6 +2534,12 @@ export const defaultConnectorRegistry = createConnectorRegistry(withDeclarativeC
       "resumes.list": listLeverResumes,
       "files.list": listLeverFiles,
       "files.get": getLeverFile,
+      // G3: profile forms + form-template reads
+      "forms.list": listLeverForms,
+      "forms.get": getLeverForm,
+      "forms.create": createLeverForm,
+      "form_templates.list": listLeverFormTemplates,
+      "form_templates.get": getLeverFormTemplate,
     },
     ashby: {
       "candidates.create": createAshbyCandidate,

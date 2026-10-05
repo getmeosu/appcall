@@ -6,8 +6,8 @@ describe("Lever manifest", () => {
     expect(manifest.key).toBe("lever");
   });
 
-  it("has version 0.7.0", () => {
-    expect(manifest.version).toBe("0.7.0");
+  it("has version 0.8.0", () => {
+    expect(manifest.version).toBe("0.8.0");
   });
 
   it("uses bun runtime", () => {
@@ -43,6 +43,11 @@ describe("Lever manifest", () => {
       "feedback.get",
       "files.get",
       "files.list",
+      "form_templates.get",
+      "form_templates.list",
+      "forms.create",
+      "forms.get",
+      "forms.list",
       "healthcheck",
       "interviews.create",
       "interviews.delete",
@@ -92,7 +97,7 @@ describe("Lever manifest", () => {
       "users.get",
       "users.list",
     ]);
-    expect(Object.keys(manifest.operations)).toHaveLength(53);
+    expect(Object.keys(manifest.operations)).toHaveLength(58);
     expect(manifest.operations["jobs.list"].kind).toBe("sync");
     expect(manifest.operations["opportunities.list"].kind).toBe("sync");
     expect(manifest.operations["opportunities.get"].kind).toBe("sync");

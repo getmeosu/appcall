@@ -1539,3 +1539,113 @@ export async function executeFilesGet(input: ExecuteFilesGetInput): Promise<Leve
   const raw = await client.getJSON(`/opportunities/${opportunityId}/files/${fileId}`);
   return { data: asEnvelopeObject(raw) };
 }
+
+// ---------------------------------------------------------------------------
+// G3: profile forms + profile form-template reads
+// Hand-written so region=eu reaches api.eu.lever.co (manifest request blocks
+// serve fixture replay). forms.create is a create: no EffectPolicy, and it
+// returns the raw provider JSON as { data } (notes.create precedent) because
+// the docs' 201 example is not data-enveloped. No G3 op is a pure update, so
+// there is no Reconcile.
+// ---------------------------------------------------------------------------
+
+const FORM_TEMPLATE_INCLUDES = new Set(["text", "group", "fields"]);
+
+/** Mirrors the manifest schema (integer 1-100): G3 handlers run before declarative validation. */
+function assertPageLimit(limit: number | undefined): void {
+  if (limit === undefined) return;
+  if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error("limit must be an integer between 1 and 100");
+  }
+}
+
+export interface ExecuteFormsListInput extends ExecutePagedReadInput {
+  opportunityId: string;
+}
+
+export async function executeFormsList(input: ExecuteFormsListInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  assertPageLimit(input.limit);
+  const client = authClientFor(input, "forms.list");
+  const raw = await client.getJSON(
+    `/opportunities/${opportunityId}/forms` + pagingQuery(input.limit, input.offset),
+  );
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecuteFormRefInput extends LeverAuthInput {
+  opportunityId: string;
+  formId: string;
+}
+
+export async function executeFormsGet(input: ExecuteFormRefInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const formId = safeSegment(input.formId, "formId");
+  const client = authClientFor(input, "forms.get");
+  const raw = await client.getJSON(`/opportunities/${opportunityId}/forms/${formId}`);
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecuteFormsCreateInput extends LeverAuthInput {
+  opportunityId: string;
+  baseTemplateId: string;
+  fields: Array<Record<string, unknown>>;
+  secret?: boolean;
+  performAs?: string;
+}
+
+export async function executeFormsCreate(input: ExecuteFormsCreateInput): Promise<LeverEnvelopeOutput> {
+  const opportunityId = safeSegment(input.opportunityId, "opportunityId");
+  const baseTemplateId = requireNonEmptyString(input.baseTemplateId, "baseTemplateId");
+  const fields = requireObjectArray(input.fields, "fields");
+  if (input.secret !== undefined && typeof input.secret !== "boolean") {
+    throw new Error("secret must be a boolean");
+  }
+  const client = authClientFor(input, "forms.create");
+  const raw = await client.postJSON(
+    `/opportunities/${opportunityId}/forms` + buildQuery({ perform_as: input.performAs }),
+    compactBody({ baseTemplateId, fields, secret: input.secret }),
+  );
+  return { data: raw == null ? {} : asEnvelopeObject(raw) };
+}
+
+export interface ExecuteFormTemplatesListInput extends ExecutePagedReadInput {
+  include?: string[];
+}
+
+export async function executeFormTemplatesList(
+  input: ExecuteFormTemplatesListInput,
+): Promise<LeverEnvelopeOutput> {
+  assertPageLimit(input.limit);
+  const qs = new URLSearchParams();
+  if (input.include !== undefined) {
+    if (!Array.isArray(input.include) || input.include.length === 0) {
+      throw new Error("include must be a non-empty array");
+    }
+    for (const item of input.include) {
+      if (typeof item !== "string" || !FORM_TEMPLATE_INCLUDES.has(item)) {
+        throw new Error("include entries must be text, group or fields");
+      }
+      qs.append("include", item);
+    }
+  }
+  if (input.limit != null) qs.set("limit", String(input.limit));
+  if (input.offset != null && input.offset !== "") qs.set("offset", input.offset);
+  const encoded = qs.toString();
+  const client = authClientFor(input, "form_templates.list");
+  const raw = await client.getJSON(`/form_templates` + (encoded.length > 0 ? `?${encoded}` : ""));
+  return { data: asEnvelopeObject(raw) };
+}
+
+export interface ExecuteFormTemplatesGetInput extends LeverAuthInput {
+  formTemplateId: string;
+}
+
+export async function executeFormTemplatesGet(
+  input: ExecuteFormTemplatesGetInput,
+): Promise<LeverEnvelopeOutput> {
+  const formTemplateId = safeSegment(input.formTemplateId, "formTemplateId");
+  const client = authClientFor(input, "form_templates.get");
+  const raw = await client.getJSON(`/form_templates/${formTemplateId}`);
+  return { data: asEnvelopeObject(raw) };
+}
