@@ -549,7 +549,7 @@ export function createGitClient(options: { accessToken: string; fetch?: typeof f
     async getRef(input: unknown) {
       const payload = validateGetRefInput(input);
       const refPath = encodeRefPath(payload.ref);
-      const response = await client.fetchJSON(`/repos/${encodeURIComponent(payload.owner)}/${encodeURIComponent(payload.repo)}/git/refs/${refPath}`);
+      const response = await client.fetchJSON(`/repos/${encodeURIComponent(payload.owner)}/${encodeURIComponent(payload.repo)}/git/ref/${refPath}`);
       if (response.status === 200) {
         const raw = isRecord(response.body) ? response.body : {};
         const obj = isRecord(raw.object) ? raw.object : {};

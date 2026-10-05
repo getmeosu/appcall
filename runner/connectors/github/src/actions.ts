@@ -676,6 +676,10 @@ import {
   validateUpdateRepoHookConfigInput,
   validateUpdateUserProjectItemInput,
 } from "./write_card17";
+import {
+  createCorrectnessCard18Client,
+  validateListUsersInput,
+} from "./correctness_card18";
 
 
 
@@ -8640,8 +8644,30 @@ export function updateUserProjectItem(input: unknown): Record<string, unknown> |
   return { connector: "github", action: "users.projects_v2.items.update", source: "connector", validated: validateUpdateUserProjectItemInput(input) };
 }
 
+// ─── correctness card 18: users.list ─────────────────────────────────────────
+
+function liveCorrectnessCard18Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createCorrectnessCard18Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function listUsers(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveCorrectnessCard18Client(input, "users.list").listUsers(input).then((result) => {
+      if (!result.ok) throw { ok: false, code: result.error.code, message: result.error.message, retryAfterSeconds: result.error.retryAfterSeconds };
+      return { connector: "github", action: "users.list", source: "connector", users: result.users };
+    });
+  }
+  return { connector: "github", action: "users.list", source: "connector", validated: validateListUsersInput(input) };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
