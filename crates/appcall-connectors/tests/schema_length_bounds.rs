@@ -25,10 +25,15 @@ fn max_length_counts_unicode_scalar_values() {
 
 #[test]
 fn max_items_unique_items_and_property_bounds() {
-    let items = operation(json!({"type":"array","minItems":1,"maxItems":2,"uniqueItems":true,"items":{"type":"string"}}));
+    let items = operation(
+        json!({"type":"array","minItems":1,"maxItems":2,"uniqueItems":true,"items":{"type":"string"}}),
+    );
     assert!(items.validate_input(&json!(["a"])).is_ok());
     assert_eq!(
-        items.validate_input(&json!(["a", "b", "c"])).unwrap_err().code(),
+        items
+            .validate_input(&json!(["a", "b", "c"]))
+            .unwrap_err()
+            .code(),
         ErrorCode::InvalidInput
     );
     assert_eq!(
