@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { assertStrictSchema, validateStrictInput } from "../../src/declarative/strict-schema";
 
 describe("strict-generated schema", () => {
@@ -41,5 +42,81 @@ describe("strict-generated schema", () => {
   });
   it("rejects an empty type union", () => {
     expect(() => assertStrictSchema({ type: [] })).toThrow("Invalid schema type");
+  });
+});
+
+describe("strict-schema sibling constraints", () => {
+  it("accepts maxLength/maxItems and sibling keywords and enforces them", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        name: { type: "string", minLength: 1, maxLength: 3 },
+        tags: { type: "array", minItems: 1, maxItems: 2, uniqueItems: true, items: { type: "string" } },
+        score: { type: "number", exclusiveMinimum: 0, exclusiveMaximum: 10 },
+        kind: { const: "alpha" },
+      },
+      minProperties: 1,
+      maxProperties: 4,
+      additionalProperties: false,
+    };
+    expect(validateStrictInput({ name: "ab", tags: ["a"], score: 5, kind: "alpha" }, schema)).toEqual({
+      name: "ab", tags: ["a"], score: 5, kind: "alpha",
+    });
+    expect(validateStrictInput({ name: "😀😀😀" }, { type: "object", properties: { name: { type: "string", maxLength: 3 } } })).toEqual({ name: "😀😀😀" });
+    expect(() => validateStrictInput({ name: "😀😀😀😀" }, { type: "object", properties: { name: { type: "string", maxLength: 3 } } })).toThrow("too long");
+    expect(() => validateStrictInput({ name: "abcd" }, schema)).toThrow("too long");
+    expect(() => validateStrictInput({ tags: ["a", "b", "c"] }, schema)).toThrow("too many items");
+    expect(() => validateStrictInput({ tags: ["a", "a"] }, schema)).toThrow("duplicate items");
+    expect(() => validateStrictInput({ score: 0 }, schema)).toThrow("below minimum");
+    expect(() => validateStrictInput({ score: 10 }, schema)).toThrow("above maximum");
+    expect(() => validateStrictInput({ kind: "beta" }, schema)).toThrow("not an allowed value");
+    expect(() => validateStrictInput({}, { type: "object", minProperties: 1 })).toThrow("too few properties");
+    expect(() => validateStrictInput({ a: 1, b: 2, c: 3 }, { type: "object", maxProperties: 2 })).toThrow("too many properties");
+  });
+
+  it("rejects malformed sibling keyword values", () => {
+    expect(() => assertStrictSchema({ type: "string", maxLength: -1 })).toThrow("maxLength must be a non-negative integer");
+    expect(() => assertStrictSchema({ type: "string", maxLength: 1.5 })).toThrow("maxLength must be a non-negative integer");
+    expect(() => assertStrictSchema({ type: "array", maxItems: -1 })).toThrow("maxItems must be a non-negative integer");
+    expect(() => assertStrictSchema({ type: "number", exclusiveMinimum: Infinity })).toThrow("exclusiveMinimum must be a finite safe number");
+    expect(() => assertStrictSchema({ type: "object", minProperties: -1 })).toThrow("minProperties must be a non-negative integer");
+    expect(() => assertStrictSchema({ type: "array", uniqueItems: "yes" as never })).toThrow("uniqueItems must be a boolean");
+  });
+
+  it("treats format as an annotation in registry mode and still rejects pattern", () => {
+    expect(() => assertStrictSchema({ type: "string", format: "email" }, 0, { nodes: 0 }, true)).not.toThrow();
+    expect(() => assertStrictSchema({ type: "string", format: "email" })).toThrow("Unsupported");
+    expect(() => assertStrictSchema({ type: "string", pattern: "^a+$" }, 0, { nodes: 0 }, true)).toThrow("Unsupported");
+  });
+
+  it("compiles every registry connector inputSchema in registry mode", () => {
+    const root = new URL("../../../connectors", import.meta.url).pathname;
+    const combinatorOps = new Set([
+      "deployments.create", "deployments.get", "discussions.comments.create", "discussions.comments.list",
+      "discussions.comments.update", "discussions.get", "discussions.update", "environments.get", "releases.assets.get",
+    ]);
+    const strip = (node: unknown): unknown => {
+      if (Array.isArray(node)) return node.map(strip);
+      if (!node || typeof node !== "object") return node;
+      return Object.fromEntries(
+        Object.entries(node as Record<string, unknown>)
+          .filter(([k]) => !["anyOf", "allOf", "oneOf"].includes(k))
+          .map(([k, v]) => [k, k === "enum" ? v : strip(v)]),
+      );
+    };
+    let compiled = 0;
+    for (const dir of readdirSync(root)) {
+      const path = `${root}/${dir}/manifest.json`;
+      if (!existsSync(path)) continue;
+      const manifest = JSON.parse(readFileSync(path, "utf8")) as { key: string; operations?: Record<string, { inputSchema?: unknown }> };
+      for (const [op, spec] of Object.entries(manifest.operations ?? {})) {
+        const schema = spec?.inputSchema;
+        if (!schema || typeof schema !== "object") continue;
+        const cleaned = manifest.key === "github" && combinatorOps.has(op) ? strip(schema) : schema;
+        expect(() => assertStrictSchema(cleaned as never, 0, { nodes: 0 }, true), `${manifest.key}.${op}`).not.toThrow();
+        compiled += 1;
+      }
+    }
+    expect(compiled).toBeGreaterThan(3900);
   });
 });
