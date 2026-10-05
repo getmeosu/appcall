@@ -628,6 +628,20 @@ import {
   validateUpdateOrgTeamInput,
 } from "./write_card13";
 
+import {
+  createWriteCard14Client,
+  validateAddOrgVariableRepositoryInput,
+  validateDeleteRunLogsInput,
+  validateSetOrgWorkflowPermissionsInput,
+  validateSetOrgActionsPermissionsInput,
+  validateRenderMarkdownInput,
+  validateCancelPagesDeploymentInput,
+  validateCreatePagesDeploymentInput,
+  validateCreatePagesSiteInput,
+  validateDeletePagesSiteInput,
+  validateRequestPagesBuildInput,
+} from "./write_card14";
+
 
 
 import {
@@ -8219,6 +8233,118 @@ export function updateOrgTeam(input: unknown): Record<string, unknown> | Promise
     });
   }
   return { connector: "github", action: "orgs.teams.update", source: "connector", validated: validateUpdateOrgTeamInput(input) };
+}
+
+
+// ─── write card 14: org variable repos, run logs, org permissions, markdown, pages ─
+
+function liveWriteCard14Client(input: Record<string, unknown>, operation: string) {
+  const fetchFn = typeof input.fetch === "function" ? input.fetch as typeof fetch : undefined;
+  return createWriteCard14Client({
+    accessToken: input.accessToken as string,
+    fetch: fetchFn,
+    githubClient: createGitHubClient({ accessToken: input.accessToken as string, fetch: fetchFn, operation }),
+  });
+}
+
+export function addOrgVariableRepository(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "actions.org_variables.repositories.add").addOrgVariableRepository(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.org_variables.repositories.add", source: "connector", added: result.added, org: result.org, name: result.name, repositoryId: result.repositoryId };
+    });
+  }
+  return { connector: "github", action: "actions.org_variables.repositories.add", source: "connector", validated: validateAddOrgVariableRepositoryInput(input) };
+}
+
+export function deleteRunLogs(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "actions.runs.logs.delete").deleteRunLogs(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "actions.runs.logs.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo, runId: result.runId };
+    });
+  }
+  return { connector: "github", action: "actions.runs.logs.delete", source: "connector", validated: validateDeleteRunLogsInput(input) };
+}
+
+export function setOrgWorkflowPermissions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "orgs.actions.permissions.workflow.set").setOrgWorkflowPermissions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.workflow.set", source: "connector", permissions: result.permissions };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.workflow.set", source: "connector", validated: validateSetOrgWorkflowPermissionsInput(input) };
+}
+
+export function setOrgActionsPermissions(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "orgs.actions.permissions.set").setOrgActionsPermissions(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "orgs.actions.permissions.set", source: "connector", permissions: result.permissions };
+    });
+  }
+  return { connector: "github", action: "orgs.actions.permissions.set", source: "connector", validated: validateSetOrgActionsPermissionsInput(input) };
+}
+
+export function renderMarkdown(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "markdown.render").renderMarkdown(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "markdown.render", source: "connector", html: result.html };
+    });
+  }
+  return { connector: "github", action: "markdown.render", source: "connector", validated: validateRenderMarkdownInput(input) };
+}
+
+export function cancelPagesDeployment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "repos.pages.deployments.cancel").cancelPagesDeployment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.deployments.cancel", source: "connector", cancelled: result.cancelled, owner: result.owner, repo: result.repo, pagesDeploymentId: result.pagesDeploymentId };
+    });
+  }
+  return { connector: "github", action: "repos.pages.deployments.cancel", source: "connector", validated: validateCancelPagesDeploymentInput(input) };
+}
+
+export function createPagesDeployment(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "repos.pages.deployments.create").createPagesDeployment(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.deployments.create", source: "connector", deployment: result.deployment };
+    });
+  }
+  return { connector: "github", action: "repos.pages.deployments.create", source: "connector", validated: validateCreatePagesDeploymentInput(input) };
+}
+
+export function createPagesSite(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "repos.pages.create").createPagesSite(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.create", source: "connector", pages: result.pages };
+    });
+  }
+  return { connector: "github", action: "repos.pages.create", source: "connector", validated: validateCreatePagesSiteInput(input) };
+}
+
+export function deletePagesSite(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "repos.pages.delete").deletePagesSite(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.delete", source: "connector", deleted: result.deleted, owner: result.owner, repo: result.repo };
+    });
+  }
+  return { connector: "github", action: "repos.pages.delete", source: "connector", validated: validateDeletePagesSiteInput(input) };
+}
+
+export function requestPagesBuild(input: unknown): Record<string, unknown> | Promise<Record<string, unknown>> {
+  if (isRecord(input) && typeof input.accessToken === "string") {
+    return liveWriteCard14Client(input, "repos.pages.builds.request").requestPagesBuild(input).then((result) => {
+      if (!result.ok) throwGitHub(result);
+      return { connector: "github", action: "repos.pages.builds.request", source: "connector", build: result.build };
+    });
+  }
+  return { connector: "github", action: "repos.pages.builds.request", source: "connector", validated: validateRequestPagesBuildInput(input) };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
