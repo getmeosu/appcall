@@ -34,7 +34,7 @@ describe("pipedrive manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("pipedrive");
     expect(manifest.name).toBe("Pipedrive");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
     expect(manifest.visibility).toBe("public");
     expect(manifest.categories).toEqual(["crm"]);
@@ -46,19 +46,30 @@ describe("pipedrive manifest", () => {
     expect(manifest.auth.setup.mode).toBe("api_key");
     expect(manifest.auth.setup.fields.map((field: { key: string }) => field.key)).toEqual(["apiKey"]);
     expect(manifest.http.baseUrl).toBe("https://api.pipedrive.com");
-    expect(manifest.network.allowedHosts).toEqual(["api.pipedrive.com"]);
+    expect(manifest.network.allowedHosts).toEqual(["api.pipedrive.com", "oauth.pipedrive.com"]);
     expect(manifest.http.auth.field).toBe("apiKey");
     expect(manifest.http.auth.in).toBe("header");
     expect(manifest.http.auth.name).toBe("x-api-token");
   });
 
-  it("declares the high-value first-depth slice, not the full Composio catalog", () => {
-    expect(Object.keys(operations).sort()).toEqual([...ACTION_KEYS, ...WEBHOOK_KEYS].sort());
-    expect(Object.keys(operations).length).toBeLessThan(40);
+  it("keeps the original operations and stays within the official HTTP ceiling", () => {
+    for (const key of [...ACTION_KEYS, ...WEBHOOK_KEYS]) {
+      expect(operations[key], key).toBeDefined();
+    }
+    const webhooks = Object.entries(operations)
+      .filter(([, operation]) => operation.kind === "webhook")
+      .map(([key]) => key)
+      .sort();
+    expect(webhooks).toEqual([...WEBHOOK_KEYS].sort());
+    expect(Object.keys(operations).length).toBeGreaterThan(ACTION_KEYS.length + WEBHOOK_KEYS.length);
+    expect(Object.keys(operations).length).toBeLessThanOrEqual(403);
   });
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
-    for (const key of ACTION_KEYS) {
+    const actionKeys = Object.entries(operations)
+      .filter(([, operation]) => operation.kind === "action")
+      .map(([key]) => key);
+    for (const key of actionKeys) {
       const operation = operations[key]!;
       expect(operation.kind, key).toBe("action");
       expect(operation.timeoutMs as number, key).toBeGreaterThan(0);

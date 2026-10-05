@@ -7,7 +7,7 @@ describe("clickup manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("clickup");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.categories).toEqual(["productivity"]);
     expect(manifest.models.length).toBeGreaterThan(0);
     expect(manifest.models).toContain("member");

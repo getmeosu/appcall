@@ -4,7 +4,7 @@ Gleap admin REST API v3 recipe for Gleap GmbH (Austria; FN 534390 v). Create an 
 
 This is the admin REST API (team-side tickets, contacts, messages, and help center), not the Conversations/S2S API that uses service-account tokens.
 
-Covered operations: `healthcheck` (`GET /users/me`), contact list/get/create/update/search, ticket list/get/create/update/archive/search/counts/history, message list/create, teams, and help-center collections/articles. Hard deletes and the Conversations API are omitted.
+Covered operations follow the official admin OpenAPI at `https://api.gleap.io/api-docs.json` (jwt bearer), including the pinned open-connector actions and the other admin routes that return JSON. `POST /tickets/compose` and `DELETE /tickets/{ticketId}` are the pinned actions that were not already separate operations. CSV downloads, `POST /uploads` multipart, account signup, websocket auth, and the Conversations/S2S API are omitted. `articles.get` keeps `GET /helpcenter/articles/{articleId}`; the current spec reads an article with the collection id in the path.
 
 Official docs live at `https://docs.gleap.io/documentation/server/api-overview`. Host is `api.gleap.io`. Native category is `dev-tools`.
 

@@ -4,7 +4,7 @@ import manifest from "../manifest.json";
 describe("klaviyo manifest", () => {
   it("has correct key and version", () => {
     expect(manifest.key).toBe("klaviyo");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
   });
 

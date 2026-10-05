@@ -26,7 +26,7 @@ describe("pagerduty manifest", () => {
   it("declares the connector identity the control plane keys on", () => {
     expect(manifest.key).toBe("pagerduty");
     expect(manifest.runtime).toBe("bun");
-    expect(manifest.version).toBe("0.3.0");
+    expect(manifest.version).toBe("0.4.0");
     expect(manifest.categories).toEqual(["dev-tools"]);
     expect(manifest.models.length).toBeGreaterThan(0);
   });
@@ -39,7 +39,10 @@ describe("pagerduty manifest", () => {
   });
 
   it("exposes the high-value incident, service, and on-call actions", () => {
-    expect(Object.keys(operations).sort()).toEqual(actionKeys);
+    for (const key of actionKeys) {
+      expect(operations[key], key).toBeDefined();
+    }
+    expect(Object.keys(operations).length).toBeGreaterThan(actionKeys.length);
   });
 
   it("gives every action the limits and tool schema the MCP gateway requires", () => {
@@ -60,18 +63,23 @@ describe("pagerduty manifest", () => {
   });
 
   it("classifies every mutating operation as a write", () => {
-    const writes = Object.entries(operations)
-      .filter(([, operation]) => ["POST", "PUT", "PATCH", "DELETE"].includes(String((operation.request as Record<string, unknown>).method)))
-      .map(([key]) => key);
-    expect(writes.sort()).toEqual([
+    const originalWrites = [
       "incidents.acknowledge",
       "incidents.create",
       "incidents.resolve",
       "incidents.update",
       "services.create",
-    ]);
-    for (const key of writes) {
-      expect(operations[key]!.sideEffect, `${key} mutates and must be sideEffect write`).toBe("write");
+    ];
+    for (const key of originalWrites) {
+      expect(operations[key]!.sideEffect, key).toBe("write");
+    }
+    for (const [key, operation] of Object.entries(operations)) {
+      const method = String((operation.request as Record<string, unknown>).method);
+      if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+        expect(operation.sideEffect, `${key} mutates and must be sideEffect write`).toBe("write");
+      } else {
+        expect(operation.sideEffect, `${key} is a read`).toBe("read");
+      }
     }
   });
 

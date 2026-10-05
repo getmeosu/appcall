@@ -5,7 +5,7 @@ describe("shopify connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("shopify");
     expect(manifest.name).toBe("Shopify");
-    expect(manifest.version).toBe("0.2.1");
+    expect(manifest.version).toBe("0.3.0");
     expect(manifest.runtime).toBe("bun");
   });
 
@@ -15,7 +15,9 @@ describe("shopify connector manifest", () => {
     expect(manifest.auth.scopes).toContain("read_orders");
     expect(manifest.auth.scopes).toContain("read_customers");
     expect(manifest.auth.setup.mode).toBe("oauth2");
-    expect(manifest.auth.setup.fields).toEqual([]);
+    expect(manifest.auth.setup.fields).toEqual([
+      { key: "shopDomain", label: "Shop subdomain", required: true, secret: false },
+    ]);
   });
 
   test("network allows *.myshopify.com", () => {
