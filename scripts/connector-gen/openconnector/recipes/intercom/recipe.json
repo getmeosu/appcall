@@ -102,7 +102,19 @@
       "tickets.get",
       "tickets.update",
       "tickets.delete",
-      "teams.list"
+      "teams.list",
+      "notes.create",
+      "notes.list",
+      "notes.get",
+      "contacts.merge",
+      "conversations.attach_contact",
+      "tickets.tag",
+      "tickets.untag",
+      "teams.get",
+      "contacts.list_companies",
+      "companies.list_contacts",
+      "contacts.list_tags",
+      "tags.get"
     ],
     "upstreamSha": "33dd4ad6ee22f9ce5158a1516a11d8b8566b5c8a",
     "marketFocus": "international",
@@ -679,12 +691,168 @@
       "adaptations": [
         "GET /teams; preserves raw provider team_list JSON."
       ]
+    },
+    "notes.create": {
+      "upstreamActionId": "create_note",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/notes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /contacts/{id}/notes with body and optional admin_id; a create, so no EffectPolicy; preserves raw provider note JSON."
+      ]
+    },
+    "notes.list": {
+      "upstreamActionId": "list_notes",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/notes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /contacts/{id}/notes; 2.13 declares no query params, so no paging inputs; preserves raw provider note_list JSON."
+      ]
+    },
+    "notes.get": {
+      "upstreamActionId": "retrieve_note",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/notes"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /notes/{id}; preserves raw provider note JSON."
+      ]
+    },
+    "contacts.merge": {
+      "upstreamActionId": "merge_contact",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/contacts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /contacts/merge with from=fromContactId (lead) and into=intoContactId (user); one-shot, so no EffectPolicy."
+      ]
+    },
+    "conversations.attach_contact": {
+      "upstreamActionId": "attach_contact_to_conversation",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/conversations"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /conversations/{id}/customers with admin_id and customer.intercom_user_id; EffectPolicy Reconcile via conversations.get (contacts list)."
+      ]
+    },
+    "tickets.tag": {
+      "upstreamActionId": "attach_tag_to_ticket",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/tickets"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "POST /tickets/{id}/tags with id=tagId and admin_id; no EffectPolicy because the 2.13 ticket object has no tags field to observe."
+      ]
+    },
+    "tickets.untag": {
+      "upstreamActionId": "detach_tag_from_ticket",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/tickets"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "DELETE /tickets/{id}/tags/{tagId} with required admin_id JSON body; no EffectPolicy because the 2.13 ticket object has no tags field to observe."
+      ]
+    },
+    "teams.get": {
+      "upstreamActionId": "retrieve_team",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/teams"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /teams/{id}; preserves raw provider team JSON."
+      ]
+    },
+    "contacts.list_companies": {
+      "upstreamActionId": "list_companies_for_contact",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/contacts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /contacts/{id}/companies; 2.13 declares no query params; preserves raw provider JSON."
+      ]
+    },
+    "companies.list_contacts": {
+      "upstreamActionId": "list_attached_contacts",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/companies"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /companies/{id}/contacts; 2.13 declares no query params; preserves raw provider JSON."
+      ]
+    },
+    "contacts.list_tags": {
+      "upstreamActionId": "list_tags_for_contact",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/contacts"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /contacts/{id}/tags; preserves raw provider tag_list JSON."
+      ]
+    },
+    "tags.get": {
+      "upstreamActionId": "find_tag",
+      "sourceRefs": [
+        "runtime-auth-request"
+      ],
+      "documentationUrls": [
+        "https://developers.intercom.com/docs/references/rest-api/tags"
+      ],
+      "responseContract": "appcall-provider-json-v1",
+      "adaptations": [
+        "GET /tags/{id}; preserves raw provider tag JSON."
+      ]
     }
   },
   "manifest": {
     "key": "intercom",
     "name": "Intercom",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "runtime": "bun",
     "visibility": "public",
     "categories": [
@@ -716,7 +884,9 @@
       "company",
       "conversation",
       "ticket",
-      "tag"
+      "tag",
+      "note",
+      "team"
     ],
     "http": {
       "baseUrl": "https://api.intercom.io",
@@ -2959,6 +3129,622 @@
         "request": {
           "method": "GET",
           "path": "/teams",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "notes.create": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Create note",
+        "description": "Add a note to an Intercom contact (POST /contacts/{id}/notes). A create, so no EffectPolicy; returns the provider note JSON.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id",
+            "body"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom contact id."
+            },
+            "body": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Note text."
+            },
+            "adminId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Admin authoring the note (maps to admin_id)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/contacts/{{id}}/notes",
+          "body": {
+            "body": "{{body}}",
+            "admin_id": "{{adminId}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "notes.list": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List notes",
+        "description": "List the notes on an Intercom contact (GET /contacts/{id}/notes).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom contact id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts/{{id}}/notes",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "notes.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get note",
+        "description": "Get an Intercom note by id (GET /notes/{id}).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom note id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/notes/{{id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contacts.merge": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Merge lead into user",
+        "description": "Merge an Intercom lead into a user (POST /contacts/merge). One-shot: the source lead stops resolving, so no EffectPolicy.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "fromContactId",
+            "intoContactId"
+          ],
+          "properties": {
+            "fromContactId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Lead contact id to merge away from (maps to from)."
+            },
+            "intoContactId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "User contact id to merge into (maps to into)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/contacts/merge",
+          "body": {
+            "from": "{{fromContactId}}",
+            "into": "{{intoContactId}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "conversations.attach_contact": {
+        "kind": "action",
+        "sideEffect": "write",
+        "effectPolicy": "Reconcile",
+        "reconcile": "conversations.get",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Attach contact to conversation",
+        "description": "Add a contact as a participant on an Intercom conversation (POST /conversations/{id}/customers). Reconciles against conversations.get, whose contacts list shows participants.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id",
+            "adminId",
+            "contactId"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom conversation id."
+            },
+            "adminId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Admin adding the participant (maps to admin_id)."
+            },
+            "contactId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom contact id to attach (maps to customer.intercom_user_id)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/conversations/{{id}}/customers",
+          "body": {
+            "admin_id": "{{adminId}}",
+            "customer": {
+              "intercom_user_id": "{{contactId}}"
+            }
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "tickets.tag": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Tag ticket",
+        "description": "Attach a tag to an Intercom ticket (POST /tickets/{id}/tags). No EffectPolicy: the 2.13 ticket object returned by tickets.get has no tags field.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id",
+            "tagId",
+            "adminId"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom ticket id."
+            },
+            "tagId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Tag id to attach (maps to body id)."
+            },
+            "adminId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Admin applying the tag (maps to admin_id)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "POST",
+          "path": "/tickets/{{id}}/tags",
+          "body": {
+            "id": "{{tagId}}",
+            "admin_id": "{{adminId}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "tickets.untag": {
+        "kind": "action",
+        "sideEffect": "write",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Untag ticket",
+        "description": "Remove a tag from an Intercom ticket (DELETE /tickets/{id}/tags/{tagId} with admin_id body). No EffectPolicy: the 2.13 ticket object returned by tickets.get has no tags field.",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id",
+            "tagId",
+            "adminId"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom ticket id."
+            },
+            "tagId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Tag id to remove."
+            },
+            "adminId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Admin removing the tag (maps to admin_id)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "DELETE",
+          "path": "/tickets/{{id}}/tags/{{tagId}}",
+          "body": {
+            "admin_id": "{{adminId}}"
+          },
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "teams.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get team",
+        "description": "Get an Intercom team by id (GET /teams/{id}).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom team id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/teams/{{id}}",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contacts.list_companies": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List companies for contact",
+        "description": "List the companies attached to an Intercom contact (GET /contacts/{id}/companies).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom contact id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts/{{id}}/companies",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "companies.list_contacts": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List contacts for company",
+        "description": "List the contacts attached to an Intercom company (GET /companies/{id}/contacts).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom company id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/companies/{{id}}/contacts",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "contacts.list_tags": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "List tags for contact",
+        "description": "List the tags attached to an Intercom contact (GET /contacts/{id}/tags).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom contact id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/contacts/{{id}}/tags",
+          "success": [
+            200
+          ]
+        },
+        "enforceOutputSchema": true,
+        "validationMode": "strict-generated",
+        "responseFormat": "json"
+      },
+      "tags.get": {
+        "kind": "action",
+        "sideEffect": "read",
+        "timeoutMs": 15000,
+        "maxInputBytes": 65536,
+        "maxResponseBytes": 5242880,
+        "title": "Get tag",
+        "description": "Get an Intercom tag by id (GET /tags/{id}).",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Intercom tag id."
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "required": [
+            "data"
+          ],
+          "properties": {
+            "data": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        "request": {
+          "method": "GET",
+          "path": "/tags/{{id}}",
           "success": [
             200
           ]

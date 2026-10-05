@@ -6,8 +6,8 @@ describe("Intercom manifest", () => {
     expect(manifest.key).toBe("intercom");
   });
 
-  it("has version 0.5.0", () => {
-    expect(manifest.version).toBe("0.5.0");
+  it("has version 0.6.0", () => {
+    expect(manifest.version).toBe("0.6.0");
   });
 
   it("uses bun runtime", () => {
@@ -48,6 +48,7 @@ describe("Intercom manifest", () => {
       "companies.delete",
       "companies.get",
       "companies.list",
+      "companies.list_contacts",
       "companies.update",
       "contacts.archive",
       "contacts.attach_company",
@@ -56,12 +57,16 @@ describe("Intercom manifest", () => {
       "contacts.detach_company",
       "contacts.get",
       "contacts.list",
+      "contacts.list_companies",
+      "contacts.list_tags",
+      "contacts.merge",
       "contacts.search",
       "contacts.tag",
       "contacts.unarchive",
       "contacts.untag",
       "contacts.update",
       "conversations.assign",
+      "conversations.attach_contact",
       "conversations.close",
       "conversations.create",
       "conversations.get",
@@ -72,14 +77,21 @@ describe("Intercom manifest", () => {
       "conversations.tag",
       "conversations.untag",
       "healthcheck",
+      "notes.create",
+      "notes.get",
+      "notes.list",
       "tags.create",
+      "tags.get",
       "tags.list",
+      "teams.get",
       "teams.list",
       "tickets.create",
       "tickets.delete",
       "tickets.get",
       "tickets.list",
       "tickets.reply",
+      "tickets.tag",
+      "tickets.untag",
       "tickets.update",
     ]);
     expect(manifest.operations["conversations.list"].sideEffect).toBe("read");
@@ -140,8 +152,8 @@ describe("Intercom manifest", () => {
     }
   });
 
-  it("declares administrator/contact/company/conversation/ticket/tag models", () => {
-    expect(manifest.models).toEqual(["administrator", "contact", "company", "conversation", "ticket", "tag"]);
+  it("declares administrator/contact/company/conversation/ticket/tag/note/team models", () => {
+    expect(manifest.models).toEqual(["administrator", "contact", "company", "conversation", "ticket", "tag", "note", "team"]);
   });
 
   it("declares contact/company/ticket/tag write and read ops with tool schemas", () => {
@@ -182,7 +194,7 @@ describe("Intercom manifest", () => {
 
   it("declares G1 ops with exact request shapes", () => {
     const ops = manifest.operations as Record<string, Record<string, unknown>>;
-    expect(Object.keys(ops)).toHaveLength(39);
+    expect(Object.keys(ops)).toHaveLength(51);
     expect(ops["conversations.reopen"].request).toEqual({
       method: "POST",
       path: "/conversations/{{id}}/parts",
@@ -269,6 +281,86 @@ describe("Intercom manifest", () => {
     expect(Object.keys(ops["contacts.attach_company"].inputSchema.properties)).toEqual(["id", "companyId"]);
     expect(Object.keys(ops["contacts.detach_company"].inputSchema.properties)).toEqual(["id", "companyId"]);
     expect(Object.keys(ops["conversations.reopen"].inputSchema.properties)).toEqual(["id", "adminId"]);
+  });
+
+  it("declares G2 ops with exact request shapes", () => {
+    const ops = manifest.operations as Record<string, Record<string, unknown>>;
+    expect(ops["notes.create"].request).toEqual({
+      method: "POST",
+      path: "/contacts/{{id}}/notes",
+      body: { body: "{{body}}", admin_id: "{{adminId}}" },
+      success: [200],
+    });
+    expect(ops["contacts.merge"].request).toEqual({
+      method: "POST",
+      path: "/contacts/merge",
+      body: { from: "{{fromContactId}}", into: "{{intoContactId}}" },
+      success: [200],
+    });
+    expect(ops["conversations.attach_contact"].request).toEqual({
+      method: "POST",
+      path: "/conversations/{{id}}/customers",
+      body: { admin_id: "{{adminId}}", customer: { intercom_user_id: "{{contactId}}" } },
+      success: [200],
+    });
+    expect(ops["tickets.tag"].request).toEqual({
+      method: "POST",
+      path: "/tickets/{{id}}/tags",
+      body: { id: "{{tagId}}", admin_id: "{{adminId}}" },
+      success: [200],
+    });
+    expect(ops["tickets.untag"].request).toEqual({
+      method: "DELETE",
+      path: "/tickets/{{id}}/tags/{{tagId}}",
+      body: { admin_id: "{{adminId}}" },
+      success: [200],
+    });
+    const reads: Record<string, string> = {
+      "notes.list": "/contacts/{{id}}/notes",
+      "notes.get": "/notes/{{id}}",
+      "teams.get": "/teams/{{id}}",
+      "contacts.list_companies": "/contacts/{{id}}/companies",
+      "companies.list_contacts": "/companies/{{id}}/contacts",
+      "contacts.list_tags": "/contacts/{{id}}/tags",
+      "tags.get": "/tags/{{id}}",
+    };
+    for (const [key, path] of Object.entries(reads)) {
+      expect(ops[key].request).toEqual({ method: "GET", path, success: [200] });
+      expect((ops[key].inputSchema as { required?: string[] }).required).toEqual(["id"]);
+      expect(Object.keys((ops[key].inputSchema as { properties: object }).properties)).toEqual(["id"]);
+    }
+  });
+
+  it("wires G2 effects: 1 Reconcile against conversations.get, 11 omit effect keys", () => {
+    const ops = manifest.operations as Record<string, Record<string, unknown>>;
+    expect(ops["conversations.attach_contact"].sideEffect).toBe("write");
+    expect(ops["conversations.attach_contact"].effectPolicy).toBe("Reconcile");
+    expect(ops["conversations.attach_contact"].reconcile).toBe("conversations.get");
+    const omitted: Record<string, string> = {
+      "notes.create": "write",
+      "contacts.merge": "write",
+      "tickets.tag": "write",
+      "tickets.untag": "write",
+      "notes.list": "read",
+      "notes.get": "read",
+      "teams.get": "read",
+      "contacts.list_companies": "read",
+      "companies.list_contacts": "read",
+      "contacts.list_tags": "read",
+      "tags.get": "read",
+    };
+    for (const [key, sideEffect] of Object.entries(omitted)) {
+      expect(ops[key].sideEffect).toBe(sideEffect);
+      expect(ops[key].effectPolicy).toBeUndefined();
+      expect(ops[key].reconcile).toBeUndefined();
+    }
+    for (const key of ["conversations.attach_contact", ...Object.keys(omitted)]) {
+      expect(String(ops[key].title ?? "").length).toBeGreaterThan(0);
+      expect(String(ops[key].description ?? "").length).toBeGreaterThan(0);
+      expect(ops[key].enforceOutputSchema).toBe(true);
+      expect(ops[key].validationMode).toBe("strict-generated");
+      expect((ops[key].inputSchema as { additionalProperties?: boolean }).additionalProperties).toBe(false);
+    }
   });
 
 });
