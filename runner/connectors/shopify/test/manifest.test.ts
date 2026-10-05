@@ -5,7 +5,7 @@ describe("shopify connector manifest", () => {
   test("declares key, runtime, auth, network, operations, and models", () => {
     expect(manifest.key).toBe("shopify");
     expect(manifest.name).toBe("Shopify");
-    expect(manifest.version).toBe("0.2.0");
+    expect(manifest.version).toBe("0.2.1");
     expect(manifest.runtime).toBe("bun");
   });
 
